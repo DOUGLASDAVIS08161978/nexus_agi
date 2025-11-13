@@ -351,15 +351,14 @@ class NeuralProcessor:
         
         # Extract activations from intermediate layers
         activations = {}
+        last_output = input_tensor
+        layer_count = 0
         for i, layer in enumerate(self.model):
             if isinstance(layer, nn.Linear):
                 with torch.no_grad():
-                    if i == 0:
-                        act = layer(input_tensor)
-                    else:
-                        act = layer(activations[f"layer_{i-1}"]["output"])
+                    act = layer(last_output)
                     
-                    activations[f"layer_{i}"] = {
+                    activations[f"layer_{layer_count}"] = {
                         "output": act,
                         "weight_norm": torch.norm(layer.weight).item(),
                         "activation_stats": {
@@ -369,6 +368,12 @@ class NeuralProcessor:
                             "max": act.max().item()
                         }
                     }
+                    last_output = act
+                    layer_count += 1
+            elif isinstance(layer, (nn.ReLU, nn.Tanh, nn.Sigmoid)):
+                # Apply activation function
+                with torch.no_grad():
+                    last_output = layer(last_output)
         
         return {
             "output": output.detach().numpy(),
