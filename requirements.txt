@@ -1,0 +1,36 @@
+# Python dependencies for Nexus AGI System
+
+# Core scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+
+# Machine learning and deep learning
+torch>=2.0.0
+transformers>=4.30.0
+scikit-learn>=1.3.0
+
+# Quantum simulation (optional)
+pennylane>=0.30.0
+
+# Probabilistic programming
+pyro-ppl>=1.8.0
+
+# Graph processing
+networkx>=3.0
+torch-geometric>=2.3.0
+
+# Symbolic reasoning (optional - may require system dependencies)
+# pyswip>=0.2.10  # Uncomment if you have SWI-Prolog installed
+
+# Symbolic math
+sympy>=1.12
+
+# Utilities
+joblib>=1.3.0
+matplotlib>=3.7.0
+
+# Note: Some packages may require additional system dependencies
+# - Pennylane: For quantum simulation features
+# - PySwip: Requires SWI-Prolog to be installed on the system
+# - torch-geometric: May require additional setup for some features

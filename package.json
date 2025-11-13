@@ -1,0 +1,25 @@
+{
+  "name": "nexus-agi-aria",
+  "version": "3.0.0",
+  "description": "ARIA - Adaptive Reasoning Intelligence Architecture: A quantum-enhanced multi-dimensional AI system",
+  "main": "aria.js",
+  "scripts": {
+    "start": "node aria.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "ai",
+    "agi",
+    "quantum",
+    "consciousness",
+    "multiverse",
+    "temporal",
+    "reasoning"
+  ],
+  "author": "Douglas Davis + Nova",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {}
+}
