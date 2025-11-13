@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  nexus-agi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexus-agi:latest
+    container_name: nexus-agi
+    volumes:
+      # Mount data directory to persist models and data
+      - nexus-data:/root/nexus_core
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    # Optional: Limit resources
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+volumes:
+  nexus-data:
+    driver: local
