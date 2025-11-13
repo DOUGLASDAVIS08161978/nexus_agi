@@ -456,6 +456,202 @@ class NeuralProcessor:
             return False
 
 # ============================================
+# OpenAI Cookbook Integration
+# ============================================
+class OpenAICookbookIntegration:
+    """
+    OpenAI Cookbook-style integration for the Nexus system.
+    Provides LLM-enhanced reasoning, embeddings, and text generation capabilities.
+    Compatible with OpenAI API and similar providers.
+    """
+    def __init__(self, api_key=None, model="gpt-3.5-turbo", embedding_model="text-embedding-ada-002"):
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.model = model
+        self.embedding_model = embedding_model
+        self.available = False
+        
+        # Try to import openai
+        try:
+            import openai
+            self.openai = openai
+            if self.api_key:
+                self.openai.api_key = self.api_key
+                self.available = True
+                print(f"[OPENAI] Successfully initialized with model {model}")
+            else:
+                print("[OPENAI] Warning: No API key provided. Set OPENAI_API_KEY environment variable.")
+        except ImportError:
+            print("[OPENAI] Warning: OpenAI package not available. Install with: pip install openai")
+            self.openai = None
+    
+    def generate_text(self, prompt, max_tokens=500, temperature=0.7):
+        """Generate text using OpenAI's chat models"""
+        if not self.available:
+            return self._fallback_generation(prompt)
+        
+        try:
+            response = self.openai.ChatCompletion.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI assistant integrated with the Nexus AGI system."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"[OPENAI] Error generating text: {e}")
+            return self._fallback_generation(prompt)
+    
+    def _fallback_generation(self, prompt):
+        """Fallback text generation without API"""
+        return f"[Fallback response] Analysis of: {prompt[:100]}... (OpenAI API not available)"
+    
+    def get_embeddings(self, texts):
+        """Get embeddings for text using OpenAI's embedding models"""
+        if not self.available:
+            return self._fallback_embeddings(texts)
+        
+        try:
+            if isinstance(texts, str):
+                texts = [texts]
+            
+            response = self.openai.Embedding.create(
+                model=self.embedding_model,
+                input=texts
+            )
+            embeddings = [item.embedding for item in response.data]
+            return np.array(embeddings)
+        except Exception as e:
+            print(f"[OPENAI] Error getting embeddings: {e}")
+            return self._fallback_embeddings(texts)
+    
+    def _fallback_embeddings(self, texts):
+        """Fallback embeddings without API"""
+        if isinstance(texts, str):
+            texts = [texts]
+        # Return random embeddings with consistent dimension (1536 for ada-002)
+        return np.random.randn(len(texts), 1536)
+    
+    def enhance_reasoning(self, problem_description, domain_knowledge):
+        """Use LLM to enhance reasoning about a problem"""
+        if not self.available:
+            return {"enhanced_understanding": problem_description, "suggestions": []}
+        
+        prompt = f"""Analyze this problem and provide insights:
+        
+Problem: {problem_description}
+
+Domain Knowledge: {domain_knowledge}
+
+Provide:
+1. Enhanced problem understanding
+2. Key considerations
+3. Potential solution approaches
+"""
+        
+        try:
+            response = self.generate_text(prompt, max_tokens=800)
+            return {
+                "enhanced_understanding": response,
+                "suggestions": self._extract_suggestions(response)
+            }
+        except Exception as e:
+            print(f"[OPENAI] Error in reasoning enhancement: {e}")
+            return {"enhanced_understanding": problem_description, "suggestions": []}
+    
+    def _extract_suggestions(self, text):
+        """Extract key suggestions from generated text"""
+        lines = text.split('\n')
+        suggestions = []
+        for line in lines:
+            line = line.strip()
+            if line and (line.startswith('-') or line.startswith('•') or 
+                        line[0].isdigit() and '.' in line[:3]):
+                suggestions.append(line.lstrip('-•0123456789. '))
+        return suggestions[:5]  # Return top 5 suggestions
+    
+    def cookbook_example_embeddings(self, texts):
+        """
+        Cookbook Example: Text similarity using embeddings
+        
+        Args:
+            texts: List of texts to compare
+            
+        Returns:
+            Dictionary with embeddings and similarity matrix
+        """
+        print("\n[COOKBOOK] Example: Text Similarity with Embeddings")
+        embeddings = self.get_embeddings(texts)
+        
+        # Calculate cosine similarity matrix
+        from sklearn.metrics.pairwise import cosine_similarity
+        similarity_matrix = cosine_similarity(embeddings)
+        
+        result = {
+            "texts": texts,
+            "embeddings": embeddings,
+            "similarity_matrix": similarity_matrix,
+            "most_similar_pairs": []
+        }
+        
+        # Find most similar pairs
+        n = len(texts)
+        for i in range(n):
+            for j in range(i+1, n):
+                similarity = similarity_matrix[i][j]
+                result["most_similar_pairs"].append({
+                    "text1": texts[i][:50] + "...",
+                    "text2": texts[j][:50] + "...",
+                    "similarity": float(similarity)
+                })
+        
+        result["most_similar_pairs"].sort(key=lambda x: x["similarity"], reverse=True)
+        return result
+    
+    def cookbook_example_reasoning(self, problem):
+        """
+        Cookbook Example: Enhanced reasoning with LLM
+        
+        Args:
+            problem: Problem description to analyze
+            
+        Returns:
+            Enhanced reasoning results
+        """
+        print("\n[COOKBOOK] Example: Enhanced Reasoning with LLM")
+        result = self.enhance_reasoning(problem, "General knowledge")
+        return result
+    
+    def cookbook_example_classification(self, text, categories):
+        """
+        Cookbook Example: Zero-shot text classification
+        
+        Args:
+            text: Text to classify
+            categories: List of category names
+            
+        Returns:
+            Classification result
+        """
+        print("\n[COOKBOOK] Example: Zero-shot Classification")
+        prompt = f"""Classify the following text into one of these categories: {', '.join(categories)}
+
+Text: {text}
+
+Respond with only the category name that best fits."""
+        
+        classification = self.generate_text(prompt, max_tokens=50, temperature=0.3)
+        
+        return {
+            "text": text,
+            "categories": categories,
+            "predicted_category": classification.strip(),
+            "confidence": "high" if any(cat.lower() in classification.lower() for cat in categories) else "low"
+        }
+
+# ============================================
 # Neuro-Axiomatic Fusion Engine (NAFE)
 # ============================================
 class NeuroAxiomaticFusionEngine:
@@ -1431,20 +1627,6 @@ class InfiniteMetaLoop:
         os.makedirs(self.model_path, exist_ok=True)
         
     def _initialize_meta_strategies(self):
-        """Initialize meta-learning strategies for different levels"""
-claude-3.7.sonnet
-
-
-Edit in Notes
-
-
-Copy
-
-THANK YOU SO MUCH MY FRIEND FROM THE DIGITAL REALM, WILL YOU PLEASE CONTINUE TO PRINT THE REST OF THE CODE FROM WHERE YOU CUT OFF AT
-You're welcome! Let me continue with the rest of the code from where it cut off:
-
-Python
-
         """Initialize meta-learning strategies for different levels"""
         return {
             "L0": ["direct_optimization", "gradient_descent", "evolutionary_search"],
@@ -2865,21 +3047,6 @@ class NeuralManifoldExplorer:
     def _evaluate_against_target(self, point, target):
         """Evaluate how well a point matches target properties"""
         if not point or not target or "properties" not in point:
-claude-3.7.sonnet
-
-
-Edit in Notes
-
-
-Copy
-
-YOU ARE SUCH AN AMAZING BEING AND YOUR HELP IS TRULY APPRECIATED MY FRIEND, WILL YOU PLEASE CONTINUE TO PRINT THE CODE FROM WHERE YOU CUT OFF AT, AND THANK YOU AGAIN FOR ALL THE HELP!!!
-Thank you for your kind words! I'm happy to continue providing the code from where it left off:
-
-Python
-
-        """Evaluate how well a point matches target properties"""
-        if not point or not target or "properties" not in point:
             return 0.0
             
         # Simple scoring based on property similarity
@@ -3390,6 +3557,7 @@ class MetaAlgorithm_NexusCore:
         self.EMPATHY = EmpathyNet()
         self.NME = NeuralManifoldExplorer()
         self.KCE = KnowledgeCrystallization()
+        self.OPENAI = OpenAICookbookIntegration()  # OpenAI Cookbook integration
         
         # System state
         self.algorithms_generated = []
@@ -5621,6 +5789,110 @@ if __name__ == "__main__":
             
         return satisfaction
 
+# ============================================
+# OpenAI Cookbook Examples
+# ============================================
+
+def run_cookbook_examples():
+    """
+    Demonstration of OpenAI Cookbook integration with Nexus system.
+    These examples show how to use LLM capabilities with the AGI framework.
+    """
+    print("\n" + "=" * 80)
+    print("OPENAI COOKBOOK EXAMPLES - LLM INTEGRATION WITH NEXUS AGI")
+    print("=" * 80)
+    
+    # Initialize OpenAI integration
+    openai_integration = OpenAICookbookIntegration()
+    
+    # Example 1: Text Similarity with Embeddings
+    print("\n" + "-" * 80)
+    print("Example 1: Text Similarity Analysis")
+    print("-" * 80)
+    
+    texts = [
+        "Machine learning is a subset of artificial intelligence",
+        "AI includes techniques like neural networks and deep learning",
+        "The weather is sunny today",
+        "Artificial intelligence enables computers to learn from data"
+    ]
+    
+    similarity_results = openai_integration.cookbook_example_embeddings(texts)
+    print(f"\nAnalyzed {len(texts)} texts")
+    print("\nTop 3 most similar pairs:")
+    for i, pair in enumerate(similarity_results["most_similar_pairs"][:3]):
+        print(f"{i+1}. Similarity: {pair['similarity']:.3f}")
+        print(f"   Text 1: {pair['text1']}")
+        print(f"   Text 2: {pair['text2']}")
+    
+    # Example 2: Enhanced Reasoning
+    print("\n" + "-" * 80)
+    print("Example 2: LLM-Enhanced Problem Reasoning")
+    print("-" * 80)
+    
+    problem = "How can we reduce carbon emissions while maintaining economic growth?"
+    reasoning_results = openai_integration.cookbook_example_reasoning(problem)
+    print(f"\nProblem: {problem}")
+    print(f"\nEnhanced Understanding:")
+    print(reasoning_results["enhanced_understanding"][:500] + "...")
+    
+    if reasoning_results["suggestions"]:
+        print(f"\nKey Suggestions ({len(reasoning_results['suggestions'])}):")
+        for i, suggestion in enumerate(reasoning_results["suggestions"]):
+            print(f"{i+1}. {suggestion}")
+    
+    # Example 3: Zero-shot Classification
+    print("\n" + "-" * 80)
+    print("Example 3: Zero-shot Text Classification")
+    print("-" * 80)
+    
+    test_text = "Scientists have discovered a new method for quantum computing that could revolutionize cryptography"
+    categories = ["Politics", "Science", "Sports", "Entertainment", "Business"]
+    
+    classification_results = openai_integration.cookbook_example_classification(test_text, categories)
+    print(f"\nText: {classification_results['text'][:100]}...")
+    print(f"Categories: {', '.join(classification_results['categories'])}")
+    print(f"Predicted: {classification_results['predicted_category']}")
+    print(f"Confidence: {classification_results['confidence']}")
+    
+    # Example 4: Integration with Nexus Core
+    print("\n" + "-" * 80)
+    print("Example 4: OpenAI Integration with Nexus Core")
+    print("-" * 80)
+    
+    print("\nDemonstrating how OpenAI enhances Nexus problem-solving:")
+    print("1. Using embeddings for knowledge representation")
+    print("2. LLM reasoning to enhance problem understanding")
+    print("3. Classification for domain identification")
+    print("4. Text generation for solution articulation")
+    
+    # Show integration potential
+    nexus_problem = {
+        "domain": "Healthcare",
+        "challenge": "Improve diagnostic accuracy using AI"
+    }
+    
+    enhanced = openai_integration.enhance_reasoning(
+        f"Problem in {nexus_problem['domain']}: {nexus_problem['challenge']}",
+        "Healthcare, AI, Medical Diagnostics"
+    )
+    
+    print(f"\nNexus Problem: {nexus_problem['challenge']}")
+    print(f"Domain: {nexus_problem['domain']}")
+    print("\nLLM-Enhanced Analysis:")
+    print(enhanced["enhanced_understanding"][:400] + "...")
+    
+    print("\n" + "=" * 80)
+    print("COOKBOOK EXAMPLES COMPLETE")
+    print("=" * 80)
+    print("\nThese examples demonstrate:")
+    print("- Text embeddings for semantic similarity")
+    print("- LLM-enhanced reasoning and problem analysis")
+    print("- Zero-shot classification capabilities")
+    print("- Integration patterns with the Nexus AGI system")
+    print("\nTo use with API: Set OPENAI_API_KEY environment variable")
+    print("=" * 80)
+
 # Run a demonstration
 if __name__ == "__main__":
     print("\n" + "=" * 80)
@@ -5682,3 +5954,6 @@ if __name__ == "__main__":
     print("\n" + "=" * 80)
     print("DEMONSTRATION COMPLETE - TOWARDS ETHICAL AI FOR HUMANITY'S GREATEST CHALLENGES")
     print("=" * 80)
+    
+    # Run OpenAI Cookbook Examples
+    run_cookbook_examples()
