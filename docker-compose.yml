@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  nexus-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.nexus
+    container_name: nexus-agi-service
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HUB_OFFLINE=1
+    volumes:
+      - ./logs:/app/logs
+      - nexus-data:/app/data
+    command: python nexus_service.py --interval 300
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  aria-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.aria
+    container_name: aria-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./logs:/app/logs
+    command: node aria_service.js --interval 300
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  nexus-data:
+    driver: local

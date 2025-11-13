@@ -9,6 +9,8 @@ This repository contains two complementary AI systems:
 1. **Nexus Core (Python)** - A meta-intelligent system that generates AGI-capable algorithms
 2. **ARIA (JavaScript)** - Adaptive Reasoning Intelligence Architecture with quantum-enhanced processing
 
+Both systems can run as **continuous services** with automatic problem solving and query processing. See [DEPLOYMENT.md](DEPLOYMENT.md) for service deployment options.
+
 ## Features
 
 ### Nexus Core (nexus_agi.py)
@@ -86,6 +88,15 @@ Basic execution with climate crisis demonstration:
 python3 nexus_agi.py
 ```
 
+**Run as a continuous service:**
+```bash
+# Process problems every 5 minutes (default)
+python3 nexus_service.py
+
+# Custom interval (e.g., every 60 seconds)
+python3 nexus_service.py --interval 60
+```
+
 The default demonstration will:
 1. Initialize all subsystems (Quantum, Symbolic, Neural, etc.)
 2. Define a complex global problem (climate crisis)
@@ -119,6 +130,15 @@ Approach: meta-algorithmic composition
 node aria.js
 ```
 
+**Run as a continuous service:**
+```bash
+# Process queries every 5 minutes (default)
+node aria_service.js
+
+# Custom interval (e.g., every 120 seconds)
+node aria_service.js --interval 120
+```
+
 The demonstration will:
 1. Initialize quantum neural network with 1M qubits
 2. Establish multiversal bridge
@@ -141,6 +161,33 @@ The demonstration will:
 
 ARIA System Status: {quantum metrics, consciousness levels, multiverse data}
 ```
+
+## Service Deployment
+
+Both systems can run as **continuous services** that process problems/queries in an endless loop:
+
+- **Direct execution**: Run service scripts with Python/Node.js
+- **Docker**: Deploy as containers using Docker Compose
+- **Systemd**: Deploy as Linux system services
+
+**Quick Start:**
+```bash
+# Python service (processes problems every 5 minutes)
+python3 nexus_service.py --interval 300
+
+# JavaScript service (processes queries every 5 minutes)
+node aria_service.js --interval 300
+
+# Or use Docker Compose
+docker-compose up -d
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide including:
+- Configuration options
+- Docker deployment
+- Systemd service setup
+- Monitoring and logging
+- Production recommendations
 
 ## Architecture
 
