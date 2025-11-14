@@ -1,0 +1,38 @@
+# Dockerfile for ARIA - Google Cloud Platform Optimized
+FROM node:20-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy application code
+COPY aria.js .
+COPY aria_service.js .
+COPY aria_automation.js .
+
+# Create directories for logs
+RUN mkdir -p /app/logs
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Create non-root user
+RUN useradd -m -u 1000 aria && \
+    chown -R aria:aria /app
+USER aria
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "process.exit(0)"
+
+# Expose port for Cloud Run
+EXPOSE 8080
+
+# Run service with web endpoint for Cloud Run
+CMD ["node", "aria_service.js", "--port", "8080"]

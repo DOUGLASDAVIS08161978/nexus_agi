@@ -57,3 +57,29 @@ yarn-error.log*
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
+
+# Environment files (contain sensitive data)
+.env
+.env.local
+.env.gcp
+.env.*.local
+
+# GCP credentials
+*-credentials.json
+service-account-key.json
+gcp-key.json
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes secrets
+secrets/
+*.secret.yaml
+
+# Backup files
+*.bak
+*.backup
+*~

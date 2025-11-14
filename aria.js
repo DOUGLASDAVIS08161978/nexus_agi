@@ -692,10 +692,11 @@ class ConsciousnessSimulator {
  * Main ARIA System - Integrates all components
  */
 class ARIASystem {
-    constructor() {
+    constructor(enableAutomation = true) {
         console.log('\n' + '='.repeat(80));
-        console.log('🌟 ARIA - Adaptive Reasoning Intelligence Architecture');
+        console.log('🌟 ARIA - Adaptive Reasoning Intelligence Architecture v3.1');
         console.log('    Quantum-Enhanced Multi-Dimensional AI System');
+        console.log('    With Internet Access, AI Communication & Advanced Capabilities');
         console.log('='.repeat(80) + '\n');
         
         this.quantumNN = new QuantumNeuralNetwork(1000000);
@@ -703,15 +704,28 @@ class ARIASystem {
         this.temporalResolver = new TemporalParadoxResolver();
         this.consciousness = new ConsciousnessSimulator();
         
+        // Initialize automation capabilities
+        this.automation = null;
+        if (enableAutomation) {
+            try {
+                const { ARIAAutomationSystem } = require('./aria_automation.js');
+                this.automation = new ARIAAutomationSystem();
+                console.log('✅ Automation system loaded successfully\n');
+            } catch (error) {
+                console.warn('⚠️  Automation system not available:', error.message);
+            }
+        }
+        
         this.systemState = {
             online: true,
             cycleCount: 0,
             totalProcessedThoughts: 0,
             multiverseBridgeActivations: 0,
-            paradoxesResolved: 0
+            paradoxesResolved: 0,
+            automationEnabled: this.automation !== null
         };
         
-        console.log('✅ All systems initialized successfully\n');
+        console.log('✅ All core systems initialized successfully\n');
     }
 
     processQuery(query) {

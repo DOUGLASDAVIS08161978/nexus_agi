@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-agi
+  namespace: nexus-agi
+  labels:
+    app: nexus-agi
+    version: v3.1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexus-agi
+  template:
+    metadata:
+      labels:
+        app: nexus-agi
+        version: v3.1
+    spec:
+      containers:
+      - name: nexus-agi
+        image: gcr.io/PROJECT_ID/nexus-agi:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: GOOGLE_CLOUD_PROJECT
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - secretRef:
+            name: nexus-secrets
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /secrets
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: gcp-credentials
+      - name: logs
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: nexus-data-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aria
+  namespace: nexus-agi
+  labels:
+    app: aria
+    version: v3.1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aria
+  template:
+    metadata:
+      labels:
+        app: aria
+        version: v3.1
+    spec:
+      containers:
+      - name: aria
+        image: gcr.io/PROJECT_ID/aria:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        - name: NODE_ENV
+          value: "production"
+        envFrom:
+        - secretRef:
+            name: nexus-secrets
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
