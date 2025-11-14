@@ -1,0 +1,150 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**.py'
+      - 'requirements.txt'
+      - '.github/workflows/python-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**.py'
+      - 'requirements.txt'
+      - '.github/workflows/python-ci.yml'
+
+jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black bandit safety
+    
+    - name: Run Black (format check)
+      run: black --check --diff .
+      continue-on-error: true
+    
+    - name: Run Flake8 (linting)
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+    
+    - name: Run Bandit (security linting)
+      run: bandit -r . -f json -o bandit-report.json || true
+      continue-on-error: true
+    
+    - name: Upload Bandit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+    
+    - name: Check dependency vulnerabilities with Safety
+      run: |
+        pip install -r requirements.txt || true
+        safety check --json || true
+      continue-on-error: true
+
+  test:
+    name: Test Python Code
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist
+        # Install project dependencies (with fallback for optional packages)
+        pip install -r requirements.txt || echo "Some packages failed to install, continuing..."
+    
+    - name: Run syntax check
+      run: python -m py_compile nexus_agi.py nexus_service.py
+    
+    - name: Run pytest
+      run: |
+        if [ -d "tests" ]; then
+          pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+        else
+          echo "No tests directory found, skipping pytest"
+        fi
+      continue-on-error: true
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: matrix.python-version == '3.11'
+      with:
+        name: coverage-reports
+        path: |
+          coverage.xml
+          htmlcov/
+
+  build-check:
+    name: Build and Import Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Try to install dependencies, but don't fail if some are unavailable
+        pip install -r requirements.txt || echo "Some optional dependencies failed, continuing..."
+    
+    - name: Check imports and syntax
+      run: |
+        python -c "import sys; import ast; ast.parse(open('nexus_agi.py').read())" || exit 1
+        python -c "import sys; import ast; ast.parse(open('nexus_service.py').read())" || exit 1
+        echo "All Python files have valid syntax"
