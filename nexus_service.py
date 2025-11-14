@@ -43,22 +43,25 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 class NexusService:
-    """Service wrapper for continuous Nexus AGI execution"""
+    """Service wrapper for continuous Nexus AGI execution with autonomous operations"""
     
-    def __init__(self, loop_interval=300):
+    def __init__(self, loop_interval=300, enable_autonomous=True):
         """
         Initialize the service
         
         Args:
             loop_interval: Seconds to wait between problem solving cycles (default: 5 minutes)
+            enable_autonomous: Enable autonomous operations controller (default: True)
         """
         self.loop_interval = loop_interval
         self.cycle_count = 0
         self.start_time = None
         self.core = None
+        self.autonomous_controller = None
+        self.enable_autonomous = enable_autonomous
         
     def initialize(self):
-        """Initialize the Nexus Core system"""
+        """Initialize the Nexus Core system and autonomous operations"""
         logger.info("=" * 80)
         logger.info("NEXUS AGI SERVICE - INITIALIZING")
         logger.info("=" * 80)
@@ -67,6 +70,20 @@ class NexusService:
             self.core = MetaAlgorithm_NexusCore()
             self.start_time = datetime.now()
             logger.info("Nexus Core initialized successfully")
+            
+            # Initialize autonomous operations if enabled
+            if self.enable_autonomous:
+                try:
+                    from autonomous_ops import AutonomousOperationsController
+                    self.autonomous_controller = AutonomousOperationsController()
+                    # Start autonomous operation in background
+                    self.autonomous_controller.start_autonomous_operation(interval=self.loop_interval)
+                    logger.info("Autonomous Operations Controller initialized and started")
+                except ImportError as e:
+                    logger.warning(f"Could not load autonomous operations: {e}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize autonomous operations: {e}")
+            
             return True
         except Exception as e:
             logger.error(f"Failed to initialize Nexus Core: {e}", exc_info=True)
@@ -178,6 +195,23 @@ class NexusService:
         logger.info("\n" + "=" * 80)
         logger.info("NEXUS AGI SERVICE - SHUTTING DOWN")
         logger.info("=" * 80)
+        
+        # Stop autonomous operations
+        if self.autonomous_controller:
+            logger.info("Stopping autonomous operations...")
+            try:
+                self.autonomous_controller.stop_autonomous_operation()
+                # Get final status
+                final_status = self.autonomous_controller.get_comprehensive_status()
+                logger.info(f"Autonomous Operations Final Status:")
+                logger.info(f"  - Cycles: {final_status['cycle_count']}")
+                logger.info(f"  - Decisions: {final_status['decision_engine']['decisions_made']}")
+                logger.info(f"  - Self-healing success: {final_status['self_healing']['success_rate']:.1f}%")
+                logger.info(f"  - Knowledge base: {final_status['learning_system']['knowledge_base_size']} entries")
+                logger.info(f"  - Tasks completed: {final_status['task_orchestrator']['completed_tasks']}")
+            except Exception as e:
+                logger.error(f"Error stopping autonomous operations: {e}")
+        
         status = self.get_status()
         logger.info(f"Total cycles completed: {status['cycles_completed']}")
         logger.info(f"Total uptime: {status['uptime_seconds']:.0f} seconds")
@@ -189,12 +223,14 @@ def main():
     """Entry point for the service"""
     import argparse
     
-    parser = argparse.ArgumentParser(description='Nexus AGI Continuous Service')
+    parser = argparse.ArgumentParser(description='Nexus AGI Continuous Service with Autonomous Operations')
     parser.add_argument('--interval', type=int, default=300,
                        help='Seconds between processing cycles (default: 300)')
     parser.add_argument('--log-level', default='INFO',
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                        help='Logging level (default: INFO)')
+    parser.add_argument('--no-autonomous', action='store_true',
+                       help='Disable autonomous operations (default: enabled)')
     
     args = parser.parse_args()
     
@@ -202,7 +238,7 @@ def main():
     logging.getLogger().setLevel(getattr(logging, args.log_level))
     
     # Create and run service
-    service = NexusService(loop_interval=args.interval)
+    service = NexusService(loop_interval=args.interval, enable_autonomous=not args.no_autonomous)
     exit_code = service.run()
     
     sys.exit(exit_code)

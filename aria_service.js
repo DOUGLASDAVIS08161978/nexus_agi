@@ -46,23 +46,39 @@ process.on('SIGTERM', () => {
 });
 
 class ARIAService {
-    constructor(loopInterval = CONFIG.loopInterval) {
+    constructor(loopInterval = CONFIG.loopInterval, enableAutonomous = true) {
         this.loopInterval = loopInterval;
         this.cycleCount = 0;
         this.startTime = null;
         this.aria = null;
         this.totalQueriesProcessed = 0;
+        this.autonomousController = null;
+        this.enableAutonomous = enableAutonomous;
     }
 
     initialize() {
         log('info', '='.repeat(80));
-        log('info', 'ARIA SERVICE - INITIALIZING');
+        log('info', 'ARIA SERVICE - INITIALIZING WITH AUTONOMOUS OPERATIONS');
         log('info', '='.repeat(80));
         
         try {
             this.aria = new ARIASystem();
             this.startTime = Date.now();
             log('info', 'ARIA system initialized successfully');
+            
+            // Initialize autonomous operations if enabled
+            if (this.enableAutonomous) {
+                try {
+                    const { ARIAAutonomousController } = require('./aria_autonomous.js');
+                    this.autonomousController = new ARIAAutonomousController();
+                    // Start autonomous operation in background
+                    this.autonomousController.startAutonomousOperation(this.loopInterval);
+                    log('info', 'Autonomous Operations Controller initialized and started');
+                } catch (error) {
+                    log('warn', `Could not load autonomous operations: ${error.message}`);
+                }
+            }
+            
             return true;
         } catch (error) {
             log('error', `Failed to initialize ARIA system: ${error.message}`);
@@ -212,6 +228,24 @@ class ARIAService {
         log('info', 'ARIA SERVICE - SHUTTING DOWN');
         log('info', '='.repeat(80));
         
+        // Stop autonomous operations
+        if (this.autonomousController) {
+            log('info', 'Stopping autonomous operations...');
+            try {
+                this.autonomousController.stopAutonomousOperation();
+                // Get final status
+                const finalStatus = this.autonomousController.getComprehensiveStatus();
+                log('info', 'Autonomous Operations Final Status:');
+                log('info', `  - Cycles: ${finalStatus.cycleCount}`);
+                log('info', `  - Decisions: ${finalStatus.decisionEngine.decisionsMade}`);
+                log('info', `  - Self-healing success: ${finalStatus.selfHealing.successRate.toFixed(1)}%`);
+                log('info', `  - Knowledge base: ${finalStatus.learningSystem.knowledgeBaseSize} entries`);
+                log('info', `  - Tasks completed: ${finalStatus.taskOrchestrator.completedTasks}`);
+            } catch (error) {
+                log('error', `Error stopping autonomous operations: ${error.message}`);
+            }
+        }
+        
         const status = this.getStatus();
         log('info', `Total cycles completed: ${status.cycles_completed}`);
         log('info', `Total queries processed: ${status.queries_processed}`);
@@ -227,24 +261,28 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     let interval = CONFIG.loopInterval;
+    let enableAutonomous = true;
     
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--interval' && args[i + 1]) {
             interval = parseInt(args[i + 1]) * 1000; // Convert seconds to milliseconds
             i++;
+        } else if (args[i] === '--no-autonomous') {
+            enableAutonomous = false;
         } else if (args[i] === '--help') {
-            console.log('ARIA Continuous Service');
+            console.log('ARIA Continuous Service with Autonomous Operations');
             console.log('Usage: node aria_service.js [options]');
             console.log('');
             console.log('Options:');
             console.log('  --interval <seconds>  Seconds between processing cycles (default: 300)');
+            console.log('  --no-autonomous      Disable autonomous operations (default: enabled)');
             console.log('  --help               Show this help message');
             process.exit(0);
         }
     }
     
     // Create and run service
-    const service = new ARIAService(interval);
+    const service = new ARIAService(interval, enableAutonomous);
     const exitCode = await service.run();
     
     process.exit(exitCode);
