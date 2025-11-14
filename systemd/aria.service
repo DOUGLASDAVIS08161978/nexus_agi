@@ -1,0 +1,25 @@
+[Unit]
+Description=ARIA Continuous Service
+After=network.target
+
+[Service]
+Type=simple
+User=aria
+Group=aria
+WorkingDirectory=/opt/nexus_agi
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/node /opt/nexus_agi/aria_service.js --interval 300
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/aria/service.log
+StandardError=append:/var/log/aria/error.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/aria
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+# Dockerfile for Nexus AGI Service
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY nexus_agi.py .
+COPY nexus_service.py .
+
+# Create directory for logs and data
+RUN mkdir -p /app/logs /app/data
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV HF_HUB_OFFLINE=1
+
+# Make service executable
+RUN chmod +x nexus_service.py
+
+# Default command
+CMD ["python", "nexus_service.py", "--interval", "300"]

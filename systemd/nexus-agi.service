@@ -1,0 +1,26 @@
+[Unit]
+Description=Nexus AGI Continuous Service
+After=network.target
+
+[Service]
+Type=simple
+User=nexus
+Group=nexus
+WorkingDirectory=/opt/nexus_agi
+Environment="PYTHONUNBUFFERED=1"
+Environment="HF_HUB_OFFLINE=1"
+ExecStart=/usr/bin/python3 /opt/nexus_agi/nexus_service.py --interval 300
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/nexus_agi/service.log
+StandardError=append:/var/log/nexus_agi/error.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/nexus_agi /opt/nexus_agi/nexus_core
+
+[Install]
+WantedBy=multi-user.target
