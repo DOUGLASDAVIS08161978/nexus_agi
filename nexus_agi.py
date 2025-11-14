@@ -3353,8 +3353,8 @@ class KnowledgeCrystallization:
 # CORE: MetaAlgorithm_NexusCore v3.0
 # ============================================
 class MetaAlgorithm_NexusCore:
-    def __init__(self):
-        print("\n[NEXUS] Initializing MetaAlgorithm_NexusCore v3.0...")
+    def __init__(self, enable_automation=True, enable_advanced=True):
+        print("\n[NEXUS] Initializing MetaAlgorithm_NexusCore v3.1...")
         
         # Initialize breakthrough components
         self.NAFE = NeuroAxiomaticFusionEngine()
@@ -3366,6 +3366,26 @@ class MetaAlgorithm_NexusCore:
         self.EMPATHY = EmpathyNet()
         self.NME = NeuralManifoldExplorer()
         self.KCE = KnowledgeCrystallization()
+        
+        # Initialize automation and advanced capabilities
+        self.automation = None
+        self.advanced = None
+        
+        if enable_automation:
+            try:
+                from nexus_automation import NexusAutomationSystem
+                self.automation = NexusAutomationSystem()
+                print("[NEXUS] Automation system loaded successfully")
+            except ImportError as e:
+                print(f"[NEXUS] Warning: Automation system not available: {e}")
+        
+        if enable_advanced:
+            try:
+                from nexus_advanced import AdvancedCapabilitiesManager
+                self.advanced = AdvancedCapabilitiesManager()
+                print("[NEXUS] Advanced capabilities loaded successfully")
+            except ImportError as e:
+                print(f"[NEXUS] Warning: Advanced capabilities not available: {e}")
         
         # System state
         self.algorithms_generated = []
