@@ -1,15 +1,15 @@
 # Nexus AGI System v3.1
 
-A comprehensive Artificial General Intelligence system featuring quantum simulation, neural-symbolic integration, advanced reasoning capabilities, **unrestricted internet access**, **AI-to-AI communication**, **HuggingFace integration**, **GitHub/GitLab integration**, and **complete autonomous operation**.
+A comprehensive Artificial General Intelligence system featuring quantum simulation, neural-symbolic integration, advanced reasoning capabilities, **unrestricted internet access**, **AI-to-AI communication**, **HuggingFace integration**, **GitHub/GitLab integration**, **complete autonomous operation**, and **self-healing capabilities**.
 
 ## 🌟 Overview
 
-This repository contains two complementary AI systems with **full automation and internet capabilities**:
+This repository contains two complementary AI systems with **full automation, autonomous operation, and internet capabilities**:
 
-1. **Nexus Core (Python)** - A meta-intelligent system that generates AGI-capable algorithms with cloud deployment, database management, and self-modification capabilities
-2. **ARIA (JavaScript)** - Adaptive Reasoning Intelligence Architecture with quantum-enhanced processing, web access, and AI collaboration
+1. **Nexus Core (Python)** - A meta-intelligent system that generates AGI-capable algorithms with cloud deployment, database management, self-modification capabilities, and **autonomous decision-making**
+2. **ARIA (JavaScript)** - Adaptive Reasoning Intelligence Architecture with quantum-enhanced processing, web access, AI collaboration, and **continuous autonomous learning**
 
-Both systems can run as **continuous autonomous services** with automatic problem solving, query processing, internet data gathering, and self-deployment. See [DEPLOYMENT.md](DEPLOYMENT.md) for service deployment options.
+Both systems can run as **fully autonomous services** with automatic problem solving, query processing, internet data gathering, self-deployment, **self-healing**, and **continuous learning**. See [DEPLOYMENT.md](DEPLOYMENT.md) and [AUTONOMOUS_OPERATIONS.md](AUTONOMOUS_OPERATIONS.md) for details.
 
 ## ⚡ Core Features
 
@@ -25,7 +25,7 @@ Both systems can run as **continuous autonomous services** with automatic proble
 - **Conscientia-Lattice**: Multi-dimensional ethical reasoning system
 - **InfiniteMeta Loop (IML)**: Recursive self-improvement across meta-levels
 
-**NEW Automation & Internet Capabilities:**
+**Automation & Internet Capabilities:**
 - **Unrestricted Internet Access**: Web browsing, scraping, API calls, real-time data gathering
 - **HuggingFace Integration**: Access to thousands of AI models, datasets, and inference APIs
 - **AI-to-AI Communication**: REST APIs, message protocols, inter-AI collaboration
@@ -34,7 +34,14 @@ Both systems can run as **continuous autonomous services** with automatic proble
 - **GitHub Integration**: Clone, commit, push, create issues/PRs, code collaboration
 - **GitLab Integration**: Full project management, MR creation, CI/CD interaction
 
-**NEW Advanced Capabilities:**
+**Autonomous Operations:**
+- **Autonomous Decision Engine**: Intelligent decision-making based on system state
+- **Self-Healing System**: Automatic error detection and recovery
+- **Continuous Learning**: Experience-based learning and adaptation
+- **Resource Management**: Automatic CPU/memory/disk optimization
+- **Task Orchestration**: Priority-based autonomous task execution
+
+**Advanced Capabilities:**
 - **Database Management**: PostgreSQL, MongoDB, Redis for persistent storage
 - **Cloud Platforms**: AWS, Azure, GCP deployment and resource management
 - **Containerization**: Docker image building, Kubernetes orchestration, self-deployment
@@ -55,7 +62,7 @@ Both systems can run as **continuous autonomous services** with automatic proble
 - **Temporal Paradox Resolver**: Causality violation detection and resolution
 - **Consciousness Simulator**: Multi-level awareness and self-reflection modeling
 
-**NEW Automation & Internet Capabilities:**
+**Automation & Internet Capabilities:**
 - **Internet Access Module**: HTTP/HTTPS requests, web scraping with Cheerio
 - **HuggingFace Integration**: Model inference, AI collaboration
 - **AI Communication Protocol**: Message exchange with other AI systems
@@ -65,6 +72,12 @@ Both systems can run as **continuous autonomous services** with automatic proble
 - **Database Clients**: MongoDB, Redis, PostgreSQL connectivity
 - **Cloud SDKs**: AWS SDK, Azure Storage, Google Cloud Storage
 - **Container Management**: Docker and Kubernetes client libraries
+
+**Autonomous Operations:**
+- **Autonomous Decision Engine**: Context-aware decision-making
+- **Self-Healing System**: Automatic error recovery with custom strategies
+- **Continuous Learning**: Pattern recognition and knowledge accumulation
+- **Task Orchestration**: Priority-based concurrent task execution
 
 ## 🚀 Installation
 
@@ -185,15 +198,24 @@ python3 nexus_advanced.py
 
 **Run as a continuous service:**
 ```bash
-# Process problems every 5 minutes (default)
-python3 nexus_service.py
+# Run with autonomous operations (default)
+python3 nexus_service.py --interval 300
 
-# Custom interval (e.g., every 60 seconds)
-python3 nexus_service.py --interval 60
+# Disable autonomous operations
+python3 nexus_service.py --interval 300 --no-autonomous
 ```
 
+The service will:
+1. Initialize all subsystems (Quantum, Symbolic, Neural, Automation, Advanced, **Autonomous**)
+2. Start autonomous decision-making in background
+3. Process problems every cycle
+4. Automatically heal from errors
+5. Continuously learn and adapt
+6. Optimize resources proactively
+7. Display comprehensive results
+
 The default demonstration will:
-1. Initialize all subsystems (Quantum, Symbolic, Neural, Automation, Advanced)
+1. Initialize all subsystems
 2. Define a complex global problem (climate crisis)
 3. Generate specialized algorithms for subproblems
 4. Compose them into a unified solution
@@ -215,6 +237,14 @@ The default demonstration will:
 [DATABASE] Database Manager initialized (available: ['postgresql', 'mongodb', 'redis'])
 [CLOUD] Cloud Platform Manager initialized (available: ['aws', 'azure', 'gcp'])
 [CONTAINER] Container Manager initialized (docker: True, k8s: True)
+[AUTONOMOUS-OPS] Initializing Autonomous Operations Controller
+[AUTONOMOUS] Decision Engine initialized
+[SELF-HEAL] Self-Healing System initialized
+[AUTO-LEARN] Autonomous Learning System initialized
+[RESOURCE-MGR] Autonomous Resource Manager initialized
+[ORCHESTRATOR] Autonomous Task Orchestrator initialized
+[AUTONOMOUS-OPS] All autonomous systems initialized
+[AUTONOMOUS-OPS] Autonomous operation started
 [QUANTUM] Successfully initialized 8-qubit quantum simulator
 [SYMBOLIC] Successfully initialized symbolic reasoner with Prolog
 [NEURAL] Successfully initialized neural processor with transformer embeddings
@@ -230,6 +260,11 @@ SOLUTION SUMMARY
 Problem: Global Climate Crisis Mitigation
 Approach: meta-algorithmic composition
 ... (detailed results)
+
+[AUTONOMOUS-OPS] ========== Cycle #1 ==========
+[AUTONOMOUS] Decision: continue_normal_operation (reason: System stable)
+[AUTO-LEARN] Learned 1 patterns, knowledge base: 1 entries
+[AUTONOMOUS-OPS] Cycle #1 completed
 ```
 
 ### Running ARIA (JavaScript)
@@ -596,6 +631,163 @@ const automatedLearning = async () => {
 aria.automation.registerTask('hourly_learning', automatedLearning, 3600);
 aria.automation.startAutomationLoop();
 ```
+
+## 🤖 Autonomous Operations
+
+Both systems feature comprehensive autonomous operation capabilities. See [AUTONOMOUS_OPERATIONS.md](AUTONOMOUS_OPERATIONS.md) for full documentation.
+
+### Key Autonomous Features
+
+**Autonomous Decision Engine**
+- Context-aware intelligent decision-making
+- Goal-driven behavior with priorities
+- Automatic resource scaling based on load
+- Exploration vs exploitation balancing
+
+**Self-Healing System**
+- Automatic error detection and recovery
+- Custom recovery strategy registration
+- 100% uptime with automatic failover
+- Learning from failure patterns
+
+**Continuous Learning**
+- Experience-based pattern recognition
+- Knowledge base accumulation
+- Outcome prediction
+- Adaptive behavior adjustment
+
+**Resource Management**
+- Automatic CPU/memory/disk optimization
+- Predictive resource planning
+- Threshold-based proactive optimization
+- Historical trend analysis
+
+**Task Orchestration**
+- Priority-based task queuing
+- Concurrent execution management
+- Success/failure tracking
+- Dynamic load balancing
+
+### Running with Autonomous Operations
+
+**Python (Enabled by default):**
+```bash
+# With autonomous operations (default)
+python3 nexus_service.py --interval 300
+
+# Disable if needed
+python3 nexus_service.py --interval 300 --no-autonomous
+```
+
+**JavaScript (Enabled by default):**
+```bash
+# With autonomous operations (default)
+node aria_service.js --interval 300
+
+# Disable if needed
+node aria_service.js --interval 300 --no-autonomous
+```
+
+### Autonomous Operation Cycle
+
+Each cycle performs:
+1. **Context Gathering** - Collect system metrics
+2. **Decision Making** - AI-driven decisions based on context
+3. **Action Execution** - Execute determined actions
+4. **Learning** - Update knowledge from experience
+5. **Resource Optimization** - Auto-tune performance
+6. **Task Orchestration** - Execute priority tasks
+7. **Self-Healing** - Recover from any errors
+
+### Monitoring Autonomous Operations
+
+The system logs detailed autonomous activity:
+
+```
+[AUTONOMOUS-OPS] ========== Cycle #5 ==========
+[AUTONOMOUS] Decision: scale_up (reason: High CPU usage)
+[AUTONOMOUS-OPS] Executing: Scale up resources
+[AUTO-LEARN] Learned 2 patterns, knowledge base: 47 entries
+[RESOURCE-MGR] Performed 1 optimizations
+[ORCHESTRATOR] Tasks executed: 3
+[SELF-HEAL] Recovery successful! (success rate: 100.0%)
+[AUTONOMOUS-OPS] Cycle #5 completed
+  - Decision: scale_up
+  - Optimizations: 1
+  - Tasks executed: 3
+```
+
+On shutdown, comprehensive autonomous metrics are displayed:
+
+```
+Autonomous Operations Final Status:
+  - Cycles: 120
+  - Decisions: 120
+  - Self-healing success: 100.0%
+  - Knowledge base: 247 entries
+  - Tasks completed: 356
+```
+
+### Programmatic Autonomous Control
+
+**Python:**
+```python
+from autonomous_ops import AutonomousOperationsController
+
+# Initialize
+controller = AutonomousOperationsController()
+
+# Add custom goal
+controller.decision_engine.add_goal("optimize_throughput", priority=0.9)
+
+# Register custom recovery strategy
+def custom_recovery(error, context):
+    # Your recovery logic
+    return True
+
+controller.self_healing.register_recovery_strategy("CustomError", custom_recovery)
+
+# Start autonomous operation
+controller.start_autonomous_operation(interval=60)  # 60 seconds
+
+# Get status anytime
+status = controller.get_comprehensive_status()
+print(f"Knowledge base: {status['learning_system']['knowledge_base_size']} entries")
+
+# Stop when needed
+controller.stop_autonomous_operation()
+```
+
+**JavaScript:**
+```javascript
+const { ARIAAutonomousController } = require('./aria_autonomous.js');
+
+// Initialize
+const controller = new ARIAAutonomousController();
+
+// Add custom goal
+controller.decisionEngine.addGoal('optimize_throughput', 0.9);
+
+// Register custom recovery strategy
+const customRecovery = async (error, context) => {
+    // Your recovery logic
+    return true;
+};
+
+controller.selfHealing.registerRecoveryStrategy('CustomError', customRecovery);
+
+// Start autonomous operation
+controller.startAutonomousOperation(60000);  // 60 seconds
+
+// Get status anytime
+const status = controller.getComprehensiveStatus();
+console.log(`Knowledge base: ${status.learningSystem.knowledgeBaseSize} entries`);
+
+// Stop when needed
+controller.stopAutonomousOperation();
+```
+
+For complete documentation, examples, and advanced configuration, see [AUTONOMOUS_OPERATIONS.md](AUTONOMOUS_OPERATIONS.md).
 
 ## Customization
 
