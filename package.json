@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "description": "ARIA - Adaptive Reasoning Intelligence Architecture: A quantum-enhanced multi-dimensional AI system",
   "main": "aria.js",
+  "type": "module",
   "scripts": {
     "start": "node aria.js",
     "test": "echo \"No tests specified\" && exit 0"
@@ -21,5 +22,8 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "dependencies": {}
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2"
+  }
 }

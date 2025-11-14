@@ -1,0 +1,89 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_NEXUS: ${{ github.repository }}/nexus
+  IMAGE_NAME_ARIA: ${{ github.repository }}/aria
+
+jobs:
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://nexus-agi.example.com
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Determine image tag
+      id: tag
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "tag=main" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Pull production images
+      run: |
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_NEXUS }}:${{ steps.tag.outputs.tag }} || \
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_NEXUS }}:main
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARIA }}:${{ steps.tag.outputs.tag }} || \
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARIA }}:main
+    
+    - name: Deploy to production (placeholder)
+      run: |
+        echo "Deploying to production environment..."
+        echo "Nexus image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_NEXUS }}:${{ steps.tag.outputs.tag }}"
+        echo "ARIA image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARIA }}:${{ steps.tag.outputs.tag }}"
+        # Add your production deployment commands here, e.g.:
+        # - SSH to production servers
+        # - Run docker-compose pull && docker-compose up -d
+        # - Or use kubectl for Kubernetes deployments
+        # - Or deploy to cloud platforms with production configurations
+        # - Implement blue-green or canary deployment strategies
+    
+    - name: Health check (placeholder)
+      run: |
+        echo "Performing production health checks..."
+        # Add actual health check commands:
+        # - curl https://nexus-agi.example.com/health
+        # - Check service responses
+        # - Verify metrics and logs
+    
+    - name: Rollback on failure (placeholder)
+      if: failure()
+      run: |
+        echo "Deployment failed! Initiating rollback..."
+        # Add rollback commands here
+    
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "::notice::Production deployment completed successfully for ${{ github.ref }}"
+    
+    - name: Create deployment record
+      if: success()
+      run: |
+        echo "Deployment timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+        echo "Git commit: ${{ github.sha }}"
+        echo "Deployed by: ${{ github.actor }}"

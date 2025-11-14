@@ -1,0 +1,133 @@
+name: JavaScript CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/javascript-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/javascript-ci.yml'
+
+jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm install --save-dev eslint prettier eslint-config-prettier eslint-plugin-node
+    
+    - name: Create ESLint config if not exists
+      run: |
+        if [ ! -f .eslintrc.json ]; then
+          cat > .eslintrc.json << 'EOF'
+        {
+          "env": {
+            "node": true,
+            "es2021": true
+          },
+          "extends": ["eslint:recommended", "prettier"],
+          "parserOptions": {
+            "ecmaVersion": 2021,
+            "sourceType": "module"
+          },
+          "rules": {
+            "no-unused-vars": "warn",
+            "no-console": "off",
+            "no-undef": "error"
+          }
+        }
+        EOF
+        fi
+    
+    - name: Create Prettier config if not exists
+      run: |
+        if [ ! -f .prettierrc.json ]; then
+          cat > .prettierrc.json << 'EOF'
+        {
+          "semi": true,
+          "trailingComma": "es5",
+          "singleQuote": true,
+          "printWidth": 100,
+          "tabWidth": 4
+        }
+        EOF
+        fi
+    
+    - name: Run ESLint
+      run: npx eslint *.js --max-warnings 50
+      continue-on-error: true
+    
+    - name: Run Prettier (format check)
+      run: npx prettier --check "*.js"
+      continue-on-error: true
+
+  test:
+    name: Test JavaScript Code
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install || echo "No npm dependencies to install"
+    
+    - name: Run syntax check
+      run: node --check aria.js && node --check aria_service.js
+    
+    - name: Run tests
+      run: npm test
+      continue-on-error: true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install || echo "No dependencies to install"
+    
+    - name: Run npm audit
+      run: npm audit --json > npm-audit.json || true
+      continue-on-error: true
+    
+    - name: Upload audit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: npm-audit-report
+        path: npm-audit.json

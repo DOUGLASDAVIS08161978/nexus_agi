@@ -53,6 +53,12 @@ yarn-error.log*
 *.tmp
 *.log
 .cache/
+.pytest_cache/
+htmlcov/
+coverage.xml
+.coverage
+bandit-report.json
+npm-audit.json
 
 # Old files
 README_OLD.py

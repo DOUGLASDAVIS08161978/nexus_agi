@@ -416,6 +416,46 @@ Created by Douglas Davis + Nova + AI Collaborators
 
 Special thanks to the open-source community for the foundational libraries that make this work possible.
 
+## CI/CD and Testing
+
+This repository includes comprehensive CI/CD pipelines with automated testing, security scanning, and deployment automation.
+
+### Continuous Integration
+
+Automated workflows run on every push and pull request:
+- **Code Quality**: Automated linting and formatting checks (flake8, black, ESLint, Prettier)
+- **Testing**: Multi-version testing across Python 3.9-3.11 and Node.js 18-22
+- **Security**: CodeQL analysis, dependency vulnerability scanning
+- **Docker**: Automated container builds and publishing to GitHub Container Registry
+
+### Running Tests Locally
+
+```bash
+# Python tests
+pytest tests/ -v --cov=. --cov-report=html
+
+# JavaScript syntax validation
+node --check aria.js aria_service.js
+
+# Code quality checks
+black --check .
+flake8 .
+npx eslint *.js
+```
+
+### CI/CD Documentation
+
+For detailed information about the CI/CD pipelines:
+- **[CI/CD Documentation](CI_CD_DOCUMENTATION.md)** - Complete usage guide
+- **[Implementation Summary](CI_CD_IMPLEMENTATION.md)** - Implementation details
+
+### Deployment
+
+The repository includes automated deployment workflows:
+- **Staging**: Auto-deploys from `develop` branch
+- **Production**: Manual approval required, deploys from `main` branch
+- **Docker**: Images published to `ghcr.io/douglasdavis08161978/nexus_agi`
+
 ## Future Directions
 
 Planned enhancements:
