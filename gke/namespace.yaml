@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-agi
+  labels:
+    name: nexus-agi
+    environment: production
