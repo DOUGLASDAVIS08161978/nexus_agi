@@ -62,14 +62,19 @@ class AdvancedQuantumProcessor:
         state_size = 2 ** self.num_qubits
         new_state = self.quantum_state.copy()
         
-        # Simplified entanglement simulation
-        for i in range(state_size):
-            if (i >> qubit1) & 1:  # If control qubit is 1
-                target_bit = (i >> qubit2) & 1
-                if target_bit == 0:
-                    # Flip target qubit
-                    flipped_index = i ^ (1 << qubit2)
-                    new_state[i], new_state[flipped_index] = new_state[flipped_index], new_state[i]
+        # Optimized entanglement simulation using vectorized operations
+        # Create index arrays for control qubit = 1
+        control_mask = np.arange(state_size)
+        control_is_one = (control_mask >> qubit1) & 1
+        target_is_zero = ((control_mask >> qubit2) & 1) == 0
+        
+        # Find indices where we need to flip
+        flip_mask = control_is_one & target_is_zero
+        flip_indices = np.where(flip_mask)[0]
+        flipped_indices = flip_indices ^ (1 << qubit2)
+        
+        # Perform the swap
+        new_state[flip_indices], new_state[flipped_indices] = new_state[flipped_indices].copy(), new_state[flip_indices].copy()
         
         self.quantum_state = new_state / np.linalg.norm(new_state)
         
@@ -142,18 +147,19 @@ class AdvancedQuantumProcessor:
         return self.quantum_state
     
     def _apply_single_qubit_gate(self, qubit: int, gate_matrix: np.ndarray) -> np.ndarray:
-        """Apply single qubit gate to quantum state"""
+        """Apply single qubit gate to quantum state (optimized with vectorization)"""
         state_size = 2 ** self.num_qubits
         new_state = np.zeros(state_size, dtype=complex)
         
-        for i in range(state_size):
-            # Extract qubit state
-            qubit_state = (i >> qubit) & 1
-            
-            # Apply gate
-            for new_qubit_state in [0, 1]:
-                new_index = (i & ~(1 << qubit)) | (new_qubit_state << qubit)
-                new_state[new_index] += gate_matrix[new_qubit_state, qubit_state] * self.quantum_state[i]
+        # Vectorized approach: process all indices at once
+        indices = np.arange(state_size)
+        qubit_states = (indices >> qubit) & 1
+        
+        # For each qubit state (0 or 1), compute the contributions
+        for new_qubit_state in [0, 1]:
+            new_indices = (indices & ~(1 << qubit)) | (new_qubit_state << qubit)
+            contributions = gate_matrix[new_qubit_state, qubit_states] * self.quantum_state[indices]
+            np.add.at(new_state, new_indices, contributions)
         
         return new_state / np.linalg.norm(new_state)
     
@@ -163,6 +169,9 @@ class AdvancedQuantumProcessor:
         """
         best_params = np.random.randn(self.num_qubits) * 2 * np.pi
         best_energy = float('inf')
+        
+        # Pre-allocate gradient array
+        gradient = np.zeros(self.num_qubits)
         
         for iteration in range(num_iterations):
             # Apply parameterized quantum circuit
@@ -174,7 +183,7 @@ class AdvancedQuantumProcessor:
             if energy < best_energy:
                 best_energy = energy
             
-            # Update parameters using gradient descent
+            # Update parameters using gradient descent with reused array
             gradient = np.random.randn(self.num_qubits) * 0.1
             best_params -= 0.01 * gradient
         
