@@ -65,16 +65,20 @@ class AdvancedQuantumProcessor:
         # Optimized entanglement simulation using vectorized operations
         # Create index arrays for control qubit = 1
         control_mask = np.arange(state_size)
-        control_is_one = (control_mask >> qubit1) & 1
-        target_is_zero = ((control_mask >> qubit2) & 1) == 0
+        control_is_one = ((control_mask >> qubit1) & 1).astype(bool)
+        target_is_zero = (((control_mask >> qubit2) & 1) == 0)
         
         # Find indices where we need to flip
         flip_mask = control_is_one & target_is_zero
         flip_indices = np.where(flip_mask)[0]
-        flipped_indices = flip_indices ^ (1 << qubit2)
         
-        # Perform the swap
-        new_state[flip_indices], new_state[flipped_indices] = new_state[flipped_indices].copy(), new_state[flip_indices].copy()
+        if len(flip_indices) > 0:
+            flipped_indices = flip_indices ^ (1 << qubit2)
+            
+            # Perform the swap using temporary storage
+            temp = new_state[flip_indices].copy()
+            new_state[flip_indices] = new_state[flipped_indices]
+            new_state[flipped_indices] = temp
         
         self.quantum_state = new_state / np.linalg.norm(new_state)
         
