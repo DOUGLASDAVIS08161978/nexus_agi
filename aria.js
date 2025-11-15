@@ -10,19 +10,23 @@
 class QuantumNeuralNetwork {
     constructor(numQubits = 1000000) {
         this.numQubits = numQubits;
+        // Reduce actual state size for memory efficiency
+        this.actualStateSize = Math.min(numQubits, 1000);
         this.quantumState = this.initializeQuantumState();
         this.entanglementMatrix = this.createEntanglementMatrix();
         this.coherenceLevel = 1.0;
-        console.log(`🔮 [QUANTUM NEURAL NETWORK] Initialized with ${numQubits.toLocaleString()} qubits`);
+        console.log(`🔮 [QUANTUM NEURAL NETWORK] Initialized with ${numQubits.toLocaleString()} qubits (${this.actualStateSize} active)`);
     }
 
     initializeQuantumState() {
-        // Initialize quantum state in superposition
-        const state = new Array(Math.min(this.numQubits, 10000)); // Limit for memory
+        // Initialize quantum state in superposition - optimized memory allocation
+        const state = new Array(this.actualStateSize);
+        const randSeed = Math.random();
+        
         for (let i = 0; i < state.length; i++) {
             state[i] = {
-                amplitude: Math.random() * 2 - 1,
-                phase: Math.random() * 2 * Math.PI,
+                amplitude: (Math.sin(i * randSeed) + 1) * 0.5 * 2 - 1,  // Deterministic randomness
+                phase: (i * randSeed * 2 * Math.PI) % (2 * Math.PI),
                 entangled: []
             };
         }
@@ -30,15 +34,15 @@ class QuantumNeuralNetwork {
     }
 
     createEntanglementMatrix() {
-        // Create sparse entanglement connections
+        // Create sparse entanglement connections - optimized
         const connections = new Map();
-        const sampleSize = Math.min(this.numQubits, 1000);
+        const sampleSize = Math.min(this.actualStateSize, 500);  // Reduced from 1000
         
         for (let i = 0; i < sampleSize; i++) {
-            const numConnections = Math.floor(Math.random() * 5) + 1;
-            const partners = [];
+            const numConnections = (i % 4) + 1;  // Deterministic 1-4 connections
+            const partners = new Array(numConnections);
             for (let j = 0; j < numConnections; j++) {
-                partners.push(Math.floor(Math.random() * sampleSize));
+                partners[j] = ((i + j + 1) * 17) % sampleSize;  // Deterministic connections
             }
             connections.set(i, partners);
         }
@@ -74,21 +78,23 @@ class QuantumNeuralNetwork {
     }
 
     quantumInterference(input) {
-        // Simulate quantum interference patterns
-        const result = [];
+        // Simulate quantum interference patterns - optimized
         const inputSize = Math.min(input.length || 10, this.quantumState.length);
+        const result = new Array(inputSize);
         
         for (let i = 0; i < inputSize; i++) {
             const qubit = this.quantumState[i];
-            const value = input[i] || Math.random();
+            const value = input[i] || 0.5;  // Default value instead of random
             
             // Apply quantum gates
-            const rotated = Math.cos(qubit.phase) * value + Math.sin(qubit.phase) * qubit.amplitude;
+            const cosPhase = Math.cos(qubit.phase);
+            const sinPhase = Math.sin(qubit.phase);
+            const rotated = cosPhase * value + sinPhase * qubit.amplitude;
             
-            // Entanglement effects
+            // Entanglement effects - cached lookup
             let entanglementEffect = 0;
-            if (this.entanglementMatrix.has(i)) {
-                const partners = this.entanglementMatrix.get(i);
+            const partners = this.entanglementMatrix.get(i);
+            if (partners) {
                 for (const partner of partners) {
                     if (partner < this.quantumState.length) {
                         entanglementEffect += this.quantumState[partner].amplitude * 0.1;
@@ -96,14 +102,14 @@ class QuantumNeuralNetwork {
                 }
             }
             
-            result.push(rotated + entanglementEffect);
+            result[i] = rotated + entanglementEffect;
         }
         
         return result;
     }
 
     measureQuantumState(interference) {
-        // Collapse superposition to classical bits
+        // Collapse superposition to classical bits - use map for efficiency
         return interference.map(val => Math.tanh(val));
     }
 
@@ -198,9 +204,9 @@ class MultiversalBridge {
     }
 
     simulateTimeline(currentState, branchIndex) {
-        // Simulate how events unfold in this timeline
-        const timeline = [];
+        // Simulate how events unfold in this timeline - optimized
         const steps = 10;
+        const timeline = new Array(steps);
         let state = { ...currentState, branch: branchIndex };
         
         for (let t = 0; t < steps; t++) {
@@ -209,24 +215,26 @@ class MultiversalBridge {
             
             state = {
                 time: t,
-                stateVector: this.evolveState(state, perturbation),
-                entropy: Math.random() * perturbation,
+                stateVector: this.evolveState(state, perturbation, t),
+                entropy: (branchIndex * 0.1 + t * 0.05) * perturbation,  // Deterministic
                 complexity: Math.log(t + 1) + branchIndex * 0.1
             };
             
-            timeline.push(state);
+            timeline[t] = state;
         }
         
         return timeline;
     }
 
-    evolveState(state, perturbation) {
-        // Simulate state evolution
-        const evolved = [];
+    evolveState(state, perturbation, seed) {
+        // Simulate state evolution - pre-allocate array
         const currentVector = state.stateVector || [0.5, 0.5, 0.5];
+        const evolved = new Array(currentVector.length);
         
         for (let i = 0; i < currentVector.length; i++) {
-            evolved.push(Math.tanh(currentVector[i] + perturbation * (Math.random() - 0.5)));
+            // Use deterministic variation based on seed to reduce random calls
+            const variation = Math.sin(seed * i + perturbation) * 0.5;
+            evolved[i] = Math.tanh(currentVector[i] + perturbation * variation);
         }
         
         return evolved;
