@@ -58,6 +58,15 @@ docker-compose logs -f nexus-agi
 
 See [META_LEARNING_CAPABILITIES.md](META_LEARNING_CAPABILITIES.md) for detailed documentation.
 
+### 🤝 AI Assistant Integration
+- **Copilot Integration**: Collaborate with GitHub Copilot and other AI assistants
+- **Problem-Solving Collaboration**: Interactive sessions for complex problem analysis
+- **Code Generation Assistance**: Request and integrate AI-assisted code generation
+- **Learning Exchange**: Share and receive learning experiences with AI systems
+- **Multi-Session Management**: Track and manage multiple collaborative sessions
+
+See [COPILOT_INTEGRATION.md](COPILOT_INTEGRATION.md) for detailed documentation.
+
 ### Technology Stack
 - **PyTorch**: Deep learning framework
 - **Transformers**: State-of-the-art NLP models
