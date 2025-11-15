@@ -49,6 +49,15 @@ docker-compose logs -f nexus-agi
 - **Meta-Learning**: Adaptive algorithms that learn how to learn
 - **Probabilistic Programming**: Bayesian inference with Pyro
 
+### 🆕 Advanced Meta-Learning & Self-Reflection
+- **Meta-Learning Engine**: Algorithms that learn about learning itself - adapts strategies based on experience
+- **Meta-Cognition Module**: Thinking about thinking - reflects on reasoning processes at multiple levels
+- **Self-Monitoring System**: Continuous performance monitoring with automatic adaptation triggers
+- **Algorithm Generator Factory**: Creates diverse portfolios of specialized learning algorithms
+- **Multi-Algorithm Generation**: Generates multiple smart algorithms for comprehensive problem-solving
+
+See [META_LEARNING_CAPABILITIES.md](META_LEARNING_CAPABILITIES.md) for detailed documentation.
+
 ### Technology Stack
 - **PyTorch**: Deep learning framework
 - **Transformers**: State-of-the-art NLP models
