@@ -37,6 +37,23 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: quantum-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - nexus-service
+      - aria-service
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   nexus-data:
     driver: local
