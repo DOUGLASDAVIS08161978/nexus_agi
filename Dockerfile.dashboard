@@ -1,0 +1,15 @@
+# Dockerfile for Quantum Consciousness Monitoring Dashboard
+FROM nginx:alpine
+
+# Copy dashboard files to nginx html directory
+COPY dashboard/index.html /usr/share/nginx/html/
+COPY dashboard/app.js /usr/share/nginx/html/
+
+# Copy nginx configuration
+COPY dashboard/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
