@@ -272,6 +272,9 @@ class NeuralProcessor:
         # Initialize optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         
+        # Cache for projection layers to avoid recreating in training loop
+        self.projection_cache = {}
+        
         # Initialize tokenizer and embedder
         try:
             self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
@@ -289,9 +292,15 @@ class NeuralProcessor:
             try:
                 inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
                 with torch.no_grad():
+                    # Move to GPU if available for faster processing
+                    if torch.cuda.is_available():
+                        inputs = {k: v.cuda() for k, v in inputs.items()}
+                        self.embedder = self.embedder.cuda()
                     outputs = self.embedder(**inputs)
                 # Use CLS token embedding or mean pooling
                 embeddings = outputs.last_hidden_state[:, 0, :]  # CLS token
+                if torch.cuda.is_available():
+                    embeddings = embeddings.cpu()
                 return embeddings
             except Exception as e:
                 print(f"[NEURAL] Error generating embeddings: {e}")
@@ -300,21 +309,21 @@ class NeuralProcessor:
             return self._fallback_embedding(text)
     
     def _fallback_embedding(self, text):
-        """Generate random embeddings as fallback"""
+        """Generate deterministic embeddings as fallback (optimized)"""
         if isinstance(text, str):
-            # Use hash of text for reproducible "random" embeddings
+            # Use hash of text for reproducible embeddings without repeated seeding
             seed = hash(text) % 10000
-            np.random.seed(seed)
-            embedding = np.random.randn(1, self.input_dim)
+            rng = np.random.RandomState(seed)
+            embedding = rng.randn(1, self.input_dim)
             return torch.tensor(embedding, dtype=torch.float32)
         elif isinstance(text, list):
-            embeddings = []
-            for t in text:
+            # Vectorized approach for lists
+            embeddings = np.zeros((len(text), self.input_dim))
+            for i, t in enumerate(text):
                 seed = hash(str(t)) % 10000
-                np.random.seed(seed)
-                embedding = np.random.randn(1, self.input_dim)
-                embeddings.append(embedding)
-            return torch.tensor(np.vstack(embeddings), dtype=torch.float32)
+                rng = np.random.RandomState(seed)
+                embeddings[i] = rng.randn(self.input_dim)
+            return torch.tensor(embeddings, dtype=torch.float32)
         else:
             return torch.randn(1, self.input_dim)
     
@@ -418,8 +427,11 @@ class NeuralProcessor:
                 # Reshape output if needed to match target
                 if output.shape != batch_target.shape:
                     if output.shape[0] == batch_target.shape[0]:
-                        # Only shape[1] differs, use a linear projection
-                        output = nn.Linear(output.shape[1], batch_target.shape[1])(output)
+                        # Only shape[1] differs, use a cached linear projection
+                        shape_key = (output.shape[1], batch_target.shape[1])
+                        if shape_key not in self.projection_cache:
+                            self.projection_cache[shape_key] = nn.Linear(shape_key[0], shape_key[1])
+                        output = self.projection_cache[shape_key](output)
                     else:
                         print(f"[NEURAL] Error: Batch shape mismatch {output.shape} vs {batch_target.shape}")
                         continue
@@ -918,6 +930,9 @@ class HoloConceptEngine:
         self.concept_space = {}
         self.semantic_operations = self._initialize_operations()
         
+        # Add embedding cache to avoid recomputing
+        self.embedding_cache = {}
+        
         # Initialize embedding model
         try:
             self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
@@ -946,7 +961,11 @@ class HoloConceptEngine:
         }
     
     def _get_embedding(self, text):
-        """Get embedding for text using transformer model"""
+        """Get embedding for text using transformer model (with caching)"""
+        # Check cache first
+        if text in self.embedding_cache:
+            return self.embedding_cache[text]
+        
         if self.model_available:
             try:
                 inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
@@ -954,19 +973,22 @@ class HoloConceptEngine:
                     outputs = self.model(**inputs)
                 # Use CLS token embedding
                 embedding = outputs.last_hidden_state[:, 0, :].cpu().numpy()[0]
+                self.embedding_cache[text] = embedding
                 return embedding
             except Exception as e:
                 print(f"[HCE] Error generating embedding: {e}")
                 return self._synthetic_embedding(text)
         else:
-            return self._synthetic_embedding(text)
+            embedding = self._synthetic_embedding(text)
+            self.embedding_cache[text] = embedding
+            return embedding
     
     def _synthetic_embedding(self, text):
-        """Generate synthetic embedding from text"""
-        # Use hash for deterministic "random" values
+        """Generate synthetic embedding from text (optimized)"""
+        # Use hash for deterministic values without global random state
         seed = hash(text) % 10000
-        np.random.seed(seed)
-        return np.random.randn(self.embedding_dim)
+        rng = np.random.RandomState(seed)
+        return rng.randn(self.embedding_dim)
     
     def map_concepts(self, knowledge_graph):
         """Generate multi-scale, entangled concept representations"""
