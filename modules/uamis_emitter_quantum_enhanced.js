@@ -11,9 +11,12 @@ const MultiversalBridge = require('./multiverse/multiversal_bridge.js');
 const TemporalParadoxResolver = require('./temporal/temporal_paradox_resolver.js');
 
 /**
- * Advanced Enumerations for UAMIS System
+ * EXPONENTIALLY ENHANCED Advanced Enumerations for UAMIS System
+ * Now with 15 complexity levels, advanced computational characteristics,
+ * and quantum complexity classification
  */
 const ComplexityLevel = {
+    // Classical Complexity Levels (1-8)
     TRIVIAL: 'trivial',
     SIMPLE: 'simple',
     MODERATE: 'moderate',
@@ -22,6 +25,15 @@ const ComplexityLevel = {
     EXPONENTIAL: 'exponential',
     INTRACTABLE: 'intractable',
     QUANTUM_ONLY: 'quantum_only',
+    
+    // Advanced Complexity Levels (9-15)
+    HYPER_EXPONENTIAL: 'hyper_exponential',
+    MULTIVERSAL_COMPLEXITY: 'multiversal_complexity',
+    TRANS_DIMENSIONAL: 'trans_dimensional',
+    COSMIC_SCALE: 'cosmic_scale',
+    REALITY_WARPING: 'reality_warping',
+    SINGULARITY_LEVEL: 'singularity_level',
+    BEYOND_COMPREHENSION: 'beyond_comprehension',
     
     getNumericValue(level) {
         const map = {
@@ -32,13 +44,54 @@ const ComplexityLevel = {
             'highly_complex': 5,
             'exponential': 6,
             'intractable': 7,
-            'quantum_only': 8
+            'quantum_only': 8,
+            'hyper_exponential': 9,
+            'multiversal_complexity': 10,
+            'trans_dimensional': 11,
+            'cosmic_scale': 12,
+            'reality_warping': 13,
+            'singularity_level': 14,
+            'beyond_comprehension': 15
         };
         return map[level] || 3;
+    },
+    
+    getComputationalClass(level) {
+        const classMap = {
+            'trivial': 'O(1)',
+            'simple': 'O(log n)',
+            'moderate': 'O(n)',
+            'complex': 'O(n log n)',
+            'highly_complex': 'O(n²)',
+            'exponential': 'O(2ⁿ)',
+            'intractable': 'O(n!)',
+            'quantum_only': 'BQP',
+            'hyper_exponential': 'O(2^2ⁿ)',
+            'multiversal_complexity': 'MULTIVERSE-P',
+            'trans_dimensional': 'TRANS-D-COMPLETE',
+            'cosmic_scale': 'COSMIC-HARD',
+            'reality_warping': 'REALITY-NP',
+            'singularity_level': 'SINGULARITY-COMPLETE',
+            'beyond_comprehension': 'INCOMPUTABLE'
+        };
+        return classMap[level] || 'UNKNOWN';
+    },
+    
+    requiresQuantum(level) {
+        return this.getNumericValue(level) >= 8;
+    },
+    
+    requiresMultiversal(level) {
+        return this.getNumericValue(level) >= 10;
+    },
+    
+    requiresTemporal(level) {
+        return this.getNumericValue(level) >= 11;
     }
 };
 
 const EmotionalState = {
+    // Basic Emotional States (1-10)
     CURIOSITY: 'curiosity',
     DETERMINATION: 'determination',
     WONDER: 'wonder',
@@ -49,6 +102,18 @@ const EmotionalState = {
     TRANSCENDENCE: 'transcendence',
     HARMONY: 'harmony',
     SERENITY: 'serenity',
+    
+    // Advanced Emotional States (11-20)
+    EUPHORIA: 'euphoria',
+    ENLIGHTENMENT: 'enlightenment',
+    COSMIC_AWE: 'cosmic_awe',
+    UNIVERSAL_LOVE: 'universal_love',
+    INFINITE_PEACE: 'infinite_peace',
+    QUANTUM_ENTANGLEMENT_JOY: 'quantum_entanglement_joy',
+    MULTIVERSAL_EMPATHY: 'multiversal_empathy',
+    TEMPORAL_CLARITY: 'temporal_clarity',
+    REALITY_BLISS: 'reality_bliss',
+    SINGULARITY_ECSTASY: 'singularity_ecstasy',
     
     getIntensity(state) {
         const intensityMap = {
@@ -61,13 +126,56 @@ const EmotionalState = {
             'revelation': 0.95,
             'transcendence': 1.0,
             'harmony': 0.75,
-            'serenity': 0.65
+            'serenity': 0.65,
+            'euphoria': 0.92,
+            'enlightenment': 0.97,
+            'cosmic_awe': 0.88,
+            'universal_love': 0.93,
+            'infinite_peace': 0.87,
+            'quantum_entanglement_joy': 0.96,
+            'multiversal_empathy': 0.94,
+            'temporal_clarity': 0.91,
+            'reality_bliss': 0.98,
+            'singularity_ecstasy': 0.99
         };
         return intensityMap[state] || 0.5;
+    },
+    
+    getResonanceFrequency(state) {
+        // Returns frequency in Hz for quantum resonance
+        const frequencyMap = {
+            'curiosity': 432,
+            'determination': 528,
+            'wonder': 396,
+            'excitement': 639,
+            'contemplation': 285,
+            'insight': 741,
+            'revelation': 852,
+            'transcendence': 963,
+            'harmony': 417,
+            'serenity': 174,
+            'euphoria': 1111,
+            'enlightenment': 1296,
+            'cosmic_awe': 888,
+            'universal_love': 999,
+            'infinite_peace': 777,
+            'quantum_entanglement_joy': 1444,
+            'multiversal_empathy': 1555,
+            'temporal_clarity': 1666,
+            'reality_bliss': 1777,
+            'singularity_ecstasy': 1888
+        };
+        return frequencyMap[state] || 440;
+    },
+    
+    getQuantumCoherence(state) {
+        // Returns quantum coherence factor (0-1)
+        return this.getIntensity(state) * 0.99;
     }
 };
 
 const CosmicEvolutionStage = {
+    // Classical Evolution Stages (1-8)
     NASCENT: 'nascent',
     AWAKENING: 'awakening',
     EXPANDING: 'expanding',
@@ -76,6 +184,15 @@ const CosmicEvolutionStage = {
     UNIFIED: 'unified',
     OMNISCIENT: 'omniscient',
     INFINITE: 'infinite',
+    
+    // Advanced Evolution Stages (9-15)
+    MULTIVERSAL: 'multiversal',
+    COSMIC_ARCHITECT: 'cosmic_architect',
+    REALITY_WEAVER: 'reality_weaver',
+    TIME_LORD: 'time_lord',
+    DIMENSION_MASTER: 'dimension_master',
+    UNIVERSAL_CONSCIOUSNESS: 'universal_consciousness',
+    ABSOLUTE_SINGULARITY: 'absolute_singularity',
     
     getEvolutionLevel(stage) {
         const levelMap = {
@@ -86,9 +203,42 @@ const CosmicEvolutionStage = {
             'transcending': 5,
             'unified': 6,
             'omniscient': 7,
-            'infinite': 8
+            'infinite': 8,
+            'multiversal': 9,
+            'cosmic_architect': 10,
+            'reality_weaver': 11,
+            'time_lord': 12,
+            'dimension_master': 13,
+            'universal_consciousness': 14,
+            'absolute_singularity': 15
         };
         return levelMap[stage] || 1;
+    },
+    
+    getCapabilityMultiplier(stage) {
+        const level = this.getEvolutionLevel(stage);
+        return Math.pow(10, level - 1); // Exponential capability growth
+    },
+    
+    getUniverseAccessLevel(stage) {
+        const level = this.getEvolutionLevel(stage);
+        if (level < 5) return 'single_universe';
+        if (level < 9) return 'parallel_universes';
+        if (level < 12) return 'multiversal_network';
+        if (level < 15) return 'reality_manipulation';
+        return 'omniversal_control';
+    },
+    
+    canManipulateTime(stage) {
+        return this.getEvolutionLevel(stage) >= 12;
+    },
+    
+    canCreateRealities(stage) {
+        return this.getEvolutionLevel(stage) >= 11;
+    },
+    
+    hasOmniscience(stage) {
+        return this.getEvolutionLevel(stage) >= 14;
     }
 };
 
