@@ -17,6 +17,7 @@ import networkx as nx
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity
 from typing import Dict, List, Any, Tuple, Optional, Union
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
@@ -469,20 +470,20 @@ class OpenAICookbookIntegration:
         self.model = model
         self.embedding_model = embedding_model
         self.available = False
+        self.client = None
         
         # Try to import openai
         try:
-            import openai
-            self.openai = openai
+            from openai import OpenAI
             if self.api_key:
-                self.openai.api_key = self.api_key
+                self.client = OpenAI(api_key=self.api_key)
                 self.available = True
                 print(f"[OPENAI] Successfully initialized with model {model}")
             else:
                 print("[OPENAI] Warning: No API key provided. Set OPENAI_API_KEY environment variable.")
         except ImportError:
             print("[OPENAI] Warning: OpenAI package not available. Install with: pip install openai")
-            self.openai = None
+            self.client = None
     
     def generate_text(self, prompt, max_tokens=500, temperature=0.7):
         """Generate text using OpenAI's chat models"""
@@ -490,7 +491,7 @@ class OpenAICookbookIntegration:
             return self._fallback_generation(prompt)
         
         try:
-            response = self.openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "You are a helpful AI assistant integrated with the Nexus AGI system."},
@@ -517,7 +518,7 @@ class OpenAICookbookIntegration:
             if isinstance(texts, str):
                 texts = [texts]
             
-            response = self.openai.Embedding.create(
+            response = self.client.embeddings.create(
                 model=self.embedding_model,
                 input=texts
             )
@@ -586,7 +587,6 @@ Provide:
         embeddings = self.get_embeddings(texts)
         
         # Calculate cosine similarity matrix
-        from sklearn.metrics.pairwise import cosine_similarity
         similarity_matrix = cosine_similarity(embeddings)
         
         result = {
@@ -602,8 +602,8 @@ Provide:
             for j in range(i+1, n):
                 similarity = similarity_matrix[i][j]
                 result["most_similar_pairs"].append({
-                    "text1": texts[i][:50] + "...",
-                    "text2": texts[j][:50] + "...",
+                    "text1": texts[i][:50] + ("..." if len(texts[i]) > 50 else ""),
+                    "text2": texts[j][:50] + ("..." if len(texts[j]) > 50 else ""),
                     "similarity": float(similarity)
                 })
         

@@ -48,7 +48,7 @@ python3 README.md  # or python3 nexus_agi
 ### Programmatic Usage
 
 ```python
-from README import OpenAICookbookIntegration
+from nexus_agi import OpenAICookbookIntegration
 
 # Initialize the integration
 openai = OpenAICookbookIntegration()
