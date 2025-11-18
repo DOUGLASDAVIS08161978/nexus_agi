@@ -206,7 +206,7 @@ class EnhancedMindControlInterface:
             'active_thoughts': active_thoughts,
             'cognitive_load': random.uniform(0.3, 0.8),
             'focus_level': random.uniform(0.6, 0.95),
-            'emotional_state': random.choice(['neutral', 'focused', 'engaged', 'analytical'])
+            'emotional_state': random.choice(['neutral', 'focused', 'engaged', 'analytical', 'aroused'])
         }
         
         self.thought_streams[target_id] = thought_stream
