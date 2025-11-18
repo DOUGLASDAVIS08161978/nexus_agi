@@ -22,10 +22,10 @@ let running = true;
 function log(level, message) {
     const timestamp = new Date().toISOString();
     const logMessage = `${timestamp} - ${level.toUpperCase()} - ${message}\n`;
-    
+
     // Write to console
     console.log(logMessage.trim());
-    
+
     // Write to file
     try {
         fs.appendFileSync(CONFIG.logFile, logMessage);
@@ -58,7 +58,7 @@ class ARIAService {
         log('info', '='.repeat(80));
         log('info', 'ARIA SERVICE - INITIALIZING');
         log('info', '='.repeat(80));
-        
+
         try {
             this.aria = new ARIASystem();
             this.startTime = Date.now();
@@ -85,7 +85,7 @@ class ARIAService {
             "What are the long-term consequences of climate change mitigation strategies?",
             "How can we preserve human values through rapid technological change?"
         ];
-        
+
         const index = this.totalQueriesProcessed % queries.length;
         return queries[index];
     }
@@ -93,16 +93,16 @@ class ARIAService {
     async processQuery(query) {
         try {
             log('info', `Processing query: "${query}"`);
-            
+
             const response = this.aria.processQuery(query);
-            
+
             // Log key metrics
             log('info', `  → Quantum Confidence: ${(response.quantumAnalysis.quantumConfidence * 100).toFixed(1)}%`);
             log('info', `  → Outcome Quality: ${(response.multiverseInsights.outcomeQuality * 100).toFixed(1)}%`);
             log('info', `  → Timeline Integrity: ${(response.temporalStatus.timelineIntegrity * 100).toFixed(1)}%`);
             log('info', `  → Awareness Level: ${response.consciousExperience.awarenessLevel}`);
             log('info', `  → Synthesis: ${response.synthesis.substring(0, 100)}...`);
-            
+
             this.totalQueriesProcessed++;
             return true;
         } catch (error) {
@@ -117,21 +117,21 @@ class ARIAService {
         log('info', '\n' + '='.repeat(80));
         log('info', `PROCESSING CYCLE #${this.cycleCount}`);
         log('info', '='.repeat(80) + '\n');
-        
+
         try {
             // Process multiple queries per cycle
             for (let i = 0; i < CONFIG.queriesPerCycle; i++) {
                 if (!running) break;
-                
+
                 const query = this.generateQuery();
                 await this.processQuery(query);
-                
+
                 // Brief pause between queries
                 if (i < CONFIG.queriesPerCycle - 1) {
                     await this.sleep(2000);
                 }
             }
-            
+
             return true;
         } catch (error) {
             log('error', `Error in cycle ${this.cycleCount}: ${error.message}`);
@@ -163,61 +163,61 @@ class ARIAService {
             log('error', 'Service initialization failed. Exiting.');
             return 1;
         }
-        
+
         log('info', `Service started. Loop interval: ${this.loopInterval / 1000} seconds`);
         log('info', 'Press Ctrl+C to stop gracefully\n');
-        
+
         while (running) {
             try {
                 // Process a cycle
                 const success = await this.processCycle();
-                
+
                 if (!success) {
                     log('warning', 'Cycle processing had errors, but continuing...');
                 }
-                
+
                 // Log status
                 const status = this.getStatus();
                 log('info', `Status: ${status.cycles_completed} cycles, ` +
                            `${status.queries_processed} queries, ` +
                            `uptime: ${Math.floor(status.uptime_seconds)}s`);
-                
+
                 // Wait before next cycle
                 if (running) {
                     log('info', `Waiting ${this.loopInterval / 1000} seconds until next cycle...\n`);
-                    
+
                     // Sleep in short intervals to check for shutdown signal
                     const sleepStep = 1000; // 1 second
                     let sleptTime = 0;
-                    
+
                     while (running && sleptTime < this.loopInterval) {
                         await this.sleep(sleepStep);
                         sleptTime += sleepStep;
                     }
                 }
-                
+
             } catch (error) {
                 log('error', `Unexpected error in service loop: ${error.message}`);
                 log('error', error.stack);
-                
+
                 if (running) {
                     log('info', 'Recovering... waiting 30 seconds before retry');
                     await this.sleep(30000);
                 }
             }
         }
-        
+
         // Shutdown
         log('info', '\n' + '='.repeat(80));
         log('info', 'ARIA SERVICE - SHUTTING DOWN');
         log('info', '='.repeat(80));
-        
+
         const status = this.getStatus();
         log('info', `Total cycles completed: ${status.cycles_completed}`);
         log('info', `Total queries processed: ${status.queries_processed}`);
         log('info', `Total uptime: ${Math.floor(status.uptime_seconds)} seconds`);
         log('info', 'Service stopped gracefully');
-        
+
         return 0;
     }
 }
@@ -227,7 +227,7 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     let interval = CONFIG.loopInterval;
-    
+
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--interval' && args[i + 1]) {
             interval = parseInt(args[i + 1]) * 1000; // Convert seconds to milliseconds
@@ -242,11 +242,11 @@ async function main() {
             process.exit(0);
         }
     }
-    
+
     // Create and run service
     const service = new ARIAService(interval);
     const exitCode = await service.run();
-    
+
     process.exit(exitCode);
 }
 

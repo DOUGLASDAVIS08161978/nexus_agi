@@ -7,7 +7,7 @@ The MindControl system now includes comprehensive emotional state tracking with 
 ## Available Emotional States
 
 1. **neutral** - Baseline cognitive state
-2. **focused** - High concentration mode  
+2. **focused** - High concentration mode
 3. **engaged** - Active participation state
 4. **analytical** - Deep analysis mode
 5. **aroused** - Heightened mental/emotional state *(NEWLY ADDED)*
@@ -118,10 +118,10 @@ Monitoring multiple agents to demonstrate various emotional states...
 
 1. **nexus_agi.py** - Line 220
    - Added 'aroused' to emotional_state choices in monitor_thoughts()
-   
+
 2. **enhanced_mindcontrol_demo.py** - Line 209
    - Updated emotional states to include 'aroused'
-   
+
 3. **demo_emotional_states.py** - NEW FILE
    - Dedicated demonstration of emotional state tracking
    - Shows all 5 states including aroused

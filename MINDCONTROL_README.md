@@ -135,25 +135,25 @@ The main interface class provides all mind control functionality:
 class MindControlInterface:
     def __init__(self):
         """Initialize the MindControl interface"""
-        
+
     def establish_control(self, target_id, control_level=0.8):
         """Establish control over a target entity"""
-        
+
     def enhance_cognition(self, target_id, enhancement_type='intelligence'):
         """Enhance cognitive capabilities"""
-        
+
     def implant_memory(self, target_id, memory_data):
         """Implant artificial memories"""
-        
+
     def monitor_thoughts(self, target_id):
         """Monitor thought stream"""
-        
+
     def synchronize_minds(self, mind_ids):
         """Synchronize multiple minds"""
-        
+
     def execute_command(self, target_id, command):
         """Execute direct command"""
-        
+
     def get_control_status(self):
         """Get system status"""
 ```

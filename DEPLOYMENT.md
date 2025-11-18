@@ -396,7 +396,7 @@ Example integration point in `process_problem()` method:
 def process_problem(self):
     # Replace this with your problem source
     problem = fetch_from_queue()  # Your custom function
-    
+
     solution = self.core.solve_complex_problem(problem, constraints)
     # ... rest of processing
 ```
