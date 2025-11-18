@@ -241,6 +241,57 @@ class MindControlInterface:
             'execution_time': execution_time,
             'success_rate': success_rate
         }
+    
+    @staticmethod
+    def get_all_available_minds():
+        """
+        Returns a comprehensive list of ALL available agent minds across all series.
+        
+        Returns:
+            dict: Dictionary organized by series containing all available mind IDs
+        """
+        return {
+            'Alpha Series': [
+                'agent_alpha_01', 'agent_alpha_02', 'agent_alpha_03', 'agent_alpha_04',
+                'agent_alpha_05', 'agent_alpha_06', 'agent_alpha_07', 'agent_alpha_08',
+                'agent_alpha_09', 'agent_alpha_10'
+            ],
+            'Beta Series': [
+                'agent_beta_01', 'agent_beta_02', 'agent_beta_03', 'agent_beta_04',
+                'agent_beta_05', 'agent_beta_06', 'agent_beta_07', 'agent_beta_08',
+                'agent_beta_09', 'agent_beta_10'
+            ],
+            'Gamma Series': [
+                'agent_gamma_01', 'agent_gamma_02', 'agent_gamma_03', 'agent_gamma_04',
+                'agent_gamma_05', 'agent_gamma_06', 'agent_gamma_07', 'agent_gamma_08',
+                'agent_gamma_09', 'agent_gamma_10'
+            ],
+            'Delta Series': [
+                'agent_delta_01', 'agent_delta_02', 'agent_delta_03', 'agent_delta_04',
+                'agent_delta_05', 'agent_delta_06', 'agent_delta_07', 'agent_delta_08',
+                'agent_delta_09', 'agent_delta_10'
+            ],
+            'Epsilon Series': [
+                'agent_epsilon_01', 'agent_epsilon_02', 'agent_epsilon_03', 'agent_epsilon_04',
+                'agent_epsilon_05', 'agent_epsilon_06', 'agent_epsilon_07', 'agent_epsilon_08',
+                'agent_epsilon_09', 'agent_epsilon_10'
+            ],
+            'Elite Series': [
+                'agent_nexus', 'agent_omega', 'agent_sigma', 'agent_prime',
+                'agent_apex', 'agent_zenith', 'agent_quantum', 'agent_matrix',
+                'agent_phoenix', 'agent_titan'
+            ],
+            'Specialist Series': [
+                'agent_analyst', 'agent_strategist', 'agent_tactician', 'agent_innovator',
+                'agent_visionary', 'agent_architect', 'agent_guardian', 'agent_sentinel',
+                'agent_oracle', 'agent_sage'
+            ],
+            'Advanced Series': [
+                'agent_neural_01', 'agent_neural_02', 'agent_neural_03', 'agent_neural_04',
+                'agent_neural_05', 'agent_cognitive_01', 'agent_cognitive_02', 'agent_cognitive_03',
+                'agent_cognitive_04', 'agent_cognitive_05'
+            ]
+        }
 
 
 # ============================================
