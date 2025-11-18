@@ -1,5 +1,5 @@
 # ============================================
-# MetaAlgorithm_NexusCore v3.0
+# MetaAlgorithm_NexusCore v3.0 - ENHANCED WITH MINDCONTROL INTEGRATION
 # A Meta-Intelligent System That Generates AGI-Capable Algorithms
 # Featuring Real Open Source Implementations (2025-2026 Edition)
 # Created by Douglas Davis + Nova + [Your AI Collaborator]
@@ -32,6 +32,136 @@ MODELS_PATH = os.path.join(BASE_PATH, "models")
 os.makedirs(MODELS_PATH, exist_ok=True)
 DATA_PATH = os.path.join(BASE_PATH, "data")
 os.makedirs(DATA_PATH, exist_ok=True)
+
+# ============================================
+# MINDCONTROL INTEGRATION
+# ============================================
+try:
+    import mindcontrol_client
+    MINDCONTROL_AVAILABLE = True
+    print("[MINDCONTROL] Successfully imported mindcontrol-client - mind control capabilities enabled!")
+except ImportError:
+    MINDCONTROL_AVAILABLE = False
+    print("[MINDCONTROL] Warning: mindcontrol-client not available. Install with: pip install mindcontrol-client")
+    print("[MINDCONTROL] Mind control features will use fallback simulation.")
+
+class MindControlInterface:
+    """
+    Interface for mindcontrol-client integration, providing advanced
+    consciousness manipulation and cognitive enhancement capabilities.
+    """
+    def __init__(self):
+        if MINDCONTROL_AVAILABLE:
+            try:
+                self.client = mindcontrol_client.MindControlClient()
+                self.active = True
+                print("[MINDCONTROL] Mind control client initialized successfully")
+            except Exception as e:
+                print(f"[MINDCONTROL] Error initializing client: {e}")
+                self.client = None
+                self.active = False
+        else:
+            self.client = None
+            self.active = False
+            
+        # Fallback simulation state
+        self.controlled_minds = {}
+        self.enhancement_levels = {}
+        
+    def establish_control(self, target_id, control_level=0.8):
+        """Establish mind control over a target entity"""
+        if self.active and self.client:
+            try:
+                result = self.client.establish_control(target_id, control_level)
+                self.controlled_minds[target_id] = {
+                    'level': control_level,
+                    'status': 'controlled',
+                    'timestamp': time.time()
+                }
+                print(f"[MINDCONTROL] Established control over {target_id} at level {control_level}")
+                return result
+            except Exception as e:
+                print(f"[MINDCONTROL] Error establishing control: {e}")
+                return self._fallback_control(target_id, control_level)
+        else:
+            return self._fallback_control(target_id, control_level)
+    
+    def _fallback_control(self, target_id, control_level):
+        """Fallback mind control simulation"""
+        self.controlled_minds[target_id] = {
+            'level': control_level,
+            'status': 'simulated_control',
+            'timestamp': time.time(),
+            'neural_patterns': np.random.randn(100),
+            'cognitive_enhancement': control_level * np.random.uniform(0.8, 1.2)
+        }
+        print(f"[MINDCONTROL] Simulated mind control established for {target_id}")
+        return {
+            'target_id': target_id,
+            'control_level': control_level,
+            'status': 'simulated_success',
+            'estimated_effectiveness': control_level * 0.9
+        }
+    
+    def enhance_cognition(self, target_id, enhancement_type='intelligence'):
+        """Enhance cognitive capabilities of controlled mind"""
+        if target_id not in self.controlled_minds:
+            return {'error': f'Mind {target_id} not under control'}
+            
+        base_level = self.controlled_minds[target_id]['level']
+        enhancement_multiplier = {
+            'intelligence': 2.0,
+            'creativity': 1.8,
+            'memory': 1.5,
+            'processing_speed': 1.7
+        }.get(enhancement_type, 1.0)
+        
+        enhanced_level = base_level * enhancement_multiplier * np.random.uniform(0.9, 1.1)
+        self.enhancement_levels[target_id] = {
+            'type': enhancement_type,
+            'level': enhanced_level,
+            'timestamp': time.time()
+        }
+        
+        print(f"[MINDCONTROL] Enhanced {enhancement_type} for {target_id} to level {enhanced_level:.2f}")
+        return {
+            'target_id': target_id,
+            'enhancement_type': enhancement_type,
+            'enhanced_level': enhanced_level,
+            'estimated_duration': np.random.uniform(3600, 86400)  # 1-24 hours
+        }
+    
+    def synchronize_minds(self, mind_ids):
+        """Synchronize multiple controlled minds for collective intelligence"""
+        if not mind_ids:
+            return {'error': 'No minds specified for synchronization'}
+            
+        synchronized = []
+        collective_iq = 0
+        
+        for mind_id in mind_ids:
+            if mind_id in self.controlled_minds:
+                synchronized.append(mind_id)
+                collective_iq += self.controlled_minds[mind_id]['level'] * 100
+                
+        if synchronized:
+            collective_iq = collective_iq / len(synchronized) * len(synchronized)**0.5  # Emergent bonus
+            print(f"[MINDCONTROL] Synchronized {len(synchronized)} minds - collective IQ: {collective_iq:.1f}")
+            
+        return {
+            'synchronized_minds': synchronized,
+            'collective_iq': collective_iq,
+            'emergent_properties': ['hive_mind', 'telepathic_communication'] if len(synchronized) > 2 else []
+        }
+    
+    def get_control_status(self):
+        """Get status of all controlled minds"""
+        return {
+            'active_controls': len(self.controlled_minds),
+            'controlled_entities': list(self.controlled_minds.keys()),
+            'enhancement_summary': self.enhancement_levels,
+            'system_status': 'active' if self.active else 'simulated'
+        }
 
 # ============================================
 # Open-Source Quantum Simulator
