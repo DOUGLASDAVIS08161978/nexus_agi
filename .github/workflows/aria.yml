@@ -10,6 +10,8 @@ jobs:
   run-aria:
     runs-on: ubuntu-latest
     timeout-minutes: 350  # Just under 6 hours to stay within GitHub limits
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout repository
