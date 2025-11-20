@@ -19,7 +19,9 @@
   "author": "Douglas Davis + Nova",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
 }

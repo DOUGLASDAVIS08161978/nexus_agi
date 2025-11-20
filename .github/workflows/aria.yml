@@ -1,0 +1,34 @@
+name: ARIA Scheduled Run
+
+on:
+  schedule:
+    # Run every hour at minute 0
+    - cron: '0 * * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  run-aria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350  # Just under 6 hours to stay within GitHub limits
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm install
+    
+    - name: Run ARIA script
+      run: |
+        node aria.js
+      env:
+        NODE_ENV: production
