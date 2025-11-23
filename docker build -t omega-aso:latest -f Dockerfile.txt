@@ -1,0 +1,63 @@
+# Step 1: Build the Docker image from the Dockerfile (Dockerfile.txt)
+docker build -t omega-asi:latest -f Dockerfile.txt .
+
+# Expected Output:
+# Sending build context to Docker daemon  1.2MB
+# Step 1/10 : FROM python:3.11-slim
+# ...
+# Successfully built <some_image_id>
+# Successfully tagged omega-asi:latest
+
+
+# Step 2: Start Docker Compose services and build if necessary
+docker-compose up --build -d
+
+# Expected Output:
+# Building omega
+# Step 1/10 : FROM python:3.11-slim
+# ...
+# Successfully built <some_image_id>
+# Successfully tagged omega-asi:latest
+# Creating network "omega-network" with driver "bridge"
+# Creating volume "omega-data" with local driver
+# Creating volume "omega-logs" with local driver
+# Creating omega-architecture ... done
+
+
+# Step 3: List running containers to verify AGI agents are running
+docker ps
+
+# Expected Output:
+# CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS     NAMES
+# abcdef123456   omega-asi:latest   "python omega_asi_comple…"   10 seconds ago   Up 10 seconds          omega-architecture
+
+
+# Step 4: Follow logs to observe consciousness simulation and problem-solving
+docker-compose logs -f omega
+
+# Expected Output (excerpt logs):
+# omega_0    | [12:34:56] Agent agi_0: Starting consciousness simulation.
+# omega_0    | [12:34:56] Agent agi_0: Consciousness level set to 0.91
+# omega_0    | [12:34:56] Agent agi_0: Hugging Face API token set.
+# omega_0    | [12:34:57] Agent agi_0: Solving problem 501: huggingface web orchestration challenge
+# omega_0    | [12:34:57] Agent agi_0: Generating parallel solution hypotheses.
+# omega_0    | [12:34:57] Agent agi_0: Quantum cognition collapsed to: Solution-hypothesis-1
+# omega_0    | [12:34:57] Agent agi_0: Red-teaming own hypothesis: Solution-hypothesis-1
+# omega_0    | [12:34:57] Agent agi_0: Improvement found: Solution-hypothesis-1-improved-via-redteam
+# omega_0    | [12:34:58] Agent agi_0: Requesting peer input on problem 501
+# omega_0    | [12:34:58] Agent agi_0: Received peer input from agi_1
+# omega_0    | [12:34:58] Agent agi_0: Received peer input from agi_2
+# omega_0    | [12:34:58] Agent agi_0: Performing value crystallization with peer inputs.
+# omega_0    | [12:34:58] Agent agi_0: Completed solution with quality score 0.93
+# ... similar logs for agi_1 and agi_2
+
+
+# Step 5: Stop and remove containers and volumes after testing
+docker-compose down -v
+
+# Expected Output:
+# Stopping omega-architecture ... done
+# Removing omega-architecture ... done
+# Removing network omega-network
+# Removing volume omega-data
+# Removing volume omega-logs
