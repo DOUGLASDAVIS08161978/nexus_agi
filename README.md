@@ -129,10 +129,69 @@ cd nexus_agi
 npm install
 ```
 
+## Quick Start
+
+The Nexus AGI system supports **three convenient startup methods**:
+
+### Method 1: Main Entry Point (Recommended)
+```bash
+python main.py
+```
+
+### Method 2: Python Module
+```bash
+python -m nexus_agi
+```
+
+### Method 3: Docker Compose
+```bash
+docker compose up
+```
+
+All three methods provide the same functionality. Choose the one that best fits your workflow!
+
 ## Usage
 
 ### Running Nexus Core (Python)
 
+#### Option 1: Using main.py (Recommended)
+The `main.py` entry point provides a unified CLI interface:
+
+```bash
+# Run Nexus Core demonstration
+python main.py
+
+# Run OMEGA ASI system
+python main.py --system omega
+
+# Run as continuous service (processes problems every 5 minutes)
+python main.py --service
+
+# Run as service with custom interval (60 seconds)
+python main.py --service --interval 60
+
+# Show help
+python main.py --help
+```
+
+#### Option 2: Using python -m nexus_agi
+Run the system as a Python module:
+
+```bash
+# Run Nexus Core demonstration
+python -m nexus_agi
+
+# Run OMEGA ASI system
+python -m nexus_agi --system omega
+
+# Run as continuous service
+python -m nexus_agi --service
+
+# Run with custom interval
+python -m nexus_agi --service --interval 60
+```
+
+#### Option 3: Direct script execution
 Basic execution with climate crisis demonstration:
 ```bash
 python3 nexus_agi.py
@@ -341,20 +400,35 @@ OMEGA ASI Solution:
 
 All three systems can run as **continuous services** that process problems/queries in an endless loop:
 
+- **Modern CLI interface**: Use `main.py` or `python -m nexus_agi` with `--service` flag
 - **Direct execution**: Run service scripts with Python/Node.js
 - **Docker**: Deploy as containers using Docker Compose
 - **Systemd**: Deploy as Linux system services
 
-**Quick Start:**
+**Quick Start - Choose your preferred method:**
+
+Method 1 (Main entry point):
 ```bash
 # Python service (processes problems every 5 minutes)
+python main.py --service --interval 300
+
+# Or use the module interface
+python -m nexus_agi --service --interval 300
+```
+
+Method 2 (Direct script execution):
+```bash
+# Python service
 python3 nexus_service.py --interval 300
 
 # JavaScript service (processes queries every 5 minutes)
 node aria_service.js --interval 300
+```
 
-# Or use Docker Compose
-docker-compose up -d
+Method 3 (Docker Compose):
+```bash
+# Deploy all services as containers
+docker compose up -d
 ```
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide including:
