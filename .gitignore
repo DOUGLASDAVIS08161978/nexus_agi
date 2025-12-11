@@ -57,3 +57,18 @@ yarn-error.log*
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
+
+# Environment and secrets (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
+# Database files (NEVER commit these!)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs directory
+logs/
+*.log
