@@ -1,0 +1,22 @@
+[
+  {
+    "action": "navigate",
+    "url": "https://www.example.com",
+    "description": "Navigate to example website"
+  },
+  {
+    "action": "wait",
+    "seconds": 2,
+    "description": "Wait for page to fully load"
+  },
+  {
+    "action": "get_text",
+    "selector": "h1",
+    "description": "Extract main heading"
+  },
+  {
+    "action": "screenshot",
+    "path": "example_page.png",
+    "description": "Capture screenshot of the page"
+  }
+]
