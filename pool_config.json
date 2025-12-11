@@ -1,0 +1,23 @@
+{
+  "pool_url": "stratum+tcp://stratum.slushpool.com:3333",
+  "pool_host": "stratum.slushpool.com",
+  "pool_port": 3333,
+  "pool_name": "Slush Pool",
+  "worker_name": "bc1q2m6w8au8yrjp85m7rqlcxqx9ypfla6h8st8u78.worker1",
+  "wallet_address": "bc1q2m6w8au8yrjp85m7rqlcxqx9ypfla6h8st8u78",
+  "backoff_limit": true,
+  "max_retries": 5,
+  "wait_after_connection": false,
+  "progress": 0.25,
+  "retry_delay_base": 2,
+  "retry_delay_max": 32,
+  "connection_timeout": 30,
+  "read_timeout": 60,
+  "keepalive_interval": 60,
+  "protocol": "stratum",
+  "stratum_version": "mining.subscribe",
+  "difficulty": "auto",
+  "dns_name": "stratum.slushpool.com",
+  "use_dns_lookup": true,
+  "prefer_ipv4": true
+}
