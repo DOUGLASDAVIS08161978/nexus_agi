@@ -1,0 +1,28 @@
+[Unit]
+Description=Nexus AGI BCI Daemon - Continuous Brain-Computer Interface Service
+After=network.target
+Documentation=https://github.com/DOUGLASDAVIS08161978/nexus_agi
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/nexus_agi
+ExecStart=/usr/bin/python3 /home/user/nexus_agi/bci_daemon.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+Environment="NEXUS_ENV_ID=production"
+
+# Resource limits
+LimitNOFILE=65536
+Nice=-10
+
+# Security
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
