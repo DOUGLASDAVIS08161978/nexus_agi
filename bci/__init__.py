@@ -25,6 +25,15 @@ from bci.devices.multi_device_adapter import OpenBCIAdapter, EmotivEPOCAdapter
 from bci.processing.signal_processor import UniversalSignalProcessor
 from bci.safety.safety_monitor import BCISafetyMonitor
 
+from bci.auth import (
+    NexusAGIAuthorizationSystem,
+    BiometricEEGAuthenticator,
+    BrainwaveCommunicationSystem,
+    EmotionalStateDetector,
+    AccessLevel,
+    SecurityEvent
+)
+
 __version__ = "1.0.0"
 __author__ = "Nexus AGI Team"
 
@@ -44,5 +53,11 @@ __all__ = [
     "SignalQuality",
     "BrainwaveData",
     "MentalState",
-    "MotorIntent"
+    "MotorIntent",
+    "NexusAGIAuthorizationSystem",
+    "BiometricEEGAuthenticator",
+    "BrainwaveCommunicationSystem",
+    "EmotionalStateDetector",
+    "AccessLevel",
+    "SecurityEvent"
 ]
