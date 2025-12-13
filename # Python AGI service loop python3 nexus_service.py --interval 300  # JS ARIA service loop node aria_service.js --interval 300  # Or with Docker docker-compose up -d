@@ -1,0 +1,8 @@
+# Python AGI service loop
+python3 nexus_service.py --interval 300
+
+# JS ARIA service loop
+node aria_service.js --interval 300
+
+# Or with Docker
+docker-compose up -d
