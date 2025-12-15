@@ -5,6 +5,9 @@
   "main": "aria.js",
   "scripts": {
     "start": "node aria.js",
+    "mcp": "node mcp_remote_server.js",
+    "mcp:dev": "node --watch mcp_remote_server.js",
+    "mcp:health": "curl http://localhost:3001/health",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [

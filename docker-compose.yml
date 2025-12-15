@@ -37,6 +37,35 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.aria
+    container_name: nexus-mcp-server
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MCP_PORT=3001
+      - MCP_HOST=0.0.0.0
+      - MCP_API_KEYS=${MCP_API_KEYS:-nexus-agi-default-key}
+      - MCP_CORS_ORIGINS=${MCP_CORS_ORIGINS:-*}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./logs:/app/logs
+    command: node mcp_remote_server.js
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   dashboard:
     build:
       context: .
@@ -48,6 +77,7 @@ services:
     depends_on:
       - nexus-service
       - aria-service
+      - mcp-server
     logging:
       driver: "json-file"
       options:

@@ -3,6 +3,24 @@
     "hf-mcp-server": {
       "type": "http",
       "url": "https://huggingface.co/mcp?login"
+    },
+    "nexus-agi-local": {
+      "type": "http",
+      "url": "http://localhost:3001/mcp",
+      "description": "Local Nexus AGI MCP Server - Quantum computing, consciousness analysis, and AI capabilities",
+      "auth": {
+        "type": "bearer",
+        "token": "${MCP_API_KEY}"
+      }
+    },
+    "nexus-agi-remote": {
+      "type": "http",
+      "url": "${MCP_REMOTE_URL:-http://localhost:3001/mcp}",
+      "description": "Remote Nexus AGI MCP Server - Accessible from any MCP client",
+      "auth": {
+        "type": "bearer",
+        "token": "${MCP_API_KEY}"
+      }
     }
   }
 }

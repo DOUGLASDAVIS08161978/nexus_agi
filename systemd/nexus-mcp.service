@@ -1,0 +1,47 @@
+[Unit]
+Description=Nexus AGI Remote MCP Server
+Documentation=https://github.com/DOUGLASDAVIS08161978/nexus_agi/blob/main/docs/MCP_SERVER.md
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=user
+Group=user
+WorkingDirectory=/home/user/nexus_agi
+
+# Environment file
+EnvironmentFile=/home/user/nexus_agi/.env
+
+# Start the MCP server
+ExecStart=/usr/bin/node /home/user/nexus_agi/mcp_remote_server.js
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/user/nexus_agi/logs
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nexus-mcp
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
