@@ -34,7 +34,13 @@ sympy>=1.12
 joblib>=1.3.0
 matplotlib>=3.7.0
 
+# LLM API clients (optional - for ProtoAGI agent)
+# Uncomment the provider you want to use:
+# openai>=1.0.0          # For OpenAI GPT models
+# anthropic>=0.18.0      # For Anthropic Claude models
+
 # Note: Some packages may require additional system dependencies
 # - Pennylane: For quantum simulation features
 # - PySwip: Requires SWI-Prolog to be installed on the system
 # - torch-geometric: May require additional setup for some features
+# - OpenAI/Anthropic: For ProtoAGI agent LLM capabilities
