@@ -57,3 +57,12 @@ yarn-error.log*
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
+
+# Credential vaults - NEVER commit these
+*.vault
+*_vault.json
+agi_credentials.*
+api_keys_vault.*
+example_vault.*
+tokens_vault.*
+advanced_vault.*
