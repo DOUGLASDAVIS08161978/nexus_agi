@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # BTCPay Server (Bitcoin Payment Processor)
+  btcpayserver:
+    image: btcpayserver/btcpayserver:1.12.5
+    container_name: nexus_btcpayserver
+    restart: unless-stopped
+    environment:
+      # Network configuration
+      BTCPAY_NETWORK: testnet  # Change to 'mainnet' for production
+      BTCPAY_BIND: 0.0.0.0:23000
+      BTCPAY_EXPLORERURL: http://nbxplorer:32838
+
+      # Database
+      BTCPAY_POSTGRES: "User ID=postgres;Host=postgres_btcpay;Port=5432;Database=btcpayserver"
+
+      # External URL (change for production)
+      BTCPAY_EXTERNALURL: http://localhost:23000
+
+      # Bitcoin configuration
+      BTCPAY_CHAINS: btc
+      BTCPAY_BTCLIGHTNING: type=lnd-rest;server=https://lnd_bitcoin:8080/;macaroonfilepath=/lnd/admin.macaroon;certthumbprint=
+
+    ports:
+      - "23000:23000"
+    volumes:
+      - btcpay_datadir:/datadir
+      - btcpay_plugindir:/root/.btcpayserver/Plugins
+      - lnd_bitcoin_datadir:/lnd
+    depends_on:
+      - postgres_btcpay
+      - nbxplorer
+    networks:
+      - nexus_network
+
+  # NBXplorer (Bitcoin blockchain indexer)
+  nbxplorer:
+    image: nicolasdorier/nbxplorer:2.4.3
+    container_name: nexus_nbxplorer
+    restart: unless-stopped
+    environment:
+      NBXPLORER_NETWORK: testnet
+      NBXPLORER_BIND: 0.0.0.0:32838
+      NBXPLORER_CHAINS: btc
+      NBXPLORER_POSTGRES: "User ID=postgres;Host=postgres_btcpay;Port=5432;Database=nbxplorer"
+    ports:
+      - "32838:32838"
+    volumes:
+      - nbxplorer_datadir:/datadir
+    depends_on:
+      - postgres_btcpay
+    networks:
+      - nexus_network
+
+  # PostgreSQL for BTCPay Server
+  postgres_btcpay:
+    image: postgres:15-alpine
+    container_name: nexus_postgres_btcpay
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_btcpay_datadir:/var/lib/postgresql/data
+    networks:
+      - nexus_network
+
+  # Nexus AGI API with Bitcoin support
+  nexus_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nexus_agi_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # App settings
+      APP_NAME: Nexus AGI
+      APP_VERSION: 4.0.0
+      ENVIRONMENT: production
+      DEBUG: "false"
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      APP_URL: http://localhost:8000
+
+      # Security
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+      # Database
+      DATABASE_URL: sqlite:///./data/nexus_agi.db
+
+      # Bitcoin configuration
+      BITCOIN_WALLET_ADDRESS: bc1q2m6w8au8yrjp85m7rqlcxqx9ypfla6h8st8u78
+      BTCPAY_SERVER_URL: http://btcpayserver:23000
+      BTCPAY_API_KEY: ${BTCPAY_API_KEY:-}
+      BTCPAY_STORE_ID: ${BTCPAY_STORE_ID:-}
+
+      # Payment processing
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      COINBASE_COMMERCE_API_KEY: ${COINBASE_COMMERCE_API_KEY:-}
+
+      # Rate limiting
+      RATE_LIMIT_FREE: 10
+      RATE_LIMIT_STARTER: 100
+      RATE_LIMIT_PROFESSIONAL: 1000
+      RATE_LIMIT_ENTERPRISE: 10000
+
+    volumes:
+      - api_data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - btcpayserver
+    networks:
+      - nexus_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  btcpay_datadir:
+  btcpay_plugindir:
+  nbxplorer_datadir:
+  postgres_btcpay_datadir:
+  lnd_bitcoin_datadir:
+  api_data:
+
+networks:
+  nexus_network:
+    driver: bridge

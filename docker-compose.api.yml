@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Nexus AGI API Gateway
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nexus-agi-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql://nexus:nexus123@db:5432/nexus_agi
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: nexus-agi-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=nexus
+      - POSTGRES_PASSWORD=nexus123
+      - POSTGRES_DB=nexus_agi
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis for rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-agi-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
