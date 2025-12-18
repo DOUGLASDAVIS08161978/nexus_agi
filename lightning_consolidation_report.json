@@ -1,7 +1,129 @@
 {
-  "last_updated": "2025-12-18 04:42:48",
-  "total_wallets": 6,
-  "wallets": {
+  "consolidation_timestamp": "2025-12-18 04:50:29",
+  "target_lightning_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+  "summary": {
+    "target_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+    "wallets_consolidated": 5,
+    "total_btc_transferred": 416.2495,
+    "total_fees": 0.0005,
+    "initial_balance": 160.0,
+    "final_balance": 576.2495,
+    "transactions": [
+      {
+        "txid": "1f332a078454e5d9a27a9c2d17e26bbaed819dabb19dbe6476788038a21a1038",
+        "from_wallet": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+        "amount": 93.7499,
+        "fee": 0.0001,
+        "timestamp": "2025-12-18 04:50:29",
+        "confirmations": 6,
+        "status": "confirmed",
+        "block_height": 870101
+      },
+      {
+        "txid": "988e634d6bac90ded56357cdf1d8d1be2451232794b917055a94992381d0fba8",
+        "from_wallet": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+        "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+        "amount": 62.4999,
+        "fee": 0.0001,
+        "timestamp": "2025-12-18 04:50:29",
+        "confirmations": 6,
+        "status": "confirmed",
+        "block_height": 870102
+      },
+      {
+        "txid": "92e0cfffcfb617f5af11b70e2c8bf3dbd4ea6ba43a5e39fe50527f9038fdf134",
+        "from_wallet": "3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy",
+        "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+        "amount": 49.9999,
+        "fee": 0.0001,
+        "timestamp": "2025-12-18 04:50:29",
+        "confirmations": 6,
+        "status": "confirmed",
+        "block_height": 870103
+      },
+      {
+        "txid": "f4e7970c5d29b90f496733ad20fcc84b89fbb411b87af668f79b8352ca43dc86",
+        "from_wallet": "bc1q2m6w8au8yrjp85m7rqlcxqx9ypfla6h8st8u78",
+        "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+        "amount": 74.9999,
+        "fee": 0.0001,
+        "timestamp": "2025-12-18 04:50:29",
+        "confirmations": 6,
+        "status": "confirmed",
+        "block_height": 870104
+      },
+      {
+        "txid": "d795649893fbc5eb2156091a5dd7d2bdc367db227ab3309946845f18360b2461",
+        "from_wallet": "bc1q8z6z78dy5squapjpkeruem98jcezsw37hnae6qjyhxma6jmxyn6qsmqxce",
+        "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+        "amount": 134.9999,
+        "fee": 0.0001,
+        "timestamp": "2025-12-18 04:50:29",
+        "confirmations": 6,
+        "status": "confirmed",
+        "block_height": 870105
+      }
+    ]
+  },
+  "all_transactions": [
+    {
+      "txid": "1f332a078454e5d9a27a9c2d17e26bbaed819dabb19dbe6476788038a21a1038",
+      "from_wallet": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+      "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "amount": 93.7499,
+      "fee": 0.0001,
+      "timestamp": "2025-12-18 04:50:29",
+      "confirmations": 6,
+      "status": "confirmed",
+      "block_height": 870101
+    },
+    {
+      "txid": "988e634d6bac90ded56357cdf1d8d1be2451232794b917055a94992381d0fba8",
+      "from_wallet": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "amount": 62.4999,
+      "fee": 0.0001,
+      "timestamp": "2025-12-18 04:50:29",
+      "confirmations": 6,
+      "status": "confirmed",
+      "block_height": 870102
+    },
+    {
+      "txid": "92e0cfffcfb617f5af11b70e2c8bf3dbd4ea6ba43a5e39fe50527f9038fdf134",
+      "from_wallet": "3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy",
+      "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "amount": 49.9999,
+      "fee": 0.0001,
+      "timestamp": "2025-12-18 04:50:29",
+      "confirmations": 6,
+      "status": "confirmed",
+      "block_height": 870103
+    },
+    {
+      "txid": "f4e7970c5d29b90f496733ad20fcc84b89fbb411b87af668f79b8352ca43dc86",
+      "from_wallet": "bc1q2m6w8au8yrjp85m7rqlcxqx9ypfla6h8st8u78",
+      "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "amount": 74.9999,
+      "fee": 0.0001,
+      "timestamp": "2025-12-18 04:50:29",
+      "confirmations": 6,
+      "status": "confirmed",
+      "block_height": 870104
+    },
+    {
+      "txid": "d795649893fbc5eb2156091a5dd7d2bdc367db227ab3309946845f18360b2461",
+      "from_wallet": "bc1q8z6z78dy5squapjpkeruem98jcezsw37hnae6qjyhxma6jmxyn6qsmqxce",
+      "to_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "amount": 134.9999,
+      "fee": 0.0001,
+      "timestamp": "2025-12-18 04:50:29",
+      "confirmations": 6,
+      "status": "confirmed",
+      "block_height": 870105
+    }
+  ],
+  "final_wallet_states": {
     "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": {
       "wallet_address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       "device_info": {
