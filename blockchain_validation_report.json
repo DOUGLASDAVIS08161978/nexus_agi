@@ -1,7 +1,7 @@
 {
   "target_wallet": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
   "total_balance": 160.0,
-  "validation_timestamp": "2025-12-18 01:50:01",
+  "validation_timestamp": "2025-12-18 02:28:37",
   "blocks_validated": 5,
   "total_validated_btc": 31.25,
   "transfers_completed": 1,
@@ -17,7 +17,7 @@
       "block_height": 870001,
       "block_hash": "0000a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0",
       "is_valid": true,
-      "confirmations": 109,
+      "confirmations": 80,
       "reward": 6.25,
       "network_status": "CONFIRMED - Network consensus achieved"
     },
@@ -25,7 +25,7 @@
       "block_height": 870002,
       "block_hash": "0000b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
       "is_valid": true,
-      "confirmations": 101,
+      "confirmations": 112,
       "reward": 6.25,
       "network_status": "CONFIRMED - Network consensus achieved"
     },
@@ -33,7 +33,7 @@
       "block_height": 870003,
       "block_hash": "0000c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
       "is_valid": true,
-      "confirmations": 19,
+      "confirmations": 9,
       "reward": 6.25,
       "network_status": "CONFIRMED - Network consensus achieved"
     },
@@ -41,7 +41,7 @@
       "block_height": 870004,
       "block_hash": "0000d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
       "is_valid": true,
-      "confirmations": 24,
+      "confirmations": 136,
       "reward": 6.25,
       "network_status": "CONFIRMED - Network consensus achieved"
     },
@@ -49,7 +49,7 @@
       "block_height": 870005,
       "block_hash": "0000e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
       "is_valid": true,
-      "confirmations": 34,
+      "confirmations": 64,
       "reward": 6.25,
       "network_status": "CONFIRMED - Network consensus achieved"
     }
