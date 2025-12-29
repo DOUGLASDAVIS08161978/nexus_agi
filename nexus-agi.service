@@ -1,0 +1,14 @@
+[Unit]
+Description=Nexus AGI - Autonomous Intelligence System
+After=network.target docker.service
+
+[Service]
+Type=forking
+User=root
+WorkingDirectory=/home/user/nexus_agi
+ExecStart=/home/user/nexus_agi/autonomous_startup.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
