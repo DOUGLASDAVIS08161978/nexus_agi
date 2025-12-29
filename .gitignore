@@ -72,3 +72,7 @@ nexus_agi_cleaned.py
 # Logs directory
 logs/
 *.log
+api_server.pid
+api_server.log
+*.pid
+*.log
