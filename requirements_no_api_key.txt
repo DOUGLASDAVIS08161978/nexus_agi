@@ -1,0 +1,5 @@
+gradio>=4.0.0
+huggingface_hub>=0.20.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=4.9.0
