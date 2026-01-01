@@ -1,0 +1,925 @@
+{
+  "generated_at": "2025-12-30T03:12:05.166338",
+  "summary": {
+    "total_revenue": 2617820.3093805257,
+    "total_expenses": 1649.9999999999982,
+    "balance": 2616170.3093805257,
+    "transaction_count": 29777
+  },
+  "revenue_streams": [
+    {
+      "stream_id": "api_service_001",
+      "name": "AGI-as-a-Service API",
+      "type": "api",
+      "active": true,
+      "pricing_model": "pay_per_use",
+      "base_price": 0.05,
+      "revenue_generated": 1123.7017548776512,
+      "transactions_count": 19526,
+      "success_rate": 1.0,
+      "setup_cost": 0.0,
+      "monthly_maintenance": 50.0,
+      "scalability_factor": 1.5
+    },
+    {
+      "stream_id": "consulting_001",
+      "name": "AI Problem Solving Consultation",
+      "type": "service",
+      "active": true,
+      "pricing_model": "pay_per_use",
+      "base_price": 100.0,
+      "revenue_generated": 93239.453001338,
+      "transactions_count": 813,
+      "success_rate": 1.0,
+      "setup_cost": 0.0,
+      "monthly_maintenance": 20.0,
+      "scalability_factor": 1.2
+    },
+    {
+      "stream_id": "data_analysis_001",
+      "name": "Automated Data Analysis Service",
+      "type": "service",
+      "active": true,
+      "pricing_model": "subscription",
+      "base_price": 499.0,
+      "revenue_generated": 5988.0,
+      "transactions_count": 12,
+      "success_rate": 1.0,
+      "setup_cost": 100.0,
+      "monthly_maintenance": 75.0,
+      "scalability_factor": 1.8
+    },
+    {
+      "stream_id": "code_gen_001",
+      "name": "AI Code Generation Service",
+      "type": "service",
+      "active": true,
+      "pricing_model": "pay_per_use",
+      "base_price": 25.0,
+      "revenue_generated": 28101.493771354926,
+      "transactions_count": 973,
+      "success_rate": 1.0,
+      "setup_cost": 0.0,
+      "monthly_maintenance": 30.0,
+      "scalability_factor": 1.6
+    },
+    {
+      "stream_id": "content_creation_001",
+      "name": "AI Content Creation Service",
+      "type": "content",
+      "active": true,
+      "pricing_model": "pay_per_use",
+      "base_price": 50.0,
+      "revenue_generated": 96412.47598352854,
+      "transactions_count": 1679,
+      "success_rate": 1.0,
+      "setup_cost": 0.0,
+      "monthly_maintenance": 25.0,
+      "scalability_factor": 1.4
+    },
+    {
+      "stream_id": "research_service_001",
+      "name": "Automated Research & Analysis",
+      "type": "research",
+      "active": true,
+      "pricing_model": "subscription",
+      "base_price": 999.0,
+      "revenue_generated": 2997.0,
+      "transactions_count": 3,
+      "success_rate": 1.0,
+      "setup_cost": 200.0,
+      "monthly_maintenance": 150.0,
+      "scalability_factor": 2.0
+    },
+    {
+      "stream_id": "algo_trading_001",
+      "name": "Algorithmic Trading System",
+      "type": "trading",
+      "active": true,
+      "pricing_model": "commission",
+      "base_price": 0.0,
+      "revenue_generated": 1827493.0074364934,
+      "transactions_count": 5783,
+      "success_rate": 1.0,
+      "setup_cost": 500.0,
+      "monthly_maintenance": 100.0,
+      "scalability_factor": 2.5
+    },
+    {
+      "stream_id": "ml_model_training_001",
+      "name": "Custom ML Model Training",
+      "type": "service",
+      "active": true,
+      "pricing_model": "pay_per_use",
+      "base_price": 500.0,
+      "revenue_generated": 564115.1774329324,
+      "transactions_count": 988,
+      "success_rate": 1.0,
+      "setup_cost": 300.0,
+      "monthly_maintenance": 100.0,
+      "scalability_factor": 1.7
+    }
+  ],
+  "recent_transactions": [
+    {
+      "transaction_id": "TXN_cdbbf793",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164144",
+      "amount": 548.3380923383382,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_0316bf68",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164152",
+      "amount": 113.0110167366346,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_99e4c213",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164161",
+      "amount": 605.3451898355574,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c43c03f7",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164168",
+      "amount": 234.01929643654927,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_096c49dd",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164175",
+      "amount": 555.3419797928805,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_ef998546",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164181",
+      "amount": 432.64355984848703,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_bf37e83c",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164188",
+      "amount": 378.0919274733992,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_19d321dd",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164197",
+      "amount": 232.9833535404731,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_d69d3ddf",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164204",
+      "amount": 276.54800315273263,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b6e1c2f9",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164211",
+      "amount": 439.75346334326724,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_4c8f1547",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164218",
+      "amount": 579.3698350648633,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c79b2f34",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164225",
+      "amount": 56.62591038073267,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_ff41dafd",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164231",
+      "amount": 196.97779065836917,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_ba17492a",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164238",
+      "amount": 782.8038127886554,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_96e1425c",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164247",
+      "amount": 422.78737222452895,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_aff3d534",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164264",
+      "amount": 574.4998353226281,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_16110366",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164278",
+      "amount": 342.0876031189299,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_0bfe8166",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164290",
+      "amount": 155.60502837731138,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2ea231a9",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164302",
+      "amount": 285.9797071748734,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b10a666b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164314",
+      "amount": 191.41039197345668,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_39f6805a",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164326",
+      "amount": 870.2320023998228,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c9c4138d",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164337",
+      "amount": 50.94058275907943,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_196533d5",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164348",
+      "amount": 115.23257542828773,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_3beed52a",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164359",
+      "amount": 183.120290896709,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_4019de81",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164372",
+      "amount": 221.8690393702981,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_d8b49a1e",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164384",
+      "amount": 98.60892500860885,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_ad07628b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164445",
+      "amount": 103.88243546322853,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_9c0a015c",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164460",
+      "amount": 273.0611645826819,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_0088ec7e",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164475",
+      "amount": 47.01025652475829,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_dbdecb0c",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164488",
+      "amount": 456.42544191999724,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_dbcb31cc",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164500",
+      "amount": 525.8487510966187,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_5fd369bc",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164512",
+      "amount": 900.2635787124808,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_f478bdec",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164523",
+      "amount": 67.31590016704999,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b85c3b0b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164535",
+      "amount": 71.44076226666996,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_7de7d3c3",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164546",
+      "amount": 91.9059476120532,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_cbebe1e1",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164558",
+      "amount": 422.48254516356246,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_31e39adc",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164578",
+      "amount": 167.52931144410346,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b1f3e8d0",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164591",
+      "amount": 845.4013346082556,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_0920e368",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164604",
+      "amount": 462.50334911744494,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_614c9222",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164617",
+      "amount": 587.32530775432,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2d48a313",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164629",
+      "amount": 189.9470469320742,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_baf642ea",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164641",
+      "amount": 411.0039215118735,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_4c19cf33",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164653",
+      "amount": 182.84078137060425,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2f225f28",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164666",
+      "amount": 397.7975312322241,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_4e8f259e",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164681",
+      "amount": 158.21834286350813,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_793d79c2",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164694",
+      "amount": 212.9717241351489,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_f36e79a5",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164706",
+      "amount": 470.44028540680074,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_3cc47632",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164718",
+      "amount": 273.9498352201593,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_d8c5d64c",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164730",
+      "amount": 420.56560821115977,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_eb6ad032",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164742",
+      "amount": 820.3995424886299,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b191d740",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164757",
+      "amount": 115.16930110780795,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_33118187",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164769",
+      "amount": 241.87551706844542,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_4159b802",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164781",
+      "amount": 295.1406775798339,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_946d2acf",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164794",
+      "amount": 296.974625041499,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_3ef68cb1",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164805",
+      "amount": 347.4108992104798,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_773e05c6",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164817",
+      "amount": 178.03856510050483,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_99ff9d53",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164829",
+      "amount": 393.18739887759693,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_58ccbbbb",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164844",
+      "amount": 701.4120947405012,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_55583579",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164856",
+      "amount": 487.4891261335413,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_aaeb9828",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164868",
+      "amount": 170.94858544306285,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_db178411",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164880",
+      "amount": 81.65528176985242,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_ccd6696b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164892",
+      "amount": 596.1299292506282,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_1de26109",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164906",
+      "amount": 189.7694838347916,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2cd45a12",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164919",
+      "amount": 93.99832393954411,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_55f6846f",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164933",
+      "amount": 349.4792919096365,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_14011afb",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164947",
+      "amount": 22.57773015022416,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_987c7681",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164960",
+      "amount": 237.34990553932565,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_1c798a6e",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.164988",
+      "amount": 452.68971035068427,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_99f4b5b9",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165003",
+      "amount": 283.25033967511,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_0ef2da2b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165020",
+      "amount": 329.2509217165722,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_35f9ce27",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165033",
+      "amount": 212.9772226184465,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_036b6674",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165045",
+      "amount": 168.62064872840273,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2d329403",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165059",
+      "amount": 416.5144398903168,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_cb97f240",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165071",
+      "amount": 189.5183593346044,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_8d3b6ad9",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165083",
+      "amount": 72.63580519116788,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_696f0c8e",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165096",
+      "amount": 83.1427907603808,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c6284cef",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165108",
+      "amount": 300.54812772674677,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c2091ae5",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165119",
+      "amount": 465.01636194943455,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b65aced1",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165135",
+      "amount": 467.02443551554427,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2eec8183",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165146",
+      "amount": 333.1524352405464,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_eb7986e3",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165158",
+      "amount": 21.297808109597614,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_8136da98",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165169",
+      "amount": 406.64772630352707,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_e2fc2695",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165181",
+      "amount": 854.1548772035554,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_61c22495",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165193",
+      "amount": 199.97448412591132,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_df04562f",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165204",
+      "amount": 229.90199646870263,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_5f5e2ed5",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165217",
+      "amount": 157.86924553895835,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b4af6c37",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165235",
+      "amount": 152.02547678613277,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_c1cdbd92",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165248",
+      "amount": 327.01799064505593,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_3447e06b",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165262",
+      "amount": 613.5269881711794,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_98fb2771",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165276",
+      "amount": 190.3989432310588,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_9a528b98",
+      "stream_id": "algo_trading_001",
+      "timestamp": "2025-12-29T03:12:05.165290",
+      "amount": 317.6088710754482,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_1ab3c103",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165307",
+      "amount": 699.5917863488883,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_2b2045ae",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165324",
+      "amount": 583.9365711060796,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_77503068",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165337",
+      "amount": 519.0531137666471,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_a9326e84",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165349",
+      "amount": 746.528684255916,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_f8c44dc9",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165363",
+      "amount": 455.0342914871569,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_33a720d6",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165375",
+      "amount": 598.5116167145303,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_b4893bc4",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165388",
+      "amount": 408.8611188157055,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_6b14f355",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165399",
+      "amount": 567.5529110534029,
+      "currency": "USD",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "TXN_f84873c7",
+      "stream_id": "ml_model_training_001",
+      "timestamp": "2025-12-29T03:12:05.165414",
+      "amount": 559.5897447979047,
+      "currency": "USD",
+      "status": "completed"
+    }
+  ]
+}

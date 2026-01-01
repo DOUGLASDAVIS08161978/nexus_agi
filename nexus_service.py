@@ -1,4 +1,4 @@
-sudo su 
+ 
 #!/usr/bin/env python3
 """
 Nexus AGI Service - Continuous Execution Loop

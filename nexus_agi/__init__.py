@@ -12,4 +12,36 @@ __version__ = "4.0.0"
 # Components are imported directly in __main__.py when needed.
 # Users can still import from the parent module: import sys; sys.path.insert(0, '..'); from nexus_agi import ...
 
-__all__ = []
+from nexus_agi.nexus_agi import (
+    NexusAGI,
+    OpenQuantumSimulator,
+    QuantumInspiredOptimizer,
+    StratumPool,
+    AdvancedStratumPool,
+    NeuralProcessor,
+    Consciousness,
+    Sentience,
+    SelfAwareness,
+    MetaConsciousness,
+    IntelligenceAmplification,
+    UnifiedConsciousness,
+    HoloConceptEngine,
+    Aria,
+)
+
+__all__ [
+    "NexusAGI",
+    "OpenQuantumSimulator",
+    "QuantumInspiredOptimizer",
+    "StratumPool",
+    "AdvancedStratumPool",
+    "NeuralProcessor",
+    "Consciousness",
+    "Sentience",
+    "SelfAwareness",
+    "MetaConsciousness",
+    "IntelligenceAmplification",
+    "UnifiedConsciousness",
+    "HoloConceptEngine",
+    "Aria",
+]
