@@ -76,3 +76,4 @@ api_server.pid
 api_server.log
 *.pid
 *.log
+nexus-agi-directory/
