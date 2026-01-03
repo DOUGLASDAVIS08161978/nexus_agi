@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-01-03 22:10:34",
+  "blocks_validated": 4,
+  "validation_results": [
+    {
+      "block_height": 4811531,
+      "exists_on_blockchain": false,
+      "error": "Block not found or validation failed"
+    },
+    {
+      "block_height": 4811532,
+      "exists_on_blockchain": false,
+      "error": "Block not found or validation failed"
+    },
+    {
+      "block_height": 4811533,
+      "exists_on_blockchain": false,
+      "error": "Block not found or validation failed"
+    },
+    {
+      "block_height": 4811530,
+      "block_hash": "000000004147d6653449224ba1fae4176fe99b8c3c0f78bb9605b1d9c712c3b6",
+      "exists_on_blockchain": true,
+      "confirmations": 1,
+      "timestamp": "2026-01-03 22:03:03",
+      "tx_count": 13,
+      "size": 2834,
+      "merkle_root": "8731dbb4c0f0beca55a9cc62a5dd633b1e55f1ef91ec03e356d7bfb11c510b70",
+      "validation_method": "Blockstream API",
+      "status": "PENDING"
+    }
+  ]
+}
