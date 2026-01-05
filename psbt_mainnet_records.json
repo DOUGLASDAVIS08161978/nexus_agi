@@ -1,0 +1,42 @@
+[
+  {
+    "success": true,
+    "timestamp": "2026-01-05T18:23:59.125356",
+    "mode": "demo",
+    "network": "mainnet",
+    "method": "PSBT",
+    "psbt": {
+      "psbt_id": "psbt_ec9d92477da21396c93ec8b94833cd0a",
+      "psbt_base64": "eyJ2ZXJzaW9uIjogMiwgInBzYnRfdmVyc2lvbiI6IDAsICJ0eCI6IHsidmVyc2lvbiI6IDIsICJsb2NrdGltZSI6IDAsICJpbnB1...",
+      "signed": false,
+      "num_inputs": 1,
+      "num_outputs": 2
+    },
+    "source": {
+      "chain": "Bitcoin Mainnet",
+      "address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "psbt_id": "psbt_ec9d92477da21396c93ec8b94833cd0a",
+      "amount": 300.0
+    },
+    "destination": {
+      "chain": "Ethereum Mainnet",
+      "address": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "tx_hash": "0x14f8619c35ea1b2672e706325291c7c9fcf53117df043235891f131e23ce0263",
+      "amount": 299.7
+    },
+    "amounts": {
+      "btc_original": 300.0,
+      "bridge_fee": 0.3,
+      "wbtc_received": 299.7
+    },
+    "validation": {
+      "validated": true,
+      "status": "success",
+      "block_number": 18500000,
+      "gas_used": 65000,
+      "demo": true
+    },
+    "status": "completed",
+    "confirmations": 12
+  }
+]
