@@ -1,0 +1,27 @@
+[
+  {
+    "success": true,
+    "timestamp": "2026-01-05T18:19:44.533102",
+    "mode": "demo",
+    "network": "testnet",
+    "source": {
+      "chain": "Bitcoin Testnet",
+      "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+      "tx_hash": "testnet_btc_tx_ecabb0b852e2ec52b7fec3640053c3e3",
+      "amount": 500.0
+    },
+    "destination": {
+      "chain": "Ethereum Sepolia",
+      "address": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "tx_hash": "0x78cb9f3bc4e63055ce2ed2daed03c25584e65e0409ec9af63afc6c8356c30b72",
+      "amount": 499.5
+    },
+    "amounts": {
+      "btc_original": 500.0,
+      "bridge_fee": 0.5,
+      "wbtc_received": 499.5
+    },
+    "status": "completed",
+    "confirmations": 3
+  }
+]
