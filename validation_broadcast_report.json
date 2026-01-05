@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-01-05T15:58:23.700125",
+  "tx_hash": "0x8df2dd3057d9bfc384aaa4a83772a3ea7473631fe8f742d3940d5fe068a86ea4",
+  "source": {
+    "chain": "Bitcoin",
+    "address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+    "amount": 300.0
+  },
+  "destination": {
+    "chain": "Ethereum",
+    "address": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+    "amount": 299.7
+  },
+  "validation": {
+    "bitcoin": true,
+    "ethereum": true
+  },
+  "status": "completed"
+}

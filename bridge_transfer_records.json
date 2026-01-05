@@ -19,5 +19,26 @@
     },
     "status": "completed",
     "mode": "demo"
+  },
+  {
+    "success": true,
+    "timestamp": "2026-01-05T15:58:39.238473",
+    "source": {
+      "chain": "Bitcoin",
+      "address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "tx_hash": "demo_btc_tx_3f5a07d1f17d66ff95e6adbe6effc4b3"
+    },
+    "destination": {
+      "chain": "Ethereum",
+      "address": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "tx_hash": "0x974f01f000f97c549f2dc8427b33a16184521a3ca66c44133ffefff6cd94df25"
+    },
+    "amounts": {
+      "btc_original": 300.0,
+      "bridge_fee": 0.3,
+      "wbtc_received": 299.7
+    },
+    "status": "completed",
+    "mode": "demo"
   }
 ]
