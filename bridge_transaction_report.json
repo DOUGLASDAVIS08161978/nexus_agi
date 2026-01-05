@@ -1,0 +1,28 @@
+{
+  "bridge_transaction_id": "e33d9e2ab4c541bd0a8939ad2ce25e9c7f30a8a9539f243a6ed8f3905242b158",
+  "timestamp": "2026-01-05 15:55:06",
+  "source_chain": "Bitcoin",
+  "destination_chain": "Ethereum",
+  "source_address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+  "destination_address": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+  "amount_locked_btc": 160.0,
+  "bridge_fee": 0.32,
+  "amount_minted_wbtc": 159.68,
+  "eth_equivalent": 2395.2000000000003,
+  "bitcoin_tx_hash": "d45b55782e6f853bf735e135864e39384bfc356b03fe8e595a6f22daffbf3ea4",
+  "ethereum_tx_hash": "0x9ed87f3cb238b9ce8f9494a3637e07075e3d2fdd2c92291886f84ddb14eae277",
+  "wbtc_contract": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+  "status": "COMPLETED",
+  "bitcoin_confirmations": 6,
+  "ethereum_confirmations": 12,
+  "verification": "PASSED",
+  "smart_contract_calls": [
+    {
+      "contract": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "function": "mint",
+      "tx_hash": "0x9ed87f3cb238b9ce8f9494a3637e07075e3d2fdd2c92291886f84ddb14eae277",
+      "gas_used": 85000,
+      "status": "CONFIRMED"
+    }
+  ]
+}
