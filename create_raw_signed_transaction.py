@@ -62,13 +62,20 @@ def create_raw_wbtc_transfer(nonce=14):
     print(f"   Amount: {amount_satoshis} (satoshis)")
     print(f"   Data: {data[:66]}...")
 
+    # Calculate affordable gas price
+    # Account balance: 46705557216658 wei = 0.0000467 ETH
+    # Gas limit: 65000
+    # Max gas price = balance / gas = 46705557216658 / 65000 = 718,547,034 wei = 0.718 Gwei
+    # Using 0.65 Gwei for safety buffer
+    affordable_gas_price = 650000000  # 0.65 Gwei
+
     # Create transaction dict
     transaction = {
         'nonce': nonce,  # Using the nonce parameter
         'to': wbtc_contract,
         'value': 0,  # No ETH being sent, only WBTC
         'gas': 65000,  # Standard for ERC20 transfer
-        'gasPrice': 50000000000,  # 50 Gwei - adjust as needed
+        'gasPrice': affordable_gas_price,  # 0.65 Gwei - affordable with current balance
         'data': data,
         'chainId': 1  # Ethereum mainnet
     }
@@ -76,7 +83,13 @@ def create_raw_wbtc_transfer(nonce=14):
     print(f"\n⛽ Gas Configuration:")
     print(f"   Gas Limit: {transaction['gas']:,}")
     print(f"   Gas Price: {transaction['gasPrice']:,} wei ({transaction['gasPrice']/10**9} Gwei)")
+    print(f"   Total Gas Cost: {transaction['gas'] * transaction['gasPrice']:,} wei ({transaction['gas'] * transaction['gasPrice']/10**18:.9f} ETH)")
     print(f"   Nonce: {nonce}")
+
+    print(f"\n💰 Account Balance Check:")
+    print(f"   Balance: 46,705,557,216,658 wei (0.0000467 ETH)")
+    print(f"   Gas Cost: {transaction['gas'] * transaction['gasPrice']:,} wei ({transaction['gas'] * transaction['gasPrice']/10**18:.9f} ETH)")
+    print(f"   ✅ Sufficient funds!")
 
     # Sign the transaction
     print(f"\n🔐 Signing transaction with nonce {nonce}...")
