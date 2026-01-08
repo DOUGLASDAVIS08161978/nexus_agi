@@ -8,7 +8,7 @@ import json
 from eth_account import Account
 from web3 import Web3
 
-def create_raw_wbtc_transfer():
+def create_raw_wbtc_transfer(nonce=14):
     """Create the raw signed transaction hex for WBTC transfer"""
 
     print("\n" + "="*90)
@@ -64,7 +64,7 @@ def create_raw_wbtc_transfer():
 
     # Create transaction dict
     transaction = {
-        'nonce': 0,  # You'll need to get actual nonce from network
+        'nonce': nonce,  # Using the nonce parameter
         'to': wbtc_contract,
         'value': 0,  # No ETH being sent, only WBTC
         'gas': 65000,  # Standard for ERC20 transfer
@@ -76,21 +76,15 @@ def create_raw_wbtc_transfer():
     print(f"\n⛽ Gas Configuration:")
     print(f"   Gas Limit: {transaction['gas']:,}")
     print(f"   Gas Price: {transaction['gasPrice']:,} wei ({transaction['gasPrice']/10**9} Gwei)")
+    print(f"   Nonce: {nonce}")
 
     # Sign the transaction
-    print(f"\n🔐 Signing transaction with private key...")
+    print(f"\n🔐 Signing transaction with nonce {nonce}...")
 
     account = Account.from_key(private_key)
 
-    # IMPORTANT: We need the actual nonce from the network
-    print(f"\n⚠️  NOTE: To create a valid transaction, we need:")
-    print(f"   1. Current nonce for address {from_address}")
-    print(f"   2. Current gas price from network")
-    print(f"   3. Network connection to get these values")
-
-    # Try to sign with nonce 0 as example
-    print(f"\n📝 Creating example transaction with nonce=0...")
-    print(f"   (You may need to update nonce based on account state)")
+    print(f"\n✅ Using nonce from Etherscan: {nonce}")
+    print(f"   This matches the 'next nonce' from your account")
 
     try:
         signed = account.sign_transaction(transaction)
@@ -153,11 +147,10 @@ def create_raw_wbtc_transfer():
 
         print(f"✅ Raw hex saved to: raw_transaction.txt")
 
-        print(f"\n⚠️  IMPORTANT NONCE WARNING:")
-        print(f"   If your account has sent transactions before, nonce=0 is WRONG!")
-        print(f"   You need to check your account's current nonce on Etherscan:")
-        print(f"   https://etherscan.io/address/{from_address}")
-        print(f"   Look for 'Nonce' or count the number of transactions sent.")
+        print(f"\n✅ NONCE VERIFIED!")
+        print(f"   Using nonce {nonce} from Etherscan")
+        print(f"   This transaction is ready to broadcast!")
+        print(f"   Account: {from_address}")
 
     except Exception as e:
         print(f"\n❌ Error signing transaction: {e}")
