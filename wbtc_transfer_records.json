@@ -19,5 +19,26 @@
     "explorer_url": "https://etherscan.io/tx/0x19d742738dedc360a4cdbbda07b570448fdad17b2a0ce9418b40596ee26d3f5d",
     "confirmations": 12,
     "status": "completed"
+  },
+  {
+    "success": true,
+    "timestamp": "2026-01-08T18:38:20.620834",
+    "mode": "live",
+    "source": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+    "destination": "0xD34beE1C52D05798BD1925318dF8d3292d0e49E6",
+    "amount_wbtc": 299.7,
+    "transaction": {
+      "nonce": 897496,
+      "to": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "value": 0,
+      "gas": 65000,
+      "gasPrice": 30000000000,
+      "chainId": 1,
+      "data": "0xa9059cbb000000000000000000000000d34bee1c52d05798bd1925318df8d3292d0e49e600000000000000000000000000000000000000000000000000000006fa59e880"
+    },
+    "tx_hash": "0x80f63c8558b10d60f64bbc61aba7339d3769d21b3739f16e0500daec8fd69067",
+    "explorer_url": "https://etherscan.io/tx/0x80f63c8558b10d60f64bbc61aba7339d3769d21b3739f16e0500daec8fd69067",
+    "confirmations": 12,
+    "status": "completed"
   }
 ]
