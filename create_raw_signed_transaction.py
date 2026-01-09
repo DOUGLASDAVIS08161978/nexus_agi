@@ -8,12 +8,16 @@ import json
 from eth_account import Account
 from web3 import Web3
 
-def create_raw_wbtc_transfer(nonce=14):
+def create_raw_wbtc_transfer(nonce=15):
     """Create the raw signed transaction hex for WBTC transfer"""
 
     print("\n" + "="*90)
     print("  🔐 CREATING RAW SIGNED TRANSACTION FOR ETHERSCAN")
     print("="*90 + "\n")
+
+    # Use the CORRECT address - the one controlled by the private key
+    # This is the user's MetaMask address
+    from_address = "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771"
 
     # Load transaction details
     with open('wbtc_transfer_records.json', 'r') as f:
@@ -24,7 +28,7 @@ def create_raw_wbtc_transfer(nonce=14):
 
         latest = records[-1]
         print(f"📋 Transaction Details:")
-        print(f"   From:   {latest['source']}")
+        print(f"   From:   {from_address} (YOUR MetaMask address)")
         print(f"   To:     {latest['destination']}")
         print(f"   Amount: {latest['amount_wbtc']} WBTC\n")
 
@@ -63,11 +67,13 @@ def create_raw_wbtc_transfer(nonce=14):
     print(f"   Data: {data[:66]}...")
 
     # Calculate affordable gas price
-    # Account balance: 46705557216658 wei = 0.0000467 ETH
+    # Previous balance: 46,705,557,216,658 wei
+    # Gas used in failed tx: 17,338,750,000,000 wei
+    # Current balance: ~29,366,807,216,658 wei = 0.0000294 ETH
     # Gas limit: 65000
-    # Max gas price = balance / gas = 46705557216658 / 65000 = 718,547,034 wei = 0.718 Gwei
-    # Using 0.65 Gwei for safety buffer
-    affordable_gas_price = 650000000  # 0.65 Gwei
+    # Max gas price = 29,366,807,216,658 / 65000 = 451,797,034 wei = 0.451 Gwei
+    # Using 0.4 Gwei for safety buffer
+    affordable_gas_price = 400000000  # 0.4 Gwei
 
     # Create transaction dict
     transaction = {
@@ -87,7 +93,9 @@ def create_raw_wbtc_transfer(nonce=14):
     print(f"   Nonce: {nonce}")
 
     print(f"\n💰 Account Balance Check:")
-    print(f"   Balance: 46,705,557,216,658 wei (0.0000467 ETH)")
+    print(f"   Previous Balance: 46,705,557,216,658 wei (0.0000467 ETH)")
+    print(f"   Gas Used (failed tx): 17,338,750,000,000 wei (0.00001734 ETH)")
+    print(f"   Current Balance: ~29,366,807,216,658 wei (0.0000294 ETH)")
     print(f"   Gas Cost: {transaction['gas'] * transaction['gasPrice']:,} wei ({transaction['gas'] * transaction['gasPrice']/10**18:.9f} ETH)")
     print(f"   ✅ Sufficient funds!")
 
