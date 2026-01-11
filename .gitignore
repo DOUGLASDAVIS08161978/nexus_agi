@@ -77,3 +77,4 @@ api_server.log
 *.pid
 *.log
 nexus-agi-directory/
+transformers/
