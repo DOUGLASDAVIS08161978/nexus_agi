@@ -1,0 +1,21 @@
+[Unit]
+Description=Nexus AGI Autonomous Mining Daemon
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/nexus_agi
+ExecStart=/usr/bin/python3 /home/user/nexus_agi/nexus_agi_autonomous_daemon.py --daemon
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+CPUQuota=80%
+MemoryLimit=2G
+
+[Install]
+WantedBy=multi-user.target
