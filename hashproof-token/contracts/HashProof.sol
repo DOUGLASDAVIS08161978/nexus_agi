@@ -87,16 +87,15 @@ contract HashProof is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGu
         internal
         override(ERC20, ERC20Pausable)
     {
-        require(from != address(0), "ERC20: transfer from zero address");
-        require(to != address(0), "ERC20: transfer to zero address");
-
         // Check max transaction amount (unless excluded)
-        if (!isExcludedFromLimits[from] && !isExcludedFromLimits[to]) {
+        // Skip for minting (from == 0) and burning (to == 0)
+        if (from != address(0) && to != address(0) && !isExcludedFromLimits[from] && !isExcludedFromLimits[to]) {
             require(amount <= maxTransactionAmount, "Transfer amount exceeds max");
         }
 
         // Apply burn if not excluded from fees
-        if (!isExcludedFromFees[from] && !isExcludedFromFees[to] && from != address(0)) {
+        // Only burn on actual transfers (not minting or burning)
+        if (from != address(0) && to != address(0) && !isExcludedFromFees[from] && !isExcludedFromFees[to]) {
             uint256 burnAmount = (amount * BURN_RATE) / BASIS_POINTS;
 
             if (burnAmount > 0) {

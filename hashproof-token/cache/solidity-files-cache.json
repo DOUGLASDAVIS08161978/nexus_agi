@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/user/nexus_agi/hashproof-token/contracts/HashProof.sol": {
-      "lastModificationDate": 1768081852791,
-      "contentHash": "95f16bc903f983f48d066491f43ece50",
+      "lastModificationDate": 1768101595559,
+      "contentHash": "8cbb706afaa5a62513c87940926ab3da",
       "sourceName": "contracts/HashProof.sol",
       "solcConfig": {
         "version": "0.8.20",
