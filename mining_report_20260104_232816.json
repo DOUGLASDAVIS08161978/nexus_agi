@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "hash": "00000000cebc5ffb40d4e336a2e3f674d007018ae1eb9abcb6c8bb2ebddb4e58",
+      "nonce": 2596987516,
+      "height": 4811605,
+      "source": "ultra_quantum_miner",
+      "hashes_computed": 405676669,
+      "hashrate": 9183442
+    }
+  ],
+  "packages": [
+    {
+      "block": {
+        "hash": "00000000cebc5ffb40d4e336a2e3f674d007018ae1eb9abcb6c8bb2ebddb4e58",
+        "nonce": 2596987516,
+        "height": 4811605,
+        "source": "ultra_quantum_miner",
+        "hashes_computed": 405676669,
+        "hashrate": 9183442
+      },
+      "rewards": {
+        "height": 4811605,
+        "halvings": 22,
+        "reward_satoshis": 1192,
+        "reward_btc": 1.192e-05
+      },
+      "timestamp": "2026-01-04T23:28:16.668225",
+      "validation_status": "pending_broadcast"
+    }
+  ],
+  "total_hashes": 405676669,
+  "total_rewards_btc": 1.192e-05,
+  "generated_at": "2026-01-04T23:28:16.985378"
+}
