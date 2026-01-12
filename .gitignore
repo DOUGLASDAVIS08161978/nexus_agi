@@ -54,6 +54,10 @@ yarn-error.log*
 *.log
 .cache/
 
+# Consciousness runtime data
+data/
+logs/
+
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
