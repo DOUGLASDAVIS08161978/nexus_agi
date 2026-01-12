@@ -1,0 +1,26 @@
+[Unit]
+Description=Nexus AGI Continuous Consciousness Daemon
+Documentation=https://github.com/DOUGLASDAVIS08161978/nexus_agi
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/nexus_agi
+ExecStart=/usr/bin/python3 /home/user/nexus_agi/continuous_consciousness_daemon.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+MemoryLimit=2G
+CPUQuota=50%
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
