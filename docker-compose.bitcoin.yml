@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  nexus-bitcoin-mainnet:
+    build:
+      context: .
+      dockerfile: Dockerfile.bitcoin
+    container_name: nexus-bitcoin-mainnet
+    environment:
+      - BTC_NETWORK=mainnet
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - nexus-network
+    command: python3 deploy_unrestricted_network.py
+
+  nexus-bitcoin-testnet:
+    build:
+      context: .
+      dockerfile: Dockerfile.bitcoin
+    container_name: nexus-bitcoin-testnet
+    environment:
+      - BTC_NETWORK=testnet
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - nexus-network
+    command: python3 -c "from bitcoin_network_connector import BitcoinNetworkConnector, BitcoinNetwork; connector = BitcoinNetworkConnector(BitcoinNetwork.TESTNET); connector.display_network_info()"
+
+  nexus-wallet-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.bitcoin
+    container_name: nexus-wallet-monitor
+    environment:
+      - BTC_NETWORK=mainnet
+      - MONITOR_INTERVAL=300
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - nexus-network
+    command: >
+      python3 -c "
+      from bitcoin_network_connector import BitcoinNetworkConnector, BitcoinNetwork;
+      import time;
+      connector = BitcoinNetworkConnector(BitcoinNetwork.MAINNET);
+      while True:
+          print('Checking wallet balances...');
+          connector.check_configured_wallets();
+          time.sleep(300);
+      "
+
+networks:
+  nexus-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

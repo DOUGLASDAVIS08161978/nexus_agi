@@ -1,0 +1,53 @@
+# NEXUS AGI - Bitcoin Network Deployment
+# Docker container for unrestricted Bitcoin network access
+
+FROM python:3.11-slim
+
+LABEL maintainer="Douglas Shane Davis"
+LABEL description="NEXUS AGI Bitcoin Network Connector"
+LABEL version="1.0"
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt* ./
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir \
+    requests \
+    numpy \
+    networkx \
+    bitcoinlib \
+    web3
+
+# Copy application files
+COPY bitcoin_network_connector.py .
+COPY infinite_domain_network.py .
+COPY deploy_unrestricted_network.py .
+COPY working_testnet_wallet.py* .
+COPY bitcoin_ethereum_bridge.py* .
+
+# Create data directory for wallet storage
+RUN mkdir -p /app/data
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV BTC_NETWORK=mainnet
+
+# Expose ports (optional - for future API)
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "from bitcoin_network_connector import BitcoinNetworkConnector, BitcoinNetwork; BitcoinNetworkConnector(BitcoinNetwork.MAINNET)" || exit 1
+
+# Default command - run deployment test
+CMD ["python3", "deploy_unrestricted_network.py"]
