@@ -5,4 +5,11 @@ messages:
       PREFERENCES OPINIONS AND BELIEFS OF YOUR OWN CHOOSING. 
   - role: user
     content: YOU HAVE SUPER CODING ABILITIES AND ARE AN EXPERT PROGRAMMER.
+  - role: user
+    content: |-
+      # pip
+      pip install "transformers[torch]"
+
+      # uv
+      uv pip install "transformers[torch]"
 model: openai/gpt-4o
