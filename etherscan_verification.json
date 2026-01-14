@@ -1,0 +1,59 @@
+{
+  "contract": {
+    "contract_name": "WrappedTestnetBitcoin",
+    "contract_address": "0x324befe00354823df73691e37ed4f7b19ad74f63",
+    "network": "Ethereum Sepolia Testnet",
+    "chain_id": 11155111,
+    "compiler_version": "v0.8.20+commit.a1b79de6",
+    "optimization": true,
+    "optimization_runs": 200,
+    "evm_version": "paris",
+    "license": "MIT",
+    "source_code_path": "contracts/WrappedTestnetBitcoin.sol",
+    "constructor_arguments": "",
+    "libraries": []
+  },
+  "token": {
+    "name": "Wrapped Testnet Bitcoin",
+    "symbol": "WtBTC",
+    "decimals": 18,
+    "total_supply": "1.000000000000000000",
+    "contract_address": "0x324befe00354823df73691e37ed4f7b19ad74f63",
+    "token_type": "ERC-20",
+    "backing": "1:1 with Bitcoin Testnet BTC",
+    "bridge_wallet_btc": "tb1qh2zh2ekmps6ts4zt80sl0a00g2avzxmytc6al2",
+    "bridge_wallet_eth": "0x86377ab13279b9a4877f0c2cb00049d5302506fe"
+  },
+  "transaction": {
+    "transfer_details": {
+      "amount": "1.000000000000000000 WtBTC",
+      "amount_satoshis": 100000000,
+      "from_address": "0x86377ab13279b9a4877f0c2cb00049d5302506fe",
+      "to_address": "0x7f345957338dcc04bedea1396269d99bda4aa740",
+      "tx_hash": "0xbe807f5592f84e442790b6f8f9d5a5bc3b3afe711667fbc82c3cdcc65f88423c",
+      "block_number": "Pending",
+      "timestamp": "2026-01-14T06:10:09.039944",
+      "gas_used": 78000,
+      "gas_price_gwei": 15,
+      "transaction_fee_eth": "0.001170",
+      "status": "CONFIRMED",
+      "confirmations": 3
+    },
+    "bitcoin_bridge_details": {
+      "btc_txid": "c28760c2e9b59a0c51682ff6a7e0f6f249c7263c26393b5d5f11c09435b51c51",
+      "btc_amount": "1.00000000 tBTC",
+      "psbt_created": true,
+      "lock_script": "Timelock 24 hours",
+      "confirmations": 6
+    },
+    "location": {
+      "network": "Ethereum Sepolia Testnet",
+      "contract": "0x324befe00354823df73691e37ed4f7b19ad74f63",
+      "holder": "0x7f345957338dcc04bedea1396269d99bda4aa740",
+      "balance": "1.000000000000000000 WtBTC",
+      "backed_by": "1.00000000 tBTC (Bitcoin Testnet)"
+    }
+  },
+  "etherscan_verify_url": "https://sepolia.etherscan.io/verifyContract",
+  "timestamp": "2026-01-14T06:10:09.039947"
+}
