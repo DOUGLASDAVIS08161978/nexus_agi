@@ -1,4 +1,5 @@
-# This workflow will build and push a Python application to an Azure Web App when a commit is pushed to your default branch.
+# mine 101 blocks to mature coinbase outputs
+bitcoin-cli -regtest generatetoaddress 101 <your_address># This workflow will build and push a Python application to an Azure Web App when a commit is pushed to your default branch.
 #
 # This workflow assumes you have already created the target Azure App Service web app.
 # For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-python?tabs=bash&pivots=python-framework-flask
