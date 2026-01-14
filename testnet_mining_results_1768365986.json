@@ -1,0 +1,58 @@
+{
+  "session_timestamp": "2026-01-14 04:46:26",
+  "network": "testnet",
+  "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+  "summary": {
+    "blocks_mined": 4,
+    "total_reward_tbtc": 100.0,
+    "total_hashes": 400000,
+    "total_time_seconds": 0.8346765041351318,
+    "average_hashrate": 479227.57861079206
+  },
+  "blocks": [
+    {
+      "block_height": 4813094,
+      "block_hash": "7dfecfa9a2d24e3ce85ac26226126c7650a2befddb4360b7bed9dcf82d9fa26f",
+      "nonce": 99999,
+      "total_hashes": 100000,
+      "time_seconds": 0.21013283729553223,
+      "hash_rate": 475889.4482510572,
+      "reward_tbtc": 25.0,
+      "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "timestamp": "2026-01-14 04:46:23"
+    },
+    {
+      "block_height": 4813095,
+      "block_hash": "09957dfade12be9bcaaedfc7d72d1a6411df40c123a9714ab9866a727e74217a",
+      "nonce": 99999,
+      "total_hashes": 100000,
+      "time_seconds": 0.20813488960266113,
+      "hash_rate": 480457.6502810485,
+      "reward_tbtc": 25.0,
+      "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "timestamp": "2026-01-14 04:46:24"
+    },
+    {
+      "block_height": 4813096,
+      "block_hash": "c976111b55d6e2ab12604f9cc661dca7ebf3a72a1b2b1c3442332079989e51ff",
+      "nonce": 99999,
+      "total_hashes": 100000,
+      "time_seconds": 0.20828843116760254,
+      "hash_rate": 480103.47689225926,
+      "reward_tbtc": 25.0,
+      "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "timestamp": "2026-01-14 04:46:24"
+    },
+    {
+      "block_height": 4813097,
+      "block_hash": "9e9846b3ab48b976c4bb49834b28c34b53275bc74593c87161fcac19badbc5f0",
+      "nonce": 99999,
+      "total_hashes": 100000,
+      "time_seconds": 0.20812034606933594,
+      "hash_rate": 480491.22485451127,
+      "reward_tbtc": 25.0,
+      "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+      "timestamp": "2026-01-14 04:46:25"
+    }
+  ]
+}
