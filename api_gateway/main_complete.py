@@ -1,3 +1,4 @@
+@claude
 """
 Nexus AGI API Gateway - Complete Production Version
 FastAPI application with full authentication, billing, and usage tracking
