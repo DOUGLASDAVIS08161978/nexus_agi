@@ -7,7 +7,7 @@ eth-utils==2.3.1
 eth-abi==4.2.1
 
 # HTTP Requests
-requests==2.31.0
+requests==2.32.4
 
 # Email/SMTP
 secure-smtplib==0.1.1
