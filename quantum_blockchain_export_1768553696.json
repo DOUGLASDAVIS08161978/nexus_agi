@@ -1,0 +1,1048 @@
+{
+  "version": "2.0.0-QUANTUM-ENHANCED",
+  "export_time": "2026-01-16T08:54:56.673419",
+  "blockchain": [
+    {
+      "height": 0,
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "previous_hash": "GENESIS",
+      "timestamp": "2026-01-16T08:53:56.580395",
+      "nonce": 0,
+      "reward": 50.0,
+      "transactions": 925,
+      "consciousness_level": 0.0
+    },
+    {
+      "height": 1,
+      "hash": "00002fd19f679da8a084780f718a4c71a1b28a9fcf36b9fc0a8af8bdebfcdd05",
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "2026-01-16T08:53:56.585483",
+      "nonce": 71766,
+      "reward": 6.25,
+      "transactions": 750,
+      "consciousness_level": 0.0
+    },
+    {
+      "height": 2,
+      "hash": "0000ab81c0fd2237a32daca776ba60271e74b90accc650b91d61aba539f07bb8",
+      "previous_hash": "00002fd19f679da8a084780f718a4c71a1b28a9fcf36b9fc0a8af8bdebfcdd05",
+      "timestamp": "2026-01-16T08:53:57.208291",
+      "nonce": 37218,
+      "reward": 6.25,
+      "transactions": 1418,
+      "consciousness_level": 0.26374444611206904
+    },
+    {
+      "height": 3,
+      "hash": "00001c853a2dadcb6ec13bcabbd8d72e4deeb72b1105742deb8c58705e0d116b",
+      "previous_hash": "0000ab81c0fd2237a32daca776ba60271e74b90accc650b91d61aba539f07bb8",
+      "timestamp": "2026-01-16T08:53:57.775674",
+      "nonce": 65786,
+      "reward": 6.25,
+      "transactions": 2488,
+      "consciousness_level": 0.5669939306498528
+    },
+    {
+      "height": 4,
+      "hash": "000023c10982596f06539b04e44da6083f58c68c8cf322b2df1df1f948d2a45e",
+      "previous_hash": "00001c853a2dadcb6ec13bcabbd8d72e4deeb72b1105742deb8c58705e0d116b",
+      "timestamp": "2026-01-16T08:53:58.752614",
+      "nonce": 43469,
+      "reward": 6.25,
+      "transactions": 1561,
+      "consciousness_level": 0.914665176707422
+    },
+    {
+      "height": 5,
+      "hash": "0000c95ce6fd90111442208fd8121f45ff9cb3f86c93bdfa44dbc354a3b5e177",
+      "previous_hash": "000023c10982596f06539b04e44da6083f58c68c8cf322b2df1df1f948d2a45e",
+      "timestamp": "2026-01-16T08:53:59.335025",
+      "nonce": 2856,
+      "reward": 6.25,
+      "transactions": 677,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 6,
+      "hash": "00009f12f8414437223926b581b40c6d61f3c596ad7c3c61b97b0dc3ee07d3f1",
+      "previous_hash": "0000c95ce6fd90111442208fd8121f45ff9cb3f86c93bdfa44dbc354a3b5e177",
+      "timestamp": "2026-01-16T08:54:00.278484",
+      "nonce": 95704,
+      "reward": 6.25,
+      "transactions": 2194,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 7,
+      "hash": "0000d49078e78e6aee1ffcac870770eb7707e4728fb9bdb1d7d0aa2176c32f23",
+      "previous_hash": "00009f12f8414437223926b581b40c6d61f3c596ad7c3c61b97b0dc3ee07d3f1",
+      "timestamp": "2026-01-16T08:54:01.413433",
+      "nonce": 11514,
+      "reward": 6.25,
+      "transactions": 1144,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 8,
+      "hash": "0000c3927ffd9b3e7ccf0644f76e60615f18a3cc7a3a1cc34d0411f96c4bd26c",
+      "previous_hash": "0000d49078e78e6aee1ffcac870770eb7707e4728fb9bdb1d7d0aa2176c32f23",
+      "timestamp": "2026-01-16T08:54:01.934021",
+      "nonce": 2483,
+      "reward": 6.25,
+      "transactions": 1088,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 9,
+      "hash": "0000e642f4c917eb19c5384838e7d96035e86716412e6d1b4b850b18bdcf1a9e",
+      "previous_hash": "0000c3927ffd9b3e7ccf0644f76e60615f18a3cc7a3a1cc34d0411f96c4bd26c",
+      "timestamp": "2026-01-16T08:54:02.439551",
+      "nonce": 35494,
+      "reward": 6.25,
+      "transactions": 2097,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 10,
+      "hash": "00004f3c2ac033699a2006598b28393388474ce202fe82e8fa8934c2df8a741b",
+      "previous_hash": "0000e642f4c917eb19c5384838e7d96035e86716412e6d1b4b850b18bdcf1a9e",
+      "timestamp": "2026-01-16T08:54:03.416238",
+      "nonce": 57062,
+      "reward": 6.25,
+      "transactions": 763,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 11,
+      "hash": "00003af616084d6af1f200e5e1703db69ecf1fc314de168098311c9ece147fc2",
+      "previous_hash": "00004f3c2ac033699a2006598b28393388474ce202fe82e8fa8934c2df8a741b",
+      "timestamp": "2026-01-16T08:54:04.192608",
+      "nonce": 8345,
+      "reward": 6.25,
+      "transactions": 675,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 12,
+      "hash": "0000b3ed031bd8fbb2f1ae00fd940e67d8d51983d211e2088ceaf42abfc927d0",
+      "previous_hash": "00003af616084d6af1f200e5e1703db69ecf1fc314de168098311c9ece147fc2",
+      "timestamp": "2026-01-16T08:54:04.709574",
+      "nonce": 39290,
+      "reward": 6.25,
+      "transactions": 1785,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 13,
+      "hash": "0000b53989f858b99cc4702ad3af1e1a904f3cfcef0316df592f2c3613c299d0",
+      "previous_hash": "0000b3ed031bd8fbb2f1ae00fd940e67d8d51983d211e2088ceaf42abfc927d0",
+      "timestamp": "2026-01-16T08:54:05.506822",
+      "nonce": 149847,
+      "reward": 6.25,
+      "transactions": 1724,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 14,
+      "hash": "0000205f5b745a7ad285763f5f3d6a18e3e1ba4dac0f7881e59a2146e01946d1",
+      "previous_hash": "0000b53989f858b99cc4702ad3af1e1a904f3cfcef0316df592f2c3613c299d0",
+      "timestamp": "2026-01-16T08:54:06.280521",
+      "nonce": 22261,
+      "reward": 6.25,
+      "transactions": 2388,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 15,
+      "hash": "000088c3752899fda65883f726d27574528569e3887195e00b1c222f4dddeb51",
+      "previous_hash": "0000205f5b745a7ad285763f5f3d6a18e3e1ba4dac0f7881e59a2146e01946d1",
+      "timestamp": "2026-01-16T08:54:06.855635",
+      "nonce": 57814,
+      "reward": 6.25,
+      "transactions": 886,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 16,
+      "hash": "0000d3752d4155336b7b21a30f330d307db1cdb0dfb074dedd2bd246b02780c7",
+      "previous_hash": "000088c3752899fda65883f726d27574528569e3887195e00b1c222f4dddeb51",
+      "timestamp": "2026-01-16T08:54:08.054233",
+      "nonce": 16237,
+      "reward": 6.25,
+      "transactions": 1368,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 17,
+      "hash": "0000c9b81e5a76ea916593d110796a232eb795ca8ef2429a758d45e78232d374",
+      "previous_hash": "0000d3752d4155336b7b21a30f330d307db1cdb0dfb074dedd2bd246b02780c7",
+      "timestamp": "2026-01-16T08:54:08.610136",
+      "nonce": 95651,
+      "reward": 6.25,
+      "transactions": 1224,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 18,
+      "hash": "000096f7c679056dfbadac491bed411b5a15919e6bfab3c6979fec8487bf426f",
+      "previous_hash": "0000c9b81e5a76ea916593d110796a232eb795ca8ef2429a758d45e78232d374",
+      "timestamp": "2026-01-16T08:54:09.277250",
+      "nonce": 56473,
+      "reward": 6.25,
+      "transactions": 1961,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 19,
+      "hash": "00009b6fac6a96e59ad4238c2919b8307f5c292193521863a643ad85ac96b7c8",
+      "previous_hash": "000096f7c679056dfbadac491bed411b5a15919e6bfab3c6979fec8487bf426f",
+      "timestamp": "2026-01-16T08:54:10.102829",
+      "nonce": 51339,
+      "reward": 6.25,
+      "transactions": 552,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 20,
+      "hash": "00009443e0328ad8ab459849906d1d8eae084be77271dd36c712ed0772761c1e",
+      "previous_hash": "00009b6fac6a96e59ad4238c2919b8307f5c292193521863a643ad85ac96b7c8",
+      "timestamp": "2026-01-16T08:54:10.696989",
+      "nonce": 69890,
+      "reward": 6.25,
+      "transactions": 1173,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 21,
+      "hash": "00005922d753f2ad37c7ef045ce6fa768cee70ecf388373f8ff6298a574a7a54",
+      "previous_hash": "00009443e0328ad8ab459849906d1d8eae084be77271dd36c712ed0772761c1e",
+      "timestamp": "2026-01-16T08:54:11.519224",
+      "nonce": 54697,
+      "reward": 6.25,
+      "transactions": 2418,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 22,
+      "hash": "0000dd8b676ade09a791762ba2c6d1ac55ff485093be9e78c94187783da574b4",
+      "previous_hash": "00005922d753f2ad37c7ef045ce6fa768cee70ecf388373f8ff6298a574a7a54",
+      "timestamp": "2026-01-16T08:54:12.522884",
+      "nonce": 12466,
+      "reward": 6.25,
+      "transactions": 2319,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 23,
+      "hash": "00005c72ac2d67ad5d8e19045341f0fcabf55a1ba41eb8e55ed235873f1fb339",
+      "previous_hash": "0000dd8b676ade09a791762ba2c6d1ac55ff485093be9e78c94187783da574b4",
+      "timestamp": "2026-01-16T08:54:13.048634",
+      "nonce": 74692,
+      "reward": 6.25,
+      "transactions": 1311,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 24,
+      "hash": "000072c2d95ebe60503ac6a3120c652d7ca58155a5480470010fb0f6fc52b309",
+      "previous_hash": "00005c72ac2d67ad5d8e19045341f0fcabf55a1ba41eb8e55ed235873f1fb339",
+      "timestamp": "2026-01-16T08:54:13.678767",
+      "nonce": 63608,
+      "reward": 6.25,
+      "transactions": 1498,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 25,
+      "hash": "0000e905eec9dcc76979b89f0788ac9dcb4079beb65ec609620aa67497bd5982",
+      "previous_hash": "000072c2d95ebe60503ac6a3120c652d7ca58155a5480470010fb0f6fc52b309",
+      "timestamp": "2026-01-16T08:54:14.665328",
+      "nonce": 112145,
+      "reward": 6.25,
+      "transactions": 2339,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 26,
+      "hash": "0000bd7f689efe1713a389761c35521b38dca731c7bb43a7f86b7de0c1b322ec",
+      "previous_hash": "0000e905eec9dcc76979b89f0788ac9dcb4079beb65ec609620aa67497bd5982",
+      "timestamp": "2026-01-16T08:54:15.527592",
+      "nonce": 95585,
+      "reward": 6.25,
+      "transactions": 1789,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 27,
+      "hash": "0000be7f5d121311a02f12981f9c8080ee69636c43e414f78858dfc578e16396",
+      "previous_hash": "0000bd7f689efe1713a389761c35521b38dca731c7bb43a7f86b7de0c1b322ec",
+      "timestamp": "2026-01-16T08:54:16.192227",
+      "nonce": 137221,
+      "reward": 6.25,
+      "transactions": 1083,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 28,
+      "hash": "000023c4e36b22241d66a7b70d23d2b034854d9f4e298c4b5ea4bde631ed8a46",
+      "previous_hash": "0000be7f5d121311a02f12981f9c8080ee69636c43e414f78858dfc578e16396",
+      "timestamp": "2026-01-16T08:54:17.332480",
+      "nonce": 170803,
+      "reward": 6.25,
+      "transactions": 1525,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 29,
+      "hash": "00000a0f91784a4fded26b039732be8686d65ead49d329c5b2e2d3bd74126005",
+      "previous_hash": "000023c4e36b22241d66a7b70d23d2b034854d9f4e298c4b5ea4bde631ed8a46",
+      "timestamp": "2026-01-16T08:54:18.129454",
+      "nonce": 19591,
+      "reward": 6.25,
+      "transactions": 823,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 30,
+      "hash": "00001a203aa448ef1e1fe30c826519612a04761ec5a20deaea4c3bb57379cea8",
+      "previous_hash": "00000a0f91784a4fded26b039732be8686d65ead49d329c5b2e2d3bd74126005",
+      "timestamp": "2026-01-16T08:54:18.666459",
+      "nonce": 265409,
+      "reward": 6.25,
+      "transactions": 1324,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 31,
+      "hash": "000043a4f4cc1b8c32839c78ab6a81c9c9cce70c3c9234c01b6167b4db3a1ed6",
+      "previous_hash": "00001a203aa448ef1e1fe30c826519612a04761ec5a20deaea4c3bb57379cea8",
+      "timestamp": "2026-01-16T08:54:20.295777",
+      "nonce": 64106,
+      "reward": 6.25,
+      "transactions": 741,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 32,
+      "hash": "0000c501e2f784ffe1702d90e12b597db771bd077093ce4328e2cd60ceef8a7b",
+      "previous_hash": "000043a4f4cc1b8c32839c78ab6a81c9c9cce70c3c9234c01b6167b4db3a1ed6",
+      "timestamp": "2026-01-16T08:54:20.908605",
+      "nonce": 146924,
+      "reward": 6.25,
+      "transactions": 1654,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 33,
+      "hash": "0000440b04754c7eacbc774d3daa72a65210c3beeedc35b3401333b30920f5b5",
+      "previous_hash": "0000c501e2f784ffe1702d90e12b597db771bd077093ce4328e2cd60ceef8a7b",
+      "timestamp": "2026-01-16T08:54:21.663256",
+      "nonce": 116344,
+      "reward": 6.25,
+      "transactions": 1275,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 34,
+      "hash": "0000e0102dc7fe1fdc34b9bbe1f30ae49b72d8351169950217d63cd4946aeeaf",
+      "previous_hash": "0000440b04754c7eacbc774d3daa72a65210c3beeedc35b3401333b30920f5b5",
+      "timestamp": "2026-01-16T08:54:22.885178",
+      "nonce": 193737,
+      "reward": 6.25,
+      "transactions": 2236,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 35,
+      "hash": "00003dda0d00b9bd0f3b64f3e36c1fdf686df788834e603e38397d2e1203115a",
+      "previous_hash": "0000e0102dc7fe1fdc34b9bbe1f30ae49b72d8351169950217d63cd4946aeeaf",
+      "timestamp": "2026-01-16T08:54:23.730734",
+      "nonce": 64041,
+      "reward": 6.25,
+      "transactions": 1436,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 36,
+      "hash": "0000139c9d55e16bc0631b889e6f8d240fb50a8860dd58b6732a3120b310d5d0",
+      "previous_hash": "00003dda0d00b9bd0f3b64f3e36c1fdf686df788834e603e38397d2e1203115a",
+      "timestamp": "2026-01-16T08:54:24.604184",
+      "nonce": 31464,
+      "reward": 6.25,
+      "transactions": 923,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 37,
+      "hash": "0000fdc8fba253e450ae6084fdf173d2bbe6b586120b701d04d0f55156dd972c",
+      "previous_hash": "0000139c9d55e16bc0631b889e6f8d240fb50a8860dd58b6732a3120b310d5d0",
+      "timestamp": "2026-01-16T08:54:25.547519",
+      "nonce": 26584,
+      "reward": 6.25,
+      "transactions": 1449,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 38,
+      "hash": "000083793fc612b7ec976d344e2f59e10d5c05cbb0e0ad00c9319ead860e5c4c",
+      "previous_hash": "0000fdc8fba253e450ae6084fdf173d2bbe6b586120b701d04d0f55156dd972c",
+      "timestamp": "2026-01-16T08:54:26.097998",
+      "nonce": 72637,
+      "reward": 6.25,
+      "transactions": 1108,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 39,
+      "hash": "000091c2029b93896d70e77ce18b813dab16f79ea16ba0c2ed4cd55f6bad889a",
+      "previous_hash": "000083793fc612b7ec976d344e2f59e10d5c05cbb0e0ad00c9319ead860e5c4c",
+      "timestamp": "2026-01-16T08:54:26.723672",
+      "nonce": 32930,
+      "reward": 6.25,
+      "transactions": 973,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 40,
+      "hash": "000038cb5c033b1aeec140b4e3ee66cf72e691185ca8e5ff9b5646be8bb74db1",
+      "previous_hash": "000091c2029b93896d70e77ce18b813dab16f79ea16ba0c2ed4cd55f6bad889a",
+      "timestamp": "2026-01-16T08:54:27.549030",
+      "nonce": 46153,
+      "reward": 6.25,
+      "transactions": 1682,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 41,
+      "hash": "00006adac05d0c5f9eed378f71d04957acdd92cf4449d599447f0bb83ef07e45",
+      "previous_hash": "000038cb5c033b1aeec140b4e3ee66cf72e691185ca8e5ff9b5646be8bb74db1",
+      "timestamp": "2026-01-16T08:54:28.291640",
+      "nonce": 205314,
+      "reward": 6.25,
+      "transactions": 1670,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 42,
+      "hash": "000005b179c30ee6644bfdedd90d3417083eb3f75b8e5ebedb47a18fec36c0c3",
+      "previous_hash": "00006adac05d0c5f9eed378f71d04957acdd92cf4449d599447f0bb83ef07e45",
+      "timestamp": "2026-01-16T08:54:29.139564",
+      "nonce": 78580,
+      "reward": 6.25,
+      "transactions": 1729,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 43,
+      "hash": "00001b19f54047e2a6c4a9566b12b7c65e91b13e52eb6d653499555a54c6f1e0",
+      "previous_hash": "000005b179c30ee6644bfdedd90d3417083eb3f75b8e5ebedb47a18fec36c0c3",
+      "timestamp": "2026-01-16T08:54:30.178267",
+      "nonce": 98972,
+      "reward": 6.25,
+      "transactions": 1439,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 44,
+      "hash": "0000544fc2f794b76bdc6ef4d6add31ae63f92021b0f4dc8ef75345c3d1b3acb",
+      "previous_hash": "00001b19f54047e2a6c4a9566b12b7c65e91b13e52eb6d653499555a54c6f1e0",
+      "timestamp": "2026-01-16T08:54:30.863742",
+      "nonce": 1563,
+      "reward": 6.25,
+      "transactions": 1744,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 45,
+      "hash": "00000a32fd18099663facb39a9baa348246172cf6871776498fc117a730928d5",
+      "previous_hash": "0000544fc2f794b76bdc6ef4d6add31ae63f92021b0f4dc8ef75345c3d1b3acb",
+      "timestamp": "2026-01-16T08:54:31.368659",
+      "nonce": 154382,
+      "reward": 6.25,
+      "transactions": 1608,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 46,
+      "hash": "000034c74c1a7650c3f8344ab2a6aeae3e4409af881ff0db6d1ea5bfce8dc098",
+      "previous_hash": "00000a32fd18099663facb39a9baa348246172cf6871776498fc117a730928d5",
+      "timestamp": "2026-01-16T08:54:32.693036",
+      "nonce": 154441,
+      "reward": 6.25,
+      "transactions": 1901,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 47,
+      "hash": "0000cb7617f327e0f48120c67c014a6e96775e953dd7c8c157385b094752bc84",
+      "previous_hash": "000034c74c1a7650c3f8344ab2a6aeae3e4409af881ff0db6d1ea5bfce8dc098",
+      "timestamp": "2026-01-16T08:54:33.463309",
+      "nonce": 59039,
+      "reward": 6.25,
+      "transactions": 1866,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 48,
+      "hash": "0000a5b3e245e541a4ef34e50d30938a9ae6a09c33788a88df0e282218dd65f3",
+      "previous_hash": "0000cb7617f327e0f48120c67c014a6e96775e953dd7c8c157385b094752bc84",
+      "timestamp": "2026-01-16T08:54:34.065826",
+      "nonce": 127857,
+      "reward": 6.25,
+      "transactions": 1070,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 49,
+      "hash": "0000c4c63626e4b907a96aaae14814f05463bb8d29ef6277c4df77d06c5981b3",
+      "previous_hash": "0000a5b3e245e541a4ef34e50d30938a9ae6a09c33788a88df0e282218dd65f3",
+      "timestamp": "2026-01-16T08:54:34.992815",
+      "nonce": 55498,
+      "reward": 6.25,
+      "transactions": 1230,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 50,
+      "hash": "00001502af4cba7ffee177dde7630b523c3732121060afd10cd150f4df1b9565",
+      "previous_hash": "0000c4c63626e4b907a96aaae14814f05463bb8d29ef6277c4df77d06c5981b3",
+      "timestamp": "2026-01-16T08:54:35.593401",
+      "nonce": 62712,
+      "reward": 6.25,
+      "transactions": 1506,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 51,
+      "hash": "0000e509279e488786d4eeab0bc736fac8ae15568823681189ea9bd59f6e6bae",
+      "previous_hash": "00001502af4cba7ffee177dde7630b523c3732121060afd10cd150f4df1b9565",
+      "timestamp": "2026-01-16T08:54:36.372388",
+      "nonce": 149642,
+      "reward": 6.25,
+      "transactions": 946,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 52,
+      "hash": "00004346e5497f59a5297e6144d8fcf3f4b5b49c196ad6bef81d7ea491935b6f",
+      "previous_hash": "0000e509279e488786d4eeab0bc736fac8ae15568823681189ea9bd59f6e6bae",
+      "timestamp": "2026-01-16T08:54:37.530765",
+      "nonce": 198192,
+      "reward": 6.25,
+      "transactions": 2032,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 53,
+      "hash": "00001c74396c28a250d604d9da0e9b5fc6fee01920b8ed8ab02cfd3ddb798bb6",
+      "previous_hash": "00004346e5497f59a5297e6144d8fcf3f4b5b49c196ad6bef81d7ea491935b6f",
+      "timestamp": "2026-01-16T08:54:38.381211",
+      "nonce": 346,
+      "reward": 6.25,
+      "transactions": 1830,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 54,
+      "hash": "0000a25b335ddf13fad95a709d1f6952a20d296d35d1194eab6b5b1ad3cf5e40",
+      "previous_hash": "00001c74396c28a250d604d9da0e9b5fc6fee01920b8ed8ab02cfd3ddb798bb6",
+      "timestamp": "2026-01-16T08:54:38.883371",
+      "nonce": 28855,
+      "reward": 6.25,
+      "transactions": 641,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 55,
+      "hash": "00003ff043d731c07b0bf2ae2a8530681a973681984b7b80487f1ce8db28d5bf",
+      "previous_hash": "0000a25b335ddf13fad95a709d1f6952a20d296d35d1194eab6b5b1ad3cf5e40",
+      "timestamp": "2026-01-16T08:54:39.702588",
+      "nonce": 72333,
+      "reward": 6.25,
+      "transactions": 535,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 56,
+      "hash": "000073144d727553b17a6877cfc66ee6c7e4a9f823d6793e345d68626ce4caa0",
+      "previous_hash": "00003ff043d731c07b0bf2ae2a8530681a973681984b7b80487f1ce8db28d5bf",
+      "timestamp": "2026-01-16T08:54:40.493194",
+      "nonce": 22624,
+      "reward": 6.25,
+      "transactions": 888,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 57,
+      "hash": "0000d59c15f28874f6aba8d346c238d366cb16d402fed20ff148c5759ed794a2",
+      "previous_hash": "000073144d727553b17a6877cfc66ee6c7e4a9f823d6793e345d68626ce4caa0",
+      "timestamp": "2026-01-16T08:54:41.036590",
+      "nonce": 189193,
+      "reward": 6.25,
+      "transactions": 801,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 58,
+      "hash": "00008e424ef5ff810cab1a4490e257ea7919ab215fa9b56c94b89d4bd39ef1f7",
+      "previous_hash": "0000d59c15f28874f6aba8d346c238d366cb16d402fed20ff148c5759ed794a2",
+      "timestamp": "2026-01-16T08:54:42.254034",
+      "nonce": 21416,
+      "reward": 6.25,
+      "transactions": 1364,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 59,
+      "hash": "0000e15146f5bf7ae7aabd1df16d2f0bd9db7571c201203819a793abfb2736d5",
+      "previous_hash": "00008e424ef5ff810cab1a4490e257ea7919ab215fa9b56c94b89d4bd39ef1f7",
+      "timestamp": "2026-01-16T08:54:42.795123",
+      "nonce": 25298,
+      "reward": 6.25,
+      "transactions": 2121,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 60,
+      "hash": "0000ea84e7ae10969782577a0138fff0d0944c2ab81f62fca6d505650af7e859",
+      "previous_hash": "0000e15146f5bf7ae7aabd1df16d2f0bd9db7571c201203819a793abfb2736d5",
+      "timestamp": "2026-01-16T08:54:43.342770",
+      "nonce": 7826,
+      "reward": 6.25,
+      "transactions": 2054,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 61,
+      "hash": "00006f3387defb60b517d664b4d1404b6e1205d84cfcdefe6aa9139534723026",
+      "previous_hash": "0000ea84e7ae10969782577a0138fff0d0944c2ab81f62fca6d505650af7e859",
+      "timestamp": "2026-01-16T08:54:44.266152",
+      "nonce": 46259,
+      "reward": 6.25,
+      "transactions": 1129,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 62,
+      "hash": "000090aa56dc6b5c8e3e055eaeb99a9d0f15b4d3a80abab496f3ca0cc1060c81",
+      "previous_hash": "00006f3387defb60b517d664b4d1404b6e1205d84cfcdefe6aa9139534723026",
+      "timestamp": "2026-01-16T08:54:44.849446",
+      "nonce": 118807,
+      "reward": 6.25,
+      "transactions": 981,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 63,
+      "hash": "0000b3b9753f5dc73fd5772126fca16515afd010771d7699af6183731ea7739b",
+      "previous_hash": "000090aa56dc6b5c8e3e055eaeb99a9d0f15b4d3a80abab496f3ca0cc1060c81",
+      "timestamp": "2026-01-16T08:54:45.555613",
+      "nonce": 101203,
+      "reward": 6.25,
+      "transactions": 1733,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 64,
+      "hash": "00008871605475bd75b206d54cb0aa197c318d59604248ce0a58e2eec047f726",
+      "previous_hash": "0000b3b9753f5dc73fd5772126fca16515afd010771d7699af6183731ea7739b",
+      "timestamp": "2026-01-16T08:54:46.540267",
+      "nonce": 64253,
+      "reward": 6.25,
+      "transactions": 2166,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 65,
+      "hash": "000026d160c8e77dcd32480276a134b8943e4115e59febbf9f07cf801ba0d104",
+      "previous_hash": "00008871605475bd75b206d54cb0aa197c318d59604248ce0a58e2eec047f726",
+      "timestamp": "2026-01-16T08:54:47.149909",
+      "nonce": 182588,
+      "reward": 6.25,
+      "transactions": 2186,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 66,
+      "hash": "000025770cf7352acf3e4a7789f718d2a99bc7b71340aa2d7ce91090db2e0347",
+      "previous_hash": "000026d160c8e77dcd32480276a134b8943e4115e59febbf9f07cf801ba0d104",
+      "timestamp": "2026-01-16T08:54:48.147887",
+      "nonce": 130599,
+      "reward": 6.25,
+      "transactions": 2307,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 67,
+      "hash": "00001d08c20168b3b4a98b6e4b13de525a71512bf7f33822eaa5d5208ec63656",
+      "previous_hash": "000025770cf7352acf3e4a7789f718d2a99bc7b71340aa2d7ce91090db2e0347",
+      "timestamp": "2026-01-16T08:54:49.252865",
+      "nonce": 72549,
+      "reward": 6.25,
+      "transactions": 661,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 68,
+      "hash": "0000cc8392669655f7570c198ea79da0e54ef8116a17b1d5824857c6b98d9af4",
+      "previous_hash": "00001d08c20168b3b4a98b6e4b13de525a71512bf7f33822eaa5d5208ec63656",
+      "timestamp": "2026-01-16T08:54:49.881137",
+      "nonce": 83576,
+      "reward": 6.25,
+      "transactions": 1897,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 69,
+      "hash": "00006ed47172f8f8ef72a30aa97511d8df7f031d4eab54baafcd8d532bf0d4e2",
+      "previous_hash": "0000cc8392669655f7570c198ea79da0e54ef8116a17b1d5824857c6b98d9af4",
+      "timestamp": "2026-01-16T08:54:50.536335",
+      "nonce": 31405,
+      "reward": 6.25,
+      "transactions": 1449,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 70,
+      "hash": "000099f26b85ea0f8b3e9999e9d25676476011298441624eccd29f0d957f3a29",
+      "previous_hash": "00006ed47172f8f8ef72a30aa97511d8df7f031d4eab54baafcd8d532bf0d4e2",
+      "timestamp": "2026-01-16T08:54:51.314684",
+      "nonce": 39684,
+      "reward": 6.25,
+      "transactions": 2050,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 71,
+      "hash": "000073b83302bbbdeabf02a1f3eb3e44a741c5d308f87c26826bd2871091a49f",
+      "previous_hash": "000099f26b85ea0f8b3e9999e9d25676476011298441624eccd29f0d957f3a29",
+      "timestamp": "2026-01-16T08:54:52.052957",
+      "nonce": 28093,
+      "reward": 6.25,
+      "transactions": 2025,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 72,
+      "hash": "0000df3b735821389807bfb6af1653ba920d3a71bae55f0eb3371c5fa0d6d9ce",
+      "previous_hash": "000073b83302bbbdeabf02a1f3eb3e44a741c5d308f87c26826bd2871091a49f",
+      "timestamp": "2026-01-16T08:54:52.602667",
+      "nonce": 43076,
+      "reward": 6.25,
+      "transactions": 1571,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 73,
+      "hash": "000035577a7614e5c75bac3731a15b7f01852e2781400e790869dd46f437d4a5",
+      "previous_hash": "0000df3b735821389807bfb6af1653ba920d3a71bae55f0eb3371c5fa0d6d9ce",
+      "timestamp": "2026-01-16T08:54:53.543699",
+      "nonce": 144859,
+      "reward": 6.25,
+      "transactions": 1331,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 74,
+      "hash": "00006e016c34ff76023f58d463d0ec6c763fd5b5c000ab671a7ef450fa7e96d1",
+      "previous_hash": "000035577a7614e5c75bac3731a15b7f01852e2781400e790869dd46f437d4a5",
+      "timestamp": "2026-01-16T08:54:54.295973",
+      "nonce": 49236,
+      "reward": 6.25,
+      "transactions": 2193,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 75,
+      "hash": "000005da763490c6a077172cbbc7c179373f21654c53302926d23b388a7b4cda",
+      "previous_hash": "00006e016c34ff76023f58d463d0ec6c763fd5b5c000ab671a7ef450fa7e96d1",
+      "timestamp": "2026-01-16T08:54:54.887831",
+      "nonce": 696,
+      "reward": 6.25,
+      "transactions": 1355,
+      "consciousness_level": 1.0
+    },
+    {
+      "height": 76,
+      "hash": "00008dda830d652f1f01115523b205179482e15da53020f839059f3f9dc45585",
+      "previous_hash": "000005da763490c6a077172cbbc7c179373f21654c53302926d23b388a7b4cda",
+      "timestamp": "2026-01-16T08:54:55.985456",
+      "nonce": 105087,
+      "reward": 6.25,
+      "transactions": 1889,
+      "consciousness_level": 1.0
+    }
+  ],
+  "bridges": [
+    {
+      "bridge_id": "BRIDGE-1768553637-4070",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x673d5fba988e17c92ac7af465cdcd8f64325cc07fc2b9768c840cc1e0de9612e",
+      "gas_used": 66958,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:53:57.900512"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553640-9361",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x36ecf46e067db2b39701f7a879f4fc253e3f348e0ff117f4b77a7d3552ed2b35",
+      "gas_used": 55242,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:00.441966"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553642-6833",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x66e0fb20f0ced02503843f7f95b944dcd3d13acc71f42a2a2f02c47e582aea8a",
+      "gas_used": 60756,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:02.504227"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553644-1409",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x8a2710a68dfc819001e30f0db785d83e575f891e6a0fd67c68ae47be6ea8e98e",
+      "gas_used": 53287,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:04.778560"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553646-3226",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x20e96a9e980d7b97287828668b3dd6b966a5dae8ad5de710c5bf15fc84be4dc4",
+      "gas_used": 81050,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:06.961310"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553649-4364",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x68afb56eec123edb676596cc3830196742b9dedd6d14c0aeeba9e4827c219911",
+      "gas_used": 67097,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:09.378607"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553651-3117",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xfaf14a7c76f42a0a241b7af0f04e219ed32d92b20e0b4982a331184e0ed656ca",
+      "gas_used": 83269,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:11.615617"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553653-6362",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x74847c566c4227e0ea7992795971f3059d4a27d3de2bb8fbfe23b3fa73d09f35",
+      "gas_used": 66652,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:13.793037"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553656-1415",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xb738fccfefa90f3bf88541cd4a57ecaec5cb96c5058cb04fa32c2820dfd1315e",
+      "gas_used": 65637,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:16.431882"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553659-1759",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x8293c06890a0ea8f2007920f8bd5d589a003246902c149f9a577f92cf70975d2",
+      "gas_used": 97040,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:19.124251"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553661-3194",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x5f92218543d4830c25ca91d3c5cb1462c04eac2bad63dac699f92d9c7dcb9ed8",
+      "gas_used": 82327,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:21.886336"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553664-4601",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xb3eacc842971f5d9da99af028f4cde9af0feecb8978a65ce8e1add9b8e450876",
+      "gas_used": 85103,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:24.659814"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553666-9503",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x5ef69b54b0aa3d2ca887cd9fe5a61f7b035c09dcddb8430fe14f4355278b4c24",
+      "gas_used": 83814,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:26.784040"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553669-5969",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x297a47b3b0ee4f7ca6878f5dfb51d87bfa7bd8aacf857bb705ae3eec4424504a",
+      "gas_used": 78612,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:29.292026"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553671-7670",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x48d60ff4cf0f532a89b9b44bb213dfc321f1b889a51c46c54ba9eddd3c65a17d",
+      "gas_used": 60833,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:31.644078"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553674-4466",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x72485834b81dc043185ddd71bae98d653c7287b7b92d0080fa7893fa32237f2d",
+      "gas_used": 75588,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:34.289983"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553676-5565",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x79e722b5f15300afc1e88ff027ed7e561887ab07511dcffdb41f2609ce890e17",
+      "gas_used": 99651,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:36.637602"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553678-2530",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x02ff0b398033fbd66413e000f4993e18fc640485252b9fa522fdffa864889f28",
+      "gas_used": 74522,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:38.935935"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553681-3685",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xf8268aeaf0ccf69e749344336410cdf4a1f38b09608050720b8b68eca404fdb8",
+      "gas_used": 90778,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:41.365972"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553683-5685",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xd6af650178ade4e8962391781e2abf67b1ef90fdf0b38963562579359b07b3eb",
+      "gas_used": 64642,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:43.356829"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553685-2319",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x0456eb8f0d254397637239816a9ac8fe84c97929a9827bdececdcc3380fc689d",
+      "gas_used": 64813,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:45.726827"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553688-8418",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0xb34ffc151ab7608ace0683a9a925371532daeeade2776ce9618b1183477e1ad8",
+      "gas_used": 73242,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:48.388392"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553690-6733",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x1fc597bbcbd214c3c3c47e583c487aeaf2ae99ec303092cd5304a8855736c63e",
+      "gas_used": 66726,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:50.601153"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553692-6014",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x743dad27e840339eeb54880bf06a348cbb4d44d23cff0c80eb9d99d9ea6ccf87",
+      "gas_used": 73630,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:52.677910"
+    },
+    {
+      "bridge_id": "BRIDGE-1768553694-3284",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "wbtc_minted": 6.25,
+      "tx_hash": "0x93fa9863b86c6317bbf9d327946e142a7be8c4bb991a171a202e0c5f00bd564d",
+      "gas_used": 60625,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-16T08:54:54.890101"
+    }
+  ],
+  "stats": {
+    "total_blocks": 76,
+    "total_rewards": 475.0,
+    "hash_rate": 562831.4602131974,
+    "peak_hash_rate": 600180.1737232433,
+    "tokens_bridged": 3203.125,
+    "wbtc_minted": 156.25,
+    "active_apis": 0,
+    "bridge_count": 25,
+    "esplora_queries": 15,
+    "consciousness_level": 1.0,
+    "blocks_per_minute": 76.51896051744136,
+    "uptime_seconds": 60.094414
+  },
+  "configuration": {
+    "wtbtc_contract": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "bitcoin_address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+    "consciousness_enabled": true,
+    "esplora_enabled": true
+  }
+}
