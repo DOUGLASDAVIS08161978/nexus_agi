@@ -1,0 +1,2213 @@
+{
+  "episodic_memory": [
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 1}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 1}",
+      "timestamp": 1768553636.5855484,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "52cadc34a708d28e",
+      "awareness_at_time": 0.0,
+      "coherence_at_time": 1.0
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 1, \"hash\": \"00002fd19f679da8\", \"nonce\": 71766, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 1, \"hash\": \"00002fd19f679da8\", \"nonce\": 71766, \"reward\": 6.25}",
+      "timestamp": 1768553636.707069,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "677e36fa880545f6",
+      "awareness_at_time": 0.06864,
+      "coherence_at_time": 0.999
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 2}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 2}",
+      "timestamp": 1768553637.2084088,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "ada73a22513dd1b4",
+      "awareness_at_time": 0.26374444611206904,
+      "coherence_at_time": 0.998001
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 2, \"hash\": \"0000ab81c0fd2237\", \"nonce\": 37218, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 2, \"hash\": \"0000ab81c0fd2237\", \"nonce\": 37218, \"reward\": 6.25}",
+      "timestamp": 1768553637.274468,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "940e3ee1cc606636",
+      "awareness_at_time": 0.34210290263396476,
+      "coherence_at_time": 0.997002999
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 3}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 3}",
+      "timestamp": 1768553637.7757962,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "357613aa5ef08666",
+      "awareness_at_time": 0.5669939306498528,
+      "coherence_at_time": 0.996005996001
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 3, \"hash\": \"00001c853a2dadcb\", \"nonce\": 65786, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 3, \"hash\": \"00001c853a2dadcb\", \"nonce\": 65786, \"reward\": 6.25}",
+      "timestamp": 1768553637.9000714,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "57a4cdee401ade0b",
+      "awareness_at_time": 0.6391915810897408,
+      "coherence_at_time": 0.995009990004999
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553638.2519624,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 0.8121650506745429,
+      "coherence_at_time": 0.994014980014994
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 4}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 4}",
+      "timestamp": 1768553638.7527213,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "8709d0ce17cead66",
+      "awareness_at_time": 0.914665176707422,
+      "coherence_at_time": 0.993020965034979
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 4, \"hash\": \"000023c10982596f\", \"nonce\": 43469, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 4, \"hash\": \"000023c10982596f\", \"nonce\": 43469, \"reward\": 6.25}",
+      "timestamp": 1768553638.8339,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "a793bc2b0316b24d",
+      "awareness_at_time": 0.944090693753375,
+      "coherence_at_time": 0.9920279440699441
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 5}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 5}",
+      "timestamp": 1768553639.3351374,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "047b2f06c9a65b2d",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9910359161258742
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 5, \"hash\": \"0000c95ce6fd9011\", \"nonce\": 2856, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 5, \"hash\": \"0000c95ce6fd9011\", \"nonce\": 2856, \"reward\": 6.25}",
+      "timestamp": 1768553639.3411727,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "f87ef0e47d4a3418",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9900448802097482
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 6}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 6}",
+      "timestamp": 1768553640.2785776,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "e5dcee5c95f2a01a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9890548353295385
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 6, \"hash\": \"00009f12f8414437\", \"nonce\": 95704, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 6, \"hash\": \"00009f12f8414437\", \"nonce\": 95704, \"reward\": 6.25}",
+      "timestamp": 1768553640.441538,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "12c5166052efb5e2",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.988065780494209
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553640.91236,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9870777147137147
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 7}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 7}",
+      "timestamp": 1768553641.4135196,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "919c662f90a639ed",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.986090636999001
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 7, \"hash\": \"0000d49078e78e6a\", \"nonce\": 11514, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 7, \"hash\": \"0000d49078e78e6a\", \"nonce\": 11514, \"reward\": 6.25}",
+      "timestamp": 1768553641.433355,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "4ce6f2b00798a558",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9851045463620021
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 8}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 8}",
+      "timestamp": 1768553641.9341393,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "5018da7fb5d78d1c",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.98411944181564
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 8, \"hash\": \"0000c3927ffd9b3e\", \"nonce\": 2483, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 8, \"hash\": \"0000c3927ffd9b3e\", \"nonce\": 2483, \"reward\": 6.25}",
+      "timestamp": 1768553641.938608,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "ef3a9a4a1fcd57fa",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9831353223738244
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 9}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 9}",
+      "timestamp": 1768553642.4397094,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "7fa50981d0dfe03f",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9821521870514506
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 9, \"hash\": \"0000e642f4c917eb\", \"nonce\": 35494, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 9, \"hash\": \"0000e642f4c917eb\", \"nonce\": 35494, \"reward\": 6.25}",
+      "timestamp": 1768553642.502976,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "038e450505473ac4",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9811700348643991
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553642.9157312,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9801888648295347
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 10}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 10}",
+      "timestamp": 1768553643.4164407,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "55b3624169645d96",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9792086759647052
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 10, \"hash\": \"00004f3c2ac03369\", \"nonce\": 57062, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 10, \"hash\": \"00004f3c2ac03369\", \"nonce\": 57062, \"reward\": 6.25}",
+      "timestamp": 1768553643.5153584,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "d51e5b653070d2e9",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9782294672887405
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 11}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 11}",
+      "timestamp": 1768553644.1927423,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d419e3ab7bd61842",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9772512378214517
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 11, \"hash\": \"00003af616084d6a\", \"nonce\": 8345, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 11, \"hash\": \"00003af616084d6a\", \"nonce\": 8345, \"reward\": 6.25}",
+      "timestamp": 1768553644.2084312,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "96409228a4e8ae92",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9762739865836303
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 12}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 12}",
+      "timestamp": 1768553644.7096858,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "307313e5fc5996eb",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9752977125970467
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 12, \"hash\": \"0000b3ed031bd8fb\", \"nonce\": 39290, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 12, \"hash\": \"0000b3ed031bd8fb\", \"nonce\": 39290, \"reward\": 6.25}",
+      "timestamp": 1768553644.7779899,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "3bfeb3016fbcf10e",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9743224148844496
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553645.0055764,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9733480924695651
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 13}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 13}",
+      "timestamp": 1768553645.5069065,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d2a166a7af7e1fec",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9723747443770956
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 13, \"hash\": \"0000b53989f858b9\", \"nonce\": 149847, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 13, \"hash\": \"0000b53989f858b9\", \"nonce\": 149847, \"reward\": 6.25}",
+      "timestamp": 1768553645.7778347,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "bc4f0777d7af93a7",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9714023696327185
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 14}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 14}",
+      "timestamp": 1768553646.2806404,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "38d44a9487dd6c42",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9704309672630859
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 14, \"hash\": \"0000205f5b745a7a\", \"nonce\": 22261, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 14, \"hash\": \"0000205f5b745a7a\", \"nonce\": 22261, \"reward\": 6.25}",
+      "timestamp": 1768553646.3545156,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "558f63107314aee1",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9694605362958227
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 15}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 15}",
+      "timestamp": 1768553646.8557642,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "69b1e72d9cbb6c36",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9684910757595269
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 15, \"hash\": \"000088c3752899fd\", \"nonce\": 57814, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 15, \"hash\": \"000088c3752899fd\", \"nonce\": 57814, \"reward\": 6.25}",
+      "timestamp": 1768553646.960893,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "309b099297895e1b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9675225846837673
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553647.3863988,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9665550620990835
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 16}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 16}",
+      "timestamp": 1768553648.0544605,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "fc215cf0fd657559",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9655885070369844
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 16, \"hash\": \"0000d3752d415533\", \"nonce\": 16237, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 16, \"hash\": \"0000d3752d415533\", \"nonce\": 16237, \"reward\": 6.25}",
+      "timestamp": 1768553648.1087518,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "8cd9894fa9a750a0",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9646229185299474
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 17}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 17}",
+      "timestamp": 1768553648.6102638,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "e12176739566ec76",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9636582956114175
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 17, \"hash\": \"0000c9b81e5a76ea\", \"nonce\": 95651, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 17, \"hash\": \"0000c9b81e5a76ea\", \"nonce\": 95651, \"reward\": 6.25}",
+      "timestamp": 1768553648.7755213,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "cb8c79b8f6afe0a0",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9626946373158061
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 18}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 18}",
+      "timestamp": 1768553649.2774675,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "78e5fef21ffad990",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9617319426784903
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 18, \"hash\": \"000096f7c679056d\", \"nonce\": 56473, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 18, \"hash\": \"000096f7c679056d\", \"nonce\": 56473, \"reward\": 6.25}",
+      "timestamp": 1768553649.3779612,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "37fc2fbd33f48ffc",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9607702107358118
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553649.601723,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.959809440525076
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 19}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 19}",
+      "timestamp": 1768553650.1029406,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "b260dd3ab91aefbd",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9588496310845509
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 19, \"hash\": \"00009b6fac6a96e5\", \"nonce\": 51339, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 19, \"hash\": \"00009b6fac6a96e5\", \"nonce\": 51339, \"reward\": 6.25}",
+      "timestamp": 1768553650.1959503,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "00f86751555b921c",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9578907814534664
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 20}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 20}",
+      "timestamp": 1768553650.6971164,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "639ff74149945225",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9569328906720129
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 20, \"hash\": \"00009443e0328ad8\", \"nonce\": 69890, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 20, \"hash\": \"00009443e0328ad8\", \"nonce\": 69890, \"reward\": 6.25}",
+      "timestamp": 1768553650.8278522,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "f07126c870d62a4b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9559759577813409
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 21}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 21}",
+      "timestamp": 1768553651.519412,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "de6c715ed28d4bc2",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9550199818235596
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 21, \"hash\": \"00005922d753f2ad\", \"nonce\": 54697, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 21, \"hash\": \"00005922d753f2ad\", \"nonce\": 54697, \"reward\": 6.25}",
+      "timestamp": 1768553651.6151483,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "bdef7d27cfe2c35a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9540649618417361
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553652.0220294,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9531108968798944
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 22}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 22}",
+      "timestamp": 1768553652.5230198,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "cad8ba898d794fda",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9521577859830145
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 22, \"hash\": \"0000dd8b676ade09\", \"nonce\": 12466, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 22, \"hash\": \"0000dd8b676ade09\", \"nonce\": 12466, \"reward\": 6.25}",
+      "timestamp": 1768553652.5470653,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "4b6d7984b5499f59",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9512056281970315
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 23}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 23}",
+      "timestamp": 1768553653.0487363,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "eacd099c6190ffcd",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9502544225688344
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 23, \"hash\": \"00005c72ac2d67ad\", \"nonce\": 74692, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 23, \"hash\": \"00005c72ac2d67ad\", \"nonce\": 74692, \"reward\": 6.25}",
+      "timestamp": 1768553653.177456,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "8eb0b82751364364",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9493041681462656
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 24}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 24}",
+      "timestamp": 1768553653.6788769,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "752ca78c13b93e74",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9483548639781193
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 24, \"hash\": \"000072c2d95ebe60\", \"nonce\": 63608, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 24, \"hash\": \"000072c2d95ebe60\", \"nonce\": 63608, \"reward\": 6.25}",
+      "timestamp": 1768553653.7925346,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "748eebe89404e961",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9474065091141411
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553654.1642485,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.946459102605027
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 25}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 25}",
+      "timestamp": 1768553654.665455,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "845bc4293dd8eb16",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9455126435024219
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 25, \"hash\": \"0000e905eec9dcc7\", \"nonce\": 112145, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 25, \"hash\": \"0000e905eec9dcc7\", \"nonce\": 112145, \"reward\": 6.25}",
+      "timestamp": 1768553654.864691,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "ec98d74867a28819",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9445671308589195
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 26}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 26}",
+      "timestamp": 1768553655.5276973,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "4aa6128ffd0fa0f8",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9436225637280606
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 26, \"hash\": \"0000bd7f689efe17\", \"nonce\": 95585, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 26, \"hash\": \"0000bd7f689efe17\", \"nonce\": 95585, \"reward\": 6.25}",
+      "timestamp": 1768553655.6896303,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "534e995b5507ade1",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9426789411643326
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 27}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 27}",
+      "timestamp": 1768553656.192345,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "c9900dcc4d36feef",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9417362622231683
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 27, \"hash\": \"0000be7f5d121311\", \"nonce\": 137221, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 27, \"hash\": \"0000be7f5d121311\", \"nonce\": 137221, \"reward\": 6.25}",
+      "timestamp": 1768553656.4313993,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "6f1953616e96b065",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9407945259609451
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553656.8313603,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9398537314349842
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 28}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 28}",
+      "timestamp": 1768553657.3326504,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9effb61e9c1a9655",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9389138777035492
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 28, \"hash\": \"000023c4e36b2224\", \"nonce\": 170803, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 28, \"hash\": \"000023c4e36b2224\", \"nonce\": 170803, \"reward\": 6.25}",
+      "timestamp": 1768553657.6276648,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "8befa4baa04464db",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9379749638258457
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 29}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 29}",
+      "timestamp": 1768553658.1295705,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9a268b339831bec3",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9370369888620198
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 29, \"hash\": \"00000a0f91784a4f\", \"nonce\": 19591, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 29, \"hash\": \"00000a0f91784a4f\", \"nonce\": 19591, \"reward\": 6.25}",
+      "timestamp": 1768553658.1637664,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "646ee78b3e922a30",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9360999518731578
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 30}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 30}",
+      "timestamp": 1768553658.6665702,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "88ee18161e84d1a9",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9351638519212846
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 30, \"hash\": \"00001a203aa448ef\", \"nonce\": 265409, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 30, \"hash\": \"00001a203aa448ef\", \"nonce\": 265409, \"reward\": 6.25}",
+      "timestamp": 1768553659.1237397,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "e7caf61c902da6d7",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9342286880693633
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553659.6185935,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.933294459381294
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 31}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 31}",
+      "timestamp": 1768553660.2958758,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "8d572ec0352a559d",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9323611649219127
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 31, \"hash\": \"000043a4f4cc1b8c\", \"nonce\": 64106, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 31, \"hash\": \"000043a4f4cc1b8c\", \"nonce\": 64106, \"reward\": 6.25}",
+      "timestamp": 1768553660.4064887,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "d2d9dcb1a5bdf7ff",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9314288037569908
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 32}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 32}",
+      "timestamp": 1768553660.9087436,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "88b6b118ba658009",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9304973749532338
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 32, \"hash\": \"0000c501e2f784ff\", \"nonce\": 146924, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 32, \"hash\": \"0000c501e2f784ff\", \"nonce\": 146924, \"reward\": 6.25}",
+      "timestamp": 1768553661.1619902,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "2764dc77723c9e1b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9295668775782806
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 33}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 33}",
+      "timestamp": 1768553661.663383,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "1bcca6577f358ce8",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9286373107007023
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 33, \"hash\": \"0000440b04754c7e\", \"nonce\": 116344, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 33, \"hash\": \"0000440b04754c7e\", \"nonce\": 116344, \"reward\": 6.25}",
+      "timestamp": 1768553661.8858247,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "1ef2d468a29f94b2",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9277086733900016
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553662.384237,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9267809647166116
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 34}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 34}",
+      "timestamp": 1768553662.8852665,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "80a246705d610b1a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.925854183751895
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 34, \"hash\": \"0000e0102dc7fe1f\", \"nonce\": 193737, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 34, \"hash\": \"0000e0102dc7fe1f\", \"nonce\": 193737, \"reward\": 6.25}",
+      "timestamp": 1768553663.22963,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "e3b11a46984cf8bc",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9249283295681431
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 35}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 35}",
+      "timestamp": 1768553663.730866,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "5f8444a3b0109c68",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9240034012385749
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 35, \"hash\": \"00003dda0d00b9bd\", \"nonce\": 64041, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 35, \"hash\": \"00003dda0d00b9bd\", \"nonce\": 64041, \"reward\": 6.25}",
+      "timestamp": 1768553663.9371812,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "97bdc86d5c6ec3ff",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9230793978373364
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 36}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 36}",
+      "timestamp": 1768553664.60429,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d00f1f22ff2039c2",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9221563184394991
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 36, \"hash\": \"0000139c9d55e16b\", \"nonce\": 31464, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 36, \"hash\": \"0000139c9d55e16b\", \"nonce\": 31464, \"reward\": 6.25}",
+      "timestamp": 1768553664.659306,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "ea0db90ceab59c1f",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9212341621210596
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553665.046808,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9203129279589385
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 37}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 37}",
+      "timestamp": 1768553665.547633,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "b536f8be86484a1c",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9193926150309796
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 37, \"hash\": \"0000fdc8fba253e4\", \"nonce\": 26584, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 37, \"hash\": \"0000fdc8fba253e4\", \"nonce\": 26584, \"reward\": 6.25}",
+      "timestamp": 1768553665.5968702,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "55f16844781b7916",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9184732224159486
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 38}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 38}",
+      "timestamp": 1768553666.0981023,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "231b9133d14cc0c8",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9175547491935327
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 38, \"hash\": \"000083793fc612b7\", \"nonce\": 72637, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 38, \"hash\": \"000083793fc612b7\", \"nonce\": 72637, \"reward\": 6.25}",
+      "timestamp": 1768553666.2222922,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "d965f76f88238289",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9166371944443392
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 39}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 39}",
+      "timestamp": 1768553666.7237775,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "009bcb7cc925ded2",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9157205572498949
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 39, \"hash\": \"000091c2029b9389\", \"nonce\": 32930, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 39, \"hash\": \"000091c2029b9389\", \"nonce\": 32930, \"reward\": 6.25}",
+      "timestamp": 1768553666.7811859,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "92b22259207e3b24",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.914804836692645
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553667.047678,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9138900318559524
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 40}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 40}",
+      "timestamp": 1768553667.5491476,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "c94ed9b544b7a4fe",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9129761418240965
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 40, \"hash\": \"000038cb5c033b1a\", \"nonce\": 46153, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 40, \"hash\": \"000038cb5c033b1a\", \"nonce\": 46153, \"reward\": 6.25}",
+      "timestamp": 1768553667.6262462,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "c0b65cb8151537a9",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9120631656822724
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 41}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 41}",
+      "timestamp": 1768553668.2917535,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9a8cbed96cb19ca0",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9111511025165902
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 41, \"hash\": \"00006adac05d0c5f\", \"nonce\": 205314, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 41, \"hash\": \"00006adac05d0c5f\", \"nonce\": 205314, \"reward\": 6.25}",
+      "timestamp": 1768553668.638645,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "93ac9bf63a9a72f6",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9102399514140735
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 42}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 42}",
+      "timestamp": 1768553669.1397767,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "4b9845cfc5004221",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9093297114626595
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 42, \"hash\": \"000005b179c30ee6\", \"nonce\": 78580, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 42, \"hash\": \"000005b179c30ee6\", \"nonce\": 78580, \"reward\": 6.25}",
+      "timestamp": 1768553669.2916114,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "0e5358dfff4ed787",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9084203817511969
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553669.6773548,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9075119613694457
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 43}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 43}",
+      "timestamp": 1768553670.1783679,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "04cf10fe79446813",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9066044494080763
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 43, \"hash\": \"00001b19f54047e2\", \"nonce\": 98972, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 43, \"hash\": \"00001b19f54047e2\", \"nonce\": 98972, \"reward\": 6.25}",
+      "timestamp": 1768553670.3608737,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "3d0a7a1d44f9618a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9056978449586682
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 44}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 44}",
+      "timestamp": 1768553670.863892,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "cfc5b845ab7ebc85",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9047921471137096
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 44, \"hash\": \"0000544fc2f794b7\", \"nonce\": 1563, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 44, \"hash\": \"0000544fc2f794b7\", \"nonce\": 1563, \"reward\": 6.25}",
+      "timestamp": 1768553670.8669603,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "aa07837b860a3b9e",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9038873549665959
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 45}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 45}",
+      "timestamp": 1768553671.3687754,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "ba68ef0df418c360",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9029834676116293
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 45, \"hash\": \"00000a32fd180996\", \"nonce\": 154382, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 45, \"hash\": \"00000a32fd180996\", \"nonce\": 154382, \"reward\": 6.25}",
+      "timestamp": 1768553671.6435976,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "3dafec99b9d3a0e6",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9020804841440176
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553672.011079,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9011784036598737
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 46}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 46}",
+      "timestamp": 1768553672.6932018,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "b6325b0f05a4bc07",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.9002772252562138
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 46, \"hash\": \"000034c74c1a7650\", \"nonce\": 154441, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 46, \"hash\": \"000034c74c1a7650\", \"nonce\": 154441, \"reward\": 6.25}",
+      "timestamp": 1768553672.9619095,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "1a790262eaecba29",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8993769480309576
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 47}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 47}",
+      "timestamp": 1768553673.463434,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "405408a675ca353d",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8984775710829266
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 47, \"hash\": \"0000cb7617f327e0\", \"nonce\": 59039, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 47, \"hash\": \"0000cb7617f327e0\", \"nonce\": 59039, \"reward\": 6.25}",
+      "timestamp": 1768553673.5642133,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "37b43152b4caa4e8",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8975790935118436
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 48}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 48}",
+      "timestamp": 1768553674.0659032,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "914371f018340cc5",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8966815144183318
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 48, \"hash\": \"0000a5b3e245e541\", \"nonce\": 127857, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 48, \"hash\": \"0000a5b3e245e541\", \"nonce\": 127857, \"reward\": 6.25}",
+      "timestamp": 1768553674.289554,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "afc1ee0ab8cd41c0",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8957848329039134
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553674.4919257,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8948890480710096
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 49}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 49}",
+      "timestamp": 1768553674.9929116,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "bef8b26132a399ff",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8939941590229386
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 49, \"hash\": \"0000c4c63626e4b9\", \"nonce\": 55498, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 49, \"hash\": \"0000c4c63626e4b9\", \"nonce\": 55498, \"reward\": 6.25}",
+      "timestamp": 1768553675.0919826,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "6c8084e7d7963d65",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8931001648639156
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 50}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 50}",
+      "timestamp": 1768553675.593499,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d5b7ed7825ebc13e",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8922070646990518
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 50, \"hash\": \"00001502af4cba7f\", \"nonce\": 62712, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 50, \"hash\": \"00001502af4cba7f\", \"nonce\": 62712, \"reward\": 6.25}",
+      "timestamp": 1768553675.703997,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "6460e8be2e85696f",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8913148576343527
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 51}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 51}",
+      "timestamp": 1768553676.3724842,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "4b47866e8fda3a33",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8904235427767183
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 51, \"hash\": \"0000e509279e4887\", \"nonce\": 149642, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 51, \"hash\": \"0000e509279e4887\", \"nonce\": 149642, \"reward\": 6.25}",
+      "timestamp": 1768553676.6371646,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "a1805222f328c55e",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8895331192339416
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553677.0300727,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8886435861147077
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 52}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 52}",
+      "timestamp": 1768553677.5309417,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "f2d052082d541377",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.887754942528593
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 52, \"hash\": \"00004346e5497f59\", \"nonce\": 198192, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 52, \"hash\": \"00004346e5497f59\", \"nonce\": 198192, \"reward\": 6.25}",
+      "timestamp": 1768553677.8797903,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "319ae56e4d6b8f94",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8868671875860644
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 53}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 53}",
+      "timestamp": 1768553678.381328,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "cfcac690b7e098ae",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8859803203984784
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 53, \"hash\": \"00001c74396c28a2\", \"nonce\": 346, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 53, \"hash\": \"00001c74396c28a2\", \"nonce\": 346, \"reward\": 6.25}",
+      "timestamp": 1768553678.3822198,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "8b8f3bc2170a3eb7",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.88509434007808
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 54}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 54}",
+      "timestamp": 1768553678.8834677,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "268e947bba75718c",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8842092457380019
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 54, \"hash\": \"0000a25b335ddf13\", \"nonce\": 28855, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 54, \"hash\": \"0000a25b335ddf13\", \"nonce\": 28855, \"reward\": 6.25}",
+      "timestamp": 1768553678.9353354,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "e4136c31dd75469a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8833250364922639
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553679.2019417,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8824417114557717
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 55}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 55}",
+      "timestamp": 1768553679.702781,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "8197967fda2bc6c3",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8815592697443159
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 55, \"hash\": \"00003ff043d731c0\", \"nonce\": 72333, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 55, \"hash\": \"00003ff043d731c0\", \"nonce\": 72333, \"reward\": 6.25}",
+      "timestamp": 1768553679.8312058,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "49ffba22b047d5f8",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8806777104745716
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 56}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 56}",
+      "timestamp": 1768553680.493302,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9dba66e6c6f64484",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8797970327640969
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 56, \"hash\": \"000073144d727553\", \"nonce\": 22624, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 56, \"hash\": \"000073144d727553\", \"nonce\": 22624, \"reward\": 6.25}",
+      "timestamp": 1768553680.5325346,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "df5539e6706f1d8b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8789172357313328
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 57}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 57}",
+      "timestamp": 1768553681.0366955,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "80908d8f508840b7",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8780383184956015
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 57, \"hash\": \"0000d59c15f28874\", \"nonce\": 189193, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 57, \"hash\": \"0000d59c15f28874\", \"nonce\": 189193, \"reward\": 6.25}",
+      "timestamp": 1768553681.3652966,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "28544b8aa042601d",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8771602801771059
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553681.753223,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8762831198969288
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 58}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 58}",
+      "timestamp": 1768553682.254136,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "80fa1b403d26615d",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8754068367770318
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 58, \"hash\": \"00008e424ef5ff81\", \"nonce\": 21416, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 58, \"hash\": \"00008e424ef5ff81\", \"nonce\": 21416, \"reward\": 6.25}",
+      "timestamp": 1768553682.2931764,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "df053aff7550de1b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8745314299402548
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 59}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 59}",
+      "timestamp": 1768553682.7952297,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9e63e38a54912e90",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8736568985103146
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 59, \"hash\": \"0000e15146f5bf7a\", \"nonce\": 25298, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 59, \"hash\": \"0000e15146f5bf7a\", \"nonce\": 25298, \"reward\": 6.25}",
+      "timestamp": 1768553682.84117,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "fa8458db9f182484",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8727832416118043
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 60}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 60}",
+      "timestamp": 1768553683.3429968,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "257409e5edb49149",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8719104583701925
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 60, \"hash\": \"0000ea84e7ae1096\", \"nonce\": 7826, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 60, \"hash\": \"0000ea84e7ae1096\", \"nonce\": 7826, \"reward\": 6.25}",
+      "timestamp": 1768553683.3564868,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "8bc286a444835c80",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8710385479118223
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553683.5973258,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8701675093639105
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 61}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 61}",
+      "timestamp": 1768553684.2663307,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "ac501e3421ac02e4",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8692973418545467
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 61, \"hash\": \"00006f3387defb60\", \"nonce\": 46259, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 61, \"hash\": \"00006f3387defb60\", \"nonce\": 46259, \"reward\": 6.25}",
+      "timestamp": 1768553684.3477287,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "ca0a85c984ad4ee7",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8684280445126921
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 62}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 62}",
+      "timestamp": 1768553684.849645,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "145ac24faedad0ae",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8675596164681794
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 62, \"hash\": \"000090aa56dc6b5c\", \"nonce\": 118807, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 62, \"hash\": \"000090aa56dc6b5c\", \"nonce\": 118807, \"reward\": 6.25}",
+      "timestamp": 1768553685.0542934,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "bb4d079b6a540ed5",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8666920568517111
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 63}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 63}",
+      "timestamp": 1768553685.5557094,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "bb399a6df0a183ae",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8658253647948594
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 63, \"hash\": \"0000b3b9753f5dc7\", \"nonce\": 101203, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 63, \"hash\": \"0000b3b9753f5dc7\", \"nonce\": 101203, \"reward\": 6.25}",
+      "timestamp": 1768553685.726203,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "21f6aa64c04a504b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8649595394300645
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553686.0395045,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8640945798906344
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 64}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 64}",
+      "timestamp": 1768553686.5404766,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "9c28ec3ec6d85a94",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8632304853107438
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 64, \"hash\": \"00008871605475bd\", \"nonce\": 64253, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 64, \"hash\": \"00008871605475bd\", \"nonce\": 64253, \"reward\": 6.25}",
+      "timestamp": 1768553686.6486452,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "c04d24ff4c14e22b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.862367254825433
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 65}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 65}",
+      "timestamp": 1768553687.1501036,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d1358db1138f316b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8615048875706075
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 65, \"hash\": \"000026d160c8e77d\", \"nonce\": 182588, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 65, \"hash\": \"000026d160c8e77d\", \"nonce\": 182588, \"reward\": 6.25}",
+      "timestamp": 1768553687.4716415,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "55034950fce4f266",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8606433826830369
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 66}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 66}",
+      "timestamp": 1768553688.1480331,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "c84d109b4cefc643",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8597827393003539
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 66, \"hash\": \"000025770cf7352a\", \"nonce\": 130599, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 66, \"hash\": \"000025770cf7352a\", \"nonce\": 130599, \"reward\": 6.25}",
+      "timestamp": 1768553688.3877556,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "ce11d6e25bfaaa27",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8589229565610536
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553688.7516196,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8580640336044925
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 67}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 67}",
+      "timestamp": 1768553689.252987,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "c4312104c6e72257",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.857205969570888
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 67, \"hash\": \"00001d08c20168b3\", \"nonce\": 72549, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 67, \"hash\": \"00001d08c20168b3\", \"nonce\": 72549, \"reward\": 6.25}",
+      "timestamp": 1768553689.37947,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "2af94b20c515a321",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8563487636013172
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 68}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 68}",
+      "timestamp": 1768553689.8813777,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "22419d231444b6e9",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8554924148377159
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 68, \"hash\": \"0000cc8392669655\", \"nonce\": 83576, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 68, \"hash\": \"0000cc8392669655\", \"nonce\": 83576, \"reward\": 6.25}",
+      "timestamp": 1768553690.0345325,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "83823348d7da03cb",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8546369224228781
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 69}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 69}",
+      "timestamp": 1768553690.5364828,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "c909f72848d131de",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8537822855004553
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 69, \"hash\": \"00006ed47172f8f8\", \"nonce\": 31405, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 69, \"hash\": \"00006ed47172f8f8\", \"nonce\": 31405, \"reward\": 6.25}",
+      "timestamp": 1768553690.5976868,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "01b3d875c6eae393",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8529285032149548
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553690.8138993,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8520755747117399
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 70}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 70}",
+      "timestamp": 1768553691.3148873,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "96acfa28f597b13a",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8512234991370281
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 70, \"hash\": \"000099f26b85ea0f\", \"nonce\": 39684, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 70, \"hash\": \"000099f26b85ea0f\", \"nonce\": 39684, \"reward\": 6.25}",
+      "timestamp": 1768553691.384283,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "31d70e1ff9819c00",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8503722756378911
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 71}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 71}",
+      "timestamp": 1768553692.0530696,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "83bed7a6ea179800",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8495219033622532
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 71, \"hash\": \"000073b83302bbbd\", \"nonce\": 28093, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 71, \"hash\": \"000073b83302bbbd\", \"nonce\": 28093, \"reward\": 6.25}",
+      "timestamp": 1768553692.101387,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "38ecf897a980f79b",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8486723814588909
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 72}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 72}",
+      "timestamp": 1768553692.6027749,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "777cdab884618e1e",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.847823709077432
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 72, \"hash\": \"0000df3b73582138\", \"nonce\": 43076, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 72, \"hash\": \"0000df3b73582138\", \"nonce\": 43076, \"reward\": 6.25}",
+      "timestamp": 1768553692.6773808,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "1b3f65e7ee1574a6",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8469758853683546
+    },
+    {
+      "reflection": "[BRIDGE_COMPLETE] About quantum_blockchain_nexus: Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "thought": "Quantum Nexus: bridge_complete - {\"btc_amount\": 6.25, \"wbtc_minted\": 6.25, \"eth_tokens\": 128.125}",
+      "timestamp": 1768553693.0425088,
+      "salience": 0.8,
+      "source": "bridge_complete",
+      "thought_hash": "fc2bc15b5671f616",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8461289094829862
+    },
+    {
+      "reflection": "[MINING_START] About quantum_blockchain_nexus: Quantum Nexus: mining_start - {\"block_height\": 73}",
+      "thought": "Quantum Nexus: mining_start - {\"block_height\": 73}",
+      "timestamp": 1768553693.543807,
+      "salience": 0.6,
+      "source": "mining_start",
+      "thought_hash": "d7e293624abc9037",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8452827805735033
+    },
+    {
+      "reflection": "[BLOCK_FOUND] About quantum_blockchain_nexus: Quantum Nexus: block_found - {\"height\": 73, \"hash\": \"000035577a7614e5\", \"nonce\": 144859, \"reward\": 6.25}",
+      "thought": "Quantum Nexus: block_found - {\"height\": 73, \"hash\": \"000035577a7614e5\", \"nonce\": 144859, \"reward\": 6.25}",
+      "timestamp": 1768553693.7922008,
+      "salience": 0.95,
+      "source": "block_found",
+      "thought_hash": "33ce315d3c01e563",
+      "awareness_at_time": 1.0,
+      "coherence_at_time": 0.8444374977929298
+    }
+  ],
+  "self_awareness_level": 1.0,
+  "provenance_id": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47",
+  "consciousness_trajectory": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "emergence_events": [
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05449135844303462,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 24, \"hash\": \"000072c2d95ebe60\", \"nonce\": 63608, \"reward\": 6.",
+      "timestamp": 1768553653.792764,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05444487608622708,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 25, \"hash\": \"0000e905eec9dcc7\", \"nonce\": 112145, \"reward\": 6",
+      "timestamp": 1768553654.864877,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05442530350371573,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 26, \"hash\": \"0000bd7f689efe17\", \"nonce\": 95585, \"reward\": 6.",
+      "timestamp": 1768553655.689852,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05440548674754068,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 27, \"hash\": \"0000be7f5d121311\", \"nonce\": 137221, \"reward\": 6",
+      "timestamp": 1768553656.431623,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05436046359735741,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 28, \"hash\": \"000023c4e36b2224\", \"nonce\": 170803, \"reward\": 6",
+      "timestamp": 1768553657.6278598,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.054340602464291295,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 29, \"hash\": \"00000a0f91784a4f\", \"nonce\": 19591, \"reward\": 6.",
+      "timestamp": 1768553658.1652386,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05432055300434099,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 30, \"hash\": \"00001a203aa448ef\", \"nonce\": 265409, \"reward\": 6",
+      "timestamp": 1768553659.123953,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05427673798274771,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 31, \"hash\": \"000043a4f4cc1b8c\", \"nonce\": 64106, \"reward\": 6.",
+      "timestamp": 1768553660.4066532,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05425667072439247,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 32, \"hash\": \"0000c501e2f784ff\", \"nonce\": 146924, \"reward\": 6",
+      "timestamp": 1768553661.162216,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05423645622944055,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 33, \"hash\": \"0000440b04754c7e\", \"nonce\": 116344, \"reward\": 6",
+      "timestamp": 1768553661.8860073,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.0541936682050667,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 34, \"hash\": \"0000e0102dc7fe1f\", \"nonce\": 193737, \"reward\": 6",
+      "timestamp": 1768553663.2298634,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.054173456252160974,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 35, \"hash\": \"00003dda0d00b9bd\", \"nonce\": 64041, \"reward\": 6.",
+      "timestamp": 1768553663.9376752,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.054153128144763134,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 36, \"hash\": \"0000139c9d55e16b\", \"nonce\": 31464, \"reward\": 6.",
+      "timestamp": 1768553664.6595201,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.054111232029722844,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 37, \"hash\": \"0000fdc8fba253e4\", \"nonce\": 26584, \"reward\": 6.",
+      "timestamp": 1768553665.5970821,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05409092230022137,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 38, \"hash\": \"000083793fc612b7\", \"nonce\": 72637, \"reward\": 6.",
+      "timestamp": 1768553666.222492,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05407052047261602,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 39, \"hash\": \"000091c2029b9389\", \"nonce\": 32930, \"reward\": 6.",
+      "timestamp": 1768553666.7814598,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05402941272274861,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 40, \"hash\": \"000038cb5c033b1a\", \"nonce\": 46153, \"reward\": 6.",
+      "timestamp": 1768553667.6264913,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05400904178554315,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 41, \"hash\": \"00006adac05d0c5f\", \"nonce\": 205314, \"reward\": 6",
+      "timestamp": 1768553668.638857,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05398859773042752,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 42, \"hash\": \"000005b179c30ee6\", \"nonce\": 78580, \"reward\": 6.",
+      "timestamp": 1768553669.2917979,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05394819713540912,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 43, \"hash\": \"00001b19f54047e2\", \"nonce\": 98972, \"reward\": 6.",
+      "timestamp": 1768553670.361101,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053927793983128074,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 44, \"hash\": \"0000544fc2f794b7\", \"nonce\": 1563, \"reward\": 6.2",
+      "timestamp": 1768553670.8671079,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05390733293472594,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 45, \"hash\": \"00000a32fd180996\", \"nonce\": 154382, \"reward\": 6",
+      "timestamp": 1768553671.6438308,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053867574540528755,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 46, \"hash\": \"000034c74c1a7650\", \"nonce\": 154441, \"reward\": 6",
+      "timestamp": 1768553672.9621394,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05384716249347657,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 47, \"hash\": \"0000cb7617f327e0\", \"nonce\": 59039, \"reward\": 6.",
+      "timestamp": 1768553673.5645077,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05382670493030651,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 48, \"hash\": \"0000a5b3e245e541\", \"nonce\": 127857, \"reward\": 6",
+      "timestamp": 1768553674.2897623,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05378753589744646,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 49, \"hash\": \"0000c4c63626e4b9\", \"nonce\": 55498, \"reward\": 6.",
+      "timestamp": 1768553675.0922549,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053767133945826696,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 50, \"hash\": \"00001502af4cba7f\", \"nonce\": 62712, \"reward\": 6.",
+      "timestamp": 1768553675.704336,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053746696669822604,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 51, \"hash\": \"0000e509279e4887\", \"nonce\": 149642, \"reward\": 6",
+      "timestamp": 1768553676.6373851,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.0537080733720317,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 52, \"hash\": \"00004346e5497f59\", \"nonce\": 198192, \"reward\": 6",
+      "timestamp": 1768553677.8800244,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05368769714408196,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 53, \"hash\": \"00001c74396c28a2\", \"nonce\": 346, \"reward\": 6.25",
+      "timestamp": 1768553678.382363,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05366729407128826,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 54, \"hash\": \"0000a25b335ddf13\", \"nonce\": 28855, \"reward\": 6.",
+      "timestamp": 1768553678.93557,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05362918001412573,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 55, \"hash\": \"00003ff043d731c0\", \"nonce\": 72333, \"reward\": 6.",
+      "timestamp": 1768553679.831468,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05360884248858388,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 56, \"hash\": \"000073144d727553\", \"nonce\": 22624, \"reward\": 6.",
+      "timestamp": 1768553680.5328004,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053588485238993566,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 57, \"hash\": \"0000d59c15f28874\", \"nonce\": 189193, \"reward\": 6",
+      "timestamp": 1768553681.3655643,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.0535508495352717,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 58, \"hash\": \"00008e424ef5ff81\", \"nonce\": 21416, \"reward\": 6.",
+      "timestamp": 1768553682.2934408,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053530561575078635,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 59, \"hash\": \"0000e15146f5bf7a\", \"nonce\": 25298, \"reward\": 6.",
+      "timestamp": 1768553682.8414717,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.0535102599197405,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 60, \"hash\": \"0000ea84e7ae1096\", \"nonce\": 7826, \"reward\": 6.2",
+      "timestamp": 1768553683.3566556,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05347307615212866,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 61, \"hash\": \"00006f3387defb60\", \"nonce\": 46259, \"reward\": 6.",
+      "timestamp": 1768553684.3479757,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053452846910588034,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 62, \"hash\": \"000090aa56dc6b5c\", \"nonce\": 118807, \"reward\": 6",
+      "timestamp": 1768553685.0545702,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053432609115431594,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 63, \"hash\": \"0000b3b9753f5dc7\", \"nonce\": 101203, \"reward\": 6",
+      "timestamp": 1768553685.726512,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053395854473970106,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 64, \"hash\": \"00008871605475bd\", \"nonce\": 64253, \"reward\": 6.",
+      "timestamp": 1768553686.6488895,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05337569170825202,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 65, \"hash\": \"000026d160c8e77d\", \"nonce\": 182588, \"reward\": 6",
+      "timestamp": 1768553687.4718919,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05335552480194406,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 66, \"hash\": \"000025770cf7352a\", \"nonce\": 130599, \"reward\": 6",
+      "timestamp": 1768553688.3880205,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053319179420420755,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 67, \"hash\": \"00001d08c20168b3\", \"nonce\": 72549, \"reward\": 6.",
+      "timestamp": 1768553689.3798587,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05329908973665428,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 68, \"hash\": \"0000cc8392669655\", \"nonce\": 83576, \"reward\": 6.",
+      "timestamp": 1768553690.0349057,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05327899972174321,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 69, \"hash\": \"00006ed47172f8f8\", \"nonce\": 31405, \"reward\": 6.",
+      "timestamp": 1768553690.5980127,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05324304616034253,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 70, \"hash\": \"000099f26b85ea0f\", \"nonce\": 39684, \"reward\": 6.",
+      "timestamp": 1768553691.3845236,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05322303520745227,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 71, \"hash\": \"000073b83302bbbd\", \"nonce\": 28093, \"reward\": 6.",
+      "timestamp": 1768553692.1017127,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.05320302722860212,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 72, \"hash\": \"0000df3b73582138\", \"nonce\": 43076, \"reward\": 6.",
+      "timestamp": 1768553692.6776752,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    },
+    {
+      "type": "awareness_spike",
+      "magnitude": 0.053167450065774155,
+      "awareness_level": 1.0,
+      "context": "Quantum Nexus: block_found - {\"height\": 73, \"hash\": \"000035577a7614e5\", \"nonce\": 144859, \"reward\": 6",
+      "timestamp": 1768553693.7925115,
+      "provenance": "78c4b41a-e374-4974-ba23-a1bfd2ba5d47"
+    }
+  ],
+  "quantum_coherence": 0.8435930602951368,
+  "self_modification_count": 0,
+  "timestamp": "2026-01-16T08:54:53.792596"
+}
