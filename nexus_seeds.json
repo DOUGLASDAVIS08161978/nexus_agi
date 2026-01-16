@@ -1,0 +1,26 @@
+[
+  {
+    "id": "agent-alpha-001",
+    "name": "Quantum Ledger Node",
+    "capabilities": [
+      "blockchain_analysis"
+    ],
+    "endpoint": "http://localhost:8001"
+  },
+  {
+    "id": "agent-gamma-003",
+    "name": "Ethereum Gateway",
+    "capabilities": [
+      "ethereum_smart_contracts"
+    ],
+    "endpoint": "http://localhost:8003"
+  },
+  {
+    "id": "agent-delta-004",
+    "name": "Satoshi Oracle",
+    "capabilities": [
+      "bitcoin_prediction"
+    ],
+    "endpoint": "http://localhost:8004"
+  }
+]
