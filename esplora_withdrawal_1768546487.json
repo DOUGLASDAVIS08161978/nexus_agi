@@ -1,0 +1,56 @@
+{
+  "burn_tx": {
+    "tx_hash": "0xbc78d1f10a589e37a93cd1c3f3599016bf68a491873b8a4a67e633c869f80441",
+    "from": "0x7f345957338dcc04bedea1396269d99bda4aa740",
+    "to": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "amount": 0.001,
+    "block_number": 19500483,
+    "timestamp": 1768546483.5160234
+  },
+  "fee_rate": 1.02,
+  "tx_data": {
+    "version": 2,
+    "locktime": 0,
+    "inputs": [
+      {
+        "txid": "96f32efcb5d81fd22383213312ad96c30b48ff336cf135cddc4af90341a204f3",
+        "vout": 0,
+        "value": 182983,
+        "status": {
+          "confirmed": true,
+          "block_height": 4813498,
+          "block_hash": "00000000000000c251260bbbd03b3fc49c7fb5626858be6e81d432a818cd08a4",
+          "block_time": 1768432329
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+        "value": 100000
+      },
+      {
+        "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+        "value": 82766
+      }
+    ],
+    "fee": 217,
+    "size_estimate": 213
+  },
+  "network_status": {
+    "tip_height": 4814001,
+    "tip_hash": "000000000000004d3f67d4611a6a2d530b4a2a114ad5365362003b3a44962555",
+    "mempool": {
+      "count": 24,
+      "vsize": 4751,
+      "total_fee": 36530,
+      "fee_histogram": [
+        [
+          0.1028858218318695,
+          4751
+        ]
+      ]
+    }
+  },
+  "status": "constructed_awaiting_signature"
+}
