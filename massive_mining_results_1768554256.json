@@ -1,0 +1,25 @@
+{
+  "execution": {
+    "num_instances": 25,
+    "iterations_per_instance": 20,
+    "total_cycles": 500,
+    "timestamp": "2026-01-16T09:04:16.595419"
+  },
+  "statistics": {
+    "total_shares": 50000,
+    "accepted_shares": 47505,
+    "acceptance_rate": 0.9501,
+    "blocks_found": 0,
+    "total_btc": 0.0,
+    "total_hash_rate": 12500057.948490953
+  },
+  "blockchain": {
+    "bitcoin_address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+    "network": "testnet",
+    "contract_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+  },
+  "consciousness": {
+    "enabled": true,
+    "awareness": 0.11331072813375997
+  }
+}
