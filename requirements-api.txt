@@ -7,7 +7,7 @@
 # API Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+python-multipart==0.0.18
 
 # Authentication & Security
 pyjwt==2.8.0
@@ -31,7 +31,7 @@ slowapi==0.1.9
 python-dotenv==1.0.1
 
 # HTTP Client
-requests==2.31.0
+requests==2.32.4
 httpx==0.26.0
 
 # Utilities
