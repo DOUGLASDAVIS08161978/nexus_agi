@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-01-17T19:44:14.838520",
+  "chain_id": 1,
+  "block_number": 19234569,
+  "hd_wallet": {
+    "mnemonic": "above able abstract abuse absent abuse abstract absurd accident access access abstract",
+    "accounts": [
+      {
+        "address": "0x4b0f056b73fa0872191e65663e852e1fc7544b87",
+        "balance_eth": 94.949475
+      },
+      {
+        "address": "0xf3e6749094bf6c8200510b289b3080a212a16d35",
+        "balance_eth": 105.0
+      },
+      {
+        "address": "0xa1394c9c379f591f47be3fe38b03206d6da9648d",
+        "balance_eth": 100.0
+      }
+    ]
+  },
+  "transactions": [
+    "0x46dc0a8e66f7752da66601efe9811daa09612a7414b789dd5efca474ffe13cb1",
+    "0xb67eec5b61eed6116f20a12761114e55b29b19740721e8ec2c9559e0a09202ea"
+  ],
+  "contracts_deployed": [
+    "0x76beb54aa58303f9e39f20ea8dd01ca780093fba"
+  ]
+}
