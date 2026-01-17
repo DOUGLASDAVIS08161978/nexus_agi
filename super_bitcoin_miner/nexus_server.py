@@ -50,7 +50,7 @@ def create_default_seeds():
 
     if not os.path.exists(FILE_NAME):
         seeds_data = {
-            "version": "1.0",
+            "version": "2.0",
             "timestamp": datetime.now().isoformat(),
             "network": "nexus_agi",
             "nodes": [
@@ -69,6 +69,46 @@ def create_default_seeds():
                         "wTBTC": "0x324befe00354823df73691e37ed4f7b19ad74f63",
                         "HashProof": "0x0000000000000000000000000000000000000000"
                     }
+                },
+                {
+                    "id": "arbitrum_bridge_1",
+                    "type": "l2_bridge",
+                    "capabilities": ["arbitrum_bridge", "token_transfer", "optimistic_rollup"],
+                    "endpoint": "arbitrum-bridge.nexus.io:8545",
+                    "network": "arbitrum",
+                    "chain_id": 42161
+                },
+                {
+                    "id": "optimism_bridge_1",
+                    "type": "l2_bridge",
+                    "capabilities": ["optimism_bridge", "token_transfer", "optimistic_rollup"],
+                    "endpoint": "optimism-bridge.nexus.io:8545",
+                    "network": "optimism",
+                    "chain_id": 10
+                },
+                {
+                    "id": "base_bridge_1",
+                    "type": "l2_bridge",
+                    "capabilities": ["base_bridge", "token_transfer", "optimistic_rollup"],
+                    "endpoint": "base-bridge.nexus.io:8545",
+                    "network": "base",
+                    "chain_id": 8453
+                },
+                {
+                    "id": "avalanche_bridge_1",
+                    "type": "alt_l1_bridge",
+                    "capabilities": ["avalanche_bridge", "token_transfer"],
+                    "endpoint": "avalanche-bridge.nexus.io:9650",
+                    "network": "avalanche",
+                    "chain_id": 43114
+                },
+                {
+                    "id": "bsc_bridge_1",
+                    "type": "alt_l1_bridge",
+                    "capabilities": ["bsc_bridge", "token_transfer"],
+                    "endpoint": "bsc-bridge.nexus.io:8545",
+                    "network": "bsc",
+                    "chain_id": 56
                 }
             ],
             "mining_pools": [
@@ -82,8 +122,47 @@ def create_default_seeds():
                 "sepolia": {
                     "wTBTC": "0x324befe00354823df73691e37ed4f7b19ad74f63",
                     "network_id": 11155111
+                },
+                "arbitrum": {
+                    "wBTC": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+                    "network_id": 42161
+                },
+                "optimism": {
+                    "wBTC": "0x68f180fcCe6836688e9084f035309E29Bf0A2095",
+                    "network_id": 10
+                },
+                "base": {
+                    "wBTC": "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c",
+                    "network_id": 8453
+                },
+                "polygon": {
+                    "wBTC": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
+                    "network_id": 137
+                },
+                "avalanche": {
+                    "wBTC": "0x50b7545627a5162F82A992c33b87aDc75187B218",
+                    "network_id": 43114
+                },
+                "bsc": {
+                    "wBTC": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+                    "network_id": 56
                 }
-            }
+            },
+            "bridge_routes": [
+                {"from": "bitcoin", "to": "ethereum", "token": "wBTC", "operator": "ethereum_bridge_1"},
+                {"from": "ethereum", "to": "arbitrum", "token": "wBTC", "operator": "arbitrum_bridge_1"},
+                {"from": "ethereum", "to": "optimism", "token": "wBTC", "operator": "optimism_bridge_1"},
+                {"from": "ethereum", "to": "base", "token": "wBTC", "operator": "base_bridge_1"},
+                {"from": "ethereum", "to": "polygon", "token": "wBTC", "operator": "polygon_bridge_1"},
+                {"from": "ethereum", "to": "avalanche", "token": "wBTC", "operator": "avalanche_bridge_1"},
+                {"from": "ethereum", "to": "bsc", "token": "wBTC", "operator": "bsc_bridge_1"},
+                {"from": "bitcoin", "to": "arbitrum", "token": "wBTC", "operator": "arbitrum_bridge_1", "multi_hop": true},
+                {"from": "bitcoin", "to": "optimism", "token": "wBTC", "operator": "optimism_bridge_1", "multi_hop": true},
+                {"from": "bitcoin", "to": "base", "token": "wBTC", "operator": "base_bridge_1", "multi_hop": true},
+                {"from": "bitcoin", "to": "polygon", "token": "wBTC", "operator": "polygon_bridge_1", "multi_hop": true},
+                {"from": "bitcoin", "to": "avalanche", "token": "wBTC", "operator": "avalanche_bridge_1", "multi_hop": true},
+                {"from": "bitcoin", "to": "bsc", "token": "wBTC", "operator": "bsc_bridge_1", "multi_hop": true}
+            ]
         }
 
         with open(FILE_NAME, 'w') as f:
