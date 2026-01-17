@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-01-17T19:58:09.868573",
+  "network": "mainnet",
+  "latest_block": {
+    "height": 870125,
+    "hash": "0000000000000000000b25382a17e298eeb5ec8dc1c1456eababe34c8f121290",
+    "tx_count": 2847
+  },
+  "custody_addresses": [
+    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy",
+    "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass"
+  ],
+  "mempool": {
+    "count": 15432,
+    "vsize": 89234567,
+    "total_fee": 12456789
+  },
+  "fee_rate_sat_vb": 10
+}

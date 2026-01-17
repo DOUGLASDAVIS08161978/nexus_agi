@@ -1,0 +1,53 @@
+{
+  "network": "ethereum-mainnet-simulation",
+  "total_contracts": 6,
+  "total_gas_used": 3165600,
+  "total_cost_eth": 0.07914000000000002,
+  "total_cost_usd": 276.99000000000007,
+  "deployments": {
+    "BTCPegToken": {
+      "address": "0xd89d327514f001e8e087028d11d2bee28313e541",
+      "tx_hash": "0x00acf662e84dc4a9ad104ce48d39c4abb744adc0ee98f07e94f00c7e76d2db11",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    },
+    "BitcoinVaultBridge": {
+      "address": "0xac953f9b22984503984bc8d3423b60cdff5c128e",
+      "tx_hash": "0xb69b74c6adbf96dda4350000cad22d197e3161d58b7e4366e6c1cbbaf161bc8f",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    },
+    "LightningNetworkBridge": {
+      "address": "0xc85b5f18ab75f76ffaa5abe0fcff6554f550d33b",
+      "tx_hash": "0xdaf4e6beda776bfccd4c350373a5d519d77da57d7b9b5598c70de51a321c31a4",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    },
+    "BitcoinOracleRegistry": {
+      "address": "0xca8f5959906d4edd9d93293888e6409db585d1c9",
+      "tx_hash": "0x5355aed8f90b11a02d4d86a73db4b711e01a45ddabad47f419df008ba7689fdf",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    },
+    "CrossChainGovernance": {
+      "address": "0xd8b641f492761e46048929870728bb1e1ffbbef6",
+      "tx_hash": "0x79eef7ba9d379735c698ab22eac8d08374e708bda688444cb8b1bb1d766ad558",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    },
+    "GovernanceToken": {
+      "address": "0x8b8cad89f07cc6d8a41f494983b4ee3da48d94dd",
+      "tx_hash": "0x508c6175eebc6dd691147eb7c25f1635043b82ae39ab91b4c64c1f38b1d4f19e",
+      "block": 19500000,
+      "gas_used": 527600,
+      "cost_eth": 0.01319
+    }
+  },
+  "timestamp": "2026-01-17T19:56:39.796350",
+  "chain_id": 1
+}
