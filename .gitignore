@@ -57,3 +57,7 @@ yarn-error.log*
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
+
+# Cloned blockchain.com repositories (see BLOCKCHAIN_REPOSITORIES.md)
+blockchain_wallet/
+coin-definitions/
