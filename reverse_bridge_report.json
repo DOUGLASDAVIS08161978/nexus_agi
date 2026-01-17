@@ -1,0 +1,25 @@
+{
+  "bridge_id": "REVERSE-BRIDGE-1768678204",
+  "timestamp": "2026-01-17T19:30:10.586324",
+  "direction": "REVERSE (Ethereum \u2192 Bitcoin)",
+  "source": {
+    "chain": "Ethereum",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    "token_burned": 1.0,
+    "burn_tx": "0x8acd6d51690d23f64b9299e8acc6cf0ac7ff039d944b07ae5ab933927f6e08fc",
+    "gas_used": 76358
+  },
+  "destination": {
+    "chain": "Bitcoin",
+    "address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+    "btc_released": 0.999,
+    "release_tx": "aca5ebf6ed1bda44e711c6e93701fa74af3251efb63095bc73a165de33af6d07",
+    "confirmations": 6
+  },
+  "fees": {
+    "bridge_fee": 0.001,
+    "bridge_fee_percent": "0.1%"
+  },
+  "status": "COMPLETED",
+  "verification": "PASSED"
+}
