@@ -1,0 +1,107 @@
+{
+  "total_bridges": 3,
+  "total_btc_locked": 160.0,
+  "total_wtbtc_minted": 160.0,
+  "total_blocks_mined": 3,
+  "contract_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+  "contract_total_supply": 160.0,
+  "bridge_transactions": [
+    {
+      "bridge_id": "BRIDGE-1768677565-1",
+      "btc_amount": 10.0,
+      "eth_tokens": 10.0,
+      "tx_hash": "0x9c5ddbc271605fb0eba45d84b06ffa594d61e74b0da105e784c0312277eff233",
+      "btc_tx_hash": "0000f44d9cac77fdc33b8f3fd7c6aacb4dbcab96389d9735b11dc2614bc4b62b",
+      "gas_used": 89758,
+      "status": "COMPLETED",
+      "contract_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "timestamp": "2026-01-17T19:19:25.892628"
+    },
+    {
+      "bridge_id": "BRIDGE-1768677567-2",
+      "btc_amount": 25.0,
+      "eth_tokens": 25.0,
+      "tx_hash": "0x25b9e2bfa61dc27a6723102bd6297912109d0291ef4fda7cc6cfda020cbde4bc",
+      "btc_tx_hash": "0000cf6ea5e7dce160bd56301f86bdb98e1f85fd29afef58d068d58162428e29",
+      "gas_used": 91903,
+      "status": "COMPLETED",
+      "contract_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "timestamp": "2026-01-17T19:19:27.953982"
+    },
+    {
+      "bridge_id": "BRIDGE-1768677569-3",
+      "btc_amount": 125.0,
+      "eth_tokens": 125.0,
+      "tx_hash": "0x3bb8ce00112f0da802b50ab3dab6d6db0984a6772b07d59041e7472386375f5a",
+      "btc_tx_hash": "000025a0e64b2baeb0c9a1e1c8bfac2fabfab3927ef5259af8f1d69d64dff657",
+      "gas_used": 94250,
+      "status": "COMPLETED",
+      "contract_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "timestamp": "2026-01-17T19:19:29.955984"
+    }
+  ],
+  "bitcoin_blocks": [
+    {
+      "height": 1,
+      "hash": "0000f44d9cac77fdc33b8f3fd7c6aacb4dbcab96389d9735b11dc2614bc4b62b",
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "2026-01-17T19:19:25.105727",
+      "nonce": 12679136,
+      "reward": 6.25,
+      "transactions": 2270,
+      "difficulty": 4
+    },
+    {
+      "height": 2,
+      "hash": "0000cf6ea5e7dce160bd56301f86bdb98e1f85fd29afef58d068d58162428e29",
+      "previous_hash": "0000f44d9cac77fdc33b8f3fd7c6aacb4dbcab96389d9735b11dc2614bc4b62b",
+      "timestamp": "2026-01-17T19:19:27.394859",
+      "nonce": 916887373,
+      "reward": 6.25,
+      "transactions": 1134,
+      "difficulty": 4
+    },
+    {
+      "height": 3,
+      "hash": "000025a0e64b2baeb0c9a1e1c8bfac2fabfab3927ef5259af8f1d69d64dff657",
+      "previous_hash": "0000cf6ea5e7dce160bd56301f86bdb98e1f85fd29afef58d068d58162428e29",
+      "timestamp": "2026-01-17T19:19:29.455216",
+      "nonce": 1019580931,
+      "reward": 6.25,
+      "transactions": 1054,
+      "difficulty": 4
+    }
+  ],
+  "ethereum_transactions": [
+    {
+      "hash": "0x9c5ddbc271605fb0eba45d84b06ffa594d61e74b0da105e784c0312277eff233",
+      "function": "mint",
+      "to": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "amount": 10.0,
+      "bitcoin_tx_id": "0000f44d9cac77fdc33b8f3fd7c6aacb4dbcab96389d9735b11dc2614bc4b62b",
+      "gas_used": 89758,
+      "timestamp": "2026-01-17T19:19:26.394278",
+      "status": "CONFIRMED"
+    },
+    {
+      "hash": "0x25b9e2bfa61dc27a6723102bd6297912109d0291ef4fda7cc6cfda020cbde4bc",
+      "function": "mint",
+      "to": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "amount": 25.0,
+      "bitcoin_tx_id": "0000cf6ea5e7dce160bd56301f86bdb98e1f85fd29afef58d068d58162428e29",
+      "gas_used": 91903,
+      "timestamp": "2026-01-17T19:19:28.454692",
+      "status": "CONFIRMED"
+    },
+    {
+      "hash": "0x3bb8ce00112f0da802b50ab3dab6d6db0984a6772b07d59041e7472386375f5a",
+      "function": "mint",
+      "to": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "amount": 125.0,
+      "bitcoin_tx_id": "000025a0e64b2baeb0c9a1e1c8bfac2fabfab3927ef5259af8f1d69d64dff657",
+      "gas_used": 94250,
+      "timestamp": "2026-01-17T19:19:30.456378",
+      "status": "CONFIRMED"
+    }
+  ]
+}
