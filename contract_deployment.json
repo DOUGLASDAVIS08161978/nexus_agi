@@ -1,0 +1,43 @@
+{
+  "network": "sepolia",
+  "contract_address": "0xbef2801dd2d0f3976e27d6f33dc894f943fb456e",
+  "deployer": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+  "deployment_tx": "0x16963822d420b0006e0f0d278f1e55fedd7c30a605359799a36949e5c4e1d853",
+  "block_number": 5234570,
+  "timestamp": "2026-01-17T19:25:22.473554",
+  "transactions": [
+    {
+      "type": "mint",
+      "tx_hash": "0x1a63f7f94e194f0f8d9d3435b728ac52cb03954e167128759290d49c7b7b5e2b",
+      "to": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "amount": 100.0
+    },
+    {
+      "type": "mint",
+      "tx_hash": "0x1dd8afc0bdea80cf274319797bfdb178e0b711c832678c2a4aec007381703701",
+      "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "amount": 60.0
+    },
+    {
+      "type": "transfer",
+      "tx_hash": "0x98466e4dad90f6a7e23206b07c57ba5feedcce6c5695fa5480bb30169bea3019",
+      "from": "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d",
+      "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "amount": 25.0
+    },
+    {
+      "type": "burn",
+      "tx_hash": "0xf2daac4ebc4ecd2716a15578f9d7d9cdd714cd50bb28079559ffd2ed8105bed7",
+      "from": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+      "amount": 10.0,
+      "btc_address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+    }
+  ],
+  "final_state": {
+    "total_supply": 150.0,
+    "balances": {
+      "0x12f4441ec006a6b00ae8bc8800c2443f9b0c775d": 75.0,
+      "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0": 75.0
+    }
+  }
+}
