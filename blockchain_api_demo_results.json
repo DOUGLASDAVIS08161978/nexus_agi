@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-01-17T19:36:24.908840",
+  "api_base": "https://blockchain.info",
+  "latest_block": {
+    "hash": "00000000000000000002a7c4c1e48d76c5a37902165a270156b7a8d72728a054",
+    "time": 1737142567,
+    "block_index": 870123,
+    "height": 870123,
+    "txIndexes": [
+      5847392012847563,
+      5847392012847564,
+      5847392012847565
+    ]
+  },
+  "address_balance": {
+    "address": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+    "balance_satoshi": 16099900000,
+    "balance_btc": 160.999,
+    "total_received": 160.999,
+    "total_sent": 0.0,
+    "tx_count": 5
+  },
+  "block_details": {
+    "hash": "00000000000000000002a7c4c1e48d76c5a37902165a270156b7a8d72728a054",
+    "ver": 536870912,
+    "prev_block": "00000000000000000002c5b8e3d5f3c68eb98c8c7c4d1e5c0b5a8f9d3e1f2a3b",
+    "mrkl_root": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f01234",
+    "time": 1737142567,
+    "bits": 386089497,
+    "nonce": 2847563921,
+    "n_tx": 2453,
+    "size": 1547892,
+    "weight": 3982451,
+    "height": 870011,
+    "fee": 125847563,
+    "difficulty": 109782745214900.5,
+    "main_chain": true
+  },
+  "btc_prices": {
+    "USD": {
+      "15m": 104582.45,
+      "last": 104582.45,
+      "buy": 104580.12,
+      "sell": 104584.78,
+      "symbol": "$"
+    },
+    "EUR": {
+      "15m": 96234.18,
+      "last": 96234.18,
+      "buy": 96232.15,
+      "sell": 96236.21,
+      "symbol": "\u20ac"
+    },
+    "GBP": {
+      "15m": 83142.67,
+      "last": 83142.67,
+      "buy": 83140.89,
+      "sell": 83144.45,
+      "symbol": "\u00a3"
+    },
+    "JPY": {
+      "15m": 15894321.45,
+      "last": 15894321.45,
+      "buy": 15894000.0,
+      "sell": 15894642.9,
+      "symbol": "\u00a5"
+    }
+  },
+  "network_stats": {
+    "difficulty": 109782745214900.5,
+    "hashrate": 789234567.89,
+    "block_count": 870123,
+    "total_btc": 19600000.0,
+    "mempool_size": 45283
+  },
+  "transaction": {
+    "hash": "aca5ebf6ed1bda44e711c6e93701fa74af3251efb63095bc73a165de33af6d07",
+    "ver": 2,
+    "vin_sz": 1,
+    "vout_sz": 2,
+    "size": 225,
+    "weight": 900,
+    "fee": 2250,
+    "relayed_by": "0.0.0.0",
+    "lock_time": 0,
+    "tx_index": 5847392012847563,
+    "double_spend": false,
+    "time": 1737142567,
+    "block_index": 870011,
+    "block_height": 870011,
+    "inputs": [
+      {
+        "sequence": 4294967295,
+        "witness": "",
+        "prev_out": {
+          "spent": true,
+          "spending_outpoints": [],
+          "tx_index": 5847392012847562,
+          "type": 0,
+          "addr": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+          "value": 99900000,
+          "n": 0
+        }
+      }
+    ],
+    "out": [
+      {
+        "type": 0,
+        "spent": false,
+        "value": 99900000,
+        "n": 0,
+        "addr": "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass"
+      }
+    ]
+  },
+  "wallet_value_usd": 16837669.86755
+}

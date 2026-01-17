@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-01-17T19:34:59.682312",
+  "latest_block": {},
+  "network_stats": {
+    "difficulty": null,
+    "hashrate": null,
+    "block_count": null,
+    "total_btc": null
+  },
+  "mempool_size": 0,
+  "btc_prices": {},
+  "address_balance": {}
+}
