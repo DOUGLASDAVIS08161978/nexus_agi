@@ -1,0 +1,104 @@
+{
+  "token_metrics": {
+    "YieldToken": {
+      "symbol": "YIELD",
+      "max_supply": "1,000,000",
+      "apy": "5%",
+      "mechanism": "Auto-compounding from bridge fees",
+      "value_proposition": "Passive income for holders"
+    },
+    "StableBTC": {
+      "symbol": "sBTC",
+      "peg": "$1.00 USD",
+      "collateral_ratio": "150%",
+      "mechanism": "Over-collateralized with BTC",
+      "value_proposition": "Stable value, DeFi utility"
+    },
+    "BridgeRewardToken": {
+      "symbol": "BREWARD",
+      "max_supply": "10,000,000",
+      "reward_rate": "100 BREWARD per 1 BTC bridged",
+      "tiers": "Bronze \u2192 Diamond (up to 2x multiplier)",
+      "value_proposition": "Loyalty rewards for bridge users"
+    },
+    "LiquidityToken": {
+      "symbol": "BLP",
+      "mechanism": "LP token for bridge liquidity",
+      "revenue": "Share of all bridge fees",
+      "value_proposition": "Passive fee income"
+    },
+    "InsuranceToken": {
+      "symbol": "INSURE",
+      "max_supply": "5,000,000",
+      "coverage": "Bridge transaction insurance",
+      "premium": "1% of covered amount",
+      "value_proposition": "Earn premiums, provide coverage"
+    },
+    "OracleRewardToken": {
+      "symbol": "ORACLE",
+      "max_supply": "2,000,000",
+      "reward": "Up to 100 ORACLE per data submission",
+      "mechanism": "Accuracy-based rewards",
+      "value_proposition": "Incentivize oracle providers"
+    },
+    "NFTCollateralToken": {
+      "symbol": "NFTC",
+      "mechanism": "Fractionalized NFT ownership",
+      "use_case": "NFT-backed lending",
+      "value_proposition": "NFT liquidity, fractional ownership"
+    },
+    "SyntheticBTC": {
+      "symbol": "synBTC",
+      "leverage": "1x to 10x",
+      "mechanism": "Synthetic Bitcoin exposure",
+      "use_case": "Leveraged trading",
+      "value_proposition": "Capital efficiency, leverage"
+    },
+    "FlashLoanToken": {
+      "symbol": "FLASH",
+      "max_supply": "3,000,000",
+      "fee": "0.09%",
+      "mechanism": "Flash loan fee distribution",
+      "value_proposition": "Fee sharing for stakers"
+    },
+    "CommunityToken": {
+      "symbol": "COMM",
+      "max_supply": "50,000,000",
+      "mechanism": "Gamified engagement + quests",
+      "rewards": "Airdrops, referrals, level-ups",
+      "value_proposition": "Community growth, viral adoption"
+    }
+  },
+  "ecosystem_value": {
+    "total_contracts": 16,
+    "bridge_infrastructure": 6,
+    "defi_tokens": 10,
+    "total_token_supply": {
+      "YIELD": 1000000,
+      "sBTC": "Variable (CDP-based)",
+      "BREWARD": 10000000,
+      "BLP": "Variable (liquidity-based)",
+      "INSURE": 5000000,
+      "ORACLE": 2000000,
+      "NFTC": "Variable (NFT-based)",
+      "synBTC": "Variable (position-based)",
+      "FLASH": 3000000,
+      "COMM": 50000000
+    },
+    "revenue_streams": [
+      "Bridge transaction fees (0.1%)",
+      "Lightning fees (0.2%)",
+      "Stability fees (0.5% annual)",
+      "Insurance premiums (1%)",
+      "Flash loan fees (0.09%)",
+      "Liquidation bonuses (10%)"
+    ],
+    "projected_annual_revenue": {
+      "bridge_fees": "$3,600,000 (100 BTC daily volume)",
+      "insurance_premiums": "$500,000",
+      "flash_loans": "$250,000",
+      "total": "$4,350,000+"
+    }
+  },
+  "deployed_contracts": 16
+}

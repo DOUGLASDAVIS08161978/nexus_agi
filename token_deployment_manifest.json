@@ -1,0 +1,144 @@
+{
+  "deployment_date": "2026-01-17T20:13:30.498510",
+  "network": "ethereum-mainnet",
+  "chain_id": 1,
+  "deployer": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+  "total_contracts": 16,
+  "contracts": {
+    "BTCPegToken": {
+      "address": "0x79086e1cb0f41b92d13a8a87acd833c59893ac0c",
+      "tx_hash": "0x326d36d4019007a7e82fec2030c0af967b5d7758924930629b99d15bb55c9bcb",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:14.654412"
+    },
+    "BitcoinVaultBridge": {
+      "address": "0xe7f136399a261e4f58bffa54965dc6177fcdd6c2",
+      "tx_hash": "0x0f8e62d01d8c93cec72d49b05bf22433c5863cafd6bae1ca3dcbb3069cfbd0fc",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:14.955645"
+    },
+    "LightningNetworkBridge": {
+      "address": "0xd510705854545b2f3b9eac263ff74a1abc0f7e00",
+      "tx_hash": "0x264b90835d6fa93c64ef6c89be01adf068cee4f3fa21728881ed04318d2ffb76",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:15.256435"
+    },
+    "BitcoinOracleRegistry": {
+      "address": "0xaeb4cc7feb3dcc7158fad7bdf863e70ae7c10a4a",
+      "tx_hash": "0xf2a0c1b3cf5905afa964401257a9b20aa0ae12548c0ce8688f54f71a82c32b61",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:15.557633"
+    },
+    "CrossChainGovernance": {
+      "address": "0xdbdfd6fd3432a98941795c40127a5763b12570e5",
+      "tx_hash": "0xfda8c34de1b09d933958bb5f051da02e264ea6e1e1de83c8642518872c53533b",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:15.858984"
+    },
+    "GovernanceToken": {
+      "address": "0xbf09d5228e4140a5a8cef3ee92c3b2a554c27341",
+      "tx_hash": "0x803aada37e7582e2c95e0fab5a98830d5e0ff0f1c3e86310de40ce546880667b",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:16.159911"
+    },
+    "YieldToken": {
+      "address": "0xf4e12f68dd7e85161fd9536de7fa27d08fdf173e",
+      "tx_hash": "0xd01b4c7c3220ff01fc62f9c47156d88a2b177f46a6cad6ebadb122c4877af1da",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:16.461678"
+    },
+    "StableBTC": {
+      "address": "0xd84d39257067ddd5bb8f0a036e04b3335bd01acb",
+      "tx_hash": "0x70a370a094b842f2a95e4a2b2802455011703ae36318927be688cc2b63e800d3",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:16.762690"
+    },
+    "BridgeRewardToken": {
+      "address": "0xce0daa16e36c705dcc38e8939cbc15bdd19531b5",
+      "tx_hash": "0x0655dddbb7539182a4fcf89b1e888fa3f2702922095d64d711733f65a5fbe432",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:17.064329"
+    },
+    "LiquidityToken": {
+      "address": "0xb81c9ebd5fbc72cf991ab2dad7b21a910078d024",
+      "tx_hash": "0xdf54280876daa4cde3e9096a5f2417a71cd19b341d9a98a34c3babd9fd219ab9",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:17.365623"
+    },
+    "InsuranceToken": {
+      "address": "0x086c059bb63425e27cadc513e542aeb741ae6cdc",
+      "tx_hash": "0xf9bfc5c4738cd239f80f6770eba1834f2f9c04202971303842c5490b970c6a3b",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:17.666789"
+    },
+    "OracleRewardToken": {
+      "address": "0xc0c7d3827401a51ee686a05524efab1571960649",
+      "tx_hash": "0x0b40b5f73cb8695f004ab14c8a707285142a3a21445bda210e40f9177b1a8512",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:17.968456"
+    },
+    "NFTCollateralToken": {
+      "address": "0xe8527f3a48d81ddcbe4f0f79b9d184af9e1cb05d",
+      "tx_hash": "0x9a5248cc49d1252192d27b3d2b9a9c05044ce2696fb307e0e00edf922ab2d767",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:18.269878"
+    },
+    "SyntheticBTC": {
+      "address": "0x067c0d9b95b5fd5e1fe4a50a0693205081156923",
+      "tx_hash": "0x2ccef3837774fc28b8278dbf7efaa19053a0cbdb38d9c2ac527de86041933e8e",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:18.571367"
+    },
+    "FlashLoanToken": {
+      "address": "0x67ba1fdf7b1b9c6da2da21c9eb6c7b4ee537e7dd",
+      "tx_hash": "0xd3cc7669067793097f8d6edb20e49c95426ef721ea2223052ed4825b5707238d",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:18.872321"
+    },
+    "CommunityToken": {
+      "address": "0x8c114b071e4c20d85f5bf4df439eaba4f39b39f6",
+      "tx_hash": "0xd2d37f0f046b112a99c2c96f6fb17e858eb3996b4791d495a9b20e196b8b2089",
+      "block_number": 19500000,
+      "gas_used": 527600,
+      "deployment_cost_eth": 0.010552,
+      "timestamp": "2026-01-17T20:13:19.174112"
+    }
+  },
+  "totals": {
+    "total_gas_used": 8441600,
+    "total_cost_eth": 0.16883200000000007,
+    "total_cost_usd": 590.9120000000003,
+    "average_gas_per_contract": 527600,
+    "average_cost_per_contract_eth": 0.010552000000000004
+  }
+}
