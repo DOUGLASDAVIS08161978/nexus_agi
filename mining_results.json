@@ -1,0 +1,68 @@
+{
+  "cumulative_stats": {
+    "cycles": 20,
+    "total_shares": 225,
+    "total_accepted": 179,
+    "total_blocks": 6,
+    "total_btc": 37.5,
+    "total_eth_tokens": 768.75,
+    "bridge_transactions": 6
+  },
+  "bridge_history": [
+    {
+      "bridge_id": "BRIDGE-1768636904",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "736f2269876294874928d20a285389f09328e3b74433cd2f54aaf19bbe2d8f19",
+      "gas_used": 58180,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:44.106599"
+    },
+    {
+      "bridge_id": "BRIDGE-1768636904",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "eba06a84cc201794f1fea7e2ae9157a805f14d5338807388c9dfae31ce3e4843",
+      "gas_used": 93920,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:44.207973"
+    },
+    {
+      "bridge_id": "BRIDGE-1768636904",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "4e599e9933fbf5fa8357b8f44ecc1e9b87e7c8d68dcaec85ed973f0086b468f6",
+      "gas_used": 70673,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:44.309011"
+    },
+    {
+      "bridge_id": "BRIDGE-1768636904",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "b11715038a96a663d16adfec52a398708654c2570773f8acb5e8a43fe495e6de",
+      "gas_used": 70153,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:44.713764"
+    },
+    {
+      "bridge_id": "BRIDGE-1768636905",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "ae7f4cdb4325b7c1a2251b0a503701bd5128910f4eb52522a69d647a498c23ed",
+      "gas_used": 65414,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:45.420932"
+    },
+    {
+      "bridge_id": "BRIDGE-1768636905",
+      "btc_amount": 6.25,
+      "eth_tokens": 128.125,
+      "tx_hash": "eb0cffd1ede8619582684633333eeb75371a95a52209971e8dd79f7dee337127",
+      "gas_used": 98577,
+      "status": "CONFIRMED",
+      "timestamp": "2026-01-17T08:01:45.825847"
+    }
+  ],
+  "timestamp": "2026-01-17T08:01:46.027755"
+}

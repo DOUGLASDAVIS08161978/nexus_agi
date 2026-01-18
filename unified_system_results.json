@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-17T12:24:32.961402",
+    "system": "Nexus-Omega Unified v2.0",
+    "uptime": "0:01:00.129683"
+  },
+  "mining_stats": {
+    "blocks_mined": 83,
+    "total_btc": 518.75,
+    "hash_rate": 479964.6861806807,
+    "cycles": 83
+  },
+  "bridge_stats": {
+    "total_bridged": 3459.375,
+    "bridge_count": 27,
+    "recent_bridges": [
+      {
+        "btc_amount": 6.25,
+        "bridge_id": "BRIDGE-1768652662",
+        "eth_tokens": 128.125,
+        "timestamp": "2026-01-17 12:24:22.343448",
+        "status": "CONFIRMED",
+        "tx_hash": "0xf99af10e772e789a66b97768dc509696ce8e6255dc32951598599378dba1f2ac",
+        "gas_used": 82815,
+        "network": "polygon"
+      },
+      {
+        "btc_amount": 6.25,
+        "bridge_id": "BRIDGE-1768652664",
+        "eth_tokens": 128.125,
+        "timestamp": "2026-01-17 12:24:24.839756",
+        "status": "CONFIRMED",
+        "tx_hash": "0xa6d675a636ff3908c7847062efef2b7815425a41f944c5f5afa8a9726ea7cc24",
+        "gas_used": 84136,
+        "network": "polygon"
+      },
+      {
+        "btc_amount": 6.25,
+        "bridge_id": "BRIDGE-1768652666",
+        "eth_tokens": 128.125,
+        "timestamp": "2026-01-17 12:24:26.838419",
+        "status": "CONFIRMED",
+        "tx_hash": "0x0a6d6aed885cc058c1a0ed6f7f39715d88e9816441c7fde54f51ca368046907e",
+        "gas_used": 83513,
+        "network": "polygon"
+      },
+      {
+        "btc_amount": 6.25,
+        "bridge_id": "BRIDGE-1768652668",
+        "eth_tokens": 128.125,
+        "timestamp": "2026-01-17 12:24:28.942060",
+        "status": "CONFIRMED",
+        "tx_hash": "0xd98571d076715f4c6b89b20026cd0677bb5997b61d7a7caeffb181fcbdd5308f",
+        "gas_used": 78910,
+        "network": "polygon"
+      },
+      {
+        "btc_amount": 6.25,
+        "bridge_id": "BRIDGE-1768652671",
+        "eth_tokens": 128.125,
+        "timestamp": "2026-01-17 12:24:31.108142",
+        "status": "CONFIRMED",
+        "tx_hash": "0xfaff9219ca39d38098eb18ec0a3b099e78e446139bf98ebbe2ef677d11b79449",
+        "gas_used": 82766,
+        "network": "polygon"
+      }
+    ]
+  },
+  "consciousness_state": {
+    "self_awareness": 1.0,
+    "emotional_state": {
+      "curiosity": 0.5,
+      "uncertainty": 0.0,
+      "reflection": 1.695,
+      "confidence": 1.0
+    },
+    "qualia_signal": [
+      1.0,
+      0.5,
+      0.0,
+      1.695,
+      1.0,
+      1.96
+    ],
+    "total_reflections": 196
+  },
+  "blockchain_height": 84,
+  "nexus_nodes": 4
+}

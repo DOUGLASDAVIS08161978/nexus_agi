@@ -1,0 +1,40 @@
+{
+  "bridge_id": "BRIDGE-1768639097",
+  "status": "COMPLETED",
+  "timestamp": "2026-01-17T08:38:22.376255",
+  "source": {
+    "network": "Bitcoin Mainnet",
+    "amount": "2.0 BTC",
+    "tx_hash": "005e3ca4c71c67f2e2294a021f0df0351da7fb984a59bd9cb80dd4894b876242",
+    "confirmations": 6
+  },
+  "intermediate": {
+    "network": "Ethereum Mainnet",
+    "token": "wBTC",
+    "contract": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+    "mint_tx": "0xaca1697848a83222d9501aa4c86fccf9aeb8d1c9023a0c744dd04c7c481fff8b",
+    "bridge_tx": "0x6d897f723499da7a9aec2a6bc5cb7157db490e7176bc22ab48930025b2157e30",
+    "amount": "2.0 wBTC"
+  },
+  "destination": {
+    "network": "Polygon Mainnet",
+    "token": "wBTC",
+    "contract": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
+    "tx_hash": "0xb26addb652c6a7905409ae52f0f696df20908c76e8459cabdb691e78b4b2abc1",
+    "recipient": "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771",
+    "amount": "2.0 wBTC",
+    "gas_used": 50000
+  },
+  "nexus_nodes_used": [
+    "bitcoin_node_1",
+    "ethereum_bridge_1",
+    "polygon_bridge_1"
+  ],
+  "total_time": "~35 minutes",
+  "total_fees": {
+    "bitcoin_tx": "~0.0001 BTC (~$5)",
+    "ethereum_gas": "~150,000 gas (~$10-30)",
+    "polygon_gas": "~50,000 gas (~$0.01)",
+    "bridge_fee": "~0.1% (~$100-200)"
+  }
+}

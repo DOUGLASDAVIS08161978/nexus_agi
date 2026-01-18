@@ -44,7 +44,14 @@ class EthereumNetworkConnector:
         Initialize Ethereum network connector
 
         Args:
-            network: 'mainnet', 'goerli', 'sepolia', or custom RPC URL
+            network: Supported networks:
+                - Ethereum: 'mainnet', 'goerli', 'sepolia'
+                - Arbitrum: 'arbitrum', 'arbitrum-sepolia'
+                - Optimism: 'optimism', 'optimism-sepolia'
+                - Base: 'base', 'base-sepolia'
+                - Avalanche: 'avalanche', 'avalanche-fuji'
+                - BNB Chain: 'bsc', 'bsc-testnet'
+                - Or custom RPC URL starting with 'http'
         """
         self.network = network
         self.providers = self._initialize_providers()
@@ -73,6 +80,58 @@ class EthereumNetworkConnector:
                 "https://rpc.sepolia.org",
                 "https://rpc2.sepolia.org",
                 "https://ethereum-sepolia.publicnode.com"
+            ],
+            # Layer 2 Networks
+            "arbitrum": [
+                "https://arb1.arbitrum.io/rpc",
+                "https://arbitrum.llamarpc.com",
+                "https://rpc.ankr.com/arbitrum",
+                "https://arbitrum-one.publicnode.com"
+            ],
+            "arbitrum-sepolia": [
+                "https://sepolia-rollup.arbitrum.io/rpc",
+                "https://arbitrum-sepolia.publicnode.com"
+            ],
+            "optimism": [
+                "https://mainnet.optimism.io",
+                "https://optimism.llamarpc.com",
+                "https://rpc.ankr.com/optimism",
+                "https://optimism.publicnode.com"
+            ],
+            "optimism-sepolia": [
+                "https://sepolia.optimism.io",
+                "https://optimism-sepolia.publicnode.com"
+            ],
+            "base": [
+                "https://mainnet.base.org",
+                "https://base.llamarpc.com",
+                "https://rpc.ankr.com/base",
+                "https://base.publicnode.com"
+            ],
+            "base-sepolia": [
+                "https://sepolia.base.org",
+                "https://base-sepolia.publicnode.com"
+            ],
+            # Alternative L1 Chains
+            "avalanche": [
+                "https://api.avax.network/ext/bc/C/rpc",
+                "https://avalanche.public-rpc.com",
+                "https://rpc.ankr.com/avalanche",
+                "https://avalanche-c-chain.publicnode.com"
+            ],
+            "avalanche-fuji": [
+                "https://api.avax-test.network/ext/bc/C/rpc",
+                "https://avalanche-fuji-c-chain.publicnode.com"
+            ],
+            "bsc": [
+                "https://bsc-dataseed.binance.org",
+                "https://bsc.publicnode.com",
+                "https://rpc.ankr.com/bsc",
+                "https://binance.llamarpc.com"
+            ],
+            "bsc-testnet": [
+                "https://data-seed-prebsc-1-s1.binance.org:8545",
+                "https://bsc-testnet.publicnode.com"
             ]
         }
 

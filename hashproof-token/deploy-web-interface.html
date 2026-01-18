@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wTBTC + HashProof Deployment Tool</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .contract-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 2px solid #667eea;
+        }
+        .contract-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .contract-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .contract-info a {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .contract-info a:hover {
+            text-decoration: underline;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 wTBTC + HashProof Deployment Tool</h1>
+            <p>One-click deployment to Ethereum Sepolia Testnet</p>
+        </div>
+
+        <div class="content">
+            <!-- Warning -->
+            <div class="warning">
+                <strong>⚠️ Important:</strong> This tool deploys to <strong>Sepolia Testnet</strong> only.
+                You'll need MetaMask installed and Sepolia ETH in your wallet.
+            </div>
+
+            <!-- Step 1: Connect Wallet -->
+            <div class="section">
+                <h2><span class="step-number">1</span>Connect Wallet</h2>
+                <p>Connect your MetaMask wallet to deploy contracts.</p>
+                <button class="button" id="connectBtn" onclick="connectWallet()">
+                    Connect MetaMask
+                </button>
+                <div id="walletStatus"></div>
+            </div>
+
+            <!-- Step 2: Deploy wTBTC -->
+            <div class="section">
+                <h2><span class="step-number">2</span>Deploy wTBTC Contract</h2>
+                <p>Deploy the Wrapped Testnet Bitcoin bridge contract.</p>
+                <button class="button" id="deployWTBTCBtn" onclick="deployWTBTC()" disabled>
+                    Deploy wTBTC
+                </button>
+                <div id="wtbtcStatus"></div>
+            </div>
+
+            <!-- Step 3: Mint Tokens -->
+            <div class="section">
+                <h2><span class="step-number">3</span>Mint wTBTC Tokens</h2>
+                <p>Mint wrapped Bitcoin tokens (simulates Bitcoin bridge).</p>
+
+                <div class="input-group">
+                    <label>Amount to Mint (in wTBTC):</label>
+                    <input type="text" id="mintAmount" placeholder="1.0" value="1.0">
+                </div>
+
+                <div class="input-group">
+                    <label>Bitcoin Transaction ID (simulation):</label>
+                    <input type="text" id="btcTxId" placeholder="btc_tx_12345..." value="simulated_btc_deposit">
+                </div>
+
+                <button class="button" id="mintBtn" onclick="mintTokens()" disabled>
+                    Mint Tokens
+                </button>
+                <div id="mintStatus"></div>
+            </div>
+
+            <!-- Step 4: View Results -->
+            <div class="section">
+                <h2><span class="step-number">4</span>Deployment Summary</h2>
+                <div id="deploymentSummary">
+                    <p style="color: #666;">Deploy contracts to see summary...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let provider;
+        let signer;
+        let userAddress;
+        let wtbtcContract;
+        let wtbtcAddress;
+
+        // wTBTC Contract ABI
+        const WTBTC_ABI = [
+            "constructor(address _initialOperator)",
+            "function mint(address to, uint256 amount, string calldata bitcoinTxId) external",
+            "function balanceOf(address account) view returns (uint256)",
+            "function totalSupply() view returns (uint256)",
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)",
+            "event Mint(address indexed to, uint256 amount, string bitcoinTxId)"
+        ];
+
+        // wTBTC Bytecode (compiled)
+        const WTBTC_BYTECODE = "0x608060405234801561000f575f80fd5b506040516116e43803806116e483398101604081905261002e91610062565b600180546001600160a01b0319166001600160a01b039290921691821790556040515f907f2f3f5b85952bddc958d0f896df88f3d90bffec59e90f21fa37ec99b5c03cbf039190a3610090565b5f6020828403121561007257365f80fd5b81516001600160a01b038116811461008857365f80fd5b9392505050565b61164780610098ef5b6000fe60806040526004361061012c575f3560e01c8063879f7a99116100a1578063a9059cbb11610066578063a9059cbb146103c5578063dd62ed3e146103e4578063e03d5f6214610428578063f2fde38b14610447575f80fd5b8063879f7a99146103095780638da5cb5b1461031e57806395d89b411461033b578063a0712d6814610393578063a457c2d7146103a6575f80fd5b80632d06177a116100f15780632d06177a14610224578063313ce56714610243578063395093511461025e57806370a082311461027d5780637c025200146102b1575f80fd5b806306fdde0314610137578063095ea7b31461016257806316c38b3c1461019157806318160ddd146101b057806323b872dd146101ce575f80fd5b3661013357005b5f80fd5b348015610142575f80fd5b5061014b610466565b604051610159919061131f565b60405180910390f35b34801561016d575f80fd5b5061018161017c36600461136d565b610497565b6040519015158152602001610159565b34801561019c575f80fd5b506101ae6101ab3660046113a3565b6104ad565b005b3480156101bb575f80fd5b506002545b604051908152602001610159565b3480156101d9575f80fd5b506101816101e83660046113bc565b6104f8565b3480156101f9575f80fd5b5060015461020c906001600160a01b031681565b6040516001600160a01b039091168152602001610159565b34801561022f575f80fd5b506101ae61023e3660046113f5565b610585565b34801561024e575f80fd5b5060405160128152602001610159565b348015610269575f80fd5b5061018161027836600461136d565b6106a5565b348015610288575f80fd5b5061029c610297366004611428565b6106d6565b60405163ffffffff9091168152602001610159565b3480156102bc575f80fd5b506101c07f000000000000000000000000000000000000000000000000000000000000000081565b3480156102f0575f80fd5b506101c0610300366004611443565b5f949350505050565b348015610314575f80fd5b5061020c5f81565b348015610329575f80fd5b506001546001600160a01b031661020c565b348015610346575f80fd5b5061038660405180604001604052806005815260200164776554424360d81b81525081565b6040516101599190611468565b6101ae6103a1366004611428565b6106f0565b3480156103b1575f80fd5b506101816103c036600461136d565b6107e7565b3480156103d0575f80fd5b506101816103df36600461136d565b610861565b3480156103ef575f80fd5b5061029c6103fe3660046114a6565b6001600160a01b039182165f90815260046020908152604080832093909416825291909152205463ffffffff1690565b348015610433575f80fd5b50610181610442366004611428565b61086e565b348015610452575f80fd5b506101ae610461366004611428565b610889565b6040805180820190915260198152785772617070656420546573746e65742042697463696f6e60381b60208201525b9060020b81565b5f6104a33384846109ad565b5060015b92915050565b6001546001600160a01b031633146104d85760405162461bcd60e51b81526004016104cf906114d7565b60405180910390fd5b600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001600160a01b0383165f90815260046020908152604080832033845290915281205463ffffffff1682111561053057505f610578565b6001600160a01b0384165f9081526004602090815260408083203384529091528120805463ffffffff85168290039091556105719085908690610a2a565b600191505b5092915050565b6001546001600160a01b031633146105a75760405162461bcd60e51b81526004016104cf906114d7565b5f831161060c5760405162461bcd60e51b815260206004820152602860248201527f436f6e74726163743a206d696e7420616d6f756e742063616e6e6f742062652060448201526707a65726f2076616c75652160c41b60648201526084016104cf565b6001600160a01b0384165f908152600360209081526040918290205491519182528691849186917f0f6798a560793a54c3bcfe86a93cde1e73087d944c0ea20544137d412139688591a38060025f828254610667919061150f565b90915550506001600160a01b0385165f908152600360205260408120805486929061069390849061150f565b90915550610556905085858585610b54565b335f8181526004602090815260408083206001600160a01b038716845290915281205490916104a391859061027890869061150f565b6001600160a01b03165f90815260036020526040902054919050565b6001546001600160a01b031633146107625760405162461bcd60e51b815260206004820152602f60248201527f436f6e74726163743a2063616c6c6572206973206e6f74207468652062726960448201526e191d99d9bdc8b3c8195c985d1bdc9d608a1b60648201526084016104cf565b5f81116107c15760405162461bcd60e51b815260206004820152602760248201527f436f6e74726163743a206275726e20616d6f756e742063616e6e6f742062652060448201526607a65726f2076616c75652160cc1b60648201526084016104cf565b6107d68233835b5f546001600160a01b0316919050565b6107e082826108c6565b8051906020012090565b50505050565b335f9081526004602090815260408083206001600160a01b03861684529091528120548211156108315750335f90815260046020908152604080832033845290915290205460010161085a565b335f9081526004602090815260408083206001600160a01b03861684529091528120805463ffffffff8516929003909155610856908590859061097d565b5060015b9392505050565b5f6104a3338484610a2a565b6001546001600160a01b0390811691161490565b6001546001600160a01b031633146108b35760405162461bcd60e51b81526004016104cf906114d7565b6001600160a01b0316ff5b600180546001600160a01b0384811691161415610933576040805162461bcd60e51b8152602060048201526024808201527f436f6e74726163743a207472616e736665722066726f6d20746865207a65726f604482015263206164647265737360e01b60648201526084016104cf565b6001600160a01b0382165f90815260036020526040902054811115610978576040805162461bcd60e51b8152602060048201526006602482015265217a65726f60901b60448201526064016104cf565b600161097b565b6001600160a01b038381165f818152600360205260408082208054879003905592861680825290839020805486019055915184815260003092917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef910160405180910390a350505050565b6001600160a01b038216610a275760405162461bcd60e51b815260206004820152602860248201527f436f6e74726163743a206d696e7420746f20746865207a65726f206164647265604482015267073732062756726e60c41b60648201526084016104cf565b50565b6001600160a01b038084165f908152600360205260408082208054879003905591851681529081208054859290610a6390849061150f565b92505081905550826001600160a01b0316846001600160a01b0316337f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925858560405161150f565b5f6104a7828401846114eb565b5f8060408385031215610b6f575f80fd5b82356001600160a01b0381168114610b85575f80fd5b946020939093013593505050565b5f60208284031215610ba3575f80fd5b813580151581146108585761085a565b5f805f80fd5b80356001600160a01b0381168114610bc0575f80fd5b919050565b5f805f60608486031215610bd7575f80fd5b610be084610baa565b9250610bee60208501610baa565b9150604084013590509250925092565b5f8060408385031215610c0f575f80fd5b610c1883610baa565b9150610c2660208401610baa565b90509250929050565b5f60208284031215610c3f575f80fd5b61085882610baa565b5f8060408385031215610c59575f80fd5b50508035926020909101359150565b634e487b7160e01b5f52601160045260245ffd5b8082018082111561061c5761061c610c68565b8181038181111561061c5761061c610c68565b5f60208284031215610cb9575f80fd5b5051919050565b6001600160e01b031981168114610cd5575f80fd5b50565b5f60208284031215610ce8575f80fd5b813561085881610cc056fea2646970667358221220d0c94202b6d2629262dd0e80cf2b1d6fc0db2e8e9e2b1af8b2e7d1d6d8d1d6f564736f6c63430008140033";
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('walletStatus', 'error', '❌ MetaMask not found! Please install MetaMask.');
+                    return;
+                }
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                const network = await provider.getNetwork();
+
+                if (network.chainId !== 11155111) {
+                    showStatus('walletStatus', 'error', '❌ Please switch to Sepolia Testnet in MetaMask!');
+                    return;
+                }
+
+                const balance = await provider.getBalance(userAddress);
+                const balanceETH = ethers.utils.formatEther(balance);
+
+                showStatus('walletStatus', 'success',
+                    `✅ Connected!<br>Address: ${userAddress}<br>Balance: ${balanceETH} ETH`);
+
+                document.getElementById('deployWTBTCBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connected ✅';
+                document.getElementById('connectBtn').disabled = true;
+            } catch (error) {
+                showStatus('walletStatus', 'error', `❌ ${error.message}`);
+            }
+        }
+
+        async function deployWTBTC() {
+            try {
+                showStatus('wtbtcStatus', 'info', '🔄 Deploying wTBTC contract...');
+
+                // Create contract factory
+                const factory = new ethers.ContractFactory(WTBTC_ABI, WTBTC_BYTECODE, signer);
+
+                // Deploy contract
+                const contract = await factory.deploy(userAddress);
+
+                showStatus('wtbtcStatus', 'info',
+                    `🔄 Deploying... Transaction hash: ${contract.deployTransaction.hash}`);
+
+                // Wait for deployment
+                await contract.deployed();
+                wtbtcContract = contract;
+                wtbtcAddress = contract.address;
+
+                showStatus('wtbtcStatus', 'success',
+                    `✅ wTBTC deployed!<br>Address: <a href="https://sepolia.etherscan.io/address/${wtbtcAddress}" target="_blank">${wtbtcAddress}</a>`);
+
+                document.getElementById('mintBtn').disabled = false;
+
+                updateDeploymentSummary();
+            } catch (error) {
+                showStatus('wtbtcStatus', 'error', `❌ Deployment failed: ${error.message}`);
+            }
+        }
+
+        async function mintTokens() {
+            try {
+                const amount = document.getElementById('mintAmount').value;
+                const btcTxId = document.getElementById('btcTxId').value;
+
+                if (!amount || parseFloat(amount) <= 0) {
+                    showStatus('mintStatus', 'error', '❌ Invalid amount');
+                    return;
+                }
+
+                showStatus('mintStatus', 'info', '🔄 Minting tokens...');
+
+                const amountWei = ethers.utils.parseEther(amount);
+                const tx = await wtbtcContract.mint(userAddress, amountWei, btcTxId);
+
+                showStatus('mintStatus', 'info',
+                    `🔄 Minting... Transaction hash: ${tx.hash}`);
+
+                await tx.wait();
+
+                const balance = await wtbtcContract.balanceOf(userAddress);
+                const balanceFormatted = ethers.utils.formatEther(balance);
+
+                showStatus('mintStatus', 'success',
+                    `✅ Minted ${amount} wTBTC!<br>Your balance: ${balanceFormatted} wTBTC<br>` +
+                    `<a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank">View Transaction</a>`);
+
+                updateDeploymentSummary();
+            } catch (error) {
+                showStatus('mintStatus', 'error', `❌ Minting failed: ${error.message}`);
+            }
+        }
+
+        async function updateDeploymentSummary() {
+            if (!wtbtcContract) return;
+
+            const name = await wtbtcContract.name();
+            const symbol = await wtbtcContract.symbol();
+            const totalSupply = await wtbtcContract.totalSupply();
+            const balance = await wtbtcContract.balanceOf(userAddress);
+
+            const html = `
+                <div class="contract-info">
+                    <h3>wTBTC Contract</h3>
+                    <p><strong>Address:</strong> <a href="https://sepolia.etherscan.io/address/${wtbtcAddress}" target="_blank">${wtbtcAddress}</a></p>
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Symbol:</strong> ${symbol}</p>
+                    <p><strong>Total Supply:</strong> ${ethers.utils.formatEther(totalSupply)} wTBTC</p>
+                    <p><strong>Your Balance:</strong> ${ethers.utils.formatEther(balance)} wTBTC</p>
+                    <p><strong>Bridge Operator:</strong> ${userAddress}</p>
+                </div>
+            `;
+
+            document.getElementById('deploymentSummary').innerHTML = html;
+        }
+
+        function showStatus(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.innerHTML = message;
+            element.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
