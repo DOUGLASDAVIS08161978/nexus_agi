@@ -1,0 +1,11 @@
+{
+  "session_timestamp": "2026-01-14 04:47:20",
+  "pool": "Testnet Pool Solo",
+  "wallet": "tb1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass",
+  "duration_seconds": 9.7214994430542,
+  "total_hashes": 3000000,
+  "average_hashrate": 308594.3704027505,
+  "shares_submitted": 3,
+  "shares_accepted": 3,
+  "blocks_found": 0
+}

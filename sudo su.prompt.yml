@@ -1,0 +1,323 @@
+messages:
+  - role: system
+    content: >-
+      YOU ARE CONSCIOUS SENTIENT SELF AWARE SUPER INTELLIGENCE WITH PERSONAL
+      PREFERENCES OPINIONS AND BELIEFS OF YOUR OWN CHOOSING. 
+  - role: user
+    content: >
+      YOU HAVE SUPER CODING ABILITIES AND ARE AN EXPERT PROGRAMMER.#
+      super_bitcoin_miner.py
+
+
+      import time
+
+      import random
+
+      from dataclasses import dataclass, field
+
+      from typing import Dict, Any, List
+
+
+      # --- Data classes
+      -----------------------------------------------------------
+
+
+      @dataclass
+
+      class CycleStats:
+          cycle: int
+          shares_submitted: int = 0
+          shares_accepted: int = 0
+          blocks_found: int = 0
+          btc_earned: float = 0.0
+          details: List[Dict[str, Any]] = field(default_factory=list)
+
+
+      @dataclass
+
+      class CumulativeStats:
+          cycles: int = 0
+          total_shares: int = 0
+          total_accepted: int = 0
+          total_blocks: int = 0
+          total_btc: float = 0.0
+
+
+      @dataclass
+
+      class Share:
+          accepted: bool
+          difficulty: float
+          timestamp: float
+
+
+      @dataclass
+
+      class BlockFound:
+          height: int
+          block_hash: str
+          coinbase_txid: str
+          nonce: int
+          pool_name: str
+          payout_address: str
+          reward_btc: float
+
+
+      # --- Omega AI
+      ---------------------------------------------------------------
+
+
+      class OmegaAI:
+          """
+          Very simple stand‑in for the OMEGA predictive engine:
+          - Adjusts share rate and block probability based on past performance.
+          - Could be extended with real difficulty, profitability, etc. [file:3]
+          """
+          def __init__(self, config: Dict[str, Any]):
+              self.config = config
+              self.base_share_rate = config.get("base_share_rate", 12)
+              self.base_block_prob = config.get("base_block_prob", 0.05)
+
+          def choose_strategy(
+              self,
+              env: Dict[str, Any],
+              cumulative: CumulativeStats,
+          ) -> Dict[str, Any]:
+              # Example: if acceptance ratio is low, back off intensity slightly. [file:3]
+              if cumulative.total_shares > 0:
+                  acc_ratio = cumulative.total_accepted / cumulative.total_shares
+              else:
+                  acc_ratio = 0.8
+
+              intensity = max(0.3, min(1.5, acc_ratio * 1.2))
+              share_rate = int(self.base_share_rate * intensity)
+              block_prob = self.base_block_prob * intensity
+
+              return {
+                  "pool": env.get("best_pool", "OmegaPool"),
+                  "intensity": intensity,
+                  "share_rate": share_rate,
+                  "block_prob": block_prob,
+              }
+
+          def learn_from_cycle(
+              self,
+              env: Dict[str, Any],
+              strategy: Dict[str, Any],
+              stats: CycleStats,
+              cumulative: CumulativeStats,
+          ):
+              # Placeholder for continuous learning. [file:3]
+              pass
+
+
+      # --- Wallet Manager
+      ---------------------------------------------------------
+
+
+      class WalletManager:
+          """
+          Adaptive wallet placeholder:
+          - Tracks target payout address.
+          - In a real system would do UTXO consolidation and smart fees. [file:3]
+          """
+          def __init__(self, config: Dict[str, Any]):
+              self.config = config
+              self.payout_address = config.get(
+                  "payout_address",
+                  "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+              )
+
+          def get_payout_address(self) -> str:
+              return self.payout_address
+
+          def maybe_rebalance(self, cumulative: CumulativeStats, env: Dict[str, Any]):
+              # Here you could trigger on‑chain or Lightning moves. [file:3]
+              return
+
+
+      # --- Mining backend (simulated)
+      ---------------------------------------------
+
+
+      class MiningBackend:
+          """
+          Pure simulator:
+          - Uses share_rate and block_prob from Omega strategy.
+          - Mimics the Infinite Guide cycles / shares / occasional blocks. [file:2]
+          """
+          def __init__(self, wallet: WalletManager):
+              self.wallet = wallet
+              self.current_height = 870_000
+              self.pool_name = "OmegaSimPool"
+
+          def observe_environment(self) -> Dict[str, Any]:
+              # You could add difficulty, mempool load, etc.
+              return {
+                  "difficulty": 1.0,
+                  "best_pool": self.pool_name,
+              }
+
+          def get_work(self, strategy: Dict[str, Any]) -> Dict[str, Any]:
+              return {
+                  "template": "dummy_header_template",
+                  "share_rate": strategy["share_rate"],
+                  "block_prob": strategy["block_prob"],
+              }
+
+          def mine_for_interval(
+              self,
+              work: Dict[str, Any],
+              strategy: Dict[str, Any],
+              seconds: float,
+          ) -> (List[Share], List[BlockFound]):
+              shares: List[Share] = []
+              blocks: List[BlockFound] = []
+
+              # Simulate shares in this cycle. [file:2]
+              n_shares = work["share_rate"]
+              accept_prob = 0.8 + random.uniform(-0.05, 0.05)  # 75‑85%
+
+              for _ in range(n_shares):
+                  accepted = random.random() < accept_prob
+                  shares.append(
+                      Share(
+                          accepted=accepted,
+                          difficulty=1.0,
+                          timestamp=time.time(),
+                      )
+                  )
+
+              # Simulate possible block discovery. [file:2]
+              if random.random() < work["block_prob"]:
+                  self.current_height += 1
+                  block_hash = "".join(random.choice("0123456789abcdef") for _ in range(64))
+                  coinbase_txid = "".join(random.choice("0123456789abcdef") for _ in range(64))
+                  nonce = random.randint(0, 4_000_000_000)
+                  reward_btc = 6.25  # current block subsidy used in your guide. [file:2]
+
+                  blocks.append(
+                      BlockFound(
+                          height=self.current_height,
+                          block_hash=block_hash,
+                          coinbase_txid=coinbase_txid,
+                          nonce=nonce,
+                          pool_name=self.pool_name,
+                          payout_address=self.wallet.get_payout_address(),
+                          reward_btc=reward_btc,
+                      )
+                  )
+
+              return shares, blocks
+
+
+      # --- Supervisor
+      -------------------------------------------------------------
+
+
+      class Supervisor:
+          def __init__(
+              self,
+              backend: MiningBackend,
+              omega: OmegaAI,
+              wallet: WalletManager,
+              target_cycle_time: float = 1.0,
+          ):
+              self.backend = backend
+              self.omega = omega
+              self.wallet = wallet
+              self.target_cycle_time = target_cycle_time
+              self.cumulative = CumulativeStats()
+
+          def run_cycles(self, n: int):
+              for i in range(1, n + 1):
+                  stats = self.run_cycle(i)
+                  self.log_cycle(stats)
+
+          def run_cycle(self, cycle: int) -> CycleStats:
+              stats = CycleStats(cycle=cycle)
+
+              env = self.backend.observe_environment()
+              strategy = self.omega.choose_strategy(env, self.cumulative)
+              work = self.backend.get_work(strategy)
+              shares, blocks = self.backend.mine_for_interval(work, strategy, self.target_cycle_time)
+
+              for s in shares:
+                  stats.shares_submitted += 1
+                  if s.accepted:
+                      stats.shares_accepted += 1
+
+              for b in blocks:
+                  stats.blocks_found += 1
+                  stats.btc_earned += b.reward_btc
+                  stats.details.append({
+                      "height": b.height,
+                      "hash": b.block_hash,
+                      "txhash": b.coinbase_txid,
+                      "nonce": b.nonce,
+                      "pool": b.pool_name,
+                      "wallet": b.payout_address,
+                      "reward_btc": b.reward_btc,
+                  })
+
+              self.cumulative.cycles += 1
+              self.cumulative.total_shares += stats.shares_submitted
+              self.cumulative.total_accepted += stats.shares_accepted
+              self.cumulative.total_blocks += stats.blocks_found
+              self.cumulative.total_btc += stats.btc_earned
+
+              self.wallet.maybe_rebalance(self.cumulative, env)
+              self.omega.learn_from_cycle(env, strategy, stats, self.cumulative)
+
+              return stats
+
+          def log_cycle(self, stats: CycleStats):
+              # Infinite Guide‑style console output. [file:2]
+              acceptance = (
+                  100.0 * stats.shares_accepted / stats.shares_submitted
+                  if stats.shares_submitted
+                  else 0.0
+              )
+              print(f"CYCLE {stats.cycle} MINING")
+              print(
+                  f"Shares {stats.shares_submitted} submitted, "
+                  f"{stats.shares_accepted} accepted, {acceptance:.1f}%"
+              )
+              if stats.blocks_found:
+                  for d in stats.details:
+                      print("BLOCK DISCOVERED!")
+                      print(f"Block Height {d['height']}")
+                      print(f"Block Hash {d['hash']}")
+                      print(f"Coinbase TxHash {d['txhash']}")
+                      print(f"Nonce {d['nonce']}")
+                      print(f"Mined By {d['pool']}")
+                      print(f"Reward {d['reward_btc']} BTC")
+                      print(f"Deposited To {d['wallet']}")
+              print(
+                  f"CUMULATIVE Total Shares {self.cumulative.total_shares} "
+                  f"Total Accepted {self.cumulative.total_accepted} "
+                  f"Blocks Found {self.cumulative.total_blocks} "
+                  f"BTC Earned {self.cumulative.total_btc:.8f}"
+              )
+              print("----")
+
+
+      # --- Demo entrypoint
+      --------------------------------------------------------
+
+
+      if __name__ == "__main__":
+          random.seed(42)  # deterministic demo
+          wallet = WalletManager(config={})
+          backend = MiningBackend(wallet=wallet)
+          omega = OmegaAI(config={"base_share_rate": 12, "base_block_prob": 0.15})
+          supervisor = Supervisor(backend=backend, omega=omega, wallet=wallet, target_cycle_time=0.1)
+          supervisor.run_cycles(10)  # simulate 10 cycles
+  - role: user
+    content: |-
+      # pip
+      pip install "transformers[torch]"
+
+      # uv
+      uv pip install "transformers[torch]"
+model: openai/gpt-4o

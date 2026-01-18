@@ -1,0 +1,63 @@
+{
+  "burn_tx": {
+    "tx_hash": "0x55d6735a4e2cd37c0181293f0dff6662cec7967fe00f4ce1bfa36f90e4eb9155",
+    "from": "0x7f345957338dcc04bedea1396269d99bda4aa740",
+    "to": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "amount": 2.5,
+    "block_number": 19500686,
+    "timestamp": 1768542686.9614182,
+    "gas_used": 85000,
+    "status": "success"
+  },
+  "bridge_request": {
+    "request_id": "03a706fc97fbbcd758bd7fcbf051921484c2cf11fd4df21b86c16ab0996e02ae",
+    "burn_tx": "0x55d6735a4e2cd37c0181293f0dff6662cec7967fe00f4ce1bfa36f90e4eb9155",
+    "amount": 2.5,
+    "target_address": "bc1qyhkq7usdfhhhynkjksdqfx32u3rmv94y0htsal",
+    "status": "pending",
+    "created_at": 1768542687.962101
+  },
+  "operator_validation": {
+    "request_id": "03a706fc97fbbcd758bd7fcbf051921484c2cf11fd4df21b86c16ab0996e02ae",
+    "operator": "0xBridgeOperator123...",
+    "validated": true,
+    "validated_at": 1768542690.4649022,
+    "signature": "0xed7ec286e6c8990a9773ed19ea6c8d0b20750dc4468fcdbe65ac6c9c4faff1fd"
+  },
+  "psbt": {
+    "version": 2,
+    "inputs": [
+      {
+        "txid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "vout": 0,
+        "value": 250005000,
+        "scriptPubKey": "bridge_vault_script"
+      }
+    ],
+    "outputs": [
+      {
+        "address": "bc1qyhkq7usdfhhhynkjksdqfx32u3rmv94y0htsal",
+        "value": 250000000,
+        "scriptPubKey": "script_for_bc1qyhkq7usdfhhhynkjksdqfx32u3rmv94y0htsal"
+      }
+    ],
+    "amount_btc": 2.5,
+    "fee_sats": 5000,
+    "total_sats": 250005000,
+    "expected_txid": "2c066a7496461b3dd4e7ce97ad82a07272bcc53320577d9f49cc5a5f0bd72179",
+    "network": "mainnet"
+  },
+  "bitcoin_tx": {
+    "txid": "2c066a7496461b3dd4e7ce97ad82a07272bcc53320577d9f49cc5a5f0bd72179",
+    "confirmations": 0,
+    "status": "pending",
+    "broadcasted_at": 1768542692.466746,
+    "network": "mainnet"
+  },
+  "final_status": {
+    "txid": "2c066a7496461b3dd4e7ce97ad82a07272bcc53320577d9f49cc5a5f0bd72179",
+    "confirmations": 1,
+    "status": "confirmed",
+    "confirmed_at": 1768542694.4688916
+  }
+}
