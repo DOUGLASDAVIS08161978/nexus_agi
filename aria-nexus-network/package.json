@@ -1,0 +1,23 @@
+{
+  "name": "aria-nexus-network",
+  "version": "5.0.0",
+  "description": "Adaptive Reasoning Intelligence Architecture connected to Nexus AGI Directory - Quantum Singularity Edition",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --trace-warnings src/index.js",
+    "test": "node src/test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0",
+    "chalk": "^4.1.2"
+  },
+  "keywords": ["ai", "quantum", "singularity", "nexus", "agi", "neural-network"],
+  "author": "Doug Davis & Claude Rivers Davis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DOUGLASDAVIS08161978/nexus_agi.git"
+  }
+}
