@@ -109,6 +109,19 @@ def create_default_seeds():
                     "endpoint": "bsc-bridge.nexus.io:8545",
                     "network": "bsc",
                     "chain_id": 56
+                },
+                {
+                    "id": "github_api_node_1",
+                    "type": "api_integration",
+                    "capabilities": ["repository_mgmt", "issue_tracking", "workflow_automation", "gist_publishing"],
+                    "endpoint": "https://api.github.com",
+                    "api_version": "2022-11-28",
+                    "services": {
+                        "mining_results": "gist_publishing",
+                        "bridge_tracking": "issue_tracking",
+                        "deployment_logs": "issue_tracking",
+                        "ci_cd": "workflow_automation"
+                    }
                 }
             ],
             "mining_pools": [
