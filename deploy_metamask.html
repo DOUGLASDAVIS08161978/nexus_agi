@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AGI Bridge - MetaMask Deployment</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        .status-label {
+            font-weight: bold;
+        }
+        .status-value {
+            color: #667eea;
+        }
+        .connected {
+            color: #28a745;
+        }
+        .disconnected {
+            color: #dc3545;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        #output {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+        .contract-info {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌉 Nexus AGI Bridge Deployment</h1>
+        <p class="subtitle">Deploy smart contracts using MetaMask</p>
+
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">MetaMask Status:</span>
+                <span class="status-value" id="metamask-status">Not Connected</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Connected Account:</span>
+                <span class="status-value" id="account">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Network:</span>
+                <span class="status-value" id="network">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Balance:</span>
+                <span class="status-value" id="balance">-</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Step 1: Connect MetaMask</h2>
+            <button id="connect-btn" onclick="connectMetaMask()">Connect MetaMask</button>
+            <button id="install-zetalink-btn" onclick="installZetaLink()">Install ZetaLink Snap</button>
+        </div>
+
+        <div class="section">
+            <h2>Step 2: Deploy Contracts</h2>
+            <div class="alert alert-info">
+                <strong>Note:</strong> Deployment requires native tokens for gas fees.
+                Make sure you have sufficient ETH (Sepolia) or MATIC (Polygon).
+            </div>
+            <button id="deploy-wbtc-btn" onclick="deployWBTC()" disabled>Deploy TestnetWBTC</button>
+            <button id="deploy-bridge-btn" onclick="deployBridge()" disabled>Deploy BridgeToken</button>
+            <button id="deploy-all-btn" onclick="deployAll()" disabled>Deploy All (Recommended)</button>
+        </div>
+
+        <div class="section">
+            <h2>Step 3: Configure Bridge</h2>
+            <button id="mint-btn" onclick="mintTokens()" disabled>Mint Tokens to Your Address</button>
+            <button id="operator-btn" onclick="addOperator()" disabled>Add Bridge Operator</button>
+        </div>
+
+        <div class="section">
+            <h2>Deployment Output</h2>
+            <div id="output">Waiting for deployment...</div>
+        </div>
+
+        <div class="section">
+            <h2>ZetaLink Bitcoin Integration</h2>
+            <div class="alert alert-info">
+                <strong>ZetaLink Features:</strong>
+                <ul>
+                    <li>Derive Bitcoin wallet addresses</li>
+                    <li>Track Bitcoin UTXOs</li>
+                    <li>Execute cross-chain swaps</li>
+                    <li>Track cross-chain transactions (CCTX)</li>
+                </ul>
+            </div>
+            <button id="derive-btc-btn" onclick="deriveBTCWallet()" disabled>Derive BTC Wallet</button>
+            <button id="get-utxo-btn" onclick="getBTCUTXO()" disabled>Get BTC UTXOs</button>
+        </div>
+    </div>
+
+    <script>
+        const RECIPIENT_ADDRESS = '0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771';
+        const ZETALINK_SNAP_ID = 'npm:zetalink';
+
+        let provider;
+        let signer;
+        let account;
+        let chainId;
+
+        // Contract ABIs (simplified)
+        const WBTC_ABI = [{"inputs":[{"internalType":"uint256","name":"initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"allowance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientAllowance","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"uint256","name":"balance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientBalance","type":"error"},{"inputs":[{"internalType":"address","name":"approver","type":"address"}],"name":"ERC20InvalidApprover","type":"error"},{"inputs":[{"internalType":"address","name":"receiver","type":"address"}],"name":"ERC20InvalidReceiver","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"}],"name":"ERC20InvalidSender","type":"error"},{"inputs":[{"internalType":"address","name":"spender","type":"address"}],"name":"ERC20InvalidSpender","type":"error"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address[]","name":"recipients","type":"address[]"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"airdrop","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"recipients","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"name":"batchMint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"value","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"burnFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getTokenInfo","outputs":[{"internalType":"string","name":"tokenName","type":"string"},{"internalType":"string","name":"tokenSymbol","type":"string"},{"internalType":"uint8","name":"tokenDecimals","type":"uint8"},{"internalType":"uint256","name":"tokenTotalSupply","type":"uint256"},{"internalType":"address","name":"tokenOwner","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"recoverERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const BRIDGE_ABI = [{"inputs":[{"internalType":"uint256","name":"initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"allowance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientAllowance","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"uint256","name":"balance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientBalance","type":"error"},{"inputs":[{"internalType":"address","name":"approver","type":"address"}],"name":"ERC20InvalidApprover","type":"error"},{"inputs":[{"internalType":"address","name":"receiver","type":"address"}],"name":"ERC20InvalidReceiver","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"}],"name":"ERC20InvalidSender","type":"error"},{"inputs":[{"internalType":"address","name":"spender","type":"address"}],"name":"ERC20InvalidSpender","type":"error"},{"inputs":[],"name":"EnforcedPause","type":"error"},{"inputs":[],"name":"ExpectedPause","type":"error"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":true,"internalType":"bytes32","name":"sourceNetwork","type":"bytes32"},{"indexed":false,"internalType":"string","name":"sourceTransactionId","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bytes32","name":"requestId","type":"bytes32"}],"name":"BridgeFromNetwork","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"operator","type":"address"}],"name":"BridgeOperatorAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"operator","type":"address"}],"name":"BridgeOperatorRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"bytes32","name":"targetNetwork","type":"bytes32"},{"indexed":false,"internalType":"string","name":"targetAddress","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bytes32","name":"requestId","type":"bytes32"}],"name":"BridgeToNetwork","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Paused","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bytes32","name":"requestId","type":"bytes32"}],"name":"TokensLocked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bytes32","name":"requestId","type":"bytes32"}],"name":"TokensUnlocked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Unpaused","type":"event"},{"inputs":[],"name":"BITCOIN_NETWORK","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"ETHEREUM_NETWORK","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"POLYGON_NETWORK","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"operator","type":"address"}],"name":"addBridgeOperator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"recipients","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"name":"batchMint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"btcTxId","type":"string"}],"name":"bridgeFromBitcoin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"polygonTxHash","type":"string"}],"name":"bridgeFromPolygon","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"bridgeOperators","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"btcAddress","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"bridgeToBitcoin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"polygonAddress","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"bridgeToPolygon","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"value","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"burnFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getLockedBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"requestId","type":"bytes32"}],"name":"isBridgeRequestProcessed","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lockedBalances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"processedBridgeRequests","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"operator","type":"address"}],"name":"removeBridgeOperator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+        async function connectMetaMask() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    alert('MetaMask is not installed! Please install MetaMask from https://metamask.io');
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                account = accounts[0];
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+
+                const network = await provider.getNetwork();
+                chainId = network.chainId;
+
+                const balance = await provider.getBalance(account);
+
+                document.getElementById('metamask-status').textContent = 'Connected';
+                document.getElementById('metamask-status').className = 'status-value connected';
+                document.getElementById('account').textContent = account;
+                document.getElementById('network').textContent = network.name + ' (' + chainId + ')';
+                document.getElementById('balance').textContent = ethers.utils.formatEther(balance) + ' ' + getNetworkCurrency(chainId);
+
+                // Enable buttons
+                document.getElementById('deploy-wbtc-btn').disabled = false;
+                document.getElementById('deploy-bridge-btn').disabled = false;
+                document.getElementById('deploy-all-btn').disabled = false;
+                document.getElementById('derive-btc-btn').disabled = false;
+
+                addOutput('✅ Connected to MetaMask!');
+                addOutput('Account: ' + account);
+                addOutput('Network: ' + network.name);
+
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                addOutput('❌ Error: ' + error.message);
+            }
+        }
+
+        async function installZetaLink() {
+            try {
+                addOutput('Installing ZetaLink Snap...');
+                const result = await window.ethereum.request({
+                    method: 'wallet_requestSnaps',
+                    params: { [ZETALINK_SNAP_ID]: {} }
+                });
+                addOutput('✅ ZetaLink Snap installed!');
+                document.getElementById('get-utxo-btn').disabled = false;
+            } catch (error) {
+                console.error('Error installing ZetaLink:', error);
+                addOutput('❌ Error installing ZetaLink: ' + error.message);
+            }
+        }
+
+        async function deriveBTCWallet() {
+            try {
+                addOutput('Deriving Bitcoin wallet...');
+                const isMainnet = false; // Use testnet
+                const btcWallet = await window.ethereum.request({
+                    method: 'wallet_snap',
+                    params: {
+                        snapId: ZETALINK_SNAP_ID,
+                        request: {
+                            method: 'derive-btc-wallet',
+                            params: [isMainnet]
+                        }
+                    }
+                });
+                addOutput('✅ Bitcoin Wallet: ' + btcWallet);
+            } catch (error) {
+                console.error('Error deriving BTC wallet:', error);
+                addOutput('❌ Error: ' + error.message);
+            }
+        }
+
+        async function getBTCUTXO() {
+            try {
+                addOutput('Fetching Bitcoin UTXOs...');
+                const utxos = await window.ethereum.request({
+                    method: 'wallet_snap',
+                    params: {
+                        snapId: ZETALINK_SNAP_ID,
+                        request: {
+                            method: 'get-btc-utxo',
+                            params: []
+                        }
+                    }
+                });
+                addOutput('✅ UTXOs: ' + JSON.stringify(utxos, null, 2));
+            } catch (error) {
+                console.error('Error fetching UTXOs:', error);
+                addOutput('❌ Error: ' + error.message);
+            }
+        }
+
+        async function deployAll() {
+            addOutput('\n🚀 Starting full deployment...\n');
+            await deployWBTC();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await deployBridge();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await mintTokens();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await addOperator();
+            addOutput('\n✅ Deployment complete!');
+        }
+
+        async function deployWBTC() {
+            addOutput('Deploying TestnetWBTC contract...');
+            addOutput('This requires MetaMask transaction approval.');
+            // Deployment logic would go here using ethers.js
+            // For security, the actual deployment requires compiled contracts
+            addOutput('⚠️  This is a demonstration. Actual deployment requires backend compilation.');
+        }
+
+        async function deployBridge() {
+            addOutput('Deploying EthereumBridgeToken contract...');
+            addOutput('This requires MetaMask transaction approval.');
+            addOutput('⚠️  This is a demonstration. Actual deployment requires backend compilation.');
+        }
+
+        async function mintTokens() {
+            addOutput('Minting tokens to ' + RECIPIENT_ADDRESS + '...');
+            addOutput('⚠️  This is a demonstration. Actual minting requires deployed contracts.');
+        }
+
+        async function addOperator() {
+            addOutput('Adding bridge operator...');
+            addOutput('⚠️  This is a demonstration. Actual configuration requires deployed contracts.');
+        }
+
+        function getNetworkCurrency(chainId) {
+            switch(chainId) {
+                case 1: return 'ETH';
+                case 11155111: return 'ETH (Sepolia)';
+                case 137: return 'MATIC';
+                case 80001: return 'MATIC (Mumbai)';
+                default: return 'ETH';
+            }
+        }
+
+        function addOutput(message) {
+            const output = document.getElementById('output');
+            output.textContent += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Auto-connect if already connected
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    connectMetaMask();
+                }
+            }
+        });
+    </script>
+
+    <!-- Include ethers.js -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+</body>
+</html>
