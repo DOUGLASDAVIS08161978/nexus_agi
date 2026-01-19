@@ -82,3 +82,33 @@ api_server.log
 *.pid
 *.log
 nexus-agi-directory/
+# Hardhat build artifacts
+artifacts/
+cache/
+typechain-types/
+
+# Deployment files (contain potentially sensitive addresses)
+deployment_*.json
+bridge_integration_guide.json
+
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit private keys!)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+coverage.json
+
+# Hardhat
+cache/
+artifacts/
