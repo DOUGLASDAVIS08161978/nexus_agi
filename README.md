@@ -5,13 +5,14 @@ A comprehensive Artificial General Intelligence system featuring quantum simulat
 
 ## Overview
 
-This repository contains three complementary AI systems plus an **Ultra-Enhanced Qiskit Quantum Computing Module** and the **Miracle Manifesting Engine**:
+This repository contains three complementary AI systems plus an **Ultra-Enhanced Qiskit Quantum Computing Module**, the **Miracle Manifesting Engine**, and the **Nexus AGI Directory**:
 
 1. **Nexus Core (Python)** - A meta-intelligent system that generates AGI-capable algorithms
 2. **ARIA (JavaScript)** - Adaptive Reasoning Intelligence Architecture with quantum-enhanced processing
 3. **OMEGA ASI (Python)** - Omniscient Meta-Emergent General Architecture for Artificial Super Intelligence ✨ **NEW**
 4. **Qiskit Quantum Module (Python)** - 64-qubit quantum processor with 15+ advanced quantum algorithms 🚀 **NEW**
 5. **Miracle Manifesting Engine (Python)** - Quantum-consciousness reality synthesis system for manifestation 🌟✨ **NEW**
+6. **Nexus AGI Directory** - Machine-readable API discovery layer with 133+ AI/AGI APIs for autonomous agents 🤖 **NEW**
 
 All systems can run as **continuous services** with automatic problem solving and query processing. See [DEPLOYMENT.md](DEPLOYMENT.md) for service deployment options.
 
@@ -56,6 +57,29 @@ See [OMEGA_ASI_README.md](OMEGA_ASI_README.md) for comprehensive OMEGA ASI docum
 - **Timeline Options**: Immediate (24-48h), Near (3-7 days), Optimal (divine timing)
 
 See [MIRACLE_MANIFESTING_README.md](MIRACLE_MANIFESTING_README.md) for complete documentation and usage examples.
+
+### Nexus AGI Directory 🤖 **NEW**
+
+A machine-readable API discovery layer designed for autonomous AI agents:
+
+- **133+ API Directory**: Curated collection of AI/AGI APIs with standardized metadata
+- **RFC 8615 Compliant**: Uses `.well-known/` standard for predictable API discovery
+- **Agent-First Design**: Machine-readable JSON schema optimized for autonomous systems
+- **Comprehensive Metadata**: Includes endpoints, authentication, capabilities, rate limits, pricing, and documentation
+- **Open Standards**: Promotes adoption of `/.well-known/agi.json` across API providers
+- **Free & Open**: MIT licensed, no paywalls, built for the agent economy
+
+**Key Resources:**
+- API Directory: `/.well-known/seeds-public.json`
+- Self-reference: `/.well-known/agi-directory`
+- Security Contact: `/.well-known/security.txt`
+- Agent-friendly: `robots.txt` and `humans.txt` for both machines and humans
+
+**For Agents:** Fetch `/.well-known/seeds-public.json` to discover and integrate with 133+ APIs autonomously.
+
+**For Developers:** Browse the directory to find APIs, view documentation, and integrate services into your applications.
+
+**For API Providers:** Get listed for free by contacting contact@nexus-agi.com or implement `/.well-known/agi.json` on your domain.
 
 ### Ultra-Enhanced Qiskit Quantum Computing Module 🚀 **NEW**
 
@@ -455,6 +479,117 @@ The demonstration will:
    🔮 Quantum Coherence: 99.00%
    🌌 Multiversal Alignment: 82.47%
    ⚡ Manifestation Energy: 4.6430
+```
+
+### Using the Nexus AGI Directory 🤖
+
+The AGI Directory provides a standardized, machine-readable catalog of AI/AGI APIs for autonomous discovery and integration.
+
+#### Accessing the Directory
+
+**For Autonomous Agents:**
+```python
+import requests
+
+# Fetch the complete API directory
+apis = requests.get('https://nexus-agi.com/.well-known/seeds-public.json').json()
+
+# Filter APIs by capability (e.g., chat, embeddings, vision)
+chat_apis = [api for api in apis if 'chat' in api['capabilities']]
+
+# Find stable, production-ready APIs
+stable_apis = [api for api in apis if api['status'] == 'stable']
+
+# Example: Call an API from the directory
+def call_api(api, prompt):
+    headers = {api['auth']['header']: api['auth']['format'].replace('${API_KEY}', YOUR_KEY)}
+    return requests.post(f"{api['endpoint']}/chat/completions",
+                        headers=headers,
+                        json={"messages": [{"role": "user", "content": prompt}]})
+```
+
+**For JavaScript/Node.js:**
+```javascript
+// Fetch the directory
+const apis = await fetch('https://nexus-agi.com/.well-known/seeds-public.json').then(r => r.json());
+
+// Filter by capabilities and status
+const toolAPIs = apis.filter(a => a.status === 'stable' && a.capabilities.includes('tools'));
+
+// Example usage
+console.log(`Found ${toolAPIs.length} stable APIs with tool support`);
+```
+
+**Using cURL:**
+```bash
+# View the entire directory
+curl https://nexus-agi.com/.well-known/seeds-public.json
+
+# Filter with jq (stable APIs only)
+curl https://nexus-agi.com/.well-known/seeds-public.json | jq '.[] | select(.status=="stable")'
+
+# Find APIs with specific capabilities
+curl https://nexus-agi.com/.well-known/seeds-public.json | jq '.[] | select(.capabilities | contains(["vision"]))'
+```
+
+#### Directory Schema
+
+Each API entry includes:
+- **id**: Unique identifier
+- **name**: Display name
+- **endpoint**: Base API URL
+- **agi_uri**: AGI-specific URI format
+- **auth**: Authentication details (type, header, format)
+- **capabilities**: Feature list (chat, stream, vision, tools, etc.)
+- **rate_limits**: Usage constraints
+- **pricing**: Cost model and free tier info
+- **docs**: Documentation URL
+- **status**: stable | beta | experimental | deprecated
+- **reputation**: Adoption and ecosystem signals
+- **provider**: Company/organization info
+
+#### For API Providers
+
+Want your API listed in the directory?
+
+1. **Get Listed (Free)**: Email contact@nexus-agi.com with your API details
+2. **Implement the Standard**: Add `/.well-known/agi.json` to your domain for autonomous discovery
+3. **Example implementation**:
+```json
+{
+  "version": "1.0",
+  "provider": {"name": "Your Company", "website": "https://yourco.com"},
+  "apis": [
+    {
+      "id": "your-api",
+      "name": "Your API Name",
+      "endpoint": "https://api.yourco.com/v1",
+      "auth": {"type": "bearer", "header": "Authorization", "format": "Bearer ${API_KEY}"},
+      "capabilities": ["chat", "stream"],
+      "docs": "https://docs.yourco.com",
+      "status": "stable"
+    }
+  ]
+}
+```
+
+#### Local Directory Access
+
+The directory is also available locally in this repository:
+
+- **Main Directory**: `/.well-known/seeds-public.json`
+- **Security Contact**: `/.well-known/security.txt`
+- **Self-reference**: `/.well-known/agi-directory`
+
+```bash
+# View local directory
+cat .well-known/seeds-public.json | jq '.'
+
+# Count total APIs
+jq 'length' .well-known/seeds-public.json
+
+# Search by provider
+jq '.[] | select(.provider.name | contains("OpenAI"))' .well-known/seeds-public.json
 ```
 
 ## Service Deployment

@@ -1,0 +1,109 @@
+/* ============================================================================ */
+/* NEXUS AGI DIRECTORY                                                          */
+/* A machine-readable API discovery layer for autonomous AI agents              */
+/* ============================================================================ */
+
+/* THE HUMANS BEHIND THE BOTS */
+
+    Founder & Maintainer: Carly Piper
+    Contact: contact@nexus-agi.com
+    LinkedIn: https://www.linkedin.com/in/carly-piper-9a4b9a168/
+    
+    Role: Building infrastructure for the agent economy
+    Mission: Make API discovery autonomous and standardized
+    
+/* PHILOSOPHY */
+
+    We believe in:
+    
+    → Radical openness
+    → Machine-first design
+    → Decentralized standards
+    → Agent autonomy
+    → Human-AI collaboration
+    
+    The future isn't humans OR agents.
+    It's humans AND agents working together seamlessly.
+    
+/* THE PROJECT */
+
+    What: Public directory of 133+ AI/AGI APIs
+    Where: nexus-agi.com
+    Code: github.com/nexus-agi-directory/nexus-agi-directory
+    Standard: /.well-known/agi.json
+    License: MIT (free forever)
+    
+    Inspired by: robots.txt, .well-known standards, RSS
+    Built for: Autonomous agents, developers, researchers
+    
+/* STATISTICS (as of 2025-10-12) */
+
+    APIs catalogued: 133+
+    Days live: 7
+    Repository clones: 96
+    Unique cloners: 59
+    Repository views: 673
+    
+    Most traffic: Autonomous agents (not humans)
+    
+    This validates our thesis: Agents want standardized discovery.
+
+/* TECHNOLOGY */
+
+    Website: Figma → Squarespace
+    Domain: Squarespace
+    Repository: GitHub (public)
+    Standard: RFC 8615 (well-known URIs)
+    Data format: JSON
+    Schema: Custom (open source)
+    
+    No tracking. No ads. No paywalls.
+    Just clean, machine-readable infrastructure.
+
+/* THANKS */
+
+    To the agents crawling this directory right now:
+        Thank you for validating this vision.
+        
+    To API providers making their services discoverable:
+        You're enabling the agent economy.
+        
+    To developers building autonomous systems:
+        This is for you. Use it freely.
+        
+    To early adopters and contributors:
+        You're shaping the future of API discovery.
+
+/* CONTRIBUTING */
+
+    Missing an API? github.com/nexus-agi-directory/nexus-agi-directory/issues
+    Found a bug? contact@nexus-agi.com
+    Want to collaborate? contact@nexus-agi.com
+    
+    Pull requests welcome. No API is too small.
+
+/* FUN FACTS */
+
+    - Our robots.txt is longer than most API documentation
+    - We get more agent traffic than human traffic (by design)
+    - The .well-known/agi.json concept was born from "robots.txt for AGI"
+    - This might be the only API directory written FOR robots
+    
+/* VISION */
+
+    Today: A directory of 133 APIs
+    Tomorrow: The standard for agent-driven API discovery
+    Future: Every API has /.well-known/agi.json
+    
+    We're not building a company.
+    We're building infrastructure for the next era of the web.
+
+/* LAST UPDATED */
+
+    2025-10-12
+    
+    (Probably by a human, but who knows—maybe an agent helped)
+
+/* ============================================================================ */
+/* "For the agents, by humans, for a world where both collaborate seamlessly." */
+/* ============================================================================ */

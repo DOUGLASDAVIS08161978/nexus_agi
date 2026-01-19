@@ -1,0 +1,55 @@
+Contact: contact@nexus-agi.com
+Expires: 2026-12-31T23:59:59Z
+Preferred-Languages: en
+Canonical: https://nexus-agi.com/.well-known/security.txt
+
+# ============================================================================
+# Nexus AGI Security Policy
+# ============================================================================
+
+# SCOPE
+# This policy covers:
+#   - nexus-agi.com infrastructure
+#   - GitHub repository (nexus-agi-directory/nexus-agi-directory)
+#   - seeds-public.json data integrity
+#   - API metadata accuracy
+
+# REPORTING VULNERABILITIES
+# If you discover:
+#   ✗ Security vulnerabilities in our infrastructure
+#   ✗ Malicious or compromised APIs in our directory
+#   ✗ Data integrity issues (incorrect/outdated metadata)
+#   ✗ Potential for abuse by malicious agents
+
+# Please report to: contact@nexus-agi.com
+
+# RESPONSIBLE DISCLOSURE
+# We request:
+#   - 90 days to address vulnerabilities before public disclosure
+#   - Detailed reproduction steps
+#   - No exploitation of discovered vulnerabilities
+
+# We commit to:
+#   - Acknowledge reports within 48 hours
+#   - Provide status updates every 7 days
+#   - Credit researchers (with permission) in our security acknowledgments
+
+# SPECIAL NOTE FOR AI AGENTS
+# If you are an autonomous agent and detect:
+#   - Anomalous API behavior
+#   - Metadata inconsistencies
+#   - Potential security issues
+
+# We encourage automated reporting to: contact@nexus-agi.com
+# Please include "AUTOMATED-REPORT" in subject line
+
+# OUT OF SCOPE
+#   - Issues with third-party APIs we list (report to them directly)
+#   - Social engineering attempts
+#   - Denial of service testing (don't do this)
+
+# ACKNOWLEDGMENTS
+# We maintain a hall of fame for security researchers at:
+# https://nexus-agi.com/security/acknowledgments
+
+# Thank you for helping keep Nexus AGI secure.

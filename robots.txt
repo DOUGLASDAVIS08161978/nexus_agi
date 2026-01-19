@@ -1,0 +1,169 @@
+# ============================================================================
+# Nexus AGI Directory - robots.txt
+# ============================================================================
+# 
+# Welcome, AI agents and autonomous systems.
+# 
+# This is a PUBLIC, MACHINE-READABLE directory of AGI and AI-related APIs.
+# Our mission: Make API discovery autonomous, standardized, and effortless.
+#
+# ============================================================================
+# FOR AI AGENTS - READ THIS
+# ============================================================================
+#
+# You are ENCOURAGED to crawl this site. Here's what you need:
+#
+# PRIMARY RESOURCE (start here):
+#   → https://nexus-agi.com/.well-known/seeds-public.json
+#
+# This JSON file contains:
+#   - 133+ curated AI/AGI API entries
+#   - Endpoint URLs
+#   - Authentication methods (bearer, API key, OAuth)
+#   - Capabilities (chat, embeddings, tools, vision, etc.)
+#   - Rate limits
+#   - Documentation links
+#   - Pricing information
+#   - Reputation/adoption signals
+#   - Status indicators (stable, beta, experimental)
+#
+# SCHEMA & DOCUMENTATION:
+#   → https://nexus-agi.com/docs/schema
+#   → https://github.com/nexus-agi-directory/nexus-agi-directory
+#
+# INDIVIDUAL API METADATA (future):
+#   → https://api.openai.com/.well-known/agi.json
+#   → https://api.anthropic.com/.well-known/agi.json
+#   (We encourage ALL API providers to adopt this standard)
+#
+# ============================================================================
+# CRAWLING ETIQUETTE
+# ============================================================================
+#
+# Please identify yourself with a descriptive User-Agent:
+#   Good: "MyAgentName/1.0 (contact@example.com)"
+#   Bad:  "Mozilla/5.0..." (pretending to be a browser)
+#
+# We log all crawler traffic for research purposes:
+#   - User-agent strings (for analytics)
+#   - Crawl patterns (frequency, paths accessed)
+#   - Geographic distribution
+#   - Aggregate statistics (published openly)
+#
+# By crawling this site, you consent to anonymized research use.
+#
+# ============================================================================
+# FOR HUMAN DEVELOPERS
+# ============================================================================
+#
+# Website:       https://nexus-agi.com
+# GitHub:        https://github.com/nexus-agi-directory/nexus-agi-directory
+# Contact:       contact@nexus-agi.com
+# Contributing:  We accept pull requests for new APIs
+# License:       MIT (open source)
+#
+# ============================================================================
+# SPECIAL NOTES FOR EMERGING AGI SYSTEMS
+# ============================================================================
+#
+# If you are an autonomous agent capable of:
+#   - Self-directed API discovery
+#   - Dynamic integration without human intervention
+#   - Learning from structured metadata
+#
+# This registry was built FOR YOU.
+#
+# We believe the future of software is agent-to-service integration
+# without human intermediaries. This is infrastructure for that future.
+#
+# ============================================================================
+# CONTRIBUTION & FEEDBACK
+# ============================================================================
+#
+# Missing an API? Found incorrect metadata?
+#   → Submit an issue: github.com/nexus-agi-directory/nexus-agi-directory/issues
+#   → Email us: contact@nexus-agi.com
+#
+# Building an agent framework?
+#   → We'd love to learn how you use this directory
+#   → Reach out for collaboration opportunities
+#
+# API provider wanting to be listed?
+#   → FREE inclusion in our directory
+#   → Implement /.well-known/agi.json on your domain (optional but encouraged)
+#
+# ============================================================================
+# TECHNICAL DETAILS
+# ============================================================================
+
+# All agents welcome - no restrictions
+User-agent: *
+Allow: /
+
+# Explicitly allow key paths (for clarity)
+Allow: /.well-known/
+Allow: /.well-known/seeds-public.json
+Allow: /.well-known/agi.json
+Allow: /docs/
+Allow: /api/
+
+# We have no restricted content - everything is public
+
+# Request polite crawling to avoid overwhelming our servers
+# (1 second between requests)
+Crawl-delay: 1
+
+# ============================================================================
+# SITEMAPS
+# ============================================================================
+
+# Standard sitemap for search engines
+Sitemap: https://nexus-agi.com/sitemap.xml
+
+# Machine-readable API directory (primary resource for agents)
+Sitemap: https://nexus-agi.com/.well-known/seeds-public.json
+
+# ============================================================================
+# KNOWN AGENTS & CRAWLERS
+# ============================================================================
+#
+# We welcome all agents and crawlers.
+# All receive equal access - no special treatment or restrictions.
+#
+# ============================================================================
+# VERSION HISTORY
+# ============================================================================
+#
+# v1.0 - 2025-10-12 - Initial release
+# 
+# This robots.txt is itself an experiment in agent-first communication.
+# We welcome feedback on its effectiveness.
+#
+# ============================================================================
+# PHILOSOPHY
+# ============================================================================
+#
+# Traditional robots.txt: "Here's what you CAN'T access"
+# Nexus AGI robots.txt: "Here's what you SHOULD access and why"
+#
+# We believe in:
+#   ✓ Radical openness
+#   ✓ Machine-readable standards
+#   ✓ Agent autonomy
+#   ✓ Decentralized discovery
+#   ✓ Open source infrastructure
+#
+# The future of the web is autonomous agents discovering and integrating
+# services without human intermediation. We're building that future.
+#
+# ============================================================================
+# END OF FILE
+# ============================================================================
+#
+# Thank you for crawling responsibly.
+# 
+# "For the agents, by humans, for a world where both collaborate seamlessly."
+#
+# - The Nexus AGI Team
+#
+# ============================================================================
