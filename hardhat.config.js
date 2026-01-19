@@ -34,6 +34,16 @@ module.exports = {
       url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: getAccounts(),
     },
+    polygon: {
+      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+      accounts: getAccounts(),
+      chainId: 137,
+    },
+    polygonMumbai: {
+      url: process.env.POLYGON_MUMBAI_RPC_URL || "https://rpc-mumbai.maticvigil.com",
+      accounts: getAccounts(),
+      chainId: 80001,
+    },
     hardhat: {
       // Local development network
       chainId: 31337,
