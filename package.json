@@ -10,7 +10,8 @@
     "auto-bridge": "ts-node scripts/automatedBridge.ts",
     "mining-simulator": "ts-node scripts/educationalMiningSimulator.ts",
     "quantum-miner": "ts-node scripts/quantumMiningSystem.ts",
-    "full-demo": "npm run quantum-miner && npm run auto-bridge",
+    "enhanced-miner": "ts-node scripts/enhancedMiningSystemV3.ts",
+    "full-demo": "npm run enhanced-miner && npm run auto-bridge",
     "compile": "hardhat compile"
   },
   "keywords": [
