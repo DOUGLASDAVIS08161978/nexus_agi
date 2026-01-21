@@ -4,13 +4,13 @@
  */
 
 import { web3Onboard, chains } from './walletConfig';
-import { ethers } from 'ethers';
+import { ethers, BrowserProvider, Signer } from 'ethers';
 
 export class WalletManager {
   private static instance: WalletManager;
   private currentWallet: any = null;
-  private provider: ethers.providers.Web3Provider | null = null;
-  private signer: ethers.Signer | null = null;
+  private provider: BrowserProvider | null = null;
+  private signer: Signer | null = null;
 
   private constructor() {}
 
@@ -27,7 +27,7 @@ export class WalletManager {
   async connectWallet(): Promise<{
     address: string;
     chainId: string;
-    provider: ethers.providers.Web3Provider;
+    provider: BrowserProvider;
   }> {
     try {
       const wallets = await web3Onboard.connectWallet();
@@ -39,12 +39,12 @@ export class WalletManager {
       this.currentWallet = wallets[0];
 
       // Create ethers provider from wallet
-      this.provider = new ethers.providers.Web3Provider(
+      this.provider = new BrowserProvider(
         this.currentWallet.provider,
         'any'
       );
 
-      this.signer = this.provider.getSigner();
+      this.signer = await this.provider.getSigner();
 
       const address = this.currentWallet.accounts[0].address;
       const chainId = this.currentWallet.chains[0].id;
@@ -104,14 +104,14 @@ export class WalletManager {
   /**
    * Get ethers provider
    */
-  getProvider(): ethers.providers.Web3Provider | null {
+  getProvider(): BrowserProvider | null {
     return this.provider;
   }
 
   /**
    * Get ethers signer
    */
-  getSigner(): ethers.Signer | null {
+  getSigner(): Signer | null {
     return this.signer;
   }
 
@@ -129,7 +129,7 @@ export class WalletManager {
     }
 
     const balance = await this.provider.getBalance(addr);
-    return ethers.utils.formatEther(balance);
+    return ethers.formatEther(balance);
   }
 
   /**

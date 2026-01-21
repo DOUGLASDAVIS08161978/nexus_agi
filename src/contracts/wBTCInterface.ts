@@ -55,14 +55,14 @@ export class WBTCContract {
     const factory = new ContractFactory(wTBTC_ABI, wTBTC_BYTECODE, signer);
 
     const contract = await factory.deploy(bridgeOperatorAddress);
-    await contract.deployed();
+    await contract.waitForDeployment();
 
     this.contract = contract;
-    this.address = contract.address;
+    this.address = await contract.getAddress();
 
-    console.log(`✅ wTBTC deployed at: ${contract.address}`);
+    console.log(`✅ wTBTC deployed at: ${this.address}`);
 
-    return contract.address;
+    return this.address;
   }
 
   /**
@@ -103,7 +103,7 @@ export class WBTCContract {
     if (!this.contract) throw new Error('Contract not initialized');
 
     const balance = await this.contract.balanceOf(address);
-    return ethers.utils.formatEther(balance);
+    return ethers.formatEther(balance);
   }
 
   /**
@@ -113,7 +113,7 @@ export class WBTCContract {
     if (!this.contract) throw new Error('Contract not initialized');
 
     const supply = await this.contract.totalSupply();
-    return ethers.utils.formatEther(supply);
+    return ethers.formatEther(supply);
   }
 
   /**
@@ -144,7 +144,7 @@ export class WBTCContract {
   ): Promise<ethers.ContractTransaction> {
     const contract = this.getContractWithSigner();
 
-    const amountWei = ethers.utils.parseEther(amount);
+    const amountWei = ethers.parseEther(amount);
 
     console.log(`🪙 Minting ${amount} wTBTC to ${toAddress}...`);
 
@@ -165,7 +165,7 @@ export class WBTCContract {
   ): Promise<ethers.ContractTransaction> {
     const contract = this.getContractWithSigner();
 
-    const amountWei = ethers.utils.parseEther(amount);
+    const amountWei = ethers.parseEther(amount);
 
     console.log(`🔥 Burning ${amount} wTBTC for BTC address ${bitcoinAddress}...`);
 
@@ -186,7 +186,7 @@ export class WBTCContract {
   ): Promise<ethers.ContractTransaction> {
     const contract = this.getContractWithSigner();
 
-    const amountWei = ethers.utils.parseEther(amount);
+    const amountWei = ethers.parseEther(amount);
 
     console.log(`💸 Transferring ${amount} wTBTC to ${toAddress}...`);
 
@@ -207,7 +207,7 @@ export class WBTCContract {
   ): Promise<ethers.ContractTransaction> {
     const contract = this.getContractWithSigner();
 
-    const amountWei = ethers.utils.parseEther(amount);
+    const amountWei = ethers.parseEther(amount);
 
     console.log(`✅ Approving ${spenderAddress} to spend ${amount} wTBTC...`);
 
@@ -226,7 +226,7 @@ export class WBTCContract {
     if (!this.contract) throw new Error('Contract not initialized');
 
     this.contract.on('Mint', (to, amount, btcTxId) => {
-      callback(to, ethers.utils.formatEther(amount), btcTxId);
+      callback(to, ethers.formatEther(amount), btcTxId);
     });
   }
 
@@ -237,7 +237,7 @@ export class WBTCContract {
     if (!this.contract) throw new Error('Contract not initialized');
 
     this.contract.on('Burn', (from, amount, btcAddress) => {
-      callback(from, ethers.utils.formatEther(amount), btcAddress);
+      callback(from, ethers.formatEther(amount), btcAddress);
     });
   }
 
