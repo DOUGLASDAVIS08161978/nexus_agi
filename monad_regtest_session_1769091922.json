@@ -1,0 +1,168 @@
+{
+  "session_id": "REGTEST-SESSION-1769091922",
+  "timestamp": "2026-01-22T14:25:22.097234",
+  "duration_seconds": 2.116460084915161,
+  "mining": {
+    "blocks_mined": 10,
+    "total_btc": 500.0,
+    "blocks": [
+      {
+        "block_number": 1,
+        "block_hash": "0000ac754fa3480b33c7516f52664719e5a39d477e30118b2daaf222ccaa9a8d",
+        "nonce": 61776,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:20.044165",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 2,
+        "block_hash": "0000af41233f27000d8d53f1e6b536b48a370ffccd6295b25ccbbf52df05ee92",
+        "nonce": 27445,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:20.071815",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 3,
+        "block_hash": "0000649acae6ab112522c8d359af4e4d803538ac2e87c8adb60f327633754517",
+        "nonce": 202169,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:20.538049",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 4,
+        "block_hash": "00003177fa1785d253c1dffcb478aceb5c39bdb5c23500ffdba6bed27f5ee359",
+        "nonce": 301626,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:20.831039",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 5,
+        "block_hash": "0000bf6e3bd052d51c2cef58720d42a7c6a5f4816aae615530073c6f7574efb7",
+        "nonce": 128886,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.205998",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 6,
+        "block_hash": "0000a79d8ceed15f11cdf4c56333c05cd151c8db5b6ae1cf6b1e2720320e797a",
+        "nonce": 685,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.207006",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 7,
+        "block_hash": "000093d7c0f3eaa1317cdcb7a3a79c8eaacb647231c0e715fab293872a9ee818",
+        "nonce": 7292,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.455397",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 8,
+        "block_hash": "00004f75dc8d6cea0f42b858ec72ec6818a779fc62a89942e8e7ec62da00ea5c",
+        "nonce": 30953,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.486367",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 9,
+        "block_hash": "00008e7a439883de33c742ff437a2643356a88652adbb44a155bb16b8c31e937",
+        "nonce": 66311,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.812069",
+        "difficulty": "0000"
+      },
+      {
+        "block_number": 10,
+        "block_hash": "0000b0bb7dfac2efef31b84862addd042ce14ea3fa45aebd275d7a1fc2d4fb94",
+        "nonce": 42509,
+        "reward": 50.0,
+        "timestamp": "2026-01-22T14:25:21.865320",
+        "difficulty": "0000"
+      }
+    ]
+  },
+  "bridging": {
+    "transactions": 5,
+    "total_wbtc": 500.0,
+    "receiving_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+    "bridges": [
+      {
+        "bridge_id": "BRIDGE-1769091920-270421f9",
+        "btc_amount": 100.0,
+        "wbtc_amount": 100.0,
+        "btc_txid": "0000af41233f27000d8d53f1e6b536b48a370ffccd6295b25ccbbf52df05ee92",
+        "monad_txid": "0xc503086a3823a2021cef9b6c50f1f1bea29357a0efe099cfa517007b1b56ceaf",
+        "from_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "to_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "timestamp": "2026-01-22T14:25:20.326417",
+        "status": "SIMULATED",
+        "gas_used": null,
+        "gas_price": null
+      },
+      {
+        "bridge_id": "BRIDGE-1769091920-28257066",
+        "btc_amount": 100.0,
+        "wbtc_amount": 100.0,
+        "btc_txid": "00003177fa1785d253c1dffcb478aceb5c39bdb5c23500ffdba6bed27f5ee359",
+        "monad_txid": "0x1d121ef0d9ba3d4211949bd5ba6e673812c9d61c2bda59b135f4201dbb664d39",
+        "from_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "to_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "timestamp": "2026-01-22T14:25:21.075100",
+        "status": "SIMULATED",
+        "gas_used": null,
+        "gas_price": null
+      },
+      {
+        "bridge_id": "BRIDGE-1769091921-efad3877",
+        "btc_amount": 100.0,
+        "wbtc_amount": 100.0,
+        "btc_txid": "0000a79d8ceed15f11cdf4c56333c05cd151c8db5b6ae1cf6b1e2720320e797a",
+        "monad_txid": "0x405a07a527bd1f5d9c94959e13d5fc7ecbd88bf7c80dc371537a3428c7550cdd",
+        "from_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "to_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "timestamp": "2026-01-22T14:25:21.447851",
+        "status": "SIMULATED",
+        "gas_used": null,
+        "gas_price": null
+      },
+      {
+        "bridge_id": "BRIDGE-1769091921-e5534834",
+        "btc_amount": 100.0,
+        "wbtc_amount": 100.0,
+        "btc_txid": "00004f75dc8d6cea0f42b858ec72ec6818a779fc62a89942e8e7ec62da00ea5c",
+        "monad_txid": "0x419d50d38ec916f3260aa296cd7ccaa4ee4404278713bb3967cd631c3bcc86e3",
+        "from_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "to_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "timestamp": "2026-01-22T14:25:21.738875",
+        "status": "SIMULATED",
+        "gas_used": null,
+        "gas_price": null
+      },
+      {
+        "bridge_id": "BRIDGE-1769091921-b2c40fe7",
+        "btc_amount": 100.0,
+        "wbtc_amount": 100.0,
+        "btc_txid": "0000b0bb7dfac2efef31b84862addd042ce14ea3fa45aebd275d7a1fc2d4fb94",
+        "monad_txid": "0x6aa21c9f17fb07586607f6a969798fffee5665c797501ec38dbb6af2923bb34b",
+        "from_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "to_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771",
+        "timestamp": "2026-01-22T14:25:22.096970",
+        "status": "SIMULATED",
+        "gas_used": null,
+        "gas_price": null
+      }
+    ]
+  },
+  "configuration": {
+    "monad_rpc": "https://testnet-rpc.monad.xyz",
+    "monad_chain_id": 10143,
+    "signing_address": "0x24F6B1ce11C57d40B542f91AC85fA9eB61f78771"
+  }
+}
