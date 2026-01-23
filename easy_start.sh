@@ -214,10 +214,11 @@ show_main_menu() {
         echo -e "  ${GREEN}5)${NC} 📱 ${CYAN}Show me how to add tokens to my mobile wallet${NC}"
         echo -e "  ${GREEN}6)${NC} 🔧 ${CYAN}Check if I have everything I need${NC}"
         echo -e "  ${GREEN}7)${NC} ❓ ${CYAN}Help - I'm confused!${NC}"
-        echo -e "  ${GREEN}8)${NC} 🚪 ${CYAN}Exit${NC}"
+        echo -e "  ${GREEN}8)${NC} 🌟 ${CYAN}Setup Bitcoin Node (myNode) - Run REAL Bitcoin!${NC}"
+        echo -e "  ${GREEN}9)${NC} 🚪 ${CYAN}Exit${NC}"
         echo ""
 
-        read -p "$(echo -e ${YELLOW}Enter your choice [1-8]: ${NC})" choice
+        read -p "$(echo -e ${YELLOW}Enter your choice [1-9]: ${NC})" choice
 
         case $choice in
             1) show_tutorial ;;
@@ -227,12 +228,13 @@ show_main_menu() {
             5) show_mobile_wallet_guide ;;
             6) run_full_check ;;
             7) show_help ;;
-            8)
+            8) setup_bitcoin_node ;;
+            9)
                 echo -e "\n${GREEN}👋 Goodbye! Come back anytime!${NC}\n"
                 exit 0
                 ;;
             *)
-                echo -e "${RED}Invalid choice. Please pick a number from 1 to 8.${NC}"
+                echo -e "${RED}Invalid choice. Please pick a number from 1 to 9.${NC}"
                 sleep 2
                 ;;
         esac
@@ -595,6 +597,59 @@ It explains everything in simple terms!
 
 EOF
 
+    wait_for_enter
+}
+
+# ============================================================================
+# BITCOIN NODE SETUP
+# ============================================================================
+
+setup_bitcoin_node() {
+    print_banner
+    print_step "🌟 SETUP YOUR OWN BITCOIN NODE (myNode)"
+
+    echo -e "${CYAN}This will let you run a REAL Bitcoin node on your computer!${NC}\n"
+    echo -e "${YELLOW}What is myNode?${NC}"
+    echo "  • Professional Bitcoin node software"
+    echo "  • Easy web interface"
+    echo "  • Full Bitcoin blockchain"
+    echo "  • Lightning Network support"
+    echo "  • Perfect for your bridge!"
+    echo ""
+    echo -e "${YELLOW}Requirements:${NC}"
+    echo "  • 500GB+ disk space (for full blockchain)"
+    echo "  • 2GB+ RAM"
+    echo "  • Unlimited internet (or high cap)"
+    echo "  • 1-7 days for initial sync"
+    echo ""
+    echo -e "${GREEN}Benefits:${NC}"
+    echo "  • Own copy of Bitcoin blockchain"
+    echo "  • No need to trust third parties"
+    echo "  • Can switch from regtest to real Bitcoin!"
+    echo "  • Support the Bitcoin network"
+    echo ""
+
+    if ask_yes_no "Do you want to set up myNode?"; then
+        echo ""
+        print_info "Opening Bitcoin node setup wizard..."
+        echo ""
+
+        if [ -f "setup_bitcoin_node.sh" ]; then
+            # Make sure it's executable
+            chmod +x setup_bitcoin_node.sh
+
+            # Launch the setup wizard
+            sudo bash setup_bitcoin_node.sh
+        else
+            print_error "Setup script not found!"
+            echo "Expected: setup_bitcoin_node.sh"
+        fi
+    else
+        echo ""
+        print_info "You can always run this later from option 8!"
+    fi
+
+    echo ""
     wait_for_enter
 }
 
