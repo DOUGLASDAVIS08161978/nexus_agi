@@ -22,20 +22,28 @@ from dataclasses import dataclass, asdict
 from web3 import Web3
 from eth_account import Account
 import sys
+import os
+from dotenv import load_dotenv
+
+# Load secure configuration from .env file
+load_dotenv()
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-# Monad Testnet Configuration
-MONAD_TESTNET_RPC = "https://testnet-rpc.monad.xyz"  # Replace with actual Monad testnet RPC
-MONAD_CHAIN_ID = 10143  # Monad testnet chain ID (verify this)
+# Monad Testnet Configuration (loaded securely from .env)
+MONAD_TESTNET_RPC = os.getenv('MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz')
+MONAD_CHAIN_ID = int(os.getenv('MONAD_CHAIN_ID', '10143'))
 
-# User's Monad Private Key (for signing transactions)
-MONAD_PRIVATE_KEY = "c411a4d4365560753ef3ceceac1652ec89240704346bf58ad900d65574f541c9"
+# User's Monad Private Key (loaded securely from .env)
+MONAD_PRIVATE_KEY = os.getenv('MONAD_PRIVATE_KEY')
 
-# WBTC Receiving Address
-WBTC_RECEIVING_ADDRESS = "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771"
+# WBTC Receiving Address (loaded securely from .env)
+WBTC_RECEIVING_ADDRESS = os.getenv('MONAD_RECEIVING_ADDRESS')
+
+# WBTC Contract Address (loaded securely from .env)
+WBTC_CONTRACT_ADDRESS = os.getenv('WBTC_CONTRACT_ADDRESS')
 
 # Regtest Configuration
 REGTEST_BLOCK_REWARD = 50.0  # BTC per block in regtest

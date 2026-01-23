@@ -16,12 +16,18 @@ from web3 import Web3
 from eth_account import Account
 import json
 import time
+import os
+from dotenv import load_dotenv
 
-# Configuration
-MONAD_TESTNET_RPC = "https://testnet-rpc.monad.xyz"
-MONAD_CHAIN_ID = 10143
-PRIVATE_KEY = "c411a4d4365560753ef3ceceac1652ec89240704346bf58ad900d65574f541c9"
-RECEIVING_ADDRESS = "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771"
+# Load secure configuration from .env file
+load_dotenv()
+
+# Configuration from environment variables (kept private!)
+MONAD_TESTNET_RPC = os.getenv('MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz')
+MONAD_CHAIN_ID = int(os.getenv('MONAD_CHAIN_ID', '10143'))
+PRIVATE_KEY = os.getenv('MONAD_PRIVATE_KEY')
+RECEIVING_ADDRESS = os.getenv('MONAD_RECEIVING_ADDRESS')
+WBTC_CONTRACT_ADDRESS = os.getenv('WBTC_CONTRACT_ADDRESS')
 
 # WBTC Contract ABI (minimal for minting)
 WBTC_ABI = [
@@ -114,34 +120,34 @@ def check_prerequisites():
         return {'w3': w3, 'account': account, 'has_gas': True}
 
 def deploy_wbtc_contract(context):
-    """Deploy WBTC contract (if we have gas)"""
-    print_header("🔨 DEPLOYING WBTC TOKEN CONTRACT")
+    """Get existing WBTC contract address (securely loaded from .env)"""
+    print_header("🪙 CONNECTING TO WBTC TOKEN CONTRACT")
 
-    if not context['has_gas']:
-        print(f"⚠️  Cannot deploy without gas")
-        print(f"   Using simulated contract address")
-        # Return a fake address for simulation
-        return "0x1234567890123456789012345678901234567890"
+    if not WBTC_CONTRACT_ADDRESS:
+        print(f"❌ WBTC contract address not configured!")
+        print(f"   Please add WBTC_CONTRACT_ADDRESS to your .env file")
+        return None
 
-    w3 = context['w3']
-    account = context['account']
-
-    # WBTC Bytecode (compiled contract)
-    # Note: In production, this would be the actual compiled bytecode
     print(f"📝 Contract Details:")
     print(f"   Name: Wrapped Bitcoin")
     print(f"   Symbol: WBTC")
     print(f"   Decimals: 8")
+    print(f"   Network: Monad Testnet")
 
-    print(f"\n⚠️  IMPORTANT:")
-    print(f"   To properly deploy, you need to:")
-    print(f"   1. Have Hardhat configured for Monad")
-    print(f"   2. Run: npx hardhat run scripts/deploy_wbtc_monad.js --network monad")
-    print(f"   3. Save the deployed contract address")
+    # Verify contract exists
+    if context['has_gas']:
+        w3 = context['w3']
+        try:
+            code = w3.eth.get_code(Web3.to_checksum_address(WBTC_CONTRACT_ADDRESS))
+            if code and code != b'' and code != b'0x':
+                print(f"   ✅ Contract verified on-chain!")
+            else:
+                print(f"   ⚠️  Warning: Contract may not be deployed yet")
+        except Exception as e:
+            print(f"   ⚠️  Could not verify contract: {e}")
 
-    print(f"\n💡 For now, I'll use a mock contract address")
-    mock_address = "0x1234567890123456789012345678901234567890"
-    return mock_address
+    print(f"\n💡 Using your existing WBTC contract")
+    return WBTC_CONTRACT_ADDRESS
 
 def mint_wbtc_tokens(context, wbtc_address, amount_btc=100.0):
     """Mint WBTC tokens to user's address"""

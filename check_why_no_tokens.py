@@ -11,11 +11,17 @@ Date: 2026-01-23
 
 from web3 import Web3
 from eth_account import Account
+import os
+from dotenv import load_dotenv
 
-# Configuration
-MONAD_TESTNET_RPC = "https://testnet-rpc.monad.xyz"
-PRIVATE_KEY = "c411a4d4365560753ef3ceceac1652ec89240704346bf58ad900d65574f541c9"
-ADDRESS = "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771"
+# Load secure configuration from .env file
+load_dotenv()
+
+# Configuration (loaded securely from .env)
+MONAD_TESTNET_RPC = os.getenv('MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz')
+PRIVATE_KEY = os.getenv('MONAD_PRIVATE_KEY')
+ADDRESS = os.getenv('MONAD_RECEIVING_ADDRESS')
+WBTC_CONTRACT_ADDRESS = os.getenv('WBTC_CONTRACT_ADDRESS')
 
 def main():
     print("""
