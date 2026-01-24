@@ -1,4 +1,4 @@
-python main.py 
+sudo su && python main.py 
 npm run build ./ # Nexus AGI System v4.0
 
 A comprehensive Artificial General Intelligence system featuring quantum simulation, neural-symbolic integration, advanced reasoning capabilities, and the new **OMEGA ASI** module.
