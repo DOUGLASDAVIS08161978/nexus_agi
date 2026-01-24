@@ -1,4 +1,4 @@
-# 🚀 HASHPROOF TOKEN (HPROOF)
+sudo su && # 🚀 HASHPROOF TOKEN (HPROOF)
 
 **The Token That Rewards Computational Work & Makes You Money**
 
