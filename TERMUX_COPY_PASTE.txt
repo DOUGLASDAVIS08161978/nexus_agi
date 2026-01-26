@@ -1,8 +1,9 @@
 #!/bin/bash
 # ============================================================
-# 📱 NEXUS AGI - TERMUX ONE-CLICK DEPLOYMENT
+# 📱 NEXUS AGI - TERMUX ONE-CLICK DEPLOYMENT (SOLC-JS)
 # ============================================================
 # COPY THIS ENTIRE SCRIPT AND PASTE INTO TERMUX
+# Uses pure JavaScript Solidity compiler (Android compatible)
 # ============================================================
 
 echo "🏠 Navigating to home directory..." && \
@@ -11,13 +12,11 @@ echo "📁 Checking for nexus_agi repository..." && \
 (cd nexus_agi 2>/dev/null || (echo "📥 Cloning repository..." && git clone https://github.com/DOUGLASDAVIS08161978/nexus_agi.git)) && \
 echo "📂 Entering nexus_agi directory..." && \
 cd nexus_agi && \
-echo "🧹 Cleaning up conflicting files..." && \
-rm -f hardhat.config.cjs scripts/deploy.cjs && \
 echo "💾 Stashing any local changes..." && \
 git stash && \
 echo "🔀 Checking out deployment branch..." && \
 git checkout claude/deploy-monetize-nexus-agi-tNrC3 && \
 echo "📡 Pulling latest changes..." && \
 git pull origin claude/deploy-monetize-nexus-agi-tNrC3 && \
-echo "🚀 Starting deployment..." && \
-bash DEPLOY_NEXUS_COMPLETE.sh
+echo "🚀 Starting deployment (solc-js)..." && \
+bash DEPLOY_SOLCJS.sh
