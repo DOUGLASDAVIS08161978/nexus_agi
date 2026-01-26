@@ -11,6 +11,8 @@ echo "📁 Checking for nexus_agi repository..." && \
 (cd nexus_agi 2>/dev/null || (echo "📥 Cloning repository..." && git clone https://github.com/DOUGLASDAVIS08161978/nexus_agi.git)) && \
 echo "📂 Entering nexus_agi directory..." && \
 cd nexus_agi && \
+echo "🧹 Cleaning up conflicting files..." && \
+rm -f hardhat.config.cjs scripts/deploy.cjs && \
 echo "💾 Stashing any local changes..." && \
 git stash && \
 echo "🔀 Checking out deployment branch..." && \
