@@ -50,7 +50,7 @@ cat > deploy_with_solcjs.cjs << 'DEPLOY_SCRIPT'
 const fs = require('fs');
 const path = require('path');
 const solc = require('solc');
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 
 // Connect to Geth
 const web3 = new Web3('http://localhost:8545');
