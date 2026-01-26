@@ -270,6 +270,10 @@ if [ ! -d "node_modules" ]; then
 else
     echo "✅ Dependencies already installed"
 fi
+
+echo "📦 Installing required Hardhat plugins..."
+npm install --save-dev @nomicfoundation/hardhat-ethers@^3.1.0 ethers@^6.0.0 --silent > /dev/null 2>&1
+echo "✅ Hardhat plugins installed"
 echo ""
 
 # ================================================================
