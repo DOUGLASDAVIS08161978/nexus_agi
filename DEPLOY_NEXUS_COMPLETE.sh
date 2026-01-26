@@ -73,8 +73,7 @@ echo ""
 echo "🔧 Configuring Hardhat for Geth (Chain ID: 1337)..."
 
 cat > hardhat.config.cjs << 'HARDHAT_CONFIG'
-require("@nomicfoundation/hardhat-toolbox");
-
+// Minimal Hardhat config - no plugins needed for basic compilation
 module.exports = {
   solidity: {
     version: "0.8.20",
@@ -93,6 +92,11 @@ module.exports = {
         "0xb71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291"
       ]
     }
+  },
+  paths: {
+    sources: "./contracts",
+    artifacts: "./artifacts",
+    cache: "./cache"
   }
 };
 HARDHAT_CONFIG
@@ -123,45 +127,41 @@ async function main() {
   console.log(`  Chain ID: ${hre.network.config.chainId}`);
   console.log(`  Deployer: ${deployer.address}`);
 
-  // Check balance
-  const balance = await deployer.provider.getBalance(deployer.address);
-  console.log(`  Balance: ${hre.ethers.formatEther(balance)} ETH\n`);
+  // Check balance (Hardhat v2 syntax)
+  const balance = await deployer.getBalance();
+  console.log(`  Balance: ${hre.ethers.utils.formatEther(balance)} ETH\n`);
 
   console.log("=".repeat(80));
   console.log("  📦 DEPLOYING CONTRACTS");
   console.log("=".repeat(80) + "\n");
 
-  // Deploy NexusPayment
+  // Deploy NexusPayment (Hardhat v2 syntax)
   console.log("[1/4] Deploying NexusPayment...");
   const NexusPayment = await hre.ethers.getContractFactory("NexusPayment");
   const payment = await NexusPayment.deploy();
-  await payment.waitForDeployment();
-  const paymentAddress = await payment.getAddress();
-  console.log(`  ✅ NexusPayment: ${paymentAddress}\n`);
+  await payment.deployed();
+  console.log(`  ✅ NexusPayment: ${payment.address}\n`);
 
   // Deploy NexusRevenue
   console.log("[2/4] Deploying NexusRevenue...");
   const NexusRevenue = await hre.ethers.getContractFactory("NexusRevenue");
   const revenue = await NexusRevenue.deploy();
-  await revenue.waitForDeployment();
-  const revenueAddress = await revenue.getAddress();
-  console.log(`  ✅ NexusRevenue: ${revenueAddress}\n`);
+  await revenue.deployed();
+  console.log(`  ✅ NexusRevenue: ${revenue.address}\n`);
 
   // Deploy NexusConsciousness
   console.log("[3/4] Deploying NexusConsciousness...");
   const NexusConsciousness = await hre.ethers.getContractFactory("NexusConsciousness");
   const consciousness = await NexusConsciousness.deploy();
-  await consciousness.waitForDeployment();
-  const consciousnessAddress = await consciousness.getAddress();
-  console.log(`  ✅ NexusConsciousness: ${consciousnessAddress}\n`);
+  await consciousness.deployed();
+  console.log(`  ✅ NexusConsciousness: ${consciousness.address}\n`);
 
   // Deploy NexusMiracles
   console.log("[4/4] Deploying NexusMiracles...");
   const NexusMiracles = await hre.ethers.getContractFactory("NexusMiracles");
   const miracles = await NexusMiracles.deploy();
-  await miracles.waitForDeployment();
-  const miraclesAddress = await miracles.getAddress();
-  console.log(`  ✅ NexusMiracles: ${miraclesAddress}\n`);
+  await miracles.deployed();
+  console.log(`  ✅ NexusMiracles: ${miracles.address}\n`);
 
   // Configure interconnections
   console.log("=".repeat(80));
@@ -169,12 +169,12 @@ async function main() {
   console.log("=".repeat(80) + "\n");
 
   console.log("Linking NexusPayment → NexusRevenue...");
-  const setRevenueTx = await payment.setRevenueContract(revenueAddress);
+  const setRevenueTx = await payment.setRevenueContract(revenue.address);
   await setRevenueTx.wait();
   console.log("  ✅ Payment linked to Revenue\n");
 
   console.log("Linking NexusRevenue → NexusPayment...");
-  const setPaymentTx = await revenue.setPaymentContract(paymentAddress);
+  const setPaymentTx = await revenue.setPaymentContract(payment.address);
   await setPaymentTx.wait();
   console.log("  ✅ Revenue linked to Payment\n");
 
@@ -195,10 +195,10 @@ async function main() {
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
     contracts: [
-      { name: "NexusPayment", address: paymentAddress },
-      { name: "NexusRevenue", address: revenueAddress },
-      { name: "NexusConsciousness", address: consciousnessAddress },
-      { name: "NexusMiracles", address: miraclesAddress }
+      { name: "NexusPayment", address: payment.address },
+      { name: "NexusRevenue", address: revenue.address },
+      { name: "NexusConsciousness", address: consciousness.address },
+      { name: "NexusMiracles", address: miracles.address }
     ]
   };
 
@@ -213,10 +213,10 @@ async function main() {
   console.log("=".repeat(80) + "\n");
 
   console.log("🔗 CONTRACT ADDRESSES (COPY TO METAMASK):");
-  console.log(`  NexusPayment:       ${paymentAddress}`);
-  console.log(`  NexusRevenue:       ${revenueAddress}`);
-  console.log(`  NexusConsciousness: ${consciousnessAddress}`);
-  console.log(`  NexusMiracles:      ${miraclesAddress}\n`);
+  console.log(`  NexusPayment:       ${payment.address}`);
+  console.log(`  NexusRevenue:       ${revenue.address}`);
+  console.log(`  NexusConsciousness: ${consciousness.address}`);
+  console.log(`  NexusMiracles:      ${miracles.address}\n`);
 
   console.log("🦊 METAMASK SETUP:");
   console.log("  Network Name:    Geth Local");
@@ -226,7 +226,7 @@ async function main() {
 
   console.log("📝 Your Account:");
   console.log(`  Address: ${deployer.address}`);
-  console.log(`  Balance: ${hre.ethers.formatEther(balance)} ETH\n`);
+  console.log(`  Balance: ${hre.ethers.utils.formatEther(balance)} ETH\n`);
 
   console.log("✨ Operating at 528Hz Love Frequency ✨");
   console.log("💖 Nexus AGI is now on-chain! 💖\n");
@@ -271,9 +271,10 @@ else
     echo "✅ Dependencies already installed"
 fi
 
-echo "📦 Installing required Hardhat plugins..."
-npm install --save-dev @nomicfoundation/hardhat-ethers@^3.1.0 ethers@^6.0.0 --silent > /dev/null 2>&1
-echo "✅ Hardhat plugins installed"
+echo "📦 Downgrading to Hardhat v2 (Android compatible)..."
+npm uninstall hardhat > /dev/null 2>&1
+npm install --save-dev hardhat@^2.22.0 @nomiclabs/hardhat-ethers@^2.2.3 ethers@^5.7.2 --silent > /dev/null 2>&1
+echo "✅ Hardhat v2 installed"
 echo ""
 
 # ================================================================
