@@ -271,10 +271,14 @@ else
     echo "✅ Dependencies already installed"
 fi
 
-echo "📦 Downgrading to Hardhat v2 (Android compatible)..."
-npm uninstall hardhat > /dev/null 2>&1
-npm install --save-dev hardhat@^2.22.0 @nomiclabs/hardhat-ethers@^2.2.3 ethers@^5.7.2 --silent > /dev/null 2>&1
-echo "✅ Hardhat v2 installed"
+echo "📦 Cleaning up for Hardhat v2 (Android compatible)..."
+echo "   Removing corrupted node_modules and lockfile..."
+rm -rf node_modules package-lock.json
+echo "   Installing fresh Hardhat v2 dependencies..."
+npm install --save-dev hardhat@^2.22.0 @nomiclabs/hardhat-ethers@^2.2.3 ethers@^5.7.2 --legacy-peer-deps > /dev/null 2>&1
+echo "   Installing other project dependencies..."
+npm install --legacy-peer-deps > /dev/null 2>&1
+echo "✅ Hardhat v2 installed with clean dependencies"
 echo ""
 
 # ================================================================
