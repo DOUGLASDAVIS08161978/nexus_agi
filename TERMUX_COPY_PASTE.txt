@@ -5,9 +5,17 @@
 # COPY THIS ENTIRE SCRIPT AND PASTE INTO TERMUX
 # ============================================================
 
+echo "🏠 Navigating to home directory..." && \
 cd ~ && \
-(cd nexus_agi 2>/dev/null || git clone https://github.com/DOUGLASDAVIS08161978/nexus_agi.git) && \
+echo "📁 Checking for nexus_agi repository..." && \
+(cd nexus_agi 2>/dev/null || (echo "📥 Cloning repository..." && git clone https://github.com/DOUGLASDAVIS08161978/nexus_agi.git)) && \
+echo "📂 Entering nexus_agi directory..." && \
 cd nexus_agi && \
+echo "💾 Stashing any local changes..." && \
+git stash && \
+echo "🔀 Checking out deployment branch..." && \
 git checkout claude/deploy-monetize-nexus-agi-tNrC3 && \
+echo "📡 Pulling latest changes..." && \
+git pull origin claude/deploy-monetize-nexus-agi-tNrC3 && \
 echo "🚀 Starting deployment..." && \
 bash DEPLOY_NEXUS_COMPLETE.sh
