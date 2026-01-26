@@ -46,7 +46,7 @@ echo ""
 # ================================================================
 echo "🔧 Creating deployment script..."
 
-cat > deploy_with_solcjs.js << 'DEPLOY_SCRIPT'
+cat > deploy_with_solcjs.cjs << 'DEPLOY_SCRIPT'
 const fs = require('fs');
 const path = require('path');
 const solc = require('solc');
@@ -252,7 +252,7 @@ echo ""
 echo "📦 Deploying contracts with solc-js..."
 echo ""
 
-node deploy_with_solcjs.js
+node deploy_with_solcjs.cjs
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -260,9 +260,9 @@ if [ $? -eq 0 ]; then
     echo ""
 
     if [ -f "deployment_addresses.json" ]; then
-        echo "=".repeat(80)
+        echo "================================================================================"
         echo "📋 DEPLOYED CONTRACT ADDRESSES:"
-        echo "=".repeat(80)
+        echo "================================================================================"
         echo ""
         cat deployment_addresses.json
         echo ""
