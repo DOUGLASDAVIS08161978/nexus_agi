@@ -1,0 +1,13 @@
+#!/bin/bash
+# ============================================================
+# 📱 NEXUS AGI - TERMUX ONE-CLICK DEPLOYMENT
+# ============================================================
+# COPY THIS ENTIRE SCRIPT AND PASTE INTO TERMUX
+# ============================================================
+
+cd ~ && \
+(cd nexus_agi 2>/dev/null || git clone https://github.com/DOUGLASDAVIS08161978/nexus_agi.git) && \
+cd nexus_agi && \
+git checkout claude/deploy-monetize-nexus-agi-tNrC3 && \
+echo "🚀 Starting deployment..." && \
+bash DEPLOY_NEXUS_COMPLETE.sh
