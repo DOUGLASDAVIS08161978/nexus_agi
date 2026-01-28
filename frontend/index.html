@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AGI Wallet Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .wallet-section {
+            margin-bottom: 30px;
+        }
+
+        .wallet-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .wallet-info p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .wallet-info .label {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .wallet-info .value {
+            color: #333;
+            word-break: break-all;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .action-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .action-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .balance-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .balance-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .balance-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Nexus AGI Wallet Manager</h1>
+            <p>Connect your wallet and manage your funds securely</p>
+        </div>
+
+        <div class="content">
+            <!-- Connect Wallet Section -->
+            <div class="wallet-section">
+                <button id="connectBtn">Connect Wallet</button>
+                <button id="disconnectBtn" class="hidden">Disconnect Wallet</button>
+
+                <div id="walletInfo" class="wallet-info hidden">
+                    <p><span class="label">Address:</span> <span class="value" id="walletAddress">-</span></p>
+                    <p><span class="label">Chain ID:</span> <span class="value" id="chainId">-</span></p>
+                    <p><span class="label">Contract Owner:</span> <span class="value">0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771</span></p>
+                </div>
+            </div>
+
+            <!-- Balance Section -->
+            <div id="balanceSection" class="hidden">
+                <div class="balance-card">
+                    <h4>Your Contract Balance</h4>
+                    <div class="balance-value" id="contractBalance">0 ETH</div>
+                </div>
+
+                <div class="balance-card">
+                    <h4>Pending Rewards</h4>
+                    <div class="balance-value" id="pendingRewards">0 ETH</div>
+                </div>
+
+                <button id="refreshBalanceBtn">🔄 Refresh Balance</button>
+            </div>
+
+            <!-- Deposit Section -->
+            <div id="depositSection" class="action-section hidden">
+                <h3>💰 Deposit ETH</h3>
+                <div class="input-group">
+                    <label for="depositAmount">Amount (ETH)</label>
+                    <input type="number" id="depositAmount" placeholder="0.1" step="0.001" min="0.001">
+                </div>
+                <button id="depositBtn">Deposit ETH</button>
+            </div>
+
+            <!-- Withdraw Section -->
+            <div id="withdrawSection" class="action-section hidden">
+                <h3>💸 Withdraw ETH</h3>
+                <div class="input-group">
+                    <label for="withdrawAmount">Amount (ETH)</label>
+                    <input type="number" id="withdrawAmount" placeholder="0.1" step="0.001" min="0.001">
+                </div>
+                <button id="withdrawBtn">Withdraw ETH</button>
+                <button id="withdrawAllBtn">Withdraw All</button>
+            </div>
+
+            <!-- Rewards Section -->
+            <div id="rewardsSection" class="action-section hidden">
+                <h3>🎁 Claim Rewards</h3>
+                <p>Earn rewards based on your deposited balance over time.</p>
+                <button id="claimRewardsBtn">Claim Rewards</button>
+            </div>
+
+            <!-- Status Messages -->
+            <div id="statusMessage" class="hidden"></div>
+        </div>
+
+        <div class="footer">
+            <p>Nexus AGI Wallet Manager | Powered by Web3-Onboard & Ethers.js</p>
+            <p>Contract Address: <span id="contractAddress">Deploy contract first</span></p>
+        </div>
+    </div>
+
+    <!-- Scripts will be added here -->
+    <script type="module">
+        // NOTE: This is a demo template. To use this:
+        // 1. Deploy the WalletManager contract
+        // 2. Update the contract address in web3-onboard-config.js
+        // 3. Set up a proper build system (Webpack, Vite, etc.) to handle ES6 modules
+        // 4. Import the actual modules:
+        //    import { connectWallet, disconnectWallet } from './src/web3-onboard-config.js';
+        //    import { depositETH, withdrawETH, ... } from './src/wallet-manager-contract.js';
+
+        console.log('Nexus AGI Wallet Manager Demo');
+        console.log('To use this application:');
+        console.log('1. Deploy the WalletManager contract using: npx hardhat run scripts/deploy_wallet_manager.js --network <network>');
+        console.log('2. Update WALLET_MANAGER_ADDRESS in frontend/src/web3-onboard-config.js');
+        console.log('3. Set up a build system (Vite recommended) to bundle the application');
+        console.log('4. Connect your wallet and start interacting!');
+
+        // Demo button handlers
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            alert('Please deploy the contract and set up the build system first!');
+            console.log('See instructions in the console');
+        });
+    </script>
+</body>
+</html>
