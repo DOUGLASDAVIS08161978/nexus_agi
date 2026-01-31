@@ -9,7 +9,7 @@ import Onboard from '@web3-onboard/core';
 import injectedModule from '@web3-onboard/injected-wallets';
 
 // Your deployed contract address (update after deployment)
-const WALLET_MANAGER_ADDRESS = 'YOUR_CONTRACT_ADDRESS_HERE';
+const WALLET_MANAGER_ADDRESS = '0x798d8B4D8677c4cf3Bc9B0B38ba8dfe318DE60E4';
 
 // Supported chains configuration
 const chains = [

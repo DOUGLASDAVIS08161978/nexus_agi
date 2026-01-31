@@ -7,7 +7,7 @@ const hre = require("hardhat");
  */
 
 // Update this with your deployed contract address
-const CONTRACT_ADDRESS = process.env.WALLET_MANAGER_ADDRESS || "YOUR_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = process.env.WALLET_MANAGER_ADDRESS || "0x798d8B4D8677c4cf3Bc9B0B38ba8dfe318DE60E4";
 
 // Your wallet address
 const YOUR_WALLET = "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771";
