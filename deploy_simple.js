@@ -40,7 +40,10 @@ async function deploy(network = 'mainnet') {
 
     // Connect
     const provider = new ethers.JsonRpcProvider(config.rpc);
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    const privateKey = process.env.PRIVATE_KEY.startsWith('0x')
+        ? process.env.PRIVATE_KEY
+        : '0x' + process.env.PRIVATE_KEY;
+    const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log(`\n🔑 Deployer: ${wallet.address}`);
 
