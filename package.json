@@ -31,6 +31,7 @@
     "@web3-onboard/injected-wallets": "^2.11.3",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
-    "hardhat": "^2.19.0"
+    "hardhat": "^2.19.0",
+    "solc": "^0.8.20"
   }
 }
