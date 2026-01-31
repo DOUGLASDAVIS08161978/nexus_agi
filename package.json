@@ -5,7 +5,10 @@
   "main": "aria.js",
   "scripts": {
     "start": "node aria.js",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "deploy:mainnet": "NODE_TLS_REJECT_UNAUTHORIZED=0 hardhat run scripts/deploy_and_verify.js --network mainnet",
+    "deploy:sepolia": "NODE_TLS_REJECT_UNAUTHORIZED=0 hardhat run scripts/deploy_and_verify.js --network sepolia",
+    "deploy": "npm run deploy:mainnet"
   },
   "keywords": [
     "ai",
