@@ -1,0 +1,85 @@
+═══════════════════════════════════════════════════════════════
+WTBTC CONTRACT VERIFICATION - QUICK COPY-PASTE REFERENCE
+═══════════════════════════════════════════════════════════════
+
+🌐 BASESCAN URL:
+https://sepolia.basescan.org/address/0xE274570e000C32F5Cb2BC7c476D3BDC77Ed74dD5#code
+
+Click: "Verify and Publish"
+
+───────────────────────────────────────────────────────────────
+
+📋 FORM FIELDS (copy exactly):
+
+Contract Address:
+0xE274570e000C32F5Cb2BC7c476D3BDC77Ed74dD5
+
+Compiler Type:
+Solidity (Single file)
+
+Compiler Version:
+v0.8.20+commit.a1b79de6
+
+Open Source License Type:
+3) MIT License (MIT)
+
+───────────────────────────────────────────────────────────────
+
+🔧 OPTIMIZATION:
+
+Optimization Enabled:
+Yes
+
+Runs (Optimizer):
+200
+
+───────────────────────────────────────────────────────────────
+
+🎯 CONSTRUCTOR ARGUMENTS ABI-ENCODED (copy this exact value):
+
+000000000000000000000000000000000000000000000000000775f05a074000
+
+───────────────────────────────────────────────────────────────
+
+📄 SOURCE CODE:
+
+Paste entire contents of: contracts/WTBTC.sol
+
+(Start with: // SPDX-License-Identifier: MIT)
+(End with: the closing brace after getTokenInfo function)
+
+───────────────────────────────────────────────────────────────
+
+✅ VERIFICATION CHECKLIST:
+
+□ Correct compiler version: v0.8.20+commit.a1b79de6
+□ Optimization: Yes
+□ Runs: 200
+□ Constructor args: 000000000000000000000000000000000000000000000000000775f05a074000
+□ Full source code pasted (all 164 lines)
+□ License: MIT
+
+───────────────────────────────────────────────────────────────
+
+⚠️  COMMON MISTAKES:
+
+❌ Wrong constructor args: 0773594000000000
+✅ Correct constructor args: 000000000000000000000000000000000000000000000000000775f05a074000
+
+❌ Optimization: No
+✅ Optimization: Yes (200 runs)
+
+❌ Wrong compiler version (v0.8.21, v0.8.19, etc)
+✅ Correct: v0.8.20+commit.a1b79de6
+
+───────────────────────────────────────────────────────────────
+
+🎉 After successful verification:
+
+Your contract will show:
+- Source code tab
+- Read Contract tab
+- Write Contract tab
+- Green checkmark on Basescan
+
+═══════════════════════════════════════════════════════════════

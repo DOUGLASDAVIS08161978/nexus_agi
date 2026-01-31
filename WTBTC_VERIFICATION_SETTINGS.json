@@ -1,0 +1,9 @@
+{
+  "contractAddress": "0xE274570e000C32F5Cb2BC7c476D3BDC77Ed74dD5",
+  "network": "Base Sepolia",
+  "compiler": "v0.8.20+commit.a1b79de6",
+  "optimization": true,
+  "runs": 200,
+  "constructorArguments": "000000000000000000000000000000000000000000000000000775f05a074000",
+  "license": "MIT"
+}
