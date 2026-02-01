@@ -36,15 +36,15 @@ fi
 
 echo -e "${GREEN}✅ Configuration found${NC}\n"
 
-# Install dependencies (only web3, solc, no hardhat)
-echo -e "${CYAN}📦 Installing dependencies (web3.js, solc)...${NC}"
-npm install web3 solc @openzeppelin/contracts --save
+# Install dependencies (only ethers, solc, no hardhat)
+echo -e "${CYAN}📦 Installing dependencies (ethers.js, solc)...${NC}"
+npm install ethers solc @openzeppelin/contracts --save
 
 echo -e "\n${GREEN}✅ Dependencies installed${NC}\n"
 
 # Run deployment
-echo -e "${CYAN}🚀 Deploying contracts using pure web3.js...${NC}\n"
-node scripts/deploy_pure_web3.js
+echo -e "${CYAN}🚀 Deploying contracts using ethers.js...${NC}\n"
+node scripts/deploy_with_ethers.js
 
 echo -e "\n${GREEN}✅ Deployment complete!${NC}\n"
 echo -e "${YELLOW}Check deployment_info.json for contract addresses${NC}\n"
