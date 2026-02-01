@@ -7,7 +7,7 @@
  * Usage: node scripts/deploy_pure_web3.js
  */
 
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const solc = require('solc');
 const fs = require('fs');
 const path = require('path');
