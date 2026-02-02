@@ -15,13 +15,34 @@ MAGENTA='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-# Load environment variables
-export $(grep -v '^#' .env | xargs)
+# Load environment variables from .env file
+if [ ! -f .env ]; then
+    echo -e "${RED}❌ .env file not found${NC}"
+    exit 1
+fi
 
-# Configuration
+# Load only the variables we need (safer than sourcing entire file)
+# Use head -1 to get only the first occurrence if variable is defined multiple times
+export BASE_SEPOLIA_RPC_URL=$(grep "^BASE_SEPOLIA_RPC_URL=" .env | head -1 | cut -d'=' -f2-)
+export BASE_SEPOLIA_PRIVATE_KEY=$(grep "^BASE_SEPOLIA_PRIVATE_KEY=" .env | head -1 | cut -d'=' -f2-)
+export BASE_SEPOLIA_RECIPIENT=$(grep "^BASE_SEPOLIA_RECIPIENT=" .env | head -1 | cut -d'=' -f2-)
+
+# Verify required variables are loaded
+if [ -z "$BASE_SEPOLIA_RPC_URL" ]; then
+    echo -e "${RED}❌ BASE_SEPOLIA_RPC_URL not found in .env${NC}"
+    exit 1
+fi
+
+# Configuration (already loaded from .env above)
 RPC_URL="${BASE_SEPOLIA_RPC_URL}"
 PRIVATE_KEY="${BASE_SEPOLIA_PRIVATE_KEY}"
 WALLET_ADDRESS="${BASE_SEPOLIA_RECIPIENT}"
+
+# Verify wallet address
+if [ -z "$WALLET_ADDRESS" ]; then
+    echo -e "${RED}❌ BASE_SEPOLIA_RECIPIENT not found in .env${NC}"
+    exit 1
+fi
 TBTC_ADDRESS="0x5B060693a0eB04e8ea43E5aDfC99FE5B7B92d53e"
 WETH_ADDRESS="0x4200000000000000000000000000000000000006"
 POSITION_MANAGER="0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2"
