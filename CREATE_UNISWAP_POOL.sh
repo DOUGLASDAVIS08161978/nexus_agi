@@ -24,6 +24,9 @@ echo ""
 # Make sure we're in the right directory
 cd "$(dirname "$0")"
 
+# Set Node.js to use IPv4 for DNS resolution (fixes Termux DNS issues)
+export NODE_OPTIONS="--dns-result-order=ipv4first"
+
 # Run the script (dotenv will load .env automatically)
 node scripts/create_uniswap_pool.js
 
