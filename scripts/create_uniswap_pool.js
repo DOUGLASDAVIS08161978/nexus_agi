@@ -11,7 +11,14 @@ const fs = require('fs');
 const path = require('path');
 
 // Load .env from project root
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const envPath = path.join(__dirname, '..', '.env');
+const envResult = require('dotenv').config({ path: envPath });
+
+if (envResult.error) {
+  console.error('Failed to load .env:', envResult.error);
+  console.error('Tried path:', envPath);
+  process.exit(1);
+}
 
 // ANSI colors
 const colors = {
@@ -75,22 +82,12 @@ async function getBitcoinPrice() {
   try {
     log('📊 Fetching Bitcoin price...', 'cyan');
 
-    // Try CoinGecko first
+    // Try Binance first (more reliable, no API key needed)
     try {
-      const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
-      const btcPrice = response.data.bitcoin.usd;
-      const ethPrice = response.data.ethereum.usd;
-
-      log(`   Bitcoin: $${btcPrice.toLocaleString()}`, 'green');
-      log(`   Ethereum: $${ethPrice.toLocaleString()}`, 'green');
-
-      return { btcPrice, ethPrice };
-    } catch (error) {
-      log('   CoinGecko failed, trying Binance...', 'yellow');
-
-      // Fallback to Binance
-      const btcResponse = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-      const ethResponse = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT');
+      const [btcResponse, ethResponse] = await Promise.all([
+        axios.get('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', { timeout: 5000 }),
+        axios.get('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT', { timeout: 5000 })
+      ]);
 
       const btcPrice = parseFloat(btcResponse.data.price);
       const ethPrice = parseFloat(ethResponse.data.price);
@@ -99,9 +96,32 @@ async function getBitcoinPrice() {
       log(`   Ethereum: $${ethPrice.toLocaleString()}`, 'green');
 
       return { btcPrice, ethPrice };
+    } catch (binanceError) {
+      log('   Binance failed, trying CoinGecko...', 'yellow');
+
+      // Fallback to CoinGecko
+      const response = await axios.get(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd',
+        { timeout: 5000 }
+      );
+      const btcPrice = response.data.bitcoin.usd;
+      const ethPrice = response.data.ethereum.usd;
+
+      log(`   Bitcoin: $${btcPrice.toLocaleString()}`, 'green');
+      log(`   Ethereum: $${ethPrice.toLocaleString()}`, 'green');
+
+      return { btcPrice, ethPrice };
     }
   } catch (error) {
-    throw new Error(`Failed to fetch prices: ${error.message}`);
+    // If all APIs fail, use approximate values
+    log('   ⚠️  APIs unavailable, using approximate prices', 'yellow');
+    const btcPrice = 78000; // Approximate current BTC price
+    const ethPrice = 2330; // Approximate current ETH price
+
+    log(`   Bitcoin: ~$${btcPrice.toLocaleString()}`, 'yellow');
+    log(`   Ethereum: ~$${ethPrice.toLocaleString()}`, 'yellow');
+
+    return { btcPrice, ethPrice };
   }
 }
 
