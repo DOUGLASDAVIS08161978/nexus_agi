@@ -87,15 +87,14 @@ async function main() {
     return;
   }
 
-  // Load Lightning integration config
-  const configPath = path.join(__dirname, '..', 'lightning_integration_config.json');
-  let reserveAddress;
+  // Get reserve address from .env (always use .env as source of truth)
+  const reserveAddress = process.env.BITCOIN_RESERVE_ADDRESS;
 
-  if (fs.existsSync(configPath)) {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    reserveAddress = config.bitcoin.reserveAddress;
-  } else {
-    reserveAddress = process.env.BITCOIN_RESERVE_ADDRESS || await question('Enter Bitcoin reserve address: ');
+  if (!reserveAddress) {
+    log('❌ Bitcoin reserve address not configured in .env', 'red');
+    log('   Run: node scripts/generate_bitcoin_address.js', 'yellow');
+    rl.close();
+    return;
   }
 
   log(`\n📋 Minting Parameters:`, 'bright');

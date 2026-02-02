@@ -146,7 +146,14 @@ async function main() {
 
   // Setup provider and wallet
   const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL);
-  const wallet = new ethers.Wallet(process.env.BASE_SEPOLIA_PRIVATE_KEY, provider);
+
+  // Ensure private key has 0x prefix
+  let privateKey = process.env.BASE_SEPOLIA_PRIVATE_KEY;
+  if (!privateKey.startsWith('0x')) {
+    privateKey = '0x' + privateKey;
+  }
+
+  const wallet = new ethers.Wallet(privateKey, provider);
 
   log(`\n💼 Your Address: ${wallet.address}`, 'cyan');
 
