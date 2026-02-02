@@ -24,12 +24,7 @@ echo ""
 # Make sure we're in the right directory
 cd "$(dirname "$0")"
 
-# Load environment variables
-if [ -f .env ]; then
-  export $(cat .env | grep -v '^#' | xargs)
-fi
-
-# Run the script
+# Run the script (dotenv will load .env automatically)
 node scripts/create_uniswap_pool.js
 
 echo ""

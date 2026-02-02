@@ -147,8 +147,16 @@ async function main() {
   // Setup provider and wallet
   const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL);
 
+  // Get private key (try both env var names)
+  let privateKey = process.env.BASE_SEPOLIA_PRIVATE_KEY || process.env.PRIVATE_KEY;
+
+  if (!privateKey) {
+    log('❌ Private key not found in environment', 'red');
+    log('   Set BASE_SEPOLIA_PRIVATE_KEY or PRIVATE_KEY in .env', 'yellow');
+    return;
+  }
+
   // Ensure private key has 0x prefix
-  let privateKey = process.env.BASE_SEPOLIA_PRIVATE_KEY;
   if (!privateKey.startsWith('0x')) {
     privateKey = '0x' + privateKey;
   }
