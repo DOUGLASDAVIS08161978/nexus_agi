@@ -63,8 +63,10 @@ const LIGHTNING_NODES = [
 const BITCOIN_APIS = {
   mainnet: 'https://mempool.space/api',
   testnet: 'https://mempool.space/testnet/api',
+  testnet4: 'https://mempool.space/testnet4/api',
   blockstream: 'https://blockstream.info/api',
-  blockstream_testnet: 'https://blockstream.info/testnet/api'
+  blockstream_testnet: 'https://blockstream.info/testnet/api',
+  blockstream_testnet4: 'https://blockstream.info/testnet4/api'
 };
 
 /**
@@ -74,12 +76,18 @@ const BITCOIN_APIS = {
 class BitcoinVerifier {
   constructor(network = 'testnet') {
     this.network = network;
-    this.apiUrl = network === 'mainnet'
-      ? BITCOIN_APIS.mainnet
-      : BITCOIN_APIS.testnet;
-    this.backupApiUrl = network === 'mainnet'
-      ? BITCOIN_APIS.blockstream
-      : BITCOIN_APIS.blockstream_testnet;
+
+    // Select API URLs based on network
+    if (network === 'mainnet') {
+      this.apiUrl = BITCOIN_APIS.mainnet;
+      this.backupApiUrl = BITCOIN_APIS.blockstream;
+    } else if (network === 'testnet4') {
+      this.apiUrl = BITCOIN_APIS.testnet4;
+      this.backupApiUrl = BITCOIN_APIS.blockstream_testnet4;
+    } else {
+      this.apiUrl = BITCOIN_APIS.testnet;
+      this.backupApiUrl = BITCOIN_APIS.blockstream_testnet;
+    }
   }
 
   async getTransaction(txid) {
@@ -257,9 +265,9 @@ class LightningManager {
  * Tracks Bitcoin backing for TBTC
  */
 class ProofOfReserves {
-  constructor(reserveAddress) {
+  constructor(reserveAddress, network = 'testnet4') {
     this.reserveAddress = reserveAddress;
-    this.verifier = new BitcoinVerifier('testnet'); // Use testnet for testing
+    this.verifier = new BitcoinVerifier(network); // Default to testnet4
     this.reserves = [];
   }
 
@@ -349,9 +357,10 @@ async function main() {
   // Initialize Bitcoin Verifier
   header('STEP 2: BITCOIN VERIFICATION SYSTEM');
 
-  const verifier = new BitcoinVerifier('testnet');
+  const bitcoinNetwork = process.env.BITCOIN_NETWORK || 'testnet4';
+  const verifier = new BitcoinVerifier(bitcoinNetwork);
   log('✅ Bitcoin verifier initialized', 'green');
-  log('   Network: Bitcoin Testnet', 'cyan');
+  log(`   Network: Bitcoin ${bitcoinNetwork}`, 'cyan');
   log('   API: mempool.space', 'cyan');
 
   // Initialize Proof of Reserves
@@ -360,7 +369,7 @@ async function main() {
   // Generate a testnet address (in production, use a real multisig address)
   const reserveAddress = process.env.BITCOIN_RESERVE_ADDRESS || 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
 
-  const por = new ProofOfReserves(reserveAddress);
+  const por = new ProofOfReserves(reserveAddress, bitcoinNetwork);
   por.loadReserves();
 
   log(`Reserve Address: ${reserveAddress}`, 'cyan');
@@ -394,7 +403,7 @@ async function main() {
       }
     },
     bitcoin: {
-      network: 'testnet',
+      network: bitcoinNetwork,
       api: 'mempool.space',
       reserveAddress
     },
@@ -416,7 +425,7 @@ async function main() {
   log('\n📊 SUMMARY:', 'bright');
   log(`   Lightning Nodes Available: ${networkStats.onlineNodes}`, 'cyan');
   log(`   Total Liquidity: ${networkStats.totalLiquidity} sats`, 'cyan');
-  log(`   Bitcoin Network: Testnet`, 'cyan');
+  log(`   Bitcoin Network: ${bitcoinNetwork}`, 'cyan');
   log(`   Reserve Address: ${reserveAddress}`, 'cyan');
   log(`   Proof of Reserves: Enabled`, 'green');
 

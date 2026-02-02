@@ -105,8 +105,9 @@ async function main() {
   // Initialize Bitcoin verifier
   header('STEP 1: VERIFY BITCOIN TRANSACTION');
 
-  log('🔍 Connecting to Bitcoin network...', 'cyan');
-  const verifier = new BitcoinVerifier('testnet');
+  const bitcoinNetwork = process.env.BITCOIN_NETWORK || 'testnet4';
+  log(`🔍 Connecting to Bitcoin network (${bitcoinNetwork})...`, 'cyan');
+  const verifier = new BitcoinVerifier(bitcoinNetwork);
 
   let btcTransaction;
   try {
@@ -117,7 +118,10 @@ async function main() {
     log(`   Confirmations: ${btcTransaction.status.confirmed ? 'Confirmed' : 'Unconfirmed'}`, 'cyan');
 
     if (btcTransaction.status.confirmed) {
-      const currentBlock = await fetch('https://mempool.space/testnet/api/blocks/tip/height')
+      const apiBase = bitcoinNetwork === 'mainnet'
+        ? 'https://mempool.space/api'
+        : `https://mempool.space/${bitcoinNetwork}/api`;
+      const currentBlock = await fetch(`${apiBase}/blocks/tip/height`)
         .then(r => r.json());
       const confirmations = currentBlock - btcTransaction.status.block_height + 1;
       log(`   Block Height: ${btcTransaction.status.block_height}`, 'cyan');
