@@ -1,6 +1,6 @@
 {
   "rpcUrl": "https://sepolia.base.org",
-  "privateKey": "0eee6f45b0af8f5a6a24744a1a978346d5bd66b41c64dc30bd18a32e246515cd",
+  "privateKey": "0x0eee6f45b0af8f5a6a24744a1a978346d5bd66b41c64dc30bd18a32e246515cd",
   "tbtcAddress": "0x5B060693a0eB04e8ea43E5aDfC99FE5B7B92d53e",
   "wethAddress": "0x4200000000000000000000000000000000000006",
   "positionManager": "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2",
