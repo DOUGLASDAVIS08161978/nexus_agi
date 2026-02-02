@@ -10,27 +10,40 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-// Load .env from project root - try multiple paths
-const possibleEnvPaths = [
-  path.join(__dirname, '..', '.env'),  // From scripts/ subdirectory
-  path.join(process.cwd(), '.env'),     // From current working directory
-  '/home/user/nexus_agi/.env'           // Absolute path as last resort
-];
+// Load environment variables from .env file
+// This MUST be at the top before anything else
+const dotenv = require('dotenv');
+const envPath = path.resolve(__dirname, '..', '.env');
 
-let envLoaded = false;
-for (const envPath of possibleEnvPaths) {
-  if (fs.existsSync(envPath)) {
-    const envResult = require('dotenv').config({ path: envPath });
-    if (!envResult.error) {
-      envLoaded = true;
-      break;
-    }
-  }
+// Load .env file and check for errors
+const envResult = dotenv.config({ path: envPath });
+
+if (envResult.error) {
+  console.error('❌ CRITICAL: Failed to load .env file');
+  console.error('   Path:', envPath);
+  console.error('   Error:', envResult.error.message);
+  process.exit(1);
 }
 
-if (!envLoaded) {
-  console.error('CRITICAL: Could not load .env file from any location');
-  console.error('Tried:', possibleEnvPaths);
+// Verify the .env file was actually loaded
+if (!process.env.BASE_SEPOLIA_RPC_URL) {
+  console.error('❌ CRITICAL: .env file loaded but BASE_SEPOLIA_RPC_URL not found');
+  console.error('   .env path:', envPath);
+  console.error('   File exists:', fs.existsSync(envPath));
+
+  // Read and display .env content for debugging
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const relevantLines = envContent.split('\n')
+      .filter(line => line.includes('BASE_SEPOLIA') || line.includes('PRIVATE_KEY'))
+      .filter(line => !line.trim().startsWith('#'));
+    console.error('   Relevant .env lines found:');
+    relevantLines.forEach(line => console.error('     ', line));
+  }
+
+  console.error('\n   Please check your .env file format:');
+  console.error('     BASE_SEPOLIA_RPC_URL=https://sepolia.base.org');
+  console.error('     BASE_SEPOLIA_PRIVATE_KEY=your_private_key_here');
   process.exit(1);
 }
 
@@ -182,12 +195,6 @@ async function main() {
 
   // Setup provider and wallet
   const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL;
-
-  if (!rpcUrl) {
-    log('❌ RPC URL not found in environment', 'red');
-    log('   Set BASE_SEPOLIA_RPC_URL in .env', 'yellow');
-    return;
-  }
 
   log(`\n🔗 Connecting to: ${rpcUrl}`, 'cyan');
 
