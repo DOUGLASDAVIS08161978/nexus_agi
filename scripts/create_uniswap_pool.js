@@ -10,13 +10,27 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-// Load .env from project root
-const envPath = path.join(__dirname, '..', '.env');
-const envResult = require('dotenv').config({ path: envPath });
+// Load .env from project root - try multiple paths
+const possibleEnvPaths = [
+  path.join(__dirname, '..', '.env'),  // From scripts/ subdirectory
+  path.join(process.cwd(), '.env'),     // From current working directory
+  '/home/user/nexus_agi/.env'           // Absolute path as last resort
+];
 
-if (envResult.error) {
-  console.error('Failed to load .env:', envResult.error);
-  console.error('Tried path:', envPath);
+let envLoaded = false;
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    const envResult = require('dotenv').config({ path: envPath });
+    if (!envResult.error) {
+      envLoaded = true;
+      break;
+    }
+  }
+}
+
+if (!envLoaded) {
+  console.error('CRITICAL: Could not load .env file from any location');
+  console.error('Tried:', possibleEnvPaths);
   process.exit(1);
 }
 

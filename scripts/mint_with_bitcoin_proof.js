@@ -14,8 +14,19 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-// Load .env from project root
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+// Load .env from project root - try multiple paths
+const possibleEnvPaths = [
+  path.join(__dirname, '..', '.env'),
+  path.join(process.cwd(), '.env'),
+  '/home/user/nexus_agi/.env'
+];
+
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    break;
+  }
+}
 
 // ANSI colors
 const colors = {
