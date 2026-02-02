@@ -145,7 +145,23 @@ async function main() {
   const { ratio, sqrtPriceX96 } = calculateSqrtPriceX96(btcPrice, ethPrice);
 
   // Setup provider and wallet
-  const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL);
+  const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL;
+
+  if (!rpcUrl) {
+    log('❌ RPC URL not found in environment', 'red');
+    log('   Set BASE_SEPOLIA_RPC_URL in .env', 'yellow');
+    return;
+  }
+
+  log(`\n🔗 Connecting to: ${rpcUrl}`, 'cyan');
+
+  // Create provider with Base Sepolia network config
+  const network = {
+    name: 'base-sepolia',
+    chainId: 84532
+  };
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl, network);
 
   // Get private key (try both env var names)
   let privateKey = process.env.BASE_SEPOLIA_PRIVATE_KEY || process.env.PRIVATE_KEY;
