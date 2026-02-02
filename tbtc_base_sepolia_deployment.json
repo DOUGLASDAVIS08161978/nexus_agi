@@ -1,0 +1,13 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "timestamp": "2026-02-02T21:00:00.000Z",
+  "deployer": "0x9FE74D9D6f1Ae0Ce1fb3B51d4a82c05b74e280f3",
+  "contracts": {
+    "TBTC": {
+      "address": "0x5B060693a0eB04e8ea43E5aDfC99FE5B7B92d53e",
+      "transactionHash": "existing",
+      "blockNumber": "existing"
+    }
+  }
+}
