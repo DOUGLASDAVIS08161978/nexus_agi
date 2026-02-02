@@ -13,7 +13,9 @@ const { BitcoinVerifier, ProofOfReserves } = require('./lightning_network_integr
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-require('dotenv').config();
+
+// Load .env from project root
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // ANSI colors
 const colors = {

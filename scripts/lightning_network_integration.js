@@ -13,7 +13,9 @@ const { ethers } = require('ethers');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+
+// Load .env from project root
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // ANSI colors
 const colors = {
