@@ -152,10 +152,17 @@ echo ""
 # Save configuration for Node.js script
 echo -e "${CYAN}Saving pool configuration...${NC}"
 
+# Ensure private key has 0x prefix
+if [[ ! "$PRIVATE_KEY" =~ ^0x ]]; then
+    PRIVATE_KEY_WITH_PREFIX="0x$PRIVATE_KEY"
+else
+    PRIVATE_KEY_WITH_PREFIX="$PRIVATE_KEY"
+fi
+
 cat > pool_config.json << EOF
 {
   "rpcUrl": "$RPC_URL",
-  "privateKey": "$PRIVATE_KEY",
+  "privateKey": "$PRIVATE_KEY_WITH_PREFIX",
   "tbtcAddress": "$TBTC_ADDRESS",
   "wethAddress": "$WETH_ADDRESS",
   "positionManager": "$POSITION_MANAGER",
