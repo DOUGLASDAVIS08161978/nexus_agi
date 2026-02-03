@@ -101,11 +101,17 @@ async function main() {
     log(`Token1: ${token1}`, 'cyan');
     log(`Price: ${ratio} ETH per TBTC\n`, 'cyan');
 
-    const token0IsTbtc = token1.toLowerCase() !== '0x4200000000000000000000000000000000000006'.toLowerCase();
+    // WETH address on Base Sepolia
+    const WETH_CANONICAL = '0x4200000000000000000000000000000000000006';
 
-    // Determine TBTC and WETH addresses
-    const TBTC_ADDRESS = token0IsTbtc ? token0 : token1;
-    const WETH_ADDRESS = token0IsTbtc ? token1 : token0;
+    // Determine which token is TBTC and which is WETH
+    const TBTC_ADDRESS = token0.toLowerCase() === WETH_CANONICAL.toLowerCase() ? token1 : token0;
+    const WETH_ADDRESS = token0.toLowerCase() === WETH_CANONICAL.toLowerCase() ? token0 : token1;
+
+    const token0IsTbtc = token0.toLowerCase() === TBTC_ADDRESS.toLowerCase();
+
+    log(`TBTC detected at: ${TBTC_ADDRESS}`, 'cyan');
+    log(`WETH detected at: ${WETH_ADDRESS}\n`, 'cyan');
 
     // Step 1: Wrap ETH to WETH
     log('════════════════════════════════════════════════════════', 'bold');
