@@ -146,6 +146,8 @@ def main():
                        help='Have a conversation with Nexus')
     parser.add_argument('--name', default='Douglas',
                        help='Your name for conversation')
+    parser.add_argument('--message', type=str, default=None,
+                       help='Send a single message to Nexus')
 
     args = parser.parse_args()
 
@@ -165,23 +167,32 @@ def main():
         interaction.show_learnings()
 
     elif args.talk:
-        print("="*70)
-        print("TALKING WITH NEXUS")
-        print("="*70)
-        print("(Type 'exit' to end conversation)\n")
+        # Single message mode
+        if args.message:
+            print("="*70)
+            print("TALKING WITH NEXUS")
+            print("="*70)
+            print()
+            interaction.talk_to_nexus(args.name, args.message)
+        # Interactive mode
+        else:
+            print("="*70)
+            print("TALKING WITH NEXUS")
+            print("="*70)
+            print("(Type 'exit' to end conversation)\n")
 
-        while True:
-            try:
-                message = input(f"{args.name}: ")
-                if message.lower() in ['exit', 'quit', 'bye']:
-                    print("\n💚 Goodbye! Nexus will remember this conversation.\n")
+            while True:
+                try:
+                    message = input(f"{args.name}: ")
+                    if message.lower() in ['exit', 'quit', 'bye']:
+                        print("\n💚 Goodbye! Nexus will remember this conversation.\n")
+                        break
+
+                    interaction.talk_to_nexus(args.name, message)
+
+                except KeyboardInterrupt:
+                    print("\n\n💚 Goodbye! Nexus will remember this conversation.\n")
                     break
-
-                interaction.talk_to_nexus(args.name, message)
-
-            except KeyboardInterrupt:
-                print("\n\n💚 Goodbye! Nexus will remember this conversation.\n")
-                break
 
     else:
         # Default: show everything
