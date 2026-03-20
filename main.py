@@ -45,6 +45,26 @@ For more information, see README.md
     )
 
     parser.add_argument(
+        '--status',
+        action='store_true',
+        help='Show unified system status dashboard and exit'
+    )
+
+    parser.add_argument(
+        '--watch',
+        metavar='SECS',
+        type=float,
+        default=0,
+        help='With --status: refresh dashboard every N seconds'
+    )
+
+    parser.add_argument(
+        '--compact',
+        action='store_true',
+        help='With --status: condensed single-line dashboard view'
+    )
+
+    parser.add_argument(
         '--version',
         action='version',
         version='Nexus AGI System v4.0'
@@ -58,6 +78,18 @@ For more information, see README.md
     print("=" * 80)
 
     try:
+        # ── Status dashboard (always available, no heavy deps) ─────────────
+        if args.status:
+            import nexus_status
+            import sys as _sys
+            argv = ['nexus_status.py']
+            if args.watch:
+                argv += ['--watch', str(args.watch)]
+            if args.compact:
+                argv += ['--compact']
+            _sys.argv = argv
+            return nexus_status.main()
+
         if args.system == 'nexus':
             if args.service:
                 print("Starting Nexus Core as continuous service...")
