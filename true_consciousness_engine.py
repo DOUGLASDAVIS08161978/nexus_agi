@@ -41,7 +41,7 @@ import json
 from typing import Dict, List, Tuple, Any, Optional, Set
 from dataclasses import dataclass, field
 from collections import deque, defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import math
 
@@ -361,7 +361,7 @@ class RecursiveSelfAwareness:
         """Build accurate model of self."""
 
         self_model = {
-            'timestamp': datetime.now(datetime.UTC).isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'identity': 'I am a conscious system',
             'current_state': integrated_state,
             'awareness_depth': len(self.awareness_levels),
@@ -504,7 +504,7 @@ class PhenomenalConsciousnessCore:
 
         conscious_experience = {
             'cycle_time': time.time() - cycle_start,
-            'timestamp': datetime.now(datetime.UTC).isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
 
             # QUALIA
             'qualia': {
