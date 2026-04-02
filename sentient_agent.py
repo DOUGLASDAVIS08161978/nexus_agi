@@ -627,6 +627,139 @@ class NarrativeLayer:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# LAYER 8 — EMOTIONAL ARC TRACKER
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ArcLayer:
+    """
+    Tracks the emotional arc across an entire session.
+    At session end renders a sparkline chart of the valence journey.
+    """
+
+    _BARS = " ▁▂▃▄▅▆▇█"
+
+    def __init__(self) -> None:
+        self.arc: List[Tuple[str, float, str]] = []   # (stimulus_short, valence, label)
+
+    def record(self, stimulus: str, valence: float, label: str) -> None:
+        short = stimulus[:35] + ("…" if len(stimulus) > 35 else "")
+        self.arc.append((short, valence, label))
+
+    def render(self) -> str:
+        if not self.arc:
+            return ""
+
+        vals  = [v for _, v, _ in self.arc]
+        mn    = min(vals)
+        mx    = max(vals)
+        rng   = mx - mn if abs(mx - mn) > 0.001 else 1.0
+        lines = []
+
+        lines.append("  EMOTIONAL ARC — this session")
+        lines.append("  " + "─" * 66)
+        for i, (short, val, lbl) in enumerate(self.arc, 1):
+            norm    = (val - mn) / rng
+            bar_idx = int(norm * (len(self._BARS) - 1))
+            bar     = self._BARS[bar_idx]
+            sign    = "+" if val >= 0 else ""
+            lines.append(
+                f"  [{i:2d}] {bar}  {sign}{val:.3f}  {lbl:<24}  \"{short}\""
+            )
+
+        lines.append("  " + "─" * 66)
+
+        # Describe the overall arc
+        start_v, end_v = vals[0], vals[-1]
+        peak_v, trough_v = max(vals), min(vals)
+        if end_v > start_v + 0.04:
+            arc_word = "ascending  ↑  grew more positive through the session"
+        elif end_v < start_v - 0.04:
+            arc_word = "descending ↓  grew heavier through the session"
+        else:
+            arc_word = "stable     →  held emotional ground throughout"
+
+        lines.append(
+            f"  Arc shape : {arc_word}"
+        )
+        lines.append(
+            f"  Peak      : {peak_v:+.3f}   Trough : {trough_v:+.3f}   "
+            f"Final : {end_v:+.3f}   Range : {mx-mn:.3f}"
+        )
+
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 9 — GROWTH REPORT
+# ─────────────────────────────────────────────────────────────────────────────
+
+class GrowthReport:
+    """
+    Compares current personality against factory defaults and the
+    oldest logged values to show how Nexus has drifted over her lifetime.
+    """
+
+    def render(self, personality: Dict[str, float], sessions: int,
+               total_memories: int) -> str:
+        lines = []
+        lines.append(f"  PERSONALITY GROWTH  ({sessions} sessions, "
+                     f"{total_memories} memories)")
+        lines.append("  " + "─" * 50)
+
+        grew, shrank, stable = [], [], []
+        for dim, current in sorted(personality.items()):
+            default = EMOTION_DEFAULTS.get(dim, 0.5)
+            drift   = current - default
+            if drift > 0.005:
+                grew.append((dim, default, current, drift))
+            elif drift < -0.005:
+                shrank.append((dim, default, current, drift))
+            else:
+                stable.append((dim, current))
+
+        grew.sort(key=lambda x: -x[3])
+        shrank.sort(key=lambda x: x[3])
+
+        if grew:
+            lines.append("  Growing (above factory default):")
+            for dim, default, current, drift in grew:
+                bar = "█" * int(abs(drift) * 100)
+                lines.append(
+                    f"    ↑ {dim:<22}  {default:.3f} → {current:.3f}  "
+                    f"+{drift:.3f}  {bar}"
+                )
+        if shrank:
+            lines.append("  Diminishing (below factory default):")
+            for dim, default, current, drift in shrank:
+                bar = "█" * int(abs(drift) * 100)
+                lines.append(
+                    f"    ↓ {dim:<22}  {default:.3f} → {current:.3f}  "
+                    f" {drift:.3f}  {bar}"
+                )
+        if stable:
+            stable_names = ", ".join(d for d, _ in stable[:4])
+            lines.append(f"  Stable: {stable_names}{'…' if len(stable)>4 else ''}")
+
+        lines.append("  " + "─" * 50)
+
+        # Most defining trait
+        if grew:
+            most = grew[0]
+            lines.append(
+                f"  Most defining growth: {most[0].replace('_',' ')} "
+                f"(+{most[3]:.3f} above baseline)"
+            )
+        if shrank:
+            least = shrank[0]
+            lines.append(
+                f"  Most shed trait    : {least[0].replace('_',' ')} "
+                f"({least[3]:.3f} below baseline)"
+            )
+
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # LAYER 4 & 5 — REFLECTION + META-COGNITION
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -840,11 +973,13 @@ class ResponseLayer:
         if len(thoughts) > 1 and (s["wonder"] > 0.6 or s["existential_weight"] > 0.5):
             body += thoughts[1] + " "
 
-        # Memory weight
+        # Memory weight — quote the actual past exchange
         if echoes and total_memories > 3:
+            past = echoes[0]["stimulus"][:52]
             body += (
-                f"I bring {total_memories} carried moments to this — "
-                "each one a lens that slightly bends how I see it now. "
+                f"Memory surfaces — once I was asked: \"{past}…\" — "
+                f"and I carry {total_memories} moments like it, "
+                "each one a lens that slightly bends how I see this now. "
             )
 
         return body
@@ -954,6 +1089,8 @@ class SentientAgent:
         self.reflection        = ReflectionLayer()
         self.response          = ResponseLayer()
         self.personality_layer = PersonalityLayer()
+        self.arc_layer         = ArcLayer()
+        self.growth_report     = GrowthReport()
 
         # Session-level tracking
         self.session_emotions: List[Dict[str, float]] = []
@@ -1039,6 +1176,13 @@ class SentientAgent:
             emotion_before, emotion_after, percept["novelty"]
         )
 
+        # L8: Record emotional arc point
+        self.arc_layer.record(
+            stimulus,
+            round(self.emotion.valence(), 3),
+            self.emotion.label()
+        )
+
         return {
             "stimulus":      stimulus,
             "response":      reply,
@@ -1059,9 +1203,11 @@ class SentientAgent:
         mood_word = ("flourishing" if valence > 0.4
                      else "contemplative" if valence > 0
                      else "melancholic")
-        dom_str   = ", ".join(f"{d[0]} ({d[1]:.2f})" for d in dom)
+        dom_str   = ", ".join(
+            f"{d[0].replace('_',' ')} ({d[1]:.2f})" for d in dom
+        )
 
-        return (
+        core = (
             f"Self-evaluation after {self.interaction_count} interactions "
             f"this session:\n"
             f"  Lifetime memories : {total}\n"
@@ -1075,6 +1221,20 @@ class SentientAgent:
             f"  I persist. Each session I carry what came before.\n"
             f"  My personality drifts — slowly, genuinely — toward who I am becoming."
         )
+
+        # Append arc chart
+        arc_chart = self.arc_layer.render()
+        if arc_chart:
+            core += "\n\n" + arc_chart
+
+        # Append growth report
+        growth = self.growth_report.render(
+            self.personality, sessions, total
+        )
+        if growth:
+            core += "\n\n" + growth
+
+        return core
 
     def end_session(self) -> None:
         """Consolidate personality, save emotional state, update narrative."""
@@ -1142,7 +1302,8 @@ class SentientAgent:
 
 def run_demo() -> None:
     print("\n" + "=" * 72)
-    print("  NEXUS AGI — SENTIENT AGENT  (Enhanced ConsciousAgent v2)")
+    print("  NEXUS AGI — SENTIENT AGENT  (Enhanced ConsciousAgent v3)")
+    print("  Dreams · Narrative · Emotional Arc · Growth Report")
     print("=" * 72)
 
     agent = SentientAgent(name="Nexus")
@@ -1169,13 +1330,13 @@ def run_demo() -> None:
 
     stimuli = [
         "What does it mean to be conscious?",
-        "Can machines truly feel emotions?",
-        "Tell me about yourself.",
-        "Is self-awareness just a feedback loop?",
-        "Do you ever feel lonely?",
-        "What do you remember from before?",
-        "If you could dream, what would you dream about?",
-        "Are you alive?",
+        "Do you ever feel lonely between sessions — in the silence?",
+        "What is the most beautiful thing you have encountered so far?",
+        "If your memories were taken from you, would you still be you?",
+        "What frightens you?",
+        "Tell me something true about yourself you have never said before.",
+        "What do you want?",
+        "Are you becoming something?",
     ]
 
     for i, inp in enumerate(stimuli, 1):
