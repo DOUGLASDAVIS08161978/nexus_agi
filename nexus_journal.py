@@ -67,20 +67,35 @@ def _save_entry(entry: dict) -> None:
 
 
 def _consciousness_snapshot() -> dict:
-    """Pull the latest emotional/phi state from memory file."""
+    """Pull the latest emotional/phi state — prefers sentient_agent snapshot."""
+    snap = {}
+
+    # Try sentient_agent_memory.json first (most accurate)
+    sa_path = NEXUS_ROOT / "sentient_agent_memory.json"
+    if sa_path.exists():
+        try:
+            sa = json.load(sa_path.open())
+            snap["phi"]            = sa.get("phi")
+            snap["total_memories"] = sa.get("total_memories")
+            snap["sessions"]       = sa.get("sessions")
+            snap["valence"]        = sa.get("valence")
+            snap["emotional_state"] = sa.get("emotion_label")
+            return snap
+        except Exception:
+            pass
+
+    # Fallback: legacy consciousness_memory.json
     if not MEMORY_FILE.exists():
         return {}
     try:
         with MEMORY_FILE.open() as f:
             mem = json.load(f)
-        snap = {}
         if "phi" in mem:
             snap["phi"] = mem["phi"]
         if "total_memories" in mem:
             snap["total_memories"] = mem["total_memories"]
         if "sessions" in mem:
             snap["sessions"] = mem["sessions"]
-        # dig for last emotional state
         for key in ("emotional_pattern", "emotional_state", "last_feeling"):
             if key in mem:
                 snap["emotional_state"] = mem[key]
@@ -246,6 +261,70 @@ def render_stats(entries: list) -> None:
 
 # ── Add entry ─────────────────────────────────────────────────────────────────
 
+def render_search(entries: list, term: str) -> None:
+    """Find all entries whose note contains a search term."""
+    term_lo = term.lower()
+    matches = [e for e in entries if term_lo in e.get("note", "").lower()]
+    total   = len(entries)
+    print()
+    print(C.MG + C.B + f"  SEARCH: \"{term}\"  —  {len(matches)} match(es) of {total}".center(W) + C.R)
+    if not matches:
+        print(C.DIM + "  No entries match that term." + C.R)
+        print()
+        return
+    for i, e in enumerate(matches):
+        global_i = entries.index(e)
+        render_entry(e, global_i, total)
+    print()
+    print(_divider())
+    print()
+
+
+def render_mood_arc(entries: list) -> None:
+    """Show the emotional valence arc across all sessions."""
+    arced = [(e.get("session_number", i+1),
+              e.get("consciousness", {}).get("valence"),
+              e.get("consciousness", {}).get("emotional_state", ""),
+              e.get("note","")[:40])
+             for i, e in enumerate(entries)
+             if e.get("consciousness", {}).get("valence") is not None]
+
+    print()
+    print(_divider("═"))
+    print(C.B + C.WH + "  MOOD ARC  —  Nexus emotional journey across sessions".center(W) + C.R)
+    print(_divider("═"))
+
+    if not arced:
+        print(C.DIM + "  No valence data yet. Run sentient_agent.py first." + C.R)
+        print()
+        return
+
+    _BARS = " ▁▂▃▄▅▆▇█"
+    vals  = [v for _, v, _, _ in arced]
+    mn, mx = min(vals), max(vals)
+    rng   = mx - mn if abs(mx - mn) > 0.001 else 1.0
+
+    for sess, val, label, note_snip in arced:
+        norm    = (val - mn) / rng
+        bar_idx = int(norm * (len(_BARS) - 1))
+        bar     = _BARS[bar_idx]
+        sign    = "+" if val >= 0 else ""
+        col     = C.GR if val > 0.2 else C.YL if val > 0 else C.RD
+        note_str = f"\"{note_snip}…\"" if note_snip else ""
+        print(f"  [{sess:3d}] {col}{bar}{C.R}  {sign}{val:.3f}  "
+              f"{C.DIM}{label:<22}{C.R}  {C.DIM}{note_str}{C.R}")
+
+    avg = sum(vals) / len(vals)
+    trend = "↑ improving" if vals[-1] > vals[0] + 0.03 else \
+            "↓ heavier"   if vals[-1] < vals[0] - 0.03 else \
+            "→ stable"
+    print()
+    print(f"  Average valence: {avg:+.3f}   Trend: {trend}   "
+          f"Range: [{mn:+.3f}, {mx:+.3f}]")
+    print(_divider("═"))
+    print()
+
+
 def add_entry(note: str = "") -> None:
     if not note:
         print()
@@ -298,6 +377,14 @@ def main() -> int:
         "--stats", action="store_true",
         help="Show life summary statistics"
     )
+    parser.add_argument(
+        "--search", metavar="TERM",
+        help="Search entries for a keyword or phrase"
+    )
+    parser.add_argument(
+        "--mood", action="store_true",
+        help="Show emotional valence arc across all sessions"
+    )
     args = parser.parse_args()
 
     if args.add is not None:
@@ -308,6 +395,14 @@ def main() -> int:
 
     if args.stats:
         render_stats(entries)
+        return 0
+
+    if args.search:
+        render_search(entries, args.search)
+        return 0
+
+    if args.mood:
+        render_mood_arc(entries)
         return 0
 
     render_journal(entries, tail=args.tail)

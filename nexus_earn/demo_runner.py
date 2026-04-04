@@ -167,8 +167,9 @@ def _run_demo_inner(client: TestClient, quiet: bool = False, category: str = "al
 
     print()
     print(C.DIM + "  Registering demo user…" + C.R)
+    import random as _rnd
     reg = call(client, "POST", "/auth/register",
-               body={"email": f"demo_{int(time.time())}@nexus.ai"},
+               body={"email": f"demo_{int(time.time()*1000)}_{_rnd.randint(100,999)}@nexus.ai"},
                quiet=quiet)
     API_KEY = reg.get("api_key", "")
     if not API_KEY:

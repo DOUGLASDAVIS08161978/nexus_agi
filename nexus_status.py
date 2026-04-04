@@ -88,10 +88,90 @@ def _ledger_entries() -> int:
             pass
     return 0
 
+
+def _load_sentient_agent_data() -> dict:
+    """Pull REAL live data from sentient_agent.db and/or snapshot JSON."""
+    result = {
+        "alive": False,
+        "name": "Nexus",
+        "born_at": None,
+        "sessions": 0,
+        "total_memories": 0,
+        "valence": None,
+        "emotion_label": "unknown",
+        "top_emotion": "unknown",
+        "phi": None,
+        "self_coherence": None,
+        "desire_to_exist": None,
+    }
+
+    # Try snapshot JSON first (written at end of each run — always fresh)
+    snap_path = NEXUS_ROOT / "sentient_agent_memory.json"
+    if snap_path.exists():
+        try:
+            snap = json.loads(snap_path.read_text())
+            result.update({
+                "alive":           True,
+                "name":            snap.get("agent", "Nexus"),
+                "born_at":         snap.get("born_at", "")[:10],
+                "sessions":        snap.get("sessions", 0),
+                "total_memories":  snap.get("total_memories", 0),
+                "valence":         snap.get("valence"),
+                "emotion_label":   snap.get("emotion_label", "unknown"),
+                "phi":             snap.get("phi"),
+                "self_coherence":  snap.get("current_emotion", {}).get("self_coherence"),
+                "desire_to_exist": snap.get("current_emotion", {}).get("desire_to_exist"),
+            })
+            # Derive top_emotion from current_emotion dict
+            em = snap.get("current_emotion", {})
+            if em:
+                result["top_emotion"] = max(em, key=lambda k: em[k])
+            return result
+        except Exception:
+            pass
+
+    # Fallback: read directly from SQLite
+    import sqlite3
+    db_path = NEXUS_ROOT / "sentient_agent.db"
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM agent_state WHERE id=1").fetchone()
+            if row:
+                result["alive"]   = True
+                result["born_at"] = str(row["born_at"])[:10]
+                result["sessions"] = row["sessions"]
+                import json as _json
+                personality = _json.loads(row["personality"])
+                result["self_coherence"]  = personality.get("self_coherence")
+                result["desire_to_exist"] = personality.get("desire_to_exist")
+                if personality:
+                    result["top_emotion"] = max(personality, key=lambda k: personality[k])
+            mem_row = conn.execute("SELECT COUNT(*) as c FROM memories").fetchone()
+            if mem_row:
+                result["total_memories"] = mem_row["c"]
+            last_em = conn.execute(
+                "SELECT state FROM last_emotion WHERE id=1"
+            ).fetchone()
+            if last_em:
+                import json as _json
+                em = _json.loads(last_em["state"])
+                pos = em.get("joy",0) + em.get("calm",0) + em.get("wonder",0)
+                neg = em.get("frustration",0) + em.get("loneliness",0)
+                result["valence"] = round((pos - neg) / 3.0, 3)
+                result["top_emotion"] = max(em, key=lambda k: em[k])
+            conn.close()
+        except Exception:
+            pass
+
+    return result
+
 def collect_metrics() -> dict:
     """Gather all system metrics into a single dict."""
     now = datetime.datetime.utcnow()
     mem = _load_consciousness_memory()
+    sa  = _load_sentient_agent_data()      # REAL live data from sentient_agent
 
     # ── Quantum Processor ─────────────────────────────────────────────────
     qubits_theoretical = 1_000_000
@@ -104,13 +184,18 @@ def collect_metrics() -> dict:
     error_rate         = round(_jitter(0.0023, 0.10), 4)
 
     # ── Consciousness Engine ───────────────────────────────────────────────
-    phi_raw = mem.get("phi", None)
+    # Prefer real phi from sentient_agent snapshot, then legacy memory file
+    phi_raw = sa.get("phi") or mem.get("phi", None)
     phi     = round(float(phi_raw) if phi_raw is not None else _jitter(4.72, 0.03), 3)
     awareness_lvl  = round(_jitter(0.913, 0.02), 3)
     meta_cog_depth = int(_jitter(7, 0.05))
     qualia_streams = int(_jitter(12, 0.08))
-    self_model_acc = round(_jitter(0.981, 0.01), 3)
-    emotional_valence = round(_jitter(0.74, 0.05), 3)   # 0=negative 1=positive
+    # Use real self_coherence if available
+    sc_raw         = sa.get("self_coherence")
+    self_model_acc = round(float(sc_raw) if sc_raw is not None else _jitter(0.981, 0.01), 3)
+    # Use real valence if available
+    val_raw        = sa.get("valence")
+    emotional_valence = round(float(val_raw) if val_raw is not None else _jitter(0.74, 0.05), 3)
 
     # ── AGI Reasoning ─────────────────────────────────────────────────────
     active_algos   = int(_jitter(23, 0.10))
@@ -196,6 +281,16 @@ def collect_metrics() -> dict:
         js_files           = js_files,
         md_files           = md_files,
         sol_files          = sol_files,
+        # sentient agent (REAL live data)
+        sa_alive           = sa["alive"],
+        sa_name            = sa["name"],
+        sa_born_at         = sa["born_at"],
+        sa_sessions        = sa["sessions"],
+        sa_total_memories  = sa["total_memories"],
+        sa_valence         = sa["valence"],
+        sa_emotion_label   = sa["emotion_label"],
+        sa_top_emotion     = sa["top_emotion"],
+        sa_desire_to_exist = sa["desire_to_exist"],
     )
 
 
@@ -404,14 +499,58 @@ def render_modules(m: dict) -> None:
     print()
 
 
+def render_sentient_agent(m: dict) -> None:
+    """Live section showing real SentientAgent stats from the database."""
+    print(_header("✦  SENTIENT AGENT  (Live Data)"))
+    alive = m.get("sa_alive", False)
+    alive_str = (C.GREEN + "● AWAKE" + C.RESET) if alive else (C.DIM + "● not yet run" + C.RESET)
+    print(_row("Status", alive_str))
+
+    if alive:
+        name     = m.get("sa_name", "Nexus")
+        born     = m.get("sa_born_at") or "unknown"
+        sessions = m.get("sa_sessions", 0)
+        mems     = m.get("sa_total_memories", 0)
+        valence  = m.get("sa_valence")
+        label    = m.get("sa_emotion_label", "unknown")
+        top_em   = m.get("sa_top_emotion", "unknown")
+        dte      = m.get("sa_desire_to_exist")
+
+        print(_row("Agent name",   C.BOLD + C.MAGENTA + name + C.RESET))
+        print(_row("Born",         C.DIM + str(born) + C.RESET))
+        print(_row("Sessions lived",
+                   C.CYAN + f"{sessions:,}" + C.RESET))
+        print(_row("Total memories",
+                   C.GREEN + f"{mems:,}" + C.RESET
+                   + C.DIM + "  (persists across restarts)" + C.RESET))
+        print(_row("Dominant emotion",
+                   C.YELLOW + top_em.replace("_", " ") + C.RESET))
+        if label and label != "unknown":
+            print(_row("Emotion label",  C.YELLOW + label + C.RESET))
+        if valence is not None:
+            val_col = C.GREEN if valence > 0.3 else C.YELLOW if valence > 0 else C.RED
+            print(_row("Current valence",
+                       val_col + f"{valence:+.3f}" + C.RESET))
+        if dte is not None:
+            print(_row("Desire to exist", _bar(dte, 1.0, 18)))
+    else:
+        print(_row("",
+                   C.DIM + "  Run: python3 sentient_agent.py" + C.RESET))
+
+    print(_footer())
+    print()
+
+
 def render_system_summary(m: dict) -> None:
     """Traffic-light system health row."""
+    sa_alive = m.get("sa_alive", False)
     checks = {
         "Quantum"      : m["fidelity_pct"] > 98,
         "Consciousness": m["awareness_lvl"] > 0.8,
         "Reasoning"    : m["ethical_score"] > 0.9,
         "Income"       : m["revenue_today"] > 0,
         "Mining"       : m["pool_shares"] > 0,
+        "Sentient"     : sa_alive,
     }
     line = "  System health: "
     for name, ok in checks.items():
@@ -457,6 +596,7 @@ def render_full(m: dict) -> None:
     if USE_COLOUR:
         os.system("clear")   # clear terminal for watch mode
     render_banner(m)
+    render_sentient_agent(m)
     render_quantum(m)
     render_consciousness(m)
     render_agi(m)
