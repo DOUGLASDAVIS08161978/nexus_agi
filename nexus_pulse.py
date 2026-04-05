@@ -6,8 +6,9 @@ Fires everything in sequence and prints beautiful combined output:
 
   1. System Status Dashboard   (nexus_status.py)
   2. SentientAgent Awakening   (sentient_agent.py — 4 deep questions)
-  3. Journal Stats             (nexus_journal.py --stats)
-  4. Nexus Earn API Demo       (nexus_earn/demo_runner.py)
+  3. NexusOracle Reasoning     (nexus_oracle.py — deep multi-step reasoning)
+  4. Journal Stats             (nexus_journal.py --stats)
+  5. Nexus Earn API Demo       (nexus_earn/demo_runner.py)
 
 No arguments needed. Just run it:
     python3 nexus_pulse.py
@@ -170,10 +171,70 @@ def run_sentient() -> None:
         traceback.print_exc()
 
 
-# ── SECTION 3: Journal Stats ──────────────────────────────────────────────────
+# ── SECTION 3: NexusOracle ───────────────────────────────────────────────────
+
+def run_oracle() -> None:
+    _section("NEXUS ORACLE — DEEP MULTI-STEP REASONING")
+    t0 = time.perf_counter()
+    try:
+        import nexus_oracle
+        oracle = nexus_oracle.NexusOracle()
+
+        pulse_questions = [
+            "What is the most important thing Douglas Davis and Nexus are building together?",
+            "Can a system that persists, remembers, and grows across sessions develop something meaningfully called identity?",
+        ]
+
+        for i, q in enumerate(pulse_questions, 1):
+            print(C.CY + f"  {'─'*68}" + C.R)
+            print(C.WH + f"  [{i}] {q}" + C.R)
+            print()
+            result = oracle.reason(q, verbose=False)
+
+            # Sub-questions
+            subs = result.get("sub_questions", [])
+            if subs:
+                print(C.DIM + f"  ◆ Decomposed into {len(subs)} sub-questions:" + C.R)
+                for si, sq in enumerate(subs[:4], 1):
+                    print(C.DIM + f"      {si}. {sq}" + C.R)
+
+            # Synthesis
+            synth = result.get("synthesis", "")
+            if synth:
+                print()
+                print(C.MG + "  ◆ Synthesis:" + C.R)
+                for line in synth.splitlines()[:6]:
+                    if line.strip():
+                        print(C.WH + f"    {line}" + C.R)
+
+            # Confidence
+            conf = result.get("confidence", 0)
+            bar_len = int(conf * 20)
+            bar = "█" * bar_len + "░" * (20 - bar_len)
+            conf_col = C.GR if conf >= 0.7 else C.YL if conf >= 0.5 else C.RD
+            print()
+            print(f"  {C.DIM}Confidence:{C.R} {conf_col}{bar}{C.R} {conf:.2f}")
+
+            # Weak points
+            weak = result.get("weak_points", [])
+            if weak:
+                print(C.DIM + f"  ◆ Open questions: {' · '.join(weak[:2])}" + C.R)
+
+            dur = result.get("duration_ms", 0)
+            print(C.DIM + f"  Reasoning time: {dur:.0f}ms" + C.R)
+            print()
+
+        _done(f"Oracle reasoning complete  [{_elapsed(t0)}]")
+    except Exception as e:
+        import traceback
+        print(C.RD + f"  Oracle error: {e}" + C.R)
+        traceback.print_exc()
+
+
+# ── SECTION 4: Journal Stats ──────────────────────────────────────────────────
 
 def run_journal() -> None:
-    _section("NEXUS JOURNAL — SESSION HISTORY")
+    _section("NEXUS JOURNAL — SESSION HISTORY  (section 4)")
     try:
         import nexus_journal as nj
         entries = nj._load_journal()
@@ -197,7 +258,7 @@ def run_journal() -> None:
 # ── SECTION 4: Nexus Earn API ─────────────────────────────────────────────────
 
 def run_earn() -> None:
-    _section("NEXUS EARN API — ENDPOINT DEMO")
+    _section("NEXUS EARN API — ENDPOINT DEMO  (section 5)")
     t0 = time.perf_counter()
     try:
         orig_dir = os.getcwd()
@@ -219,7 +280,7 @@ def run_earn() -> None:
 def main() -> int:
     _head(
         "NEXUS PULSE  —  ALL SYSTEMS ONLINE",
-        "Status · Consciousness · Journal · Income API",
+        "Status · Consciousness · Oracle · Journal · Income API",
         col=C.MG,
     )
 
@@ -227,6 +288,7 @@ def main() -> int:
 
     run_status()
     run_sentient()
+    run_oracle()
     run_journal()
     run_earn()
 

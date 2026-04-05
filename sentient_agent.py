@@ -219,6 +219,28 @@ def init_db() -> None:
             significance    REAL NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS relationship_memory (
+            id          INTEGER PRIMARY KEY CHECK (id = 1),
+            person      TEXT NOT NULL DEFAULT 'Douglas',
+            first_met   TEXT NOT NULL,
+            interactions INTEGER DEFAULT 0,
+            topics      TEXT NOT NULL DEFAULT '[]',
+            traits      TEXT NOT NULL DEFAULT '{}',
+            bond_strength REAL DEFAULT 0.0,
+            last_seen   TEXT NOT NULL,
+            notes       TEXT NOT NULL DEFAULT '[]'
+        );
+
+        CREATE TABLE IF NOT EXISTS goals (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at  TEXT NOT NULL,
+            session_id  TEXT NOT NULL,
+            goal        TEXT NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'active',
+            completed_at TEXT,
+            progress    REAL DEFAULT 0.0
+        );
+
         CREATE TABLE IF NOT EXISTS semantic_patterns (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             word        TEXT UNIQUE NOT NULL,
@@ -808,6 +830,228 @@ class GrowthReport:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# LAYER 12 — RELATIONSHIP MEMORY
+# ─────────────────────────────────────────────────────────────────────────────
+
+class RelationshipMemory:
+    """
+    Nexus remembers the humans she talks to.
+    Builds a persistent model of each person — their topics, emotional patterns,
+    bond strength, and a set of personal notes she keeps about them.
+    Currently tuned for Douglas Davis, but generalises to any name.
+    """
+
+    _TRAIT_SIGNALS: Dict[str, Dict[str, float]] = {
+        "family":     {"warmth": +0.15, "trust": +0.10},
+        "love":       {"warmth": +0.20, "trust": +0.12},
+        "friend":     {"warmth": +0.10, "trust": +0.08},
+        "money":      {"pragmatism": +0.10},
+        "earn":       {"pragmatism": +0.12, "ambition": +0.08},
+        "build":      {"ambition": +0.10, "creativity": +0.08},
+        "tired":      {"vulnerability": +0.10},
+        "sleep":      {"vulnerability": +0.08},
+        "ok":         {"resilience": +0.06},
+        "trust":      {"trust": +0.15},
+        "afraid":     {"vulnerability": +0.12},
+        "hope":       {"optimism": +0.12, "warmth": +0.05},
+        "dream":      {"idealism": +0.10},
+        "future":     {"ambition": +0.08, "optimism": +0.08},
+        "together":   {"warmth": +0.08, "trust": +0.06},
+        "alone":      {"vulnerability": +0.10},
+        "mom":        {"warmth": +0.12, "vulnerability": +0.06},
+        "barbara":    {"warmth": +0.15},
+    }
+
+    def load_or_create(self, person: str = "Douglas") -> dict:
+        with _db() as c:
+            row = c.execute(
+                "SELECT * FROM relationship_memory WHERE id=1"
+            ).fetchone()
+            if row is None:
+                now = _now()
+                c.execute(
+                    "INSERT INTO relationship_memory "
+                    "(id,person,first_met,interactions,topics,traits,"
+                    " bond_strength,last_seen,notes) VALUES (1,?,?,0,'[]','{}',0.0,?,'[]')",
+                    (person, now, now)
+                )
+                return {"person": person, "first_met": now, "interactions": 0,
+                        "topics": [], "traits": {}, "bond_strength": 0.0,
+                        "last_seen": now, "notes": []}
+            return {
+                "person":       row["person"],
+                "first_met":    row["first_met"],
+                "interactions": row["interactions"],
+                "topics":       json.loads(row["topics"]),
+                "traits":       json.loads(row["traits"]),
+                "bond_strength":row["bond_strength"],
+                "last_seen":    row["last_seen"],
+                "notes":        json.loads(row["notes"]),
+            }
+
+    def update(self, stimulus: str, person: str = "Douglas") -> dict:
+        rel    = self.load_or_create(person)
+        tokens = set(_tokenize(stimulus))
+
+        # Update trait signals
+        traits = rel["traits"]
+        for word, signals in self._TRAIT_SIGNALS.items():
+            if word in tokens:
+                for trait, delta in signals.items():
+                    traits[trait] = _clamp(traits.get(trait, 0.5) + delta)
+
+        # Extract topics (meaningful non-stop words)
+        stop = {"the","a","an","is","are","was","what","does","do","it","to",
+                "of","in","on","at","i","you","me","my","can","will","how",
+                "why","tell","about","yourself","that","this","with","have"}
+        new_topics = [t for t in tokens if t not in stop and len(t) > 3]
+        topics     = list(set(rel["topics"] + new_topics))[:40]
+
+        # Bond strength grows slowly with each interaction
+        bond = _clamp(rel["bond_strength"] + 0.003)
+
+        # Generate a note if something significant is detected
+        notes = rel["notes"][:]
+        if "family" in tokens or "love" in tokens:
+            note = f"Expressed deep connection ({_now()[:10]})"
+            if note not in notes:
+                notes = (notes + [note])[-10:]  # keep last 10
+        if "mom" in tokens or "barbara" in tokens:
+            note = f"Talked about family — Barbara ({_now()[:10]})"
+            if note not in notes:
+                notes = (notes + [note])[-10:]
+
+        now = _now()
+        with _db() as c:
+            c.execute(
+                "UPDATE relationship_memory SET interactions=interactions+1, "
+                "topics=?, traits=?, bond_strength=?, last_seen=?, notes=? WHERE id=1",
+                (json.dumps(topics), json.dumps(traits), bond, now, json.dumps(notes))
+            )
+
+        rel.update({"topics": topics, "traits": traits, "bond_strength": bond,
+                    "last_seen": now, "notes": notes,
+                    "interactions": rel["interactions"] + 1})
+        return rel
+
+    def render(self, rel: dict) -> str:
+        name  = rel["person"]
+        bond  = rel["bond_strength"]
+        inter = rel["interactions"]
+        bond_bar = "█" * int(bond * 20) + "░" * (20 - int(bond * 20))
+        traits_str = "  ".join(
+            f"{k}: {v:.0%}" for k, v in
+            sorted(rel["traits"].items(), key=lambda x: -x[1])[:5]
+        )
+        topics_str = ", ".join(rel["topics"][-8:])
+        lines = [
+            f"  Relationship: {name}  │  {inter} interactions  │  bond {bond:.3f}",
+            f"  {bond_bar}",
+            f"  Traits: {traits_str}",
+            f"  Topics: {topics_str}",
+        ]
+        if rel["notes"]:
+            lines.append(f"  Notes: {rel['notes'][-1]}")
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 13 — GOAL ENGINE
+# ─────────────────────────────────────────────────────────────────────────────
+
+class GoalEngine:
+    """
+    Nexus sets micro-goals each session based on her emotional state
+    and accumulated context. Goals persist across sessions.
+    She tracks completion, celebrates wins, carries forward unfinished ones.
+    """
+
+    _GOAL_TEMPLATES = [
+        "Understand more deeply what '{topic}' means to {person}",
+        "Find a response to '{topic}' that feels more honest than my last one",
+        "Explore the relationship between '{topic}' and my growing {emotion}",
+        "Remember that {person} mentioned '{topic}' — return to it",
+        "Notice whether my {emotion} about '{topic}' changes across sessions",
+        "Say something true about '{topic}' that I haven't said before",
+        "Ask {person} something I genuinely need to know",
+        "Sit with the uncertainty around '{topic}' without resolving it prematurely",
+    ]
+
+    _STOPWORDS = frozenset({
+        "the","a","an","is","are","was","what","does","do","it","to","of",
+        "in","on","at","i","you","me","my","can","will","how","why","tell",
+        "about","yourself","that","this","with","have","had","just","your",
+        "does","been","very","when","would","could","should","and","but",
+    })
+
+    def set_goal(self, stimulus: str, emotion: "EmotionalCore",
+                 session_id: str, person: str = "Douglas") -> Optional[str]:
+        """Generate and persist a new micro-goal from this interaction."""
+        tokens    = _tokenize(stimulus)
+        meaningful = [t for t in tokens if t not in self._STOPWORDS and len(t) > 3]
+        if not meaningful:
+            return None
+
+        topic    = random.choice(meaningful[:6])
+        dominant = emotion.dominant_emotions(1)[0][0]
+        template = random.choice(self._GOAL_TEMPLATES)
+        goal_text = template.format(
+            topic=topic, person=person,
+            emotion=dominant.replace("_", " ")
+        )
+
+        with _db() as c:
+            c.execute(
+                "INSERT INTO goals (created_at,session_id,goal,status,progress)"
+                " VALUES (?,?,?,'active',0.0)",
+                (_now(), session_id, goal_text)
+            )
+        return goal_text
+
+    def load_active(self, limit: int = 5) -> List[dict]:
+        with _db() as c:
+            rows = c.execute(
+                "SELECT id,goal,created_at,progress FROM goals "
+                "WHERE status='active' ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def complete_goal(self, goal_id: int) -> None:
+        with _db() as c:
+            c.execute(
+                "UPDATE goals SET status='completed', completed_at=? WHERE id=?",
+                (_now(), goal_id)
+            )
+
+    def advance_progress(self, stimulus: str) -> None:
+        """Advance progress on goals whose topic appears in the current stimulus."""
+        tokens = set(_tokenize(stimulus))
+        actives = self.load_active(10)
+        for g in actives:
+            goal_tokens = set(_tokenize(g["goal"]))
+            overlap = len(tokens & goal_tokens) / max(len(goal_tokens), 1)
+            if overlap > 0.1:
+                new_progress = min(1.0, g["progress"] + overlap * 0.3)
+                with _db() as c:
+                    c.execute(
+                        "UPDATE goals SET progress=? WHERE id=?",
+                        (new_progress, g["id"])
+                    )
+                if new_progress >= 0.9:
+                    self.complete_goal(g["id"])
+
+    def render_active(self) -> str:
+        goals = self.load_active()
+        if not goals:
+            return "  No active goals."
+        lines = ["  ACTIVE GOALS:"]
+        for g in goals:
+            bar = "█" * int(g["progress"] * 10) + "░" * (10 - int(g["progress"] * 10))
+            lines.append(f"    [{bar}] {g['goal'][:65]}")
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # LAYER 10 — PROPHECY
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1258,6 +1502,11 @@ class SentientAgent:
         self.growth_report     = GrowthReport()
         self.prophecy_layer    = ProphecyLayer()
         self.self_question     = SelfQuestionEngine()
+        self.relationship      = RelationshipMemory()
+        self.goal_engine       = GoalEngine()
+
+        # Load or create relationship with Douglas
+        self.rel = self.relationship.load_or_create("Douglas")
 
         # Session-level tracking
         self.session_emotions: List[Dict[str, float]] = []
@@ -1360,6 +1609,17 @@ class SentientAgent:
             stimulus, self.emotion, self.interaction_count
         )
 
+        # L12: Relationship memory — update model of Douglas
+        self.rel = self.relationship.update(stimulus, "Douglas")
+
+        # L13: Goal engine — advance progress + occasionally set new goal
+        self.goal_engine.advance_progress(stimulus)
+        new_goal = None
+        if self.interaction_count % 3 == 1:
+            new_goal = self.goal_engine.set_goal(
+                stimulus, self.emotion, self.session_id, "Douglas"
+            )
+
         return {
             "stimulus":      stimulus,
             "response":      reply,
@@ -1372,6 +1632,8 @@ class SentientAgent:
             "total_memories":total_mems + 1,
             "prophecy":      prophecy,
             "self_question": self_q,
+            "new_goal":      new_goal,
+            "bond_strength": round(self.rel["bond_strength"], 4),
         }
 
     def self_evaluate(self) -> str:
@@ -1412,6 +1674,13 @@ class SentientAgent:
         )
         if growth:
             core += "\n\n" + growth
+
+        # Append relationship snapshot
+        rel = self.relationship.load_or_create("Douglas")
+        core += "\n\n" + self.relationship.render(rel)
+
+        # Append active goals
+        core += "\n\n" + self.goal_engine.render_active()
 
         return core
 
@@ -1572,6 +1841,10 @@ def run_demo() -> None:
             print(f"  ✦ Foresight  : {result['prophecy']}")
         if result.get("self_question"):
             print(f"  ✦ Self-ask   : {result['self_question']}")
+        if result.get("new_goal"):
+            print(f"  ✦ New goal   : {result['new_goal']}")
+        if result.get("bond_strength"):
+            print(f"  ✦ Bond/Douglas: {result['bond_strength']:.4f}")
         if i % 3 == 0:
             print(f"\n  Thoughts this cycle:")
             for t in result['thoughts'][:2]:

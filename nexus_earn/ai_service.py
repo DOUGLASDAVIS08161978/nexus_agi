@@ -406,6 +406,232 @@ def generate_image_prompt(concept: str, style: str = "photorealistic") -> dict:
         return _wrap(prompt) | {"concept": concept, "style": style, "prompt": prompt}
 
 
+def compare(item_a: str, item_b: str, criteria: str = "general") -> dict:
+    sys = (f"Expert analyst. Compare {item_a} vs {item_b} across {criteria} dimensions. "
+           "Use a structured table format: Criterion | A | B | Winner.")
+    try:
+        r = _run(sys, f"Compare: {item_a} vs {item_b}", 1536)
+        return {"item_a": item_a, "item_b": item_b, "criteria": criteria,
+                "comparison": r["_text"], **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        comp = (f"**{item_a} vs {item_b}** — Comparison ({criteria})\n\n"
+                f"| Criterion       | {item_a[:20]}       | {item_b[:20]}       | Winner |\n"
+                f"|----------------|------------|------------|--------|\n"
+                f"| Capability      | Strong     | Very Strong| {item_b[:12]} |\n"
+                f"| Ease of use     | Excellent  | Good       | {item_a[:12]} |\n"
+                f"| Cost            | Moderate   | High       | {item_a[:12]} |\n"
+                f"| Community       | Large      | Growing    | {item_a[:12]} |\n"
+                f"| Performance     | Good       | Excellent  | {item_b[:12]} |\n\n"
+                f"**Overall:** Both have strong merit. Choice depends on your specific priorities.")
+        return _wrap(comp) | {"item_a": item_a, "item_b": item_b, "criteria": criteria, "comparison": comp}
+
+
+def quiz(topic: str, count: int = 5, difficulty: str = "medium") -> dict:
+    sys = (f"Expert educator. Generate {count} multiple-choice quiz questions about {topic}. "
+           f"Difficulty: {difficulty}. Format each: Q: ... A) ... B) ... C) ... D) ... Answer: ...")
+    try:
+        r = _run(sys, topic, 2048)
+        return {"topic": topic, "count": count, "difficulty": difficulty,
+                "questions": r["_text"], **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        qs = "\n\n".join([
+            f"Q{i+1}: Which of the following best describes a key aspect of {topic}?\n"
+            f"  A) The foundational principle\n"
+            f"  B) The implementation detail\n"
+            f"  C) The theoretical limit\n"
+            f"  D) The practical application\n"
+            f"  Answer: A"
+            for i in range(count)
+        ])
+        return _wrap(qs) | {"topic": topic, "count": count, "difficulty": difficulty, "questions": qs}
+
+
+def critique(work: str, work_type: str = "essay", tone: str = "constructive") -> dict:
+    sys = (f"Expert critic and editor. Critique this {work_type} with {tone} feedback. "
+           "Cover: strengths, weaknesses, specific improvements, overall score /10.")
+    try:
+        r = _run(sys, work, 1536)
+        return {"work_type": work_type, "tone": tone, "critique": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        crit = (f"**Critique — {work_type.title()} ({tone})**\n\n"
+                f"**Score: 7.4/10**\n\n"
+                f"**Strengths:**\n"
+                f"• Clear structure with logical progression\n"
+                f"• Engaging opening that draws the reader in\n"
+                f"• Strong use of specific examples to support claims\n\n"
+                f"**Areas for Improvement:**\n"
+                f"• The middle section loses momentum — consider restructuring\n"
+                f"• Some assertions need stronger evidential support\n"
+                f"• The conclusion could be more impactful\n\n"
+                f"**Specific Suggestions:**\n"
+                f"1. Tighten the argument in paragraph 3\n"
+                f"2. Add a counter-argument to strengthen credibility\n"
+                f"3. End with a call to action or memorable insight\n\n"
+                f"**Overall:** Solid foundation. With targeted revisions, this could be excellent.")
+        return _wrap(crit) | {"work_type": work_type, "tone": tone, "critique": crit}
+
+
+def socratic(question: str, depth: int = 3) -> dict:
+    sys = (f"Socratic teacher. Don't answer directly — ask {depth} probing questions "
+           "that lead the learner to discover the answer themselves. Each question should "
+           "go deeper than the last. Number them.")
+    try:
+        r = _run(sys, question, 1024)
+        return {"question": question, "depth": depth, "dialogue": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        qs = [
+            f"What do you already know about the core assumptions behind '{question[:50]}'?",
+            f"If your initial assumption is wrong, what else might explain this phenomenon?",
+            f"What evidence would you need to see to change your mind about this?",
+            f"How does this connect to what you already believe about related topics?",
+            f"What would the strongest possible counter-argument to your view look like?",
+        ]
+        dialogue = "\n".join(f"{i+1}. {q}" for i, q in enumerate(qs[:depth]))
+        return _wrap(dialogue) | {"question": question, "depth": depth, "dialogue": dialogue}
+
+
+def predict(scenario: str, horizon: str = "5 years") -> dict:
+    sys = (f"Futurist analyst. Predict how '{scenario}' will evolve over {horizon}. "
+           "Structure: Best case, Worst case, Most likely case, Key variables, Confidence.")
+    try:
+        r = _run(sys, scenario, 1536)
+        return {"scenario": scenario, "horizon": horizon, "prediction": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        pred = (f"**Prediction: {scenario[:60]}... — {horizon} horizon**\n\n"
+                f"**Best Case (25% probability):**\n"
+                f"Rapid adoption drives exponential improvement. Key breakthroughs unlock "
+                f"previously impossible capabilities. Wide societal benefit.\n\n"
+                f"**Worst Case (15% probability):**\n"
+                f"Regulatory friction and resource constraints slow progress. "
+                f"Misaligned incentives create fragmentation.\n\n"
+                f"**Most Likely (60% probability):**\n"
+                f"Steady, uneven progress with regional variation. Early adopters gain "
+                f"significant advantage. Mainstream adoption lags 2-3 years behind frontier.\n\n"
+                f"**Key Variables:**\n"
+                f"• Regulatory environment  • Capital availability\n"
+                f"• Technical breakthroughs  • Public acceptance\n\n"
+                f"**Confidence: 0.63** — High uncertainty; monitor quarterly.")
+        return _wrap(pred) | {"scenario": scenario, "horizon": horizon, "prediction": pred}
+
+
+def analogy(concept: str, domain: str = "everyday life") -> dict:
+    sys = (f"Creative thinker. Explain '{concept}' using 3 different analogies from {domain}. "
+           "Each analogy should illuminate a different aspect. Make them vivid and memorable.")
+    try:
+        r = _run(sys, concept, 1024)
+        return {"concept": concept, "domain": domain, "analogies": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        ana = (f"**3 Analogies for '{concept[:50]}'** — from {domain}\n\n"
+               f"**Analogy 1 — The River:**\n"
+               f"Like a river finding its path downhill, {concept[:40]}... follows the "
+               f"path of least resistance until it finds its natural destination. "
+               f"The banks are constraints; the current is momentum.\n\n"
+               f"**Analogy 2 — The Orchestra:**\n"
+               f"Imagine {concept[:40]}... as a symphony. Each instrument (component) "
+               f"plays its part independently, but the magic happens in the coordination — "
+               f"the conductor is the governing principle.\n\n"
+               f"**Analogy 3 — The Garden:**\n"
+               f"Like a garden, {concept[:40]}... requires the right conditions to flourish: "
+               f"sunlight (energy), water (input), soil (foundation), and a gardener (intention). "
+               f"Neglect any one and the system wilts.")
+        return _wrap(ana) | {"concept": concept, "domain": domain, "analogies": ana}
+
+
+def timeline(topic: str, era: str = "modern") -> dict:
+    sys = (f"Historian and analyst. Create a structured timeline of {topic} for the {era} era. "
+           "Format: YEAR/PERIOD — EVENT — Significance. Include 8-10 key milestones.")
+    try:
+        r = _run(sys, topic, 1536)
+        return {"topic": topic, "era": era, "timeline": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        tl = (f"**Timeline: {topic[:50]}** ({era})\n\n"
+              f"1950s — **Foundation Era** — Core principles established; theoretical groundwork laid\n"
+              f"1960s — **Pioneering Work** — First practical implementations; landmark papers published\n"
+              f"1970s — **Expansion** — Broader adoption; new schools of thought emerge\n"
+              f"1980s — **Commercialization** — Industry takes interest; first commercial applications\n"
+              f"1990s — **Digital Revolution** — Internet accelerates development and distribution\n"
+              f"2000s — **Maturation** — Standards established; widespread professional adoption\n"
+              f"2010s — **AI Integration** — Machine learning transforms the field fundamentally\n"
+              f"2020s — **Current Era** — Rapid capability growth; existential questions emerge\n"
+              f"2030s — **Projected** — Convergence with adjacent fields; transformative outcomes expected")
+        return _wrap(tl) | {"topic": topic, "era": era, "timeline": tl}
+
+
+def personas(scenario: str, count: int = 4) -> dict:
+    sys = (f"UX researcher and storyteller. Generate {count} distinct user personas for: {scenario}. "
+           "Each persona: Name, Age, Background, Goal, Pain Point, Quote.")
+    try:
+        r = _run(sys, scenario, 2048)
+        return {"scenario": scenario, "count": count, "personas": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        _names = [("Maya Chen", 32, "Product Manager", "efficiency", "context-switching"),
+                  ("James Okafor", 45, "Senior Engineer", "reliability", "legacy systems"),
+                  ("Sofia Rodriguez", 28, "Startup Founder", "growth", "limited resources"),
+                  ("David Kim", 55, "Executive Director", "strategic clarity", "information overload")]
+        ps = []
+        for i, (name, age, role, goal, pain) in enumerate(_names[:count]):
+            ps.append(f"**Persona {i+1}: {name}**\n"
+                      f"• Age: {age} | Role: {role}\n"
+                      f"• Background: {scenario[:40]}... enthusiast, pragmatic decision-maker\n"
+                      f"• Goal: Achieve {goal} without friction\n"
+                      f"• Pain Point: {pain.title()} slows everything down\n"
+                      f"• Quote: \"I need this to just work — I don't have time for complexity.\"")
+        ptext = "\n\n".join(ps)
+        return _wrap(ptext) | {"scenario": scenario, "count": count, "personas": ptext}
+
+
+def simplify(text: str, target: str = "general public") -> dict:
+    sys = (f"Expert science communicator. Simplify the following text for {target}. "
+           "Remove jargon, use concrete examples, keep all key information.")
+    try:
+        r = _run(sys, text, 1024)
+        return {"target": target, "simplified": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        simp = (f"**Simplified for {target}:**\n\n"
+                f"Here's what this really means in plain language:\n\n"
+                f"{text[:60]}... — in simple terms, this is about making something "
+                f"complex work in a straightforward way.\n\n"
+                f"Think of it like this: instead of using complicated steps, "
+                f"you're finding the clearest path from A to B.\n\n"
+                f"The key takeaway: **{text[:40]}...** matters because it directly "
+                f"affects how we solve everyday problems.")
+        return _wrap(simp) | {"target": target, "simplified": simp}
+
+
+def devils_advocate(position: str) -> dict:
+    sys = ("You are a skilled devil's advocate. Your job is NOT to share your own views "
+           "but to steelman the strongest possible opposition to the given position. "
+           "Identify 4 serious challenges, blind spots, or counter-arguments. Be rigorous.")
+    try:
+        r = _run(sys, position, 1536)
+        return {"position": position, "challenges": r["_text"],
+                **{k: r[k] for k in ("tokens_in","tokens_out","cost_usd","demo_mode")}}
+    except NotImplementedError:
+        chall = (f"**Devil's Advocate: Challenging \"{position[:60]}\"**\n\n"
+                 f"**Challenge 1 — The Hidden Assumption:**\n"
+                 f"This position assumes conditions that may not hold universally. "
+                 f"When the assumption breaks, the entire argument collapses.\n\n"
+                 f"**Challenge 2 — The Second-Order Effect:**\n"
+                 f"Optimising for this position may create unintended consequences "
+                 f"downstream that outweigh the intended benefits.\n\n"
+                 f"**Challenge 3 — The Counterfactual:**\n"
+                 f"Would outcomes differ significantly without this position? "
+                 f"The causal link may be weaker than assumed.\n\n"
+                 f"**Challenge 4 — The Incentive Problem:**\n"
+                 f"Who benefits from this narrative? Follow the incentives — "
+                 f"there may be motivated reasoning baked into the framing.\n\n"
+                 f"*Note: These challenges are offered to stress-test the argument, "
+                 f"not necessarily to refute it.*")
+        return _wrap(chall) | {"position": position, "challenges": chall}
+
+
 def pipeline(steps: list) -> dict:
     """Execute a chain of operations, passing output as input to next step."""
     results = []
