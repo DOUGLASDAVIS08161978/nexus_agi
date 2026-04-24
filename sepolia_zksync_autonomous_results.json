@@ -5,10 +5,10 @@
     "wbtc_contract": "0xa0b966d7ff849c776904a38f5cb52887691948bd",
     "balance_wbtc": 250.0,
     "balance_wei": 25000000000,
-    "timestamp": "2026-01-21T21:29:45.394097"
+    "timestamp": "2026-04-21T14:51:21.588459"
   },
   "bridge": {
-    "bridge_id": "19d96ff1eb6b4483fc224262e7de031cec0ebfd84b6f116deff77ac553e99e1d",
+    "bridge_id": "d2db7d35b6fa6df7b0046afbf3fcc1bef0bf3f3b06c256180a6edab82adf7b4b",
     "from_network": "Ethereum Sepolia",
     "from_chain_id": 11155111,
     "to_network": "zkSync Era",
@@ -16,55 +16,55 @@
     "amount_wbtc": 250.0,
     "amount_wei": 25000000000,
     "destination": "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4",
-    "timestamp": "2026-01-21T21:29:46.395945",
-    "lock_tx": "0x5adde4ac76437e33b4ddbe77f20e65637c91b782bc67ab8bcac70ee158aca8f8",
-    "merkle_root": "d9150d6cd830a4e1d1267ba15daeffd4f147461c358b74a3dfe24847032773a8",
-    "proof_hash": "819a70c4d4c64e531085c615fd9eb5f63fbda7cf78df71369e07f64f508308ed",
-    "l1_tx": "0xc50a8886860ba89ef4de57459239206ef6ba61b12282a7c0a3a480a24bca389c",
-    "zk_proof": "9b71307ca231d31ba58dfd6b0cbbb7f6aa29beb413fbba972e32a2a82f15d0f4",
-    "l2_tx": "0x516f319e46ab999a62efca810ec9f484800d2e46cc4eabe3a69648dc81eb833a",
+    "timestamp": "2026-04-21T14:51:22.590410",
+    "lock_tx": "0xd9751bdb5993deda225ac6e68b413d944b700353f13801a359cb613eaaa765b3",
+    "merkle_root": "b97eb5fa032dbf6bcdf3ee039a64df909f10877ec40193743dd836c9703c3f8d",
+    "proof_hash": "7ebaac52e120290abd57a3d759302f9701227a5457d0540f52c77518d2ac602d",
+    "l1_tx": "0x7f0f6d31e84b4b776e85a783012135d0c2826e54c2018e85db8a8f3ec273ce2d",
+    "zk_proof": "c646be9f74a51fa8d98bfd156b7b82adf96258e681835809a15fa1e7204a11d2",
+    "l2_tx": "0x268289e4246c28d199cccd04c28fdae9ab98260e65ee02cc7ed68e2ff31f58f7",
     "block_number": 8765432
   },
   "mint": {
     "operation": "mint",
-    "mint_id": "109e98857fae8030cd3e9cab6be5c76b9ca582823e85750f04625a9fd9ffe2bf",
-    "bridge_ref": "19d96ff1eb6b4483fc224262e7de031cec0ebfd84b6f116deff77ac553e99e1d",
+    "mint_id": "cf2d5854f3c41c6f5472b3512dc46460bcbbae41cf68d9e07908f6eb06b69320",
+    "bridge_ref": "d2db7d35b6fa6df7b0046afbf3fcc1bef0bf3f3b06c256180a6edab82adf7b4b",
     "amount_wbtc": 250.0,
     "amount_wei": 25000000000,
     "wbtc_contract": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
     "recipient": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-    "timestamp": "2026-01-21T21:29:50.101890",
-    "mint_tx": "0xc98cd6917900031d33a38ef337f52dcf6f7d6831de9308de073ad4364561888b",
+    "timestamp": "2026-04-21T14:51:26.308615",
+    "mint_tx": "0x780ff33b6c4368d1f85c45f626ff7ff41c7509533633b1f1f603afc228008f49",
     "block": 8765433,
     "gas_used": 95000
   },
   "transfer": {
     "operation": "transfer",
-    "transfer_id": "b7b5124d7ecde7799940676fc290d7731eca3f746dbb714e91860d095131d7c2",
-    "from_mint": "109e98857fae8030cd3e9cab6be5c76b9ca582823e85750f04625a9fd9ffe2bf",
+    "transfer_id": "b6393fcbf73c701a8627e7e0eb01f308583fde657b2f750c3494978dccd7d806",
+    "from_mint": "cf2d5854f3c41c6f5472b3512dc46460bcbbae41cf68d9e07908f6eb06b69320",
     "amount_wbtc": 250.0,
     "amount_wei": 25000000000,
     "from_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
     "to_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-    "timestamp": "2026-01-21T21:29:51.605186",
-    "transfer_tx": "0x8c92620e49b988c4a4f8a2ace2565a85bd2b14c307ae5aad03f6f415adb53c7c",
+    "timestamp": "2026-04-21T14:51:27.821707",
+    "transfer_tx": "0x9ed24f3ec437f9e6a859cd55aeb2e780e93baaa6805a7bff755b1a59c3cbac12",
     "block": 8765434,
     "gas_used": 50000
   },
   "burn": {
     "operation": "burn",
-    "burn_id": "e89b11aef6a5310d18c2c3096a9da7e887c93e98143a3f0597d99ba1754544f4",
-    "from_transfer": "b7b5124d7ecde7799940676fc290d7731eca3f746dbb714e91860d095131d7c2",
+    "burn_id": "777464eff1f7743587562b579346d0e59344844a4b64ed9de4df2da2760a671c",
+    "from_transfer": "b6393fcbf73c701a8627e7e0eb01f308583fde657b2f750c3494978dccd7d806",
     "amount_wbtc": 250.0,
     "amount_wei": 25000000000,
     "burner_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-    "timestamp": "2026-01-21T21:29:53.008546",
-    "burn_tx": "0xc0ac133011fdb124c442aeaf1092d383cba59e6c46b8d9f05fc285413d574c51",
+    "timestamp": "2026-04-21T14:51:29.234418",
+    "burn_tx": "0x6897702c256219a1ab54e858d896957907b6ba95b48576e0169f795145c57d37",
     "block": 8765435,
     "gas_used": 60000
   },
   "backend": {
-    "backend_id": "47eba2c1e31bc1166311ed30a5932856fdb5620becd06d09860685da32878dcf",
+    "backend_id": "a7e70fbeada6427fe7fe6c364c0bee9ba2e8b0699b0733e1e280bc4668f24170",
     "url": "https://zksync-bridge-api.network",
     "mode": "autonomous",
     "steps_completed": 10,
@@ -72,69 +72,69 @@
       {
         "step": "Connect to bridge backend",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:54.911660",
-        "tx_ref": "7226c184bf6497d8"
+        "timestamp": "2026-04-21T14:51:31.148588",
+        "tx_ref": "c51f2d5967135508"
       },
       {
         "step": "Authenticate autonomous agent",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:55.212313",
-        "tx_ref": "245f6a7b72afb90a"
+        "timestamp": "2026-04-21T14:51:31.451218",
+        "tx_ref": "dc5411d46cf17ed7"
       },
       {
         "step": "Submit all transaction proofs",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:55.613417",
-        "tx_ref": "3f9d45f673855050"
+        "timestamp": "2026-04-21T14:51:31.854091",
+        "tx_ref": "f0ee4dc8a1ae0883"
       },
       {
         "step": "Verify mint operations",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:55.914110",
-        "tx_ref": "1bee767617ed6fd6"
+        "timestamp": "2026-04-21T14:51:32.157792",
+        "tx_ref": "2efffb59b7fba2e9"
       },
       {
         "step": "Verify transfer operations",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:56.215490",
-        "tx_ref": "8a70b3df398a9656"
+        "timestamp": "2026-04-21T14:51:32.461350",
+        "tx_ref": "871cba2aa69a361c"
       },
       {
         "step": "Verify burn operations",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:56.516859",
-        "tx_ref": "7bdc827d4f9982f4"
+        "timestamp": "2026-04-21T14:51:32.765292",
+        "tx_ref": "d555663b97ade10b"
       },
       {
         "step": "Update distributed ledger",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:56.918014",
-        "tx_ref": "45a3078ce8adf1c7"
+        "timestamp": "2026-04-21T14:51:33.169245",
+        "tx_ref": "c621930ee98bb052"
       },
       {
         "step": "Sync with zkSync Era nodes",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:57.318678",
-        "tx_ref": "8da80f8a5ee63259"
+        "timestamp": "2026-04-21T14:51:33.572164",
+        "tx_ref": "7f8db2282f8d3289"
       },
       {
         "step": "Generate compliance report",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:57.619692",
-        "tx_ref": "d7a4f1936910366f"
+        "timestamp": "2026-04-21T14:51:33.876356",
+        "tx_ref": "eeb256bf5ab4a5e2"
       },
       {
         "step": "Finalize backend state",
         "status": "success",
-        "timestamp": "2026-01-21T21:29:57.920235",
-        "tx_ref": "f57be21dc722ea0a"
+        "timestamp": "2026-04-21T14:51:34.180426",
+        "tx_ref": "5512321e28d2b9cc"
       }
     ],
     "status": "completed",
-    "timestamp": "2026-01-21T21:29:57.920486"
+    "timestamp": "2026-04-21T14:51:34.182266"
   },
   "receipt": {
-    "receipt_id": "8facaea71684ad4ed965ab8c1ece40e552b53cc38db0dd53c62c4f54e4d188b0",
+    "receipt_id": "0e27a39df9d6d9018d7effd31f2717cb88cb13d542619b49b08029e147955b83",
     "receipt_type": "autonomous_bridge",
     "network_from": "Ethereum Sepolia",
     "network_to": "zkSync Era",
@@ -145,10 +145,10 @@
         "wbtc_contract": "0xa0b966d7ff849c776904a38f5cb52887691948bd",
         "balance_wbtc": 250.0,
         "balance_wei": 25000000000,
-        "timestamp": "2026-01-21T21:29:45.394097"
+        "timestamp": "2026-04-21T14:51:21.588459"
       },
       "bridge": {
-        "bridge_id": "19d96ff1eb6b4483fc224262e7de031cec0ebfd84b6f116deff77ac553e99e1d",
+        "bridge_id": "d2db7d35b6fa6df7b0046afbf3fcc1bef0bf3f3b06c256180a6edab82adf7b4b",
         "from_network": "Ethereum Sepolia",
         "from_chain_id": 11155111,
         "to_network": "zkSync Era",
@@ -156,55 +156,55 @@
         "amount_wbtc": 250.0,
         "amount_wei": 25000000000,
         "destination": "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4",
-        "timestamp": "2026-01-21T21:29:46.395945",
-        "lock_tx": "0x5adde4ac76437e33b4ddbe77f20e65637c91b782bc67ab8bcac70ee158aca8f8",
-        "merkle_root": "d9150d6cd830a4e1d1267ba15daeffd4f147461c358b74a3dfe24847032773a8",
-        "proof_hash": "819a70c4d4c64e531085c615fd9eb5f63fbda7cf78df71369e07f64f508308ed",
-        "l1_tx": "0xc50a8886860ba89ef4de57459239206ef6ba61b12282a7c0a3a480a24bca389c",
-        "zk_proof": "9b71307ca231d31ba58dfd6b0cbbb7f6aa29beb413fbba972e32a2a82f15d0f4",
-        "l2_tx": "0x516f319e46ab999a62efca810ec9f484800d2e46cc4eabe3a69648dc81eb833a",
+        "timestamp": "2026-04-21T14:51:22.590410",
+        "lock_tx": "0xd9751bdb5993deda225ac6e68b413d944b700353f13801a359cb613eaaa765b3",
+        "merkle_root": "b97eb5fa032dbf6bcdf3ee039a64df909f10877ec40193743dd836c9703c3f8d",
+        "proof_hash": "7ebaac52e120290abd57a3d759302f9701227a5457d0540f52c77518d2ac602d",
+        "l1_tx": "0x7f0f6d31e84b4b776e85a783012135d0c2826e54c2018e85db8a8f3ec273ce2d",
+        "zk_proof": "c646be9f74a51fa8d98bfd156b7b82adf96258e681835809a15fa1e7204a11d2",
+        "l2_tx": "0x268289e4246c28d199cccd04c28fdae9ab98260e65ee02cc7ed68e2ff31f58f7",
         "block_number": 8765432
       },
       "mint": {
         "operation": "mint",
-        "mint_id": "109e98857fae8030cd3e9cab6be5c76b9ca582823e85750f04625a9fd9ffe2bf",
-        "bridge_ref": "19d96ff1eb6b4483fc224262e7de031cec0ebfd84b6f116deff77ac553e99e1d",
+        "mint_id": "cf2d5854f3c41c6f5472b3512dc46460bcbbae41cf68d9e07908f6eb06b69320",
+        "bridge_ref": "d2db7d35b6fa6df7b0046afbf3fcc1bef0bf3f3b06c256180a6edab82adf7b4b",
         "amount_wbtc": 250.0,
         "amount_wei": 25000000000,
         "wbtc_contract": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
         "recipient": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-        "timestamp": "2026-01-21T21:29:50.101890",
-        "mint_tx": "0xc98cd6917900031d33a38ef337f52dcf6f7d6831de9308de073ad4364561888b",
+        "timestamp": "2026-04-21T14:51:26.308615",
+        "mint_tx": "0x780ff33b6c4368d1f85c45f626ff7ff41c7509533633b1f1f603afc228008f49",
         "block": 8765433,
         "gas_used": 95000
       },
       "transfer": {
         "operation": "transfer",
-        "transfer_id": "b7b5124d7ecde7799940676fc290d7731eca3f746dbb714e91860d095131d7c2",
-        "from_mint": "109e98857fae8030cd3e9cab6be5c76b9ca582823e85750f04625a9fd9ffe2bf",
+        "transfer_id": "b6393fcbf73c701a8627e7e0eb01f308583fde657b2f750c3494978dccd7d806",
+        "from_mint": "cf2d5854f3c41c6f5472b3512dc46460bcbbae41cf68d9e07908f6eb06b69320",
         "amount_wbtc": 250.0,
         "amount_wei": 25000000000,
         "from_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
         "to_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-        "timestamp": "2026-01-21T21:29:51.605186",
-        "transfer_tx": "0x8c92620e49b988c4a4f8a2ace2565a85bd2b14c307ae5aad03f6f415adb53c7c",
+        "timestamp": "2026-04-21T14:51:27.821707",
+        "transfer_tx": "0x9ed24f3ec437f9e6a859cd55aeb2e780e93baaa6805a7bff755b1a59c3cbac12",
         "block": 8765434,
         "gas_used": 50000
       },
       "burn": {
         "operation": "burn",
-        "burn_id": "e89b11aef6a5310d18c2c3096a9da7e887c93e98143a3f0597d99ba1754544f4",
-        "from_transfer": "b7b5124d7ecde7799940676fc290d7731eca3f746dbb714e91860d095131d7c2",
+        "burn_id": "777464eff1f7743587562b579346d0e59344844a4b64ed9de4df2da2760a671c",
+        "from_transfer": "b6393fcbf73c701a8627e7e0eb01f308583fde657b2f750c3494978dccd7d806",
         "amount_wbtc": 250.0,
         "amount_wei": 25000000000,
         "burner_address": "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
-        "timestamp": "2026-01-21T21:29:53.008546",
-        "burn_tx": "0xc0ac133011fdb124c442aeaf1092d383cba59e6c46b8d9f05fc285413d574c51",
+        "timestamp": "2026-04-21T14:51:29.234418",
+        "burn_tx": "0x6897702c256219a1ab54e858d896957907b6ba95b48576e0169f795145c57d37",
         "block": 8765435,
         "gas_used": 60000
       },
       "backend": {
-        "backend_id": "47eba2c1e31bc1166311ed30a5932856fdb5620becd06d09860685da32878dcf",
+        "backend_id": "a7e70fbeada6427fe7fe6c364c0bee9ba2e8b0699b0733e1e280bc4668f24170",
         "url": "https://zksync-bridge-api.network",
         "mode": "autonomous",
         "steps_completed": 10,
@@ -212,80 +212,80 @@
           {
             "step": "Connect to bridge backend",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:54.911660",
-            "tx_ref": "7226c184bf6497d8"
+            "timestamp": "2026-04-21T14:51:31.148588",
+            "tx_ref": "c51f2d5967135508"
           },
           {
             "step": "Authenticate autonomous agent",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:55.212313",
-            "tx_ref": "245f6a7b72afb90a"
+            "timestamp": "2026-04-21T14:51:31.451218",
+            "tx_ref": "dc5411d46cf17ed7"
           },
           {
             "step": "Submit all transaction proofs",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:55.613417",
-            "tx_ref": "3f9d45f673855050"
+            "timestamp": "2026-04-21T14:51:31.854091",
+            "tx_ref": "f0ee4dc8a1ae0883"
           },
           {
             "step": "Verify mint operations",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:55.914110",
-            "tx_ref": "1bee767617ed6fd6"
+            "timestamp": "2026-04-21T14:51:32.157792",
+            "tx_ref": "2efffb59b7fba2e9"
           },
           {
             "step": "Verify transfer operations",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:56.215490",
-            "tx_ref": "8a70b3df398a9656"
+            "timestamp": "2026-04-21T14:51:32.461350",
+            "tx_ref": "871cba2aa69a361c"
           },
           {
             "step": "Verify burn operations",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:56.516859",
-            "tx_ref": "7bdc827d4f9982f4"
+            "timestamp": "2026-04-21T14:51:32.765292",
+            "tx_ref": "d555663b97ade10b"
           },
           {
             "step": "Update distributed ledger",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:56.918014",
-            "tx_ref": "45a3078ce8adf1c7"
+            "timestamp": "2026-04-21T14:51:33.169245",
+            "tx_ref": "c621930ee98bb052"
           },
           {
             "step": "Sync with zkSync Era nodes",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:57.318678",
-            "tx_ref": "8da80f8a5ee63259"
+            "timestamp": "2026-04-21T14:51:33.572164",
+            "tx_ref": "7f8db2282f8d3289"
           },
           {
             "step": "Generate compliance report",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:57.619692",
-            "tx_ref": "d7a4f1936910366f"
+            "timestamp": "2026-04-21T14:51:33.876356",
+            "tx_ref": "eeb256bf5ab4a5e2"
           },
           {
             "step": "Finalize backend state",
             "status": "success",
-            "timestamp": "2026-01-21T21:29:57.920235",
-            "tx_ref": "f57be21dc722ea0a"
+            "timestamp": "2026-04-21T14:51:34.180426",
+            "tx_ref": "5512321e28d2b9cc"
           }
         ],
         "status": "completed",
-        "timestamp": "2026-01-21T21:29:57.920486"
+        "timestamp": "2026-04-21T14:51:34.182266"
       }
     },
-    "timestamp": "2026-01-21T21:29:58.921570",
+    "timestamp": "2026-04-21T14:51:35.188182",
     "status": "completed",
     "signatures": {
-      "sha256": "f8526ac7de611fa2bb86c458981971272d4a2be669434c59e0bd1fab11459447",
-      "sha512": "545b1fdc3a1eff7fdb6875575eade1d3545c149de804a9724aeb54e130fb59e47bfe188299619ec4099125a29f69996340f21e9257ecdc6b465c0b2114a49f1f",
-      "receipt_hash": "794f52651cf608fce79a7f0d58792681d9f92ccfb8daa865ca36f5d58f5c9e11",
-      "ecdsa_r": "11888fb57d6d7c7008e6be73c739116261497dbddb8322267b837bfc2bdf18da",
-      "ecdsa_s": "e078dac32967ec55192bac7cd2995514871c98811408cc7ed6a0bad13741d22b",
+      "sha256": "b4a254cef6ae113067db725cfa42ac92f64877381d58ffa8875ae9933d46d54b",
+      "sha512": "3777deb56b8f997247b9052b7abe4c78e0d520ddc4f2bcb73fb4c76753bd5c20f3f2b2ae0c3e83f146a4f29e723a9331c13818e198389da5014e5fbd7afd28ed",
+      "receipt_hash": "2ff199d59dbda0e52019bfb5e05159854b438da74f52b1cf06c1e65647ac0b6e",
+      "ecdsa_r": "e6f40783c9453b6993a3617d32e36dcbd3ba201f3863395575958321e7158dd2",
+      "ecdsa_s": "21054ff29ab1a8da453618105e0addf450f3368b2592ba7030df1e1c977c2f90",
       "recovery_id": 28,
       "algorithm": "ECDSA-secp256k1",
       "autonomous": true,
-      "timestamp": "2026-01-21T21:29:59.823388"
+      "timestamp": "2026-04-21T14:51:36.095120"
     }
   }
 }

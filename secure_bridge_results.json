@@ -2,18 +2,18 @@
   "mining": {
     "total_btc": 187.5,
     "blocks": 30,
-    "mining_address": "tb1qf9e776cdd5cea2862320d07c4a123b77ea5e22"
+    "mining_address": "tb1q788338896ccef307faa2f434461d157643e2d8"
   },
   "bridge": {
     "amount_wbtc": 187.5,
-    "network": "Ethereum mainnet"
+    "network": "Ethereum "
   },
   "operations": {
     "minted": 187.5,
     "transferred": 187.5,
     "burned": 187.5
   },
-  "wallet": "0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771",
+  "wallet": "",
   "backend_steps": 10,
   "status": "completed"
 }

@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ -f /root/bitcoin-core/.bitcoin/bitcoind.pid ]; then
+    kill $(cat /root/bitcoin-core/.bitcoin/bitcoind.pid)
+fi

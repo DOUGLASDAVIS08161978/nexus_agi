@@ -1,0 +1,644 @@
+Package: broadcom-sta-common
+Architecture: all
+Version: 6.30.223.271-12ubuntu0.1
+Priority: optional
+Section: multiverse/admin
+Source: broadcom-sta
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Eduard Bloch <blade@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 32
+Recommends: broadcom-sta-source, module-assistant
+Filename: pool/multiverse/b/broadcom-sta/broadcom-sta-common_6.30.223.271-12ubuntu0.1_all.deb
+Size: 9024
+MD5sum: b3df521f309ccd2f946cda683284e3a3
+SHA1: 0541220d29534e957bc424109303c2aeb3408f95
+SHA256: 7fbd3a2f35fc2cefc29ea5a0444991478e66e4fe998892f65a4ed54e73df2ce2
+SHA512: 92cb4cf80fda509b8feb7163c38cf25075f8422ff084b688275de6cc457b2b166b8322759d8585e6bf3daa9d8bd2e34db661acd0b26ec82d64b7ad4afaff7b92
+Homepage: http://www.broadcom.com/support/802.11/linux_sta.php
+Description: Common files for the Broadcom STA Wireless driver
+Description-md5: a6bd57d95d48308610bc995bd8922939
+
+Package: broadcom-sta-dkms
+Architecture: all
+Version: 6.30.223.271-12ubuntu0.1
+Priority: optional
+Section: multiverse/admin
+Source: broadcom-sta
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Eduard Bloch <blade@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 14141
+Provides: broadcom-sta-modules
+Depends: dkms (>= 2.1.0.0)
+Recommends: wireless-tools
+Conflicts: broadcom-sta-modules
+Filename: pool/multiverse/b/broadcom-sta/broadcom-sta-dkms_6.30.223.271-12ubuntu0.1_all.deb
+Size: 2202920
+MD5sum: 1b3127e514a8fbef7f45c0cfd81ff957
+SHA1: cfbc2873cb25501bd6273092a27d8d9c4c910631
+SHA256: d0e777693d87f4a6754c31fda596a34d1f78c4a1fdb36c3590f610e70fac0105
+SHA512: bfa5f70bbdef60f44c775d36dac23a8872700a7de16160dc47b0db6f8fc25654e306345a80204f81538da41213ab8f00498bf3dc35ef8b5ee2022facd8d9c45e
+Homepage: http://www.broadcom.com/support/802.11/linux_sta.php
+Description: dkms source for the Broadcom STA Wireless driver
+Description-md5: 4c9c20d84937e0293fe598f44d785bce
+
+Package: broadcom-sta-source
+Architecture: all
+Version: 6.30.223.271-12ubuntu0.1
+Priority: optional
+Section: multiverse/admin
+Source: broadcom-sta
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Eduard Bloch <blade@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 2189
+Depends: debhelper (>= 8), make, xz-utils
+Recommends: module-assistant
+Filename: pool/multiverse/b/broadcom-sta/broadcom-sta-source_6.30.223.271-12ubuntu0.1_all.deb
+Size: 2221400
+MD5sum: 30029430f0a3afaa5cdaecba98d612b9
+SHA1: e83145f160819983363acdfbc74def27584c7b00
+SHA256: 2d8a846bf023a268bddc4d2cd5692858f1c430f2155d0d79704db01e72198a6d
+SHA512: 6f00d53584a2f774b511ab6cffccc0dd95e9696c2f889d078a794056d2b93ecf13a79a96367627e4dddfb0a03d4961e54f48cf4a3fb50fb11619be598210cecb
+Homepage: http://www.broadcom.com/support/802.11/linux_sta.php
+Description: Source for the Broadcom STA Wireless driver
+Description-md5: 5bb170970da4a03f1c53b6f0202148ef
+
+Package: cuda-drivers-fabricmanager-525
+Architecture: arm64
+Version: 525.147.05-0ubuntu2.20.04.2
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-525
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Depends: cuda-drivers-fabricmanager-535
+Filename: pool/multiverse/f/fabric-manager-525/cuda-drivers-fabricmanager-525_525.147.05-0ubuntu2.20.04.2_arm64.deb
+Size: 5056
+MD5sum: 7abff7f458f4d4514b99fe2e27892197
+SHA1: bfe9011de47c40fcfdf78d19334cd94f41f18772
+SHA256: 99de8ab1f98c574ed2b7fc14d82cfe1d9c92c3880b1de20211a719ce1b057256
+SHA512: d4829a1183f8e13bcd6cb8de97a1234becc2ace7ceb773bc9dd42d4d73f51c363c51c3389b66c215dc371209d0cdb41e867c9bd3df93711f59be71dd909c508e
+Description: Meta-package for FM and Driver (transitional package)
+Description-md5: 79d09248104f4f2ac9d5cef6b9817c8f
+
+Package: cuda-drivers-fabricmanager-550
+Architecture: arm64
+Version: 550.163.01-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-550
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Provides: cuda-drivers-fabricmanager
+Depends: nvidia-fabricmanager-550 (= 550.163.01-0ubuntu0.20.04.1)
+Conflicts: cuda-drivers-fabricmanager
+Replaces: cuda-drivers-fabricmanager
+Filename: pool/multiverse/f/fabric-manager-550/cuda-drivers-fabricmanager-550_550.163.01-0ubuntu0.20.04.1_arm64.deb
+Size: 5064
+MD5sum: 7a43977bcd183d9bb039c87a46f22d74
+SHA1: b5216971563acf238e18ca44e1fca3824b41f90f
+SHA256: 9c3b9e433edce9142fab9d07c9c1b92905e3ef39f5aec6770a6a63f82e9414e0
+SHA512: 8ccddad2771012c34dd189297bd47c8fa105d00994a4e452bd6de94c5fae85a057a6f9e44c703dc24b9d2e9bdc68d0e515a2f3b5cbbe4ed5ef9c369c15551916
+Description: Meta-package for FM and Driver
+Description-md5: 6715a1a6e39ab2cdf04d9fe216556c20
+
+Package: cuda-drivers-fabricmanager-570
+Architecture: arm64
+Version: 570.133.20-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-570
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Provides: cuda-drivers-fabricmanager
+Depends: nvidia-fabricmanager-570 (= 570.133.20-0ubuntu0.20.04.1)
+Conflicts: cuda-drivers-fabricmanager
+Replaces: cuda-drivers-fabricmanager
+Filename: pool/multiverse/f/fabric-manager-570/cuda-drivers-fabricmanager-570_570.133.20-0ubuntu0.20.04.1_arm64.deb
+Size: 4896
+MD5sum: 5f07c630170777c0f7f89de39b9d6ee8
+SHA1: 88678039f8722f3b1d86e2f4f924eb397ed1dc62
+SHA256: 874d721f19009701e95e0a2f78fc2bbc95cd6e241d7baaadabab5bdbe2135fcd
+SHA512: fd2af90fa86e0dcf3f964b48bd801163a4d7ca50de72b99d3f33a69736472332dfcfa8421b69ac5c6f9fb7d4f62ddeeef7ab5f22a77ee0834cd888361a8751cb
+Description: Meta-package for FM and Driver
+Description-md5: 6715a1a6e39ab2cdf04d9fe216556c20
+
+Package: libclamunrar9
+Architecture: arm64
+Version: 0.103.11-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: libclamunrar
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: ClamAV Team <pkg-clamav-devel@lists.alioth.debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 278
+Depends: libclamav9, libc6 (>= 2.17), libgcc-s1 (>= 3.0), libstdc++6 (>= 5.2)
+Filename: pool/multiverse/libc/libclamunrar/libclamunrar9_0.103.11-0ubuntu0.20.04.1_arm64.deb
+Size: 117728
+MD5sum: 1d873b9aeeeede23cf84132cf93a2b55
+SHA1: 7a490080068e9d9b95ce75cb2c000f9876826f36
+SHA256: 2bc379a592e27b7ab3549bc1ca6baaa58cc026a1b312f7f8d6044c4d6377ac83
+SHA512: dc2c6070f489b5762e9279b4e3b43a52704ea84ae291eb201fdd480744ab11fc042bcba872fd3efacaaab9986ff2a7c3419970462d7d788ea1d34366d494fe42
+Homepage: https://www.clamav.net/
+Description: anti-virus utility for Unix - unrar support
+Description-md5: 81aaa76cb9df5259f364d29eeca2acc6
+
+Package: libnvidia-common-418-server
+Architecture: all
+Version: 418.226.00-0ubuntu0.20.04.2
+Multi-Arch: foreign
+Priority: optional
+Section: multiverse/libs
+Source: nvidia-graphics-drivers-418-server
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 34
+Provides: libnvidia-common
+Conflicts: libnvidia-common
+Breaks: libnvidia-gl-418-server (<< 390.25-0ubuntu2~)
+Replaces: libnvidia-common, libnvidia-gl-418-server (<< 390.25-0ubuntu2~)
+Filename: pool/multiverse/n/nvidia-graphics-drivers-418-server/libnvidia-common-418-server_418.226.00-0ubuntu0.20.04.2_all.deb
+Size: 9056
+MD5sum: 3ef832d811223984267cbc56ef013e9f
+SHA1: 53e3fe0e3602d1e7111cfcce3ccb09d62e0337a8
+SHA256: 94e0f38a3fe36d7c769b8e1b4c878fc3f2ce464d956fce56f947f033dd7b8db4
+SHA512: 637b76fac0486fc805011f72956a04918d2046e86284c78a00d631c31ad8b9566cbdca29634f64749f6bc101f335adcd491a5522e963110aa8e41f81222e938f
+Homepage: http://www.nvidia.com
+Description: Shared files used by the NVIDIA libraries
+Description-md5: 259c61ba4e777f5a2f1e7ee2fd1957bc
+
+Package: libnvidia-common-440-server
+Architecture: all
+Version: 450.248.02-0ubuntu0.20.04.1
+Multi-Arch: foreign
+Priority: optional
+Section: multiverse/libs
+Source: nvidia-graphics-drivers-450-server
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 20
+Depends: libnvidia-common-450-server
+Filename: pool/multiverse/n/nvidia-graphics-drivers-450-server/libnvidia-common-440-server_450.248.02-0ubuntu0.20.04.1_all.deb
+Size: 6008
+MD5sum: 5d0c8d1d8376366580ac2d6d7e2fae6a
+SHA1: 46908cb7f3b495bbdbd2dc45ec2c6fab58dc9fd7
+SHA256: 166b4469bd5b6068d1ca25dc6009b7afabace31f8464bd7e952338405bb7759f
+SHA512: 1f005a146462a402170b6b7c30a82a227812916449b7d07ec9de6abe2fb59f0e272008b9ecf4ee0db1f160b16213544d25bec8bd5310ebd359ebfc20bacfa96b
+Homepage: http://www.nvidia.com
+Description: Transitional package for libnvidia-common-450-server
+Description-md5: 9fa4d974119d7ecb5a92d0caa476d4ac
+
+Package: libnvidia-common-460-server
+Architecture: all
+Version: 470.256.02-0ubuntu0.20.04.1
+Multi-Arch: foreign
+Priority: optional
+Section: multiverse/libs
+Source: nvidia-graphics-drivers-470-server
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 19
+Depends: libnvidia-common-470-server
+Filename: pool/multiverse/n/nvidia-graphics-drivers-470-server/libnvidia-common-460-server_470.256.02-0ubuntu0.20.04.1_all.deb
+Size: 6132
+MD5sum: 86ac459bda5b1c23609e1812784944c6
+SHA1: b99932131128c3a8e7c8856e875379769d9c28dc
+SHA256: 7e9762fe753276b0f9528c0d3b23c8d253ab7a6ddc652b778e1c41bc15b0a600
+SHA512: d70f9526392977da6c976208731081fa2dbf8432d2fd3b565c629940b0abc8641193ee00419cbf292303b5c7421e6b849237754bd5331204705fe304e8b9bbd8
+Homepage: http://www.nvidia.com
+Description: Transitional package for libnvidia-common-470-server
+Description-md5: 6f895c6bf1f300c22961cd467a0eae18
+
+Package: libnvidia-nscq-525
+Architecture: arm64
+Version: 525.147.05-0ubuntu2.20.04.1
+Priority: optional
+Section: multiverse/libs
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Depends: libnvidia-nscq-535
+Filename: pool/multiverse/libn/libnvidia-nscq-525/libnvidia-nscq-525_525.147.05-0ubuntu2.20.04.1_arm64.deb
+Size: 5156
+MD5sum: 5a970bc34cac619356abefaebabd99de
+SHA1: a06b35887465f669c34d38d052043f028ee3c9e7
+SHA256: 0a73f25db7b3233ba41556483898ba59c48e04fb49ee994ded27a0f8dc54b533
+SHA512: d737b28a87bec80dfbdcecbc01b510dbfd4839a2fe7d0220391c75b412fed2d051da60bfbfd3ddf0d7daf6b0fd8b22e1f90445e6ed265e857cd15ead2c14867d
+Description: Transitional package for libnvidia-nscq-535
+Description-md5: 86ca362cda0acfaa2c36ef6c8dc23cb5
+
+Package: libnvidia-nscq-550
+Architecture: arm64
+Version: 550.163.01-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1528
+Provides: libnvidia-nscq, nscq2
+Conflicts: libnvidia-nscq
+Replaces: libnvidia-nscq
+Filename: pool/multiverse/libn/libnvidia-nscq-550/libnvidia-nscq-550_550.163.01-0ubuntu0.20.04.1_arm64.deb
+Size: 324856
+MD5sum: 5fa5727cce425a0acfe0b4e3ecb3eabf
+SHA1: 3f6b54422eab38f05b22ba15b7ceea68b7f59ee1
+SHA256: 9f88f59989deb06f1d24315cc46267c913472c571a040f92458ebbee76158bd9
+SHA512: ac8a1cc15f0ae294c8c11b3d69c65a5196fc8475354c3e9472e3223403323bc6537b30595d804601070a7400fc38bd0e2723820188b0dcd8fd65069631be6b6f
+Description: NVSwitch Configuration and Query library
+Description-md5: 06d90fb68ae67655c00815a4db03a64e
+
+Package: libnvidia-nscq-570
+Architecture: arm64
+Version: 570.133.20-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1680
+Provides: libnvidia-nscq, nscq2
+Conflicts: libnvidia-nscq
+Replaces: libnvidia-nscq
+Filename: pool/multiverse/libn/libnvidia-nscq-570/libnvidia-nscq-570_570.133.20-0ubuntu0.20.04.1_arm64.deb
+Size: 353024
+MD5sum: e82e3a1f26769d5f8dbe7000201d6724
+SHA1: 5644f9e61fc92ea37e85ab51b115a9c04eedadc3
+SHA256: ccde977b5eebab720b7e26455cde91a86ef5cdc4317f920cf1d1417142aada16
+SHA512: 104aab0a1f8597ff14e4e2813b2741a7cd468a08dab9ff7160f176bcdaf3b877904cad22e56485a1a44f59dcdc10bfd90719b8edc454200532bbb7a981d22367
+Description: NVSwitch Configuration and Query library
+Description-md5: 06d90fb68ae67655c00815a4db03a64e
+
+Package: libunrar-dev
+Architecture: arm64
+Version: 1:5.6.6-2ubuntu0.1
+Multi-Arch: same
+Priority: optional
+Section: multiverse/libdevel
+Source: unrar-nonfree
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Martin Meredith <mez@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1038
+Depends: libunrar5 (= 1:5.6.6-2ubuntu0.1)
+Filename: pool/multiverse/u/unrar-nonfree/libunrar-dev_5.6.6-2ubuntu0.1_arm64.deb
+Size: 168492
+MD5sum: 3230ae9168a95a65590c9447e595bd13
+SHA1: 22ec4429601cdbb830c64a1e517a69f2a7cfe891
+SHA256: e3d88e546764a5778cc42be478198066eed04b86f368b43afd9db04358d080f2
+SHA512: cdd410c9ec18af71e92fd55ee4c458cc2d3e028c5063cff42bd7cb364b61f283210c9539a4fdad2b452a89f8a66b88bbe02002d9a92db9e8b84138755cf53b42
+Homepage: http://www.rarlabs.com/
+Description: Unarchiver for .rar files (non-free version) - development files
+Description-md5: e2d7a80bdadc66bc711713796a0c6e1c
+
+Package: libunrar5
+Architecture: arm64
+Version: 1:5.6.6-2ubuntu0.1
+Multi-Arch: same
+Priority: optional
+Section: multiverse/libs
+Source: unrar-nonfree
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Martin Meredith <mez@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 394
+Depends: libc6 (>= 2.17), libgcc-s1 (>= 3.0), libstdc++6 (>= 5.2)
+Filename: pool/multiverse/u/unrar-nonfree/libunrar5_5.6.6-2ubuntu0.1_arm64.deb
+Size: 102388
+MD5sum: 98e12026874ce8e29cf0f0f80de7d474
+SHA1: 31271014e4e4d45fa63629c093e63d3cb1c018ac
+SHA256: 932b03bb2f1361571d773595c2c6caa48ae52511ada23269002462738af7947f
+SHA512: 179ee71548a53a9794d8e01abec2c0b65c4971d9b8d01b02aaa8a7d94410b0b072c6d8dd95277083391e32d0d38f86857e771e37392ba70b0e91fdc1eac54a81
+Homepage: http://www.rarlabs.com/
+Description: Unarchiver for .rar files (non-free version) - shared library
+Description-md5: c337a222882750df1e56ffa55407084b
+
+Package: linux-firmware-raspi2
+Architecture: arm64
+Version: 6-0ubuntu0~20.04.1
+Priority: optional
+Section: multiverse/misc
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 24812
+Breaks: flash-kernel (<< 3.103)
+Filename: pool/multiverse/l/linux-firmware-raspi2/linux-firmware-raspi2_6-0ubuntu0~20.04.1_arm64.deb
+Size: 5603600
+MD5sum: 8171806ffdd7cf353be2fbfbb11ad782
+SHA1: 591df4340ef9705af007f659211a74edadfc96f9
+SHA256: 63b20b1e1c5db0f33f9fbcddcea8fab33ffc25f4d0690f30db3e4db83b78582b
+SHA512: 30612cf1edb4eddf2ec7946306d896f33f302b29dd1cc87eb0906725ebcc2c3d713909b8db34e0585d4f574e9c63a1ba3b3ab56604cc374c29f995d43a520a48
+Homepage: https://github.com/raspberrypi/firmware
+Description: Raspberry Pi 2/3/4 GPU firmware and bootloaders
+Description-md5: 1eae7edc83929faa465de3cae99b870f
+
+Package: nvidia-fabricmanager-525
+Architecture: arm64
+Version: 525.147.05-0ubuntu2.20.04.2
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-525
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Depends: nvidia-fabricmanager-535
+Filename: pool/multiverse/f/fabric-manager-525/nvidia-fabricmanager-525_525.147.05-0ubuntu2.20.04.2_arm64.deb
+Size: 5056
+MD5sum: d0fa2ac20ce6a19d8f85969484f10c18
+SHA1: 2fb7762e3b019af92c467f811577807e96827c94
+SHA256: 3af66d2fa4bc7b0d6d8194b7f65023547edf17c5010515787cfe72ae2c41554f
+SHA512: 9800bafec1467369506b3ee409930f94494ccf56779d6efff030043b8fe15a3048525b48f0d9a87053878de07e7726a558cb7ec91e460001d1b8b81e6aa7a9f7
+Description: Fabric Manager for NVSwitch based systems. (transitional package)
+Description-md5: 06ff0a5beaed94dd1612653f803516ef
+
+Package: nvidia-fabricmanager-550
+Architecture: arm64
+Version: 550.163.01-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-550
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 28382
+Provides: nvidia-fabricmanager
+Conflicts: nvidia-fabricmanager
+Replaces: nvidia-fabricmanager
+Filename: pool/multiverse/f/fabric-manager-550/nvidia-fabricmanager-550_550.163.01-0ubuntu0.20.04.1_arm64.deb
+Size: 4786836
+MD5sum: bf9b3bfe7b74a3b4546797cc2acb6870
+SHA1: 4d096f12598766d3e61f1208efb4b39195cd8a1b
+SHA256: 38e31fbaa73793673dea1b3f9a5609bb1f8d849365df50f2a9fa9337a21559ea
+SHA512: 8b4631dcd7c43fe7516dc8ad921eb50df0535e63db73c07614f4a7d3bb872dc7db183f44fb5c8f3cefb64d50a0b65378373d43549b681a0eefca596ff252e12c
+Description: Fabric Manager for NVSwitch based systems.
+Description-md5: 3d49e1346de8fc10beaca066b0eb5df0
+
+Package: nvidia-fabricmanager-570
+Architecture: arm64
+Version: 570.133.20-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-570
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 36484
+Provides: nvidia-fabricmanager
+Conflicts: nvidia-fabricmanager
+Replaces: nvidia-fabricmanager
+Filename: pool/multiverse/f/fabric-manager-570/nvidia-fabricmanager-570_570.133.20-0ubuntu0.20.04.1_arm64.deb
+Size: 6741184
+MD5sum: 5998ff15d244daad2a0369e2ff0fb923
+SHA1: a8b54fe8bc0b28ff3d3797c9f7dd75b42d8c36e2
+SHA256: 1f95ebcd132eff418676a93ac340f16d28cd609eeb64612f908d2f9fc9718ea4
+SHA512: 724af6261c80372286600dfe83cfe205cfb530b9a208fd346e8e303540369f94b622c23e11758224d4c05ac0fe5a4169384172a3eeeef4ed70c248ed8738f59d
+Description: Fabric Manager for NVSwitch based systems.
+Description-md5: 3d49e1346de8fc10beaca066b0eb5df0
+
+Package: nvidia-fabricmanager-dev-525
+Architecture: arm64
+Version: 525.147.05-0ubuntu2.20.04.2
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-525
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 16
+Depends: nvidia-fabricmanager-dev-535
+Filename: pool/multiverse/f/fabric-manager-525/nvidia-fabricmanager-dev-525_525.147.05-0ubuntu2.20.04.2_arm64.deb
+Size: 5068
+MD5sum: c92f9d060da4a018c3f86c63628be3c9
+SHA1: a1857912164c16ab5bee36fcf8543edfb27d5223
+SHA256: 218cffc1af704796ba2536309de4597f5e0046f005adb8567baf0cd9743a3b0e
+SHA512: e81a194ffd313a22c0d618a5ecc21938e2086a6818e9e27fe43d6a36d0c12a18017092a90db183bed4f4c078024d2ba1d9555240217ca921da33b9ade0355642
+Description: Fabric Manager API headers and associated library (transitional package)
+Description-md5: 6d784138f631bec423b38a723527202b
+
+Package: nvidia-fabricmanager-dev-550
+Architecture: arm64
+Version: 550.163.01-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-550
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1765
+Provides: nvidia-fabricmanager-dev
+Conflicts: nvidia-fabricmanager-dev
+Replaces: nvidia-fabricmanager-dev
+Filename: pool/multiverse/f/fabric-manager-550/nvidia-fabricmanager-dev-550_550.163.01-0ubuntu0.20.04.1_arm64.deb
+Size: 482796
+MD5sum: 701609cf68c22088edb37f3cf9bd64d3
+SHA1: de11ac767244ba48f05ab971347f5ed05434758e
+SHA256: a71526c43c7619af5b8a2b75bd1103231c161ff0f6322792585e12914c7cced9
+SHA512: bc8c79f2cbd73f60ec2923584a29e80a7ca93ce8dcaca8c381b9061e4f6ab0128ead8c721ced6a927f53ece59a43bbfc825bf476843bdc340085b6f5f494e343
+Description: Fabric Manager API headers and associated library
+Description-md5: 565605cc6a127d423c88c38e5c2f9a26
+
+Package: nvidia-fabricmanager-dev-570
+Architecture: arm64
+Version: 570.133.20-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Source: fabric-manager-570
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 2604
+Provides: nvidia-fabricmanager-dev
+Conflicts: nvidia-fabricmanager-dev
+Replaces: nvidia-fabricmanager-dev
+Filename: pool/multiverse/f/fabric-manager-570/nvidia-fabricmanager-dev-570_570.133.20-0ubuntu0.20.04.1_arm64.deb
+Size: 699728
+MD5sum: c25b7456be5802a2e960ca53a19ec48f
+SHA1: 6d926a685c278e923a5b138dd1e83c2b5c85631b
+SHA256: 164f29c22b5096ea99180dc333118d294fa1c87b935c8d1a4a2144a313e7bb08
+SHA512: bd56331da4317afe78fe89f4c4f5616d59385343399ce3336fc4b42a012c4af45825017b4ab5f74bece82fc415e0f6e184d901da5420eea6be788f1e26f1cd2f
+Description: Fabric Manager API headers and associated library
+Description-md5: 565605cc6a127d423c88c38e5c2f9a26
+
+Package: nvidia-imex-550
+Architecture: arm64
+Version: 550.163.01-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 21369
+Provides: nvidia-imex
+Conflicts: nvidia-imex
+Replaces: nvidia-imex
+Filename: pool/multiverse/n/nvidia-imex-550/nvidia-imex-550_550.163.01-0ubuntu0.20.04.1_arm64.deb
+Size: 6493868
+MD5sum: 6cdb4b7b05c3b60ecdb3ba5c5c6e11e9
+SHA1: 6ec500b4a7420458fc645aa6186d660968e6a759
+SHA256: 334fcd7de48e1f0751cf820459270479e67147ce46a2433170b4780336b5f789
+SHA512: 416c7b92bb841ad7751ecc5b5f45d3cb4443016ce0bd2c89aaea6932594ae169e42da9bcb67cca8dcc04283d6820245fe8a2372877d24c241ae70a2752c5eb12
+Description: IMEX Manager for NVIDIA based systems.
+Description-md5: f7a765b2a95d4cabcc9695466d5f6cc8
+
+Package: nvidia-imex-570
+Architecture: arm64
+Version: 570.133.20-0ubuntu0.20.04.1
+Priority: optional
+Section: multiverse/libs
+Origin: Ubuntu
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 29640
+Provides: nvidia-imex
+Conflicts: nvidia-imex
+Replaces: nvidia-imex
+Filename: pool/multiverse/n/nvidia-imex-570/nvidia-imex-570_570.133.20-0ubuntu0.20.04.1_arm64.deb
+Size: 8803272
+MD5sum: c51d46477072b171cddfa879fcb85b0f
+SHA1: 5ee1feda6f7d01dcbf188d242127c310d81d6bb2
+SHA256: ad2aaf6ad9ec03ef049c76b906d278ecad580c2710b25552772bd2a06fb7e6ce
+SHA512: 7ade3a58e0b823945c073ab26c9831b24f2d747bc097fd669426316f0b66452454b725958b80a4ddcae671e5802729cb951526b9f4930fd68ebfff77b513bc7f
+Description: IMEX Manager for NVIDIA based systems.
+Description-md5: f7a765b2a95d4cabcc9695466d5f6cc8
+
+Package: unrar
+Architecture: arm64
+Version: 1:5.6.6-2ubuntu0.1
+Priority: optional
+Section: multiverse/utils
+Source: unrar-nonfree
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Martin Meredith <mez@debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 408
+Depends: libc6 (>= 2.17), libgcc-s1 (>= 3.0), libstdc++6 (>= 5.2)
+Conflicts: rar (<= 2.60-1)
+Filename: pool/multiverse/u/unrar-nonfree/unrar_5.6.6-2ubuntu0.1_arm64.deb
+Size: 99116
+MD5sum: c2580d8239d61177b4f6b948933b9c42
+SHA1: cffa574a02817697f5c6f6897a6d22c6979cb409
+SHA256: 1a70051e66243b37fd6842868d3f5997b88194674b4ecddabb38edffab10fcf8
+SHA512: 1b44bb53faad869f340a3064c45e96e7be302bda5f41bdf1b77901a80f3307e86002dd308727f83b0b4112e87c39f6c82cbd4a0e87af1ad9ab4d045b5be013cf
+Homepage: http://www.rarlabs.com/
+Description: Unarchiver for .rar files (non-free version)
+Description-md5: 363f696bb115028ffafb265ccc9f32fb
+
+Package: virtualbox-guest-dkms
+Architecture: all
+Version: 6.1.50-dfsg-1~ubuntu1.20.04.1
+Priority: optional
+Section: multiverse/kernel
+Source: virtualbox
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Debian Virtualbox Team <team+debian-virtualbox@tracker.debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 7621
+Provides: virtualbox-guest-modules
+Depends: dkms (>= 2.1.0.0)
+Filename: pool/multiverse/v/virtualbox/virtualbox-guest-dkms_6.1.50-dfsg-1~ubuntu1.20.04.1_all.deb
+Size: 679140
+MD5sum: ecf5057a423ebd6a36335f185a81dd7f
+SHA1: 619e131c6100afc27b0d76a3e6d03bf3bed5835d
+SHA256: 5589d687be0b57d85627fe9306b82389459ff5b2fd9d9a33187205d899bd455b
+SHA512: ff963952884e3242d82786470bac5b7473b54739b044bc4a44314cd91290195729d05d8516772033904451811f0eaa96e85cff70cc63d524d5b5d6068df01c0b
+Homepage: https://www.virtualbox.org
+Description: x86 virtualization solution - guest addition module source for dkms
+Modaliases: vboxguest(pci:v000080EEd0000CAFEsv00000000sd00000000bc*sc*i*)
+Description-md5: e15ead9377a7f1e325ded819d3cfaf8b
+
+Package: virtualbox-guest-dkms-hwe
+Architecture: all
+Version: 6.1.16-dfsg-6ubuntu1.20.04.2
+Priority: optional
+Section: multiverse/kernel
+Source: virtualbox-hwe
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Debian Virtualbox Team <team+debian-virtualbox@tracker.debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 7485
+Provides: virtualbox-guest-dkms, virtualbox-guest-modules
+Depends: dkms (>= 2.1.0.0)
+Conflicts: virtualbox-guest-dkms
+Replaces: virtualbox-guest-dkms
+Filename: pool/multiverse/v/virtualbox-hwe/virtualbox-guest-dkms-hwe_6.1.16-dfsg-6ubuntu1.20.04.2_all.deb
+Size: 665504
+MD5sum: 318cf4e70d896a3eccdf9c303e2c24d7
+SHA1: 47ba87097507de1895f03f7b70baf0cac8043f7c
+SHA256: b9be45054429f0c62ed451e04a1577b325ad246fef8f4c92e04f11794456f2c3
+SHA512: 922c84df0541bb1c7c96ae04b59f5cea1f899f30ff904e79d3c96df1659462116e52220cb8fb133460a40a5cba6f35924b4a53f23ad7298c229c8eec1e076023
+Homepage: https://www.virtualbox.org
+Description: x86 virtualization solution - guest addition module source for dkms
+Modaliases: vboxguest(pci:v000080EEd0000CAFEsv00000000sd00000000bc*sc*i*)
+Description-md5: 5da76c89e724bb98d7f67d251fa8de7d
+
+Package: virtualbox-guest-source
+Architecture: all
+Version: 6.1.50-dfsg-1~ubuntu1.20.04.1
+Priority: optional
+Section: multiverse/kernel
+Source: virtualbox
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Debian Virtualbox Team <team+debian-virtualbox@tracker.debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1200
+Depends: build-essential, bzip2, debhelper-compat (= 12), kbuild, module-assistant
+Filename: pool/multiverse/v/virtualbox/virtualbox-guest-source_6.1.50-dfsg-1~ubuntu1.20.04.1_all.deb
+Size: 1127788
+MD5sum: 3ecd5cd93dd7f76273cedea3fb39a164
+SHA1: 199d03061a0278e9ba4dff316ffe703b45e678d0
+SHA256: 46ecbc7aa7a44fa96d5a8f33cf12e09a67b9f2c5ea091dff603a1e46e96c527b
+SHA512: 1db00c2200152032170e5dc0610cf478a22e31905e49408cdac7a4012f3c8c756ecd46d820afcc41a27b7a541e60bfa7d27c6b1b18f325c0f3aee7c9553f2e7d
+Homepage: https://www.virtualbox.org
+Description: x86 virtualization solution - guest addition module source
+Description-md5: 4e8ea50b26a8f2bc5f4e7ef943a32a06
+
+Package: virtualbox-guest-source-hwe
+Architecture: all
+Version: 6.1.16-dfsg-6ubuntu1.20.04.2
+Priority: optional
+Section: multiverse/kernel
+Source: virtualbox-hwe
+Origin: Ubuntu
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Original-Maintainer: Debian Virtualbox Team <team+debian-virtualbox@tracker.debian.org>
+Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+Installed-Size: 1186
+Provides: virtualbox-guest-source
+Depends: build-essential, bzip2, debhelper-compat (= 12), kbuild, module-assistant
+Conflicts: virtualbox-guest-source
+Replaces: virtualbox-guest-source
+Filename: pool/multiverse/v/virtualbox-hwe/virtualbox-guest-source-hwe_6.1.16-dfsg-6ubuntu1.20.04.2_all.deb
+Size: 1111240
+MD5sum: e5f687e80589cd1742d002db37c76db6
+SHA1: 13aeb3d277eb435f1dfdb5baa2d29faad6622441
+SHA256: ad8d133a695aa5c6ad16c23cee300c364f7da60ba3419f0e49a578e75a7c9c8c
+SHA512: b38d282747dc253ab1a1e50d3846a5938e919ec13c10fc4fea930180232d0d940a1d5b3d5ebead57974e65fc0a802ff782687d872905345c498ed012c692d371
+Homepage: https://www.virtualbox.org
+Description: x86 virtualization solution - guest addition module source
+Description-md5: 4e8ea50b26a8f2bc5f4e7ef943a32a06
+

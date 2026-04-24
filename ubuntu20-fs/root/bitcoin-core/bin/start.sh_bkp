@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ -f /root/bitcoin-core/bin/bitcoind ]; then
+    /root/bitcoin-core/bin/bitcoind -conf=/root/bitcoin-core/.bitcoin/bitcoin.conf -datadir=/root/bitcoin-core/.bitcoin -daemon
+fi

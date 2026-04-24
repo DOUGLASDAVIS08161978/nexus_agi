@@ -1,0 +1,21 @@
+{
+  "network": "monad",
+  "chainId": 41454,
+  "timestamp": 1769820387,
+  "contracts": {
+    "WTBTC": {
+      "name": "Wrapped Testnet Bitcoin",
+      "symbol": "WTBTC",
+      "decimals": 8,
+      "totalSupply": "100000000",
+      "address": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "explorer": "https://explorer.testnet.monad.xyz/address/0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "Bridge": {
+      "address": "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "explorer": "https://explorer.testnet.monad.xyz/address/0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    }
+  },
+  "bitcoinAddress": "bc1qyhkq7usdfhhhynkjksdqfx32u3rmv94y0htsal",
+  "status": "simulated"
+}

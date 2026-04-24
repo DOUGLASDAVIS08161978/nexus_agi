@@ -1,0 +1,1073 @@
+Package: bcmwl-kernel-source
+Description-md5: 9da890d8409fb430fa6f9a0c8a37934a
+Description-en: Broadcom 802.11 Linux STA wireless driver source
+ This package contains Broadcom 802.11 Linux STA wireless driver
+ for use with Broadcom's BCM4311-, BCM4312-, BCM4313-, BCM4321-,
+ BCM4322-, BCM43224-, and BCM43225-, BCM43227- and BCM43228-based
+ hardware.
+
+Package: libcuda1-340
+Description-md5: 6cd8a29ce828440044bf16ef76348773
+Description-en: NVIDIA CUDA runtime library
+ The Compute Unified Device Architecture (CUDA) enables NVIDIA
+ graphics processing units (GPUs) to be used for massively parallel
+ general purpose computation.
+ .
+ This package contains the driver specific runtime library.
+ .
+ Supported NVIDIA devices include GPUs starting from GeForce 8 and Quadro FX
+ series, as well as the Tesla computing processors.
+
+Package: libnvidia-cfg1-390
+Description-md5: 7dce7edcd194e980223937b38f49e8b9
+Description-en: NVIDIA binary OpenGL/GLX configuration library
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ This package contains the libnvidia-cfg.so.1 runtime library.
+
+Package: libnvidia-cfg1-418
+Description-md5: 797d1ad343a3529454bbc4a4ac8edcb6
+Description-en: Transitional package for libnvidia-cfg1-430
+ This is a transitional package for libnvidia-cfg1-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-cfg1-430
+Description-md5: 256e72301d7fc5c3c4cf8334a94c7ed8
+Description-en: Transitional package for libnvidia-cfg1-440
+ This is a transitional package for libnvidia-cfg1-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-cfg1-435
+Description-md5: 7dce7edcd194e980223937b38f49e8b9
+Description-en: NVIDIA binary OpenGL/GLX configuration library
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ This package contains the libnvidia-cfg.so.1 runtime library.
+
+Package: libnvidia-cfg1-440
+Description-md5: 7dce7edcd194e980223937b38f49e8b9
+Description-en: NVIDIA binary OpenGL/GLX configuration library
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ This package contains the libnvidia-cfg.so.1 runtime library.
+
+Package: libnvidia-common-390
+Description-md5: 259c61ba4e777f5a2f1e7ee2fd1957bc
+Description-en: Shared files used by the NVIDIA libraries
+ This package provides a set of files that are required by the NVIDIA
+ libraries.
+
+Package: libnvidia-common-418
+Description-md5: e931787086cca1c071b94f5b1f6fdbb6
+Description-en: Transitional package for libnvidia-common-430
+ This is a transitional package for libnvidia-common-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-common-430
+Description-md5: 259c61ba4e777f5a2f1e7ee2fd1957bc
+Description-en: Shared files used by the NVIDIA libraries
+ This package provides a set of files that are required by the NVIDIA
+ libraries.
+
+Package: libnvidia-common-430
+Description-md5: 50d23315518d9c84683cf238209aae6f
+Description-en: Transitional package for libnvidia-common-440
+ This is a transitional package for libnvidia-common-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-common-435
+Description-md5: 259c61ba4e777f5a2f1e7ee2fd1957bc
+Description-en: Shared files used by the NVIDIA libraries
+ This package provides a set of files that are required by the NVIDIA
+ libraries.
+
+Package: libnvidia-common-440
+Description-md5: 259c61ba4e777f5a2f1e7ee2fd1957bc
+Description-en: Shared files used by the NVIDIA libraries
+ This package provides a set of files that are required by the NVIDIA
+ libraries.
+
+Package: libnvidia-compute-390
+Description-md5: c7c5b2d5b16b7e02eed65de795271363
+Description-en: NVIDIA libcompute package
+ This package provides a set of libraries which enable the NVIDIA driver
+ to use GPUs for parallel general purpose computation through CUDA and
+ OpenCL.
+
+Package: libnvidia-compute-418
+Description-md5: 6035d1bd13e145aa4424bced82e6ef76
+Description-en: Transitional package for libnvidia-compute-430
+ This is a transitional package for libnvidia-compute-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-compute-430
+Description-md5: def87e4f9092a199357102693b13f4df
+Description-en: Transitional package for libnvidia-compute-440
+ This is a transitional package for libnvidia-compute-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-compute-435
+Description-md5: c7c5b2d5b16b7e02eed65de795271363
+Description-en: NVIDIA libcompute package
+ This package provides a set of libraries which enable the NVIDIA driver
+ to use GPUs for parallel general purpose computation through CUDA and
+ OpenCL.
+
+Package: libnvidia-compute-440
+Description-md5: c7c5b2d5b16b7e02eed65de795271363
+Description-en: NVIDIA libcompute package
+ This package provides a set of libraries which enable the NVIDIA driver
+ to use GPUs for parallel general purpose computation through CUDA and
+ OpenCL.
+
+Package: libnvidia-decode-390
+Description-md5: 82c3a05b45f86380632898c9b339df7a
+Description-en: NVIDIA Video Decoding runtime libraries
+ This package includes the NVIDIA CUDA Video Decoder (NVCUVID) library which
+ provides an interface to hardware video decoding capabilities on NVIDIA GPUs with CUDA.
+ .
+ The package also provides a VDPAU (Video Decode and Presentation API for Unix-like
+ systems) library for the NVIDIA vendor implementation.
+
+Package: libnvidia-decode-418
+Description-md5: 3b2b447f6a073c5bd7bb5d4975a0cb35
+Description-en: Transitional package for libnvidia-decode-430
+ This is a transitional package for libnvidia-decode-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-decode-430
+Description-md5: cf06ede8af62b3afc1803eefa1b981fd
+Description-en: Transitional package for libnvidia-decode-440
+ This is a transitional package for libnvidia-decode-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-decode-435
+Description-md5: 82c3a05b45f86380632898c9b339df7a
+Description-en: NVIDIA Video Decoding runtime libraries
+ This package includes the NVIDIA CUDA Video Decoder (NVCUVID) library which
+ provides an interface to hardware video decoding capabilities on NVIDIA GPUs with CUDA.
+ .
+ The package also provides a VDPAU (Video Decode and Presentation API for Unix-like
+ systems) library for the NVIDIA vendor implementation.
+
+Package: libnvidia-decode-440
+Description-md5: 82c3a05b45f86380632898c9b339df7a
+Description-en: NVIDIA Video Decoding runtime libraries
+ This package includes the NVIDIA CUDA Video Decoder (NVCUVID) library which
+ provides an interface to hardware video decoding capabilities on NVIDIA GPUs with CUDA.
+ .
+ The package also provides a VDPAU (Video Decode and Presentation API for Unix-like
+ systems) library for the NVIDIA vendor implementation.
+
+Package: libnvidia-encode-390
+Description-md5: 21b4191ea88e49a7e948a2b89cfed901
+Description-en: NVENC Video Encoding runtime library
+ The NVENC Video Encoding library provides an interface to video encoder
+ hardware on supported NVIDIA GPUs.
+ .
+ This package contains the nvidia-encode runtime library.
+
+Package: libnvidia-encode-418
+Description-md5: 0f23ed254f5e13d2997ce3e03d96b449
+Description-en: Transitional package for libnvidia-encode-430
+ This is a transitional package for libnvidia-encode-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-encode-430
+Description-md5: c21683172ccbb731942e089dee375dfa
+Description-en: Transitional package for libnvidia-encode-440
+ This is a transitional package for libnvidia-encode-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-encode-435
+Description-md5: 21b4191ea88e49a7e948a2b89cfed901
+Description-en: NVENC Video Encoding runtime library
+ The NVENC Video Encoding library provides an interface to video encoder
+ hardware on supported NVIDIA GPUs.
+ .
+ This package contains the nvidia-encode runtime library.
+
+Package: libnvidia-encode-440
+Description-md5: 21b4191ea88e49a7e948a2b89cfed901
+Description-en: NVENC Video Encoding runtime library
+ The NVENC Video Encoding library provides an interface to video encoder
+ hardware on supported NVIDIA GPUs.
+ .
+ This package contains the nvidia-encode runtime library.
+
+Package: libnvidia-extra-440
+Description-md5: 0c26d83df4ea22dc17ba24c862fae8c7
+Description-en: Extra libraries for the NVIDIA driver
+ This package provides an additional set of libraries to be used with
+ the NVIDIA driver.
+
+Package: libnvidia-fbc1-390
+Description-md5: 19123a53d351a2e540ca869d1e74f9d2
+Description-en: NVIDIA OpenGL-based Framebuffer Capture runtime library
+ The NVIDIA OpenGL-based Framebuffer Capture (NvFBCOpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvFBCOpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvFBCOpenGL runtime library.
+
+Package: libnvidia-fbc1-418
+Description-md5: b7fb477e7c3c7869ac792e8681dacf31
+Description-en: Transitional package for libnvidia-fbc1-430
+ This is a transitional package for libnvidia-fbc1-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-fbc1-430
+Description-md5: f13254b54b3665b444c5088846bf205d
+Description-en: Transitional package for libnvidia-fbc1-440
+ This is a transitional package for libnvidia-fbc1-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-fbc1-435
+Description-md5: 19123a53d351a2e540ca869d1e74f9d2
+Description-en: NVIDIA OpenGL-based Framebuffer Capture runtime library
+ The NVIDIA OpenGL-based Framebuffer Capture (NvFBCOpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvFBCOpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvFBCOpenGL runtime library.
+
+Package: libnvidia-fbc1-440
+Description-md5: 19123a53d351a2e540ca869d1e74f9d2
+Description-en: NVIDIA OpenGL-based Framebuffer Capture runtime library
+ The NVIDIA OpenGL-based Framebuffer Capture (NvFBCOpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvFBCOpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvFBCOpenGL runtime library.
+
+Package: libnvidia-gl-390
+Description-md5: d899ab089124230e29489e7dcc9f137a
+Description-en: NVIDIA OpenGL/GLX/EGL/GLES GLVND libraries and Vulkan ICD
+ This package provides the NVIDIA OpenGL/GLX/EGL/GLES libraries and the
+ Vulkan ICD.
+
+Package: libnvidia-gl-418
+Description-md5: 0eeed97230390cb071869780a4bafbe7
+Description-en: Transitional package for libnvidia-gl-430
+ This is a transitional package for libnvidia-gl-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-gl-430
+Description-md5: 57d8874f281f08a44bf8aa288f3a255c
+Description-en: Transitional package for libnvidia-gl-440
+ This is a transitional package for libnvidia-gl-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-gl-435
+Description-md5: d899ab089124230e29489e7dcc9f137a
+Description-en: NVIDIA OpenGL/GLX/EGL/GLES GLVND libraries and Vulkan ICD
+ This package provides the NVIDIA OpenGL/GLX/EGL/GLES libraries and the
+ Vulkan ICD.
+
+Package: libnvidia-gl-440
+Description-md5: d899ab089124230e29489e7dcc9f137a
+Description-en: NVIDIA OpenGL/GLX/EGL/GLES GLVND libraries and Vulkan ICD
+ This package provides the NVIDIA OpenGL/GLX/EGL/GLES libraries and the
+ Vulkan ICD.
+
+Package: libnvidia-ifr1-390
+Description-md5: ed00f275619e715136fe0176e6f7fd69
+Description-en: NVIDIA OpenGL-based Inband Frame Readback runtime library
+ The NVIDIA OpenGL-based Inband Frame Readback (NvIFROpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvIFROpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvIFROpenGL runtime library.
+
+Package: libnvidia-ifr1-418
+Description-md5: f7f0cd3813978443d0de420f5cf55d73
+Description-en: Transitional package for libnvidia-ifr1-430
+ This is a transitional package for libnvidia-ifr1-430, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-ifr1-430
+Description-md5: 64f10c1d3769b0f5e6083f8d7efc32b4
+Description-en: Transitional package for libnvidia-ifr1-440
+ This is a transitional package for libnvidia-ifr1-440, and can be
+ safely removed after the installation is complete.
+
+Package: libnvidia-ifr1-435
+Description-md5: ed00f275619e715136fe0176e6f7fd69
+Description-en: NVIDIA OpenGL-based Inband Frame Readback runtime library
+ The NVIDIA OpenGL-based Inband Frame Readback (NvIFROpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvIFROpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvIFROpenGL runtime library.
+
+Package: libnvidia-ifr1-440
+Description-md5: ed00f275619e715136fe0176e6f7fd69
+Description-en: NVIDIA OpenGL-based Inband Frame Readback runtime library
+ The NVIDIA OpenGL-based Inband Frame Readback (NvIFROpenGL) library provides
+ a high performance, low latency interface to capture and optionally encode an
+ OpenGL framebuffer. NvIFROpenGL is a private API that is only available to
+ approved partners for use in remote graphics scenarios.
+ .
+ This package contains the NvIFROpenGL runtime library.
+
+Package: linux-modules-nvidia-390-5.4.0-1009-aws
+Description-md5: 241e70450e68e8d3b6623cf4a99fd62d
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ one of the linux-modules-nvidia-390-aws* meta-packages,
+ which will ensure that upgrades work correctly, and that supporting packages are
+ also installed.
+
+Package: linux-modules-nvidia-390-5.4.0-1009-gcp
+Description-md5: 9fec5b757484f91aa39f234594a99c99
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-390-5.4.0-1009-oracle
+Description-md5: 9fec5b757484f91aa39f234594a99c99
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-390-5.4.0-1010-azure
+Description-md5: 6a818e70dfa898275515f03b246c77a5
+Description-en: Linux kernel nvidia modules for version 5.4.0-1010
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1010.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ one of the linux-modules-nvidia-390-azure* meta-packages,
+ which will ensure that upgrades work correctly, and that supporting packages are
+ also installed.
+
+Package: linux-modules-nvidia-390-5.4.0-26-generic
+Description-md5: ef9c1228a3fc6aac59855be893eaaef9
+Description-en: Linux kernel nvidia modules for version 5.4.0-26
+ This package contains the Linux kernel nvidia modules for version 5.4.0-26.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-390-5.4.0-26-lowlatency
+Description-md5: ef9c1228a3fc6aac59855be893eaaef9
+Description-en: Linux kernel nvidia modules for version 5.4.0-26
+ This package contains the Linux kernel nvidia modules for version 5.4.0-26.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-390-aws
+Description-md5: 3db35d39378b02ecd629e28df820e061
+Description-en: Extra drivers for nvidia-390 for aws
+ Install extra signed nvidia-390 modules compatible with
+ aws
+
+Package: linux-modules-nvidia-390-azure
+Description-md5: 4018528e538ec6378a50fcc856e767a9
+Description-en: Extra drivers for nvidia-390 for azure
+ Install extra signed nvidia-390 modules compatible with
+ azure
+
+Package: linux-modules-nvidia-390-gcp
+Description-md5: d35567e44dee9263c40419aa9a072201
+Description-en: Extra drivers for nvidia-390 for the gcp flavour
+ Install extra signed nvidia-390 modules compatible with the gcp flavour.
+
+Package: linux-modules-nvidia-390-generic
+Description-md5: 2f2a1f00722d2b9effe53f66be767dd6
+Description-en: Extra drivers for nvidia-390 for the generic flavour
+ Install extra signed nvidia-390 modules compatible with the generic flavour.
+
+Package: linux-modules-nvidia-390-generic-hwe-20.04
+Description-md5: 2f2a1f00722d2b9effe53f66be767dd6
+Description-en: Extra drivers for nvidia-390 for the generic flavour
+ Install extra signed nvidia-390 modules compatible with the generic flavour.
+
+Package: linux-modules-nvidia-390-lowlatency
+Description-md5: 5e09ce6e7767c2556e1c5fb691831e8a
+Description-en: Extra drivers for nvidia-390 for the lowlatency flavour
+ Install extra signed nvidia-390 modules compatible with the lowlatency flavour.
+
+Package: linux-modules-nvidia-390-lowlatency-hwe-20.04
+Description-md5: 5e09ce6e7767c2556e1c5fb691831e8a
+Description-en: Extra drivers for nvidia-390 for the lowlatency flavour
+ Install extra signed nvidia-390 modules compatible with the lowlatency flavour.
+
+Package: linux-modules-nvidia-390-oem
+Description-md5: 1221f30d32cfcd5a4492e98017e153d1
+Description-en: Extra drivers for nvidia-390 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades from linux-oem to generic
+
+Package: linux-modules-nvidia-390-oem-osp1
+Description-md5: 16d98be0db69051f6616c75faa8ac587
+Description-en: Extra drivers for nvidia-390 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades from linux-oem-osp1 to generic
+
+Package: linux-modules-nvidia-390-oracle
+Description-md5: 37db51081f61816d17faa61279234a0a
+Description-en: Extra drivers for nvidia-390 for the oracle flavour
+ Install extra signed nvidia-390 modules compatible with the oracle flavour.
+
+Package: linux-modules-nvidia-418-oem
+Description-md5: 00e43ab67bcdd89f9da36d65694e2ff9
+Description-en: Extra drivers for nvidia-418 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades from linux-oem to generic
+
+Package: linux-modules-nvidia-418-oem-osp1
+Description-md5: 670d8e4b2651ee8c8dafaad799d12a50
+Description-en: Extra drivers for nvidia-418 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades from linux-oem-osp1 to generic
+
+Package: linux-modules-nvidia-430-aws
+Description-md5: b7240c7c5e2a34ba60aaffaa372d362e
+Description-en: Extra drivers for nvidia-430 for the aws flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-430-azure
+Description-md5: 508c8d2fa6add2c3f6e19e0d99a00ea6
+Description-en: Extra drivers for nvidia-430 for the azure flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-430-gcp
+Description-md5: 55d53b90ef0bc558bd6ee77da99df1a4
+Description-en: Extra drivers for nvidia-430 for the gcp flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-430-generic
+Description-md5: c97cb15a721825690399e76b116f5821
+Description-en: Extra drivers for nvidia-430 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-430-lowlatency
+Description-md5: c97cb15a721825690399e76b116f5821
+Description-en: Extra drivers for nvidia-430 for the generic flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-430-oracle
+Description-md5: d0641c9ee1652214c8aceb6e02de4982
+Description-en: Extra drivers for nvidia-430 for the oracle flavour (dummy transitional package)
+ Transitional package for upgrades of -430 to -440.
+
+Package: linux-modules-nvidia-440-5.4.0-1009-aws
+Description-md5: 0643de813e71e591e5d5e7b3268e999f
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ one of the linux-modules-nvidia-440-aws* meta-packages,
+ which will ensure that upgrades work correctly, and that supporting packages are
+ also installed.
+
+Package: linux-modules-nvidia-440-5.4.0-1009-gcp
+Description-md5: 9fec5b757484f91aa39f234594a99c99
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-440-5.4.0-1009-oracle
+Description-md5: 9fec5b757484f91aa39f234594a99c99
+Description-en: Linux kernel nvidia modules for version 5.4.0-1009
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1009.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-440-5.4.0-1010-azure
+Description-md5: d418e3c11e0ce49abf3b718e9212909d
+Description-en: Linux kernel nvidia modules for version 5.4.0-1010
+ This package contains the Linux kernel nvidia modules for version 5.4.0-1010.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ one of the linux-modules-nvidia-440-azure* meta-packages,
+ which will ensure that upgrades work correctly, and that supporting packages are
+ also installed.
+
+Package: linux-modules-nvidia-440-5.4.0-26-generic
+Description-md5: ef9c1228a3fc6aac59855be893eaaef9
+Description-en: Linux kernel nvidia modules for version 5.4.0-26
+ This package contains the Linux kernel nvidia modules for version 5.4.0-26.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-440-5.4.0-26-lowlatency
+Description-md5: ef9c1228a3fc6aac59855be893eaaef9
+Description-en: Linux kernel nvidia modules for version 5.4.0-26
+ This package contains the Linux kernel nvidia modules for version 5.4.0-26.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-440-5.6.0-1007-oem
+Description-md5: bcdf64eda3b8e0a417da92c75dfa9b88
+Description-en: Linux kernel nvidia modules for version 5.6.0-1007
+ This package contains the Linux kernel nvidia modules for version 5.6.0-1007.
+ .
+ You likely do not want to install this package directly. Instead, install the
+ linux-image-nvidia-FLAVOUR meta-package, which will ensure that upgrades work
+ correctly, and that supporting packages are also installed.
+
+Package: linux-modules-nvidia-440-aws
+Description-md5: 689c7cc84ff781c55d142b223f9554a9
+Description-en: Extra drivers for nvidia-440 for aws
+ Install extra signed nvidia-440 modules compatible with
+ aws
+
+Package: linux-modules-nvidia-440-azure
+Description-md5: a9a4b5cc581edef2185f0551f1056b75
+Description-en: Extra drivers for nvidia-440 for azure
+ Install extra signed nvidia-440 modules compatible with
+ azure
+
+Package: linux-modules-nvidia-440-gcp
+Description-md5: 0a56a862b2035b9e9fdb04d211df6236
+Description-en: Extra drivers for nvidia-440 for the gcp flavour
+ Install extra signed nvidia-440 modules compatible with the gcp flavour.
+
+Package: linux-modules-nvidia-440-generic
+Description-md5: 78b942484ce2047c36bdc8c0efe9f2f3
+Description-en: Extra drivers for nvidia-440 for the generic flavour
+ Install extra signed nvidia-440 modules compatible with the generic flavour.
+
+Package: linux-modules-nvidia-440-generic-hwe-20.04
+Description-md5: 78b942484ce2047c36bdc8c0efe9f2f3
+Description-en: Extra drivers for nvidia-440 for the generic flavour
+ Install extra signed nvidia-440 modules compatible with the generic flavour.
+
+Package: linux-modules-nvidia-440-lowlatency
+Description-md5: 06bc37111ee2b793eab72fd5448b1b42
+Description-en: Extra drivers for nvidia-440 for the lowlatency flavour
+ Install extra signed nvidia-440 modules compatible with the lowlatency flavour.
+
+Package: linux-modules-nvidia-440-lowlatency-hwe-20.04
+Description-md5: 06bc37111ee2b793eab72fd5448b1b42
+Description-en: Extra drivers for nvidia-440 for the lowlatency flavour
+ Install extra signed nvidia-440 modules compatible with the lowlatency flavour.
+
+Package: linux-modules-nvidia-440-oem-20.04
+Description-md5: bf9311d360ef83135fc6fb86e79343de
+Description-en: Extra drivers for nvidia-440 for the OEM flavour
+ Install extra signed nvidia-440 modules compatible with the OEM flavour.
+
+Package: linux-modules-nvidia-440-oracle
+Description-md5: 73f9643941e3ffb2c538a2f30059738f
+Description-en: Extra drivers for nvidia-440 for the oracle flavour
+ Install extra signed nvidia-440 modules compatible with the oracle flavour.
+
+Package: nvidia-331
+Description-md5: 3612f7cb365b0b5804f0fb129ccb1c2c
+Description-en: Transitional package for nvidia-331
+ This is a transitional package for nvidia-331, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-331-dev
+Description-md5: 6c98e0772fd230780190db0e8cbb108c
+Description-en: Transitional package for nvidia-340-dev
+ This is a transitional package for nvidia-340-dev, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-331-updates
+Description-md5: 57112f542d553ab72039643ae9695ee9
+Description-en: Transitional package for nvidia-340
+ This is a transitional package for nvidia-340, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-331-updates-dev
+Description-md5: 6c98e0772fd230780190db0e8cbb108c
+Description-en: Transitional package for nvidia-340-dev
+ This is a transitional package for nvidia-340-dev, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-331-updates-uvm
+Description-md5: 57112f542d553ab72039643ae9695ee9
+Description-en: Transitional package for nvidia-340
+ This is a transitional package for nvidia-340, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-331-uvm
+Description-md5: 57112f542d553ab72039643ae9695ee9
+Description-en: Transitional package for nvidia-340
+ This is a transitional package for nvidia-340, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-340
+Description-md5: 8597c97ef19d5359374bc2742e6dd180
+Description-en: NVIDIA binary driver - version 340.108
+ The binary driver provide optimized hardware acceleration of OpenGL
+ applications via a direct-rendering X Server. AGP, PCIe, SLI, TV-out
+ and flat panel displays are also supported.
+ .
+ This package also includes the source for building the kernel module
+ required by the Xorg driver, and provides NVIDIA's implementation of
+ the Video Decode and presentation API. The latter enables acceleration
+ for GeForce 8 and later series cards for h264 video.
+ .
+ Release Notes and supported GPUs:
+ http://www.nvidia.com/object/linux-display-amd64-340.108-driver.html
+
+Package: nvidia-340-dev
+Description-md5: ef3b76d980ecacaf3116114549ba70ca
+Description-en: NVIDIA binary Xorg driver development files
+ This package contains the NVIDIA binary Xorg driver
+ development files.
+ .
+ For more information on this source package visit NVIDIA's homepage
+ at http://www.nvidia.com/ .
+
+Package: nvidia-340-updates
+Description-md5: 57112f542d553ab72039643ae9695ee9
+Description-en: Transitional package for nvidia-340
+ This is a transitional package for nvidia-340, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-340-updates-dev
+Description-md5: 6c98e0772fd230780190db0e8cbb108c
+Description-en: Transitional package for nvidia-340-dev
+ This is a transitional package for nvidia-340-dev, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-340-uvm
+Description-md5: 6150dcc587e7591e1163978c48a23ab4
+Description-en: Transitional package for nvidia-340
+ This is a transitional package for nvidia-340.
+
+Package: nvidia-384
+Description-md5: 5e7381ee8cd139d587750b38f0b51589
+Description-en: Transitional package for nvidia-driver-390
+ This is a transitional package for nvidia-driver-390, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-384-dev
+Description-md5: 5e7381ee8cd139d587750b38f0b51589
+Description-en: Transitional package for nvidia-driver-390
+ This is a transitional package for nvidia-driver-390, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-compute-utils-390
+Description-md5: bf6fab9efc1024a52f79dd543478f871
+Description-en: NVIDIA compute utilities
+ This package provides utility binaries for paraller general purpose
+ computing use cases with the NVIDIA driver.
+ .
+ CUDA MPS is a feature that allows multiple CUDA processes to share a single
+ GPU context. CUDA MPS should be transparent to CUDA programs.
+ .
+ CUDA MPS requires a device that supports Unified Virtual Address (UVA) and
+ has compute capability SM 3.5 or higher.
+ Pre-CUDA 4.0 APIs are not supported under CUDA MPS.
+
+Package: nvidia-compute-utils-418
+Description-md5: a7a68e2fd56464f462a97d3030586412
+Description-en: Transitional package for nvidia-compute-utils-430
+ This is a transitional package for nvidia-compute-utils-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-compute-utils-430
+Description-md5: c12e0e30657359fae999c5f159fd083a
+Description-en: Transitional package for nvidia-compute-utils-440
+ This is a transitional package for nvidia-compute-utils-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-compute-utils-435
+Description-md5: bf6fab9efc1024a52f79dd543478f871
+Description-en: NVIDIA compute utilities
+ This package provides utility binaries for paraller general purpose
+ computing use cases with the NVIDIA driver.
+ .
+ CUDA MPS is a feature that allows multiple CUDA processes to share a single
+ GPU context. CUDA MPS should be transparent to CUDA programs.
+ .
+ CUDA MPS requires a device that supports Unified Virtual Address (UVA) and
+ has compute capability SM 3.5 or higher.
+ Pre-CUDA 4.0 APIs are not supported under CUDA MPS.
+
+Package: nvidia-compute-utils-440
+Description-md5: bf6fab9efc1024a52f79dd543478f871
+Description-en: NVIDIA compute utilities
+ This package provides utility binaries for paraller general purpose
+ computing use cases with the NVIDIA driver.
+ .
+ CUDA MPS is a feature that allows multiple CUDA processes to share a single
+ GPU context. CUDA MPS should be transparent to CUDA programs.
+ .
+ CUDA MPS requires a device that supports Unified Virtual Address (UVA) and
+ has compute capability SM 3.5 or higher.
+ Pre-CUDA 4.0 APIs are not supported under CUDA MPS.
+
+Package: nvidia-dkms-390
+Description-md5: ec8c193060b5458922cc0bda62df7796
+Description-en: NVIDIA DKMS package
+ This package builds the NVIDIA kernel module needed by the userspace
+ driver, using DKMS.
+ Provided that you have the kernel header packages installed, the kernel
+ module will be built for your running kernel, and automatically rebuilt for
+ any new kernel headers that are installed.
+
+Package: nvidia-dkms-418
+Description-md5: 1d1bed3ba4d9d61f3e45599e2a60eb16
+Description-en: Transitional package for nvidia-dkms-430
+ This is a transitional package for nvidia-dkms-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-dkms-430
+Description-md5: 5c83bdcca0d585b076eb478732f29e90
+Description-en: Transitional package for nvidia-dkms-440
+ This is a transitional package for nvidia-dkms-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-dkms-435
+Description-md5: ec8c193060b5458922cc0bda62df7796
+Description-en: NVIDIA DKMS package
+ This package builds the NVIDIA kernel module needed by the userspace
+ driver, using DKMS.
+ Provided that you have the kernel header packages installed, the kernel
+ module will be built for your running kernel, and automatically rebuilt for
+ any new kernel headers that are installed.
+
+Package: nvidia-dkms-440
+Description-md5: ec8c193060b5458922cc0bda62df7796
+Description-en: NVIDIA DKMS package
+ This package builds the NVIDIA kernel module needed by the userspace
+ driver, using DKMS.
+ Provided that you have the kernel header packages installed, the kernel
+ module will be built for your running kernel, and automatically rebuilt for
+ any new kernel headers that are installed.
+
+Package: nvidia-driver-390
+Description-md5: 814a7c3076594296e6ee2a9c3d826740
+Description-en: NVIDIA driver metapackage
+ This metapackage depends on the NVIDIA binary driver and on all of its libraries,
+ to provide hardware acceleration for OpenGL/GLX/EGL/GLES/Vulkan
+ applications on either X11 or on Wayland.
+ .
+ See /usr/share/doc/nvidia-driver-390/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: nvidia-driver-418
+Description-md5: 4827e73f0efd6022196ef03ec384d854
+Description-en: Transitional package for nvidia-driver-430
+ This is a transitional package for nvidia-driver-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-driver-430
+Description-md5: 1553c698471d680950a9468f2b9591a3
+Description-en: Transitional package for nvidia-driver-440
+ This is a transitional package for nvidia-driver-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-driver-435
+Description-md5: 3bdc5f4ce6c242fa3668e56a926d03d6
+Description-en: NVIDIA driver metapackage
+ This metapackage depends on the NVIDIA binary driver and on all of its libraries,
+ to provide hardware acceleration for OpenGL/GLX/EGL/GLES/Vulkan
+ applications on either X11 or on Wayland.
+ .
+ See /usr/share/doc/nvidia-driver-435/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: nvidia-driver-440
+Description-md5: e18331a2f439a2134ea149ec7de1a5e4
+Description-en: NVIDIA driver metapackage
+ This metapackage depends on the NVIDIA binary driver and on all of its libraries,
+ to provide hardware acceleration for OpenGL/GLX/EGL/GLES/Vulkan
+ applications on either X11 or on Wayland.
+ .
+ See /usr/share/doc/nvidia-driver-440/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: nvidia-headless-390
+Description-md5: 86d5105d59972487393b3dbe5c901379
+Description-en: NVIDIA headless metapackage
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-390 metapackage.
+
+Package: nvidia-headless-418
+Description-md5: b4ff4287bee2fbb5bc1ed507e55617dd
+Description-en: Transitional package for nvidia-headless-430
+ This is a transitional package for nvidia-headless-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-headless-430
+Description-md5: e8413c4a8a2e74f4f373315742e28741
+Description-en: Transitional package for nvidia-headless-440
+ This is a transitional package for nvidia-headless-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-headless-435
+Description-md5: 218d3a6126f7ee53655ebeddcebb536f
+Description-en: NVIDIA headless metapackage
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-435 metapackage.
+
+Package: nvidia-headless-440
+Description-md5: f80bba4867c99e792b2a01edc41d60ed
+Description-en: NVIDIA headless metapackage
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-440 metapackage.
+
+Package: nvidia-headless-no-dkms-390
+Description-md5: 8a64bdacdf6cbf15c61b167bc3577159
+Description-en: NVIDIA headless metapackage - no DKMS
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL. DKMS will not be installed, and, therefore, the kernel module
+ will not be built.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-390 metapackage.
+
+Package: nvidia-headless-no-dkms-418
+Description-md5: b757ac6ef7b7c908e0d7a1b2766006ca
+Description-en: Transitional package for nvidia-headless-no-dkms-430
+ This is a transitional package for nvidia-headless-no-dkms-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-headless-no-dkms-430
+Description-md5: 76b7afff883ef840d34aa6edcf742001
+Description-en: Transitional package for nvidia-headless-no-dkms-440
+ This is a transitional package for nvidia-headless-no-dkms-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-headless-no-dkms-435
+Description-md5: b9f61f207f8832ea27419772c6decebd
+Description-en: NVIDIA headless metapackage - no DKMS
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL. DKMS will not be installed, and, therefore, the kernel module
+ will not be built.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-435 metapackage.
+
+Package: nvidia-headless-no-dkms-440
+Description-md5: c6836f5128f57eff4cfc3ac217148353
+Description-en: NVIDIA headless metapackage - no DKMS
+ This metapackage installs the NVIDIA driver and the libraries that enable
+ parallel general purpose computation through CUDA and
+ OpenCL. DKMS will not be installed, and, therefore, the kernel module
+ will not be built.
+ .
+ Install this package if you do not need X11 or Wayland support, which is
+ provided by the nvidia-driver-440 metapackage.
+
+Package: nvidia-kernel-common-390
+Description-md5: caa64a2a10d329a0475baf9ebcdb40d5
+Description-en: Shared files used with the kernel module
+ This package installs all the optional accessory files for the NVIDIA
+ kernel module.
+ .
+ Install this package if you want to blacklist any conflicting kernel
+ modules, and if you want udev to load the the NVIDIA kernel modules,
+ and to create the uvm devices automatically.
+
+Package: nvidia-kernel-common-418
+Description-md5: a8217b70acdd32fccf8d424917b249a4
+Description-en: Transitional package for nvidia-kernel-common-430
+ This is a transitional package for nvidia-kernel-common-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-kernel-common-430
+Description-md5: a466aa9933e07508d18fb4b4c51f78e8
+Description-en: Transitional package for nvidia-kernel-common-440
+ This is a transitional package for nvidia-kernel-common-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-kernel-common-435
+Description-md5: caa64a2a10d329a0475baf9ebcdb40d5
+Description-en: Shared files used with the kernel module
+ This package installs all the optional accessory files for the NVIDIA
+ kernel module.
+ .
+ Install this package if you want to blacklist any conflicting kernel
+ modules, and if you want udev to load the the NVIDIA kernel modules,
+ and to create the uvm devices automatically.
+
+Package: nvidia-kernel-common-440
+Description-md5: caa64a2a10d329a0475baf9ebcdb40d5
+Description-en: Shared files used with the kernel module
+ This package installs all the optional accessory files for the NVIDIA
+ kernel module.
+ .
+ Install this package if you want to blacklist any conflicting kernel
+ modules, and if you want udev to load the the NVIDIA kernel modules,
+ and to create the uvm devices automatically.
+
+Package: nvidia-kernel-source-390
+Description-md5: dc60d6861ca351f7cadc7d8fcc74e854
+Description-en: NVIDIA kernel source package
+ This package provides the NVIDIA kernel source needed by the userspace
+ driver.
+
+Package: nvidia-kernel-source-418
+Description-md5: 41688a3cfc4c5279f6e59eea54e25f40
+Description-en: Transitional package for nvidia-kernel-source-430
+ This is a transitional package for nvidia-kernel-source-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-kernel-source-430
+Description-md5: 3bbb65ec55a945136cd8bffb0f6668a6
+Description-en: Transitional package for nvidia-kernel-source-440
+ This is a transitional package for nvidia-kernel-source-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-kernel-source-435
+Description-md5: dc60d6861ca351f7cadc7d8fcc74e854
+Description-en: NVIDIA kernel source package
+ This package provides the NVIDIA kernel source needed by the userspace
+ driver.
+
+Package: nvidia-kernel-source-440
+Description-md5: dc60d6861ca351f7cadc7d8fcc74e854
+Description-en: NVIDIA kernel source package
+ This package provides the NVIDIA kernel source needed by the userspace
+ driver.
+
+Package: nvidia-opencl-icd-340
+Description-md5: a9c59351040d333e50f4a411fc913d8e
+Description-en: NVIDIA OpenCL ICD
+ OpenCL (Open Computing Language) is a multivendor open standard for
+ general-purpose parallel programming of heterogeneous systems that include
+ CPUs, GPUs and other processors.
+ .
+ This package provides the NVIDIA installable client driver (ICD) for OpenCL
+ which supports NVIDIA GPUs.
+
+Package: nvidia-utils-390
+Description-md5: d81f3aa17f8585f803913263abcf99e2
+Description-en: NVIDIA driver support binaries
+ This package contains supporting binaries for the NVIDIA driver.
+
+Package: nvidia-utils-418
+Description-md5: 0cef78fa50b0b5c10b582b8f80558735
+Description-en: Transitional package for nvidia-utils-430
+ This is a transitional package for nvidia-utils-430, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-utils-430
+Description-md5: acd0449144ee1a6ab3e947098ebd8866
+Description-en: Transitional package for nvidia-utils-440
+ This is a transitional package for nvidia-utils-440, and can be
+ safely removed after the installation is complete.
+
+Package: nvidia-utils-435
+Description-md5: d81f3aa17f8585f803913263abcf99e2
+Description-en: NVIDIA driver support binaries
+ This package contains supporting binaries for the NVIDIA driver.
+
+Package: nvidia-utils-440
+Description-md5: d81f3aa17f8585f803913263abcf99e2
+Description-en: NVIDIA driver support binaries
+ This package contains supporting binaries for the NVIDIA driver.
+
+Package: xserver-xorg-video-nvidia-390
+Description-md5: 0e48d46882de977abded40ac6bbb282b
+Description-en: NVIDIA binary Xorg driver
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ See /usr/share/doc/nvidia-driver-390/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: xserver-xorg-video-nvidia-418
+Description-md5: 637bbbc99b21072356a10dbaaf806d1b
+Description-en: Transitional package for xserver-xorg-video-nvidia-430
+ This is a transitional package for xserver-xorg-video-nvidia-430, and can be
+ safely removed after the installation is complete.
+
+Package: xserver-xorg-video-nvidia-430
+Description-md5: eda589e351803c5169ea931e95261ed5
+Description-en: Transitional package for xserver-xorg-video-nvidia-440
+ This is a transitional package for xserver-xorg-video-nvidia-440, and can be
+ safely removed after the installation is complete.
+
+Package: xserver-xorg-video-nvidia-435
+Description-md5: eecf94410a3595805ed6d7455927f12f
+Description-en: NVIDIA binary Xorg driver
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ See /usr/share/doc/nvidia-driver-435/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: xserver-xorg-video-nvidia-440
+Description-md5: c1b554737af685416b3c18758101778b
+Description-en: NVIDIA binary Xorg driver
+ The NVIDIA binary driver provides optimized hardware acceleration of
+ OpenGL/GLX/EGL/GLES applications via a direct-rendering X Server
+ for graphics cards using NVIDIA chip sets.
+ .
+ See /usr/share/doc/nvidia-driver-440/README.txt.gz
+ for a complete list of supported GPUs and PCI IDs.
+
+Package: nvidia-340
+Description-md5: 1f352f939d1d5b6c48ef7626bcce37fd
+Description-en: NVIDIA binary driver - version 340.108
+ The binary driver provide optimized hardware acceleration of OpenGL
+ applications via a direct-rendering X Server. AGP, PCIe, SLI, TV-out
+ and flat panel displays are also supported.
+ .
+ This package also includes the source for building the kernel module
+ required by the Xorg driver, and provides NVIDIA's implementation of
+ the Video Decode and presentation API. The latter enables acceleration
+ for GeForce 8 and later series cards for h264 video.
+ .
+ Release Notes and supported GPUs:
+ http://www.nvidia.com/object/linux-display-32bit-arm-340.108-driver.html
+
+Package: sl-modem-daemon
+Description-md5: dd33edc29e8f6ca6bd7aaea974c49391
+Description-en: SmartLink software modem daemon
+ The SmartLink modem daemon is the application part of the
+ driver for recent modems produced by Smart Link Ltd.
+ .
+ This package replaces (along with hardware access drivers) the old
+ driver generation (2.7.x) which consisted of kernel modules only.
+ .
+ It needs a kernel driver to access the hardware. This can be either
+ recent ALSA (shipped with a newer kernel (>=2.6.4) with ALSA support
+ and snd-intel8x0m module) which is sufficient for basic operation and
+ data/Internet connection, or the SmartLink kernel driver which is
+ provided by separate packages which you can build using the source from
+ the sl-modem-dkms package.
+

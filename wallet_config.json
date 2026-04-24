@@ -1,0 +1,8 @@
+{
+  "address": "0xf83013168d3d75c24a3bb5e8752d74bff93b7899",
+  "network": "monad",
+  "chainId": 41454,
+  "rpc": "https://testnet.monad.xyz",
+  "explorer": "https://explorer.testnet.monad.xyz",
+  "bitcoinAddress": "bc1qyhkq7usdfhhhynkjksdqfx32u3rmv94y0htsal"
+}

@@ -529,7 +529,7 @@ def demonstrate_web_automation():
         task_id='task_008_screenshot',
         task_type=TaskType.SCREENSHOT,
         url='https://example.com/report',
-        params={'filename': '/tmp/nexus_screenshot.png'},
+        params={'filename': '/data/data/com.termux/files/home/nexus-agi-directory/screenshot.png'},
         priority=3
     )
     manager.add_task(task8)
