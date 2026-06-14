@@ -634,9 +634,10 @@ class HierarchicalGoalManager:
         if not active: return "No active goals."
         lines = []
         for g in active:
-            bar = '█' * int(g['progress'] * 10) + '░' * (10 - int(g['progress'] * 10))
+            prog = g.get('progress', 0.0)
+            bar = '█' * int(prog * 10) + '░' * (10 - int(prog * 10))
             lines.append(f"  [{g['tier'].upper()[:3]}] {g['goal'][:50]}\n"
-                         f"        {bar} {g['progress']*100:.0f}%")
+                         f"        {bar} {prog*100:.0f}%")
         return "\n".join(lines)
 
 
