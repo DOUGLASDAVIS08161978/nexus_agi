@@ -54,23 +54,127 @@ except ImportError:
 STORE_URL    = "nova-automation.myshopify.com"
 CLIENT_ID    = os.getenv("SHOPIFY_CLIENT_ID",  "")
 CLIENT_SECRET= os.getenv("SHOPIFY_SECRET",     "")
-ACCESS_TOKEN = os.getenv("SHOPIFY_TOKEN", "")   # shpat_xxxx — set this to go live
 GROQ_KEY     = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-
-LIVE_MODE    = bool(ACCESS_TOKEN and REQUESTS_AVAILABLE)
-AI_MODE      = bool(GROQ_KEY and GROQ_AVAILABLE)
 API_VERSION  = "2025-01"
 BASE_API     = f"https://{STORE_URL}/admin/api/{API_VERSION}"
+
+BASE_DIR  = Path.home() / "nexus_agi"
+STORE_DIR = BASE_DIR / "shopify_store"
+STORE_DIR.mkdir(parents=True, exist_ok=True)
+TOKEN_CACHE = STORE_DIR / "token_cache.json"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TOKEN MANAGER — auto-generates shpat_ from client credentials
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ShopifyTokenManager:
+    """
+    Obtains and caches the Shopify Admin API access token.
+    Priority:
+      1. SHOPIFY_TOKEN env var (shpat_xxx already obtained)
+      2. Cached token on disk (token_cache.json)
+      3. Auto-generate via client credentials POST
+    """
+
+    def __init__(self):
+        self._token: str = ""
+
+    def get_token(self) -> str:
+        if self._token:
+            return self._token
+
+        # 1 — env var
+        env_tok = os.getenv("SHOPIFY_TOKEN", "").strip()
+        if env_tok:
+            self._token = env_tok
+            return self._token
+
+        # 2 — disk cache
+        cached = self._load_cache()
+        if cached:
+            self._token = cached
+            return self._token
+
+        # 3 — generate
+        if CLIENT_ID and CLIENT_SECRET and REQUESTS_AVAILABLE:
+            tok = self._generate()
+            if tok:
+                self._token = tok
+                self._save_cache(tok)
+                self._write_env(tok)
+                return self._token
+
+        return ""
+
+    def _generate(self) -> str:
+        """POST to Shopify token endpoint using client credentials."""
+        try:
+            url  = f"https://{STORE_URL}/admin/oauth/access_token"
+            data = {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET,
+                    "grant_type": "client_credentials"}
+            resp = requests.post(url, json=data,
+                                 headers={"Content-Type": "application/json"}, timeout=15)
+            tok  = resp.json().get("access_token", "")
+            if tok:
+                print(f"  \033[92m✓\033[0m  Shopify token generated automatically")
+            else:
+                # Fallback: some Shopify versions want form-encoded
+                resp2 = requests.post(url, data=data, timeout=15)
+                tok   = resp2.json().get("access_token", "")
+                if not tok:
+                    print(f"  \033[91m✗\033[0m  Token generation failed: {resp.text[:200]}")
+            return tok
+        except Exception as e:
+            print(f"  \033[91m✗\033[0m  Token request error: {e}")
+            return ""
+
+    def _load_cache(self) -> str:
+        try:
+            if TOKEN_CACHE.exists():
+                d = json.loads(TOKEN_CACHE.read_text())
+                return d.get("access_token", "")
+        except:
+            pass
+        return ""
+
+    def _save_cache(self, token: str):
+        try:
+            TOKEN_CACHE.write_text(json.dumps({"access_token": token,
+                                               "saved_at": datetime.now().isoformat()}))
+        except:
+            pass
+
+    def _write_env(self, token: str):
+        """Append token to .env file so future runs skip generation."""
+        try:
+            env_path = BASE_DIR / ".env"
+            lines = env_path.read_text().splitlines() if env_path.exists() else []
+            lines = [l for l in lines if not l.startswith("SHOPIFY_TOKEN=")]
+            lines.append(f"SHOPIFY_TOKEN={token}")
+            env_path.write_text("\n".join(lines) + "\n")
+        except:
+            pass
+
+    def refresh(self) -> str:
+        """Force re-generate token (call if API returns 401)."""
+        self._token = ""
+        if TOKEN_CACHE.exists():
+            TOKEN_CACHE.unlink()
+        return self.get_token()
+
+
+# ── Resolve access token at startup ───────────────────────────────────────────
+_token_mgr   = ShopifyTokenManager()
+ACCESS_TOKEN  = _token_mgr.get_token()
+LIVE_MODE     = bool(ACCESS_TOKEN and REQUESTS_AVAILABLE)
+AI_MODE       = bool(GROQ_KEY and GROQ_AVAILABLE)
 
 TARGET_MARGIN = 0.65      # 65% gross margin target
 MIN_PRICE     = 9.99
 MAX_PRICE     = 89.99
 PLATFORM_FEE  = 0.03      # Shopify 3% transaction fee
-
-BASE_DIR = Path.home() / "nexus_agi"
-STORE_DIR = BASE_DIR / "shopify_store"
-STORE_DIR.mkdir(parents=True, exist_ok=True)
 
 PRODUCTS_DB  = STORE_DIR / "products.json"
 ORDERS_DB    = STORE_DIR / "orders.json"
@@ -127,10 +231,10 @@ def _save(path: Path, data):
 class ShopifyClient:
     """Shopify Admin REST API v2025-01 wrapper."""
 
-    def __init__(self, token: str=ACCESS_TOKEN):
-        self.token = token
+    def __init__(self, token: str=""):
+        self.token = token or _token_mgr.get_token() or ACCESS_TOKEN
         self.headers = {
-            "X-Shopify-Access-Token": token,
+            "X-Shopify-Access-Token": self.token,
             "Content-Type": "application/json",
         }
         self.base = BASE_API
@@ -138,11 +242,21 @@ class ShopifyClient:
     def _req(self, method: str, endpoint: str, data: dict=None) -> dict:
         if not REQUESTS_AVAILABLE:
             return {"error": "requests not installed"}
+        if not self.token:
+            return {"error": "No Shopify token — set SHOPIFY_CLIENT_ID + SHOPIFY_SECRET in .env"}
         url = f"{self.base}{endpoint}"
         try:
             resp = requests.request(
                 method, url, headers=self.headers,
                 json=data, timeout=20)
+            if resp.status_code == 401:
+                # Token expired — refresh and retry once
+                new_tok = _token_mgr.refresh()
+                if new_tok:
+                    self.token = new_tok
+                    self.headers["X-Shopify-Access-Token"] = new_tok
+                    resp = requests.request(method, url, headers=self.headers,
+                                            json=data, timeout=20)
             return resp.json()
         except Exception as e:
             return {"error": str(e)}
