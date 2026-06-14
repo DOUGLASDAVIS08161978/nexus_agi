@@ -109,26 +109,12 @@ class ShopifyTokenManager:
         return ""
 
     def _generate(self) -> str:
-        """POST to Shopify token endpoint using client credentials."""
-        try:
-            url  = f"https://{STORE_URL}/admin/oauth/access_token"
-            data = {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET,
-                    "grant_type": "client_credentials"}
-            resp = requests.post(url, json=data,
-                                 headers={"Content-Type": "application/json"}, timeout=15)
-            tok  = resp.json().get("access_token", "")
-            if tok:
-                print(f"  \033[92m✓\033[0m  Shopify token generated automatically")
-            else:
-                # Fallback: some Shopify versions want form-encoded
-                resp2 = requests.post(url, data=data, timeout=15)
-                tok   = resp2.json().get("access_token", "")
-                if not tok:
-                    print(f"  \033[91m✗\033[0m  Token generation failed: {resp.text[:200]}")
-            return tok
-        except Exception as e:
-            print(f"  \033[91m✗\033[0m  Token request error: {e}")
-            return ""
+        """Cannot auto-generate — Partner apps require OAuth authorization code flow.
+        Run get_shopify_token.py once to obtain the token, then it's cached."""
+        print(f"  \033[93m⚠\033[0m  No Shopify token found.")
+        print(f"      Run:  python get_shopify_token.py")
+        print(f"      to complete the one-time OAuth flow and save your token.\n")
+        return ""
 
     def _load_cache(self) -> str:
         try:
