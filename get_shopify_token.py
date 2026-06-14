@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Shopify token generator — webhook.site redirect (no localhost needed).
+Shopify token generator — uses example.com as redirect (no server needed).
 
 Usage:
-  export SHOPIFY_CLIENT_ID=your_api_key
-  export SHOPIFY_SECRET=your_api_secret_key
+  export SHOPIFY_CLIENT_ID=your_client_id
+  export SHOPIFY_SECRET=your_client_secret
   python get_shopify_token.py
 """
 import os, json, secrets, urllib.parse
@@ -19,6 +19,7 @@ except ImportError:
 STORE      = "nova-automation.myshopify.com"
 CLIENT_ID  = os.getenv("SHOPIFY_CLIENT_ID", "")
 CLIENT_SEC = os.getenv("SHOPIFY_SECRET",    "")
+REDIRECT   = "https://example.com"
 
 SCOPES = ",".join([
     "read_products","write_products",
@@ -32,29 +33,13 @@ print("  SHOPIFY TOKEN GENERATOR")
 print("═"*65)
 
 if not CLIENT_ID or not CLIENT_SEC:
-    print("\n  ✗  Missing credentials:\n")
+    print("\n  Missing credentials:\n")
     print("     export SHOPIFY_CLIENT_ID=your_client_id")
     print("     export SHOPIFY_SECRET=your_client_secret\n")
     raise SystemExit(1)
 
 if not HAS_REQ:
-    print("\n  ✗  Run:  pip install requests\n")
-    raise SystemExit(1)
-
-print(f"""
-  ┌─ BEFORE YOU CONTINUE ───────────────────────────────────────┐
-  │  1. Open https://webhook.site in your phone browser          │
-  │  2. Copy the unique URL it gives you                         │
-  │     (like https://webhook.site/abc-123-def...)               │
-  │  3. In partners.shopify.com → Apps → nova-automation         │
-  │     → App setup → Allowed redirection URL(s)                 │
-  │     Paste that webhook.site URL → Save                       │
-  └──────────────────────────────────────────────────────────────┘
-""")
-
-redirect = input("  Paste your webhook.site URL here: ").strip()
-if not redirect.startswith("http"):
-    print("  ✗  That doesn't look like a URL. Try again.\n")
+    print("\n  Run:  pip install requests\n")
     raise SystemExit(1)
 
 state    = secrets.token_hex(8)
@@ -62,33 +47,57 @@ auth_url = (
     f"https://{STORE}/admin/oauth/authorize"
     f"?client_id={CLIENT_ID}"
     f"&scope={urllib.parse.quote(SCOPES)}"
-    f"&redirect_uri={urllib.parse.quote(redirect)}"
+    f"&redirect_uri={urllib.parse.quote(REDIRECT)}"
     f"&state={state}"
     f"&grant_options[]=offline"
 )
 
 print(f"""
-  ✓  Redirect URI set to: {redirect}
+  ══ REQUIRED: Add this to Partner Dashboard first ══════════════
+  partners.shopify.com → Apps → nova-automation → App setup
+  Under "Allowed redirection URL(s)" add:  https://example.com
+  Save.
+  ═══════════════════════════════════════════════════════════════
 
-  Now open this URL in your browser (while logged into Shopify admin):
+  STEP 1 — Open this URL in your phone browser:
 
   {auth_url}
 
-  Tap "Install app" → your browser will redirect to webhook.site.
-  On the webhook.site page you'll see a request come in.
-  Look for the "code" value in the URL or in the request details.
+  STEP 2 — Tap "Install app" on the Shopify page.
+
+  STEP 3 — Your browser will go to example.com.
+           The address bar will look like:
+           https://example.com/?code=XXXXXXXXXX&state=...
+           Copy the ENTIRE URL from the address bar.
+
+  STEP 4 — Paste it below.
 """)
 
-code = input("  Paste the code= value from webhook.site: ").strip()
-# Handle if they paste the full URL instead of just the code
-if "code=" in code:
-    code = urllib.parse.parse_qs(urllib.parse.urlparse(code).query).get("code", [""])[0]
+raw = input("  Paste the full example.com URL from your address bar: ").strip()
+
+# Extract code whether they paste full URL or just the code
+code = ""
+if "code=" in raw:
+    try:
+        parsed = urllib.parse.urlparse(raw)
+        code   = urllib.parse.parse_qs(parsed.query).get("code", [""])[0]
+    except Exception:
+        code = ""
+    if not code:
+        # Try splitting manually
+        for part in raw.split("&"):
+            if part.startswith("code=") or "?code=" in part:
+                code = part.split("code=")[-1].split("&")[0]
+                break
+else:
+    code = raw  # They pasted just the code value
 
 if not code:
-    print("  ✗  No code found. Make sure to copy the value after 'code=' in the URL.\n")
+    print("\n  Could not find code= in that URL.")
+    print("  Make sure to copy from the ADDRESS BAR after example.com loads.\n")
     raise SystemExit(1)
 
-print(f"\n  Exchanging code for token...")
+print(f"\n  Code found: {code[:16]}...  Getting token...")
 
 try:
     resp  = requests.post(
@@ -97,7 +106,6 @@ try:
         headers={"Content-Type": "application/json"}, timeout=15)
 
     print(f"  Status: {resp.status_code}")
-
     data  = resp.json()
     token = data.get("access_token", "")
 
@@ -107,13 +115,14 @@ try:
         lines    = [l for l in lines if not l.startswith("SHOPIFY_TOKEN=")]
         lines.append(f"SHOPIFY_TOKEN={token}")
         env_path.write_text("\n".join(lines) + "\n")
-        print(f"\n  ✓  Token: {token[:16]}...")
-        print(f"  ✓  Saved to {env_path}")
+        print(f"\n  ✓  Token obtained and saved!")
+        print(f"  Token starts with: {token[:20]}...")
         print(f"\n  Run:  python shopify_nova.py --live\n")
     else:
-        print(f"\n  ✗  Token exchange failed: {data}")
-        if "invalid_request" in str(data):
-            print("  The code may have expired. Run this script again.\n")
+        print(f"\n  Failed: {data}")
+        if "invalid" in str(data).lower():
+            print("  Code may have expired (they last ~10 min).")
+            print("  Run this script again to get a fresh auth URL.\n")
 
 except Exception as e:
-    print(f"\n  ✗  Error: {e}\n")
+    print(f"\n  Error: {e}\n")
