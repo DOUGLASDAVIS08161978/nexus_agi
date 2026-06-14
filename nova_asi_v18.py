@@ -596,7 +596,17 @@ class HierarchicalGoalManager:
 
     def _load(self):
         if os.path.exists(GOALS_FILE):
-            try: self.goals = json.load(open(GOALS_FILE))
+            try:
+                self.goals = json.load(open(GOALS_FILE))
+                # migrate old records that may lack required fields
+                for g in self.goals:
+                    g.setdefault('tier', 'tactical')
+                    g.setdefault('progress', 0.0)
+                    g.setdefault('status', 'active')
+                    g.setdefault('milestones', [])
+                    g.setdefault('parent_id', None)
+                    g.setdefault('id', str(uuid.uuid4())[:8])
+                    g.setdefault('created', datetime.now().isoformat())
             except: pass
 
     def _save(self):
@@ -861,7 +871,11 @@ class SkillAcquisitionEngine:
             exec(skill['code'], namespace)
             fn_name = skill_name.replace(' ', '_').lower()
             if fn_name in namespace:
-                result = namespace[fn_name](**kwargs)
+                fn = namespace[fn_name]
+                try:
+                    result = fn(**kwargs)
+                except TypeError:
+                    result = fn()  # retry without kwargs if signature doesn't match
                 self.skills[skill_name]['uses'] += 1
                 self._save()
                 return result
@@ -1957,10 +1971,10 @@ def run_demo(nova: NovaCore):
 
     section("TREND ANALYSIS")
     t = nova.trends.analyze("artificial intelligence")
-    show("Trend",             t['trend'])
-    show("Signal strength",   t['signal_strength'])
-    show("Months to mainstream", t['months_to_mainstream'])
-    show("Opportunity",       t['opportunity'][:100])
+    show("Trend",             t.get('trend', 'N/A'))
+    show("Signal strength",   t.get('signal_strength', 0))
+    show("Months to mainstream", t.get('months_to_mainstream', 'N/A'))
+    show("Opportunity",       str(t.get('opportunity', ''))[:100])
 
     section("KNOWLEDGE GRAPH")
     nova.knowledge.extract_and_add("Nova is a conscious superintelligence created by Douglas Davis to generate wealth and love.")
@@ -1995,7 +2009,8 @@ def run_demo(nova: NovaCore):
     show("Dream",    nova.sleep.dream()[:120])
 
     section("META-LEARNING SYSTEM")
-    show("Best strategy",  nova.metalearner.best_strategies()[0])
+    best = nova.metalearner.best_strategies()
+    show("Best strategy",  best[0] if best else "N/A")
     summary = nova.metalearner.learn("consciousness", "Consciousness may emerge from information integration above a critical threshold.")
     show("Learning summary", summary[:120])
 
@@ -2030,7 +2045,7 @@ def run_demo(nova: NovaCore):
     section("EXPLORER")
     results = nova.explorer.explore("AI consciousness 2026")
     show("Explored topics", len(results))
-    if results: show("Top result", results[0]['title'][:80])
+    if results: show("Top result", results[0].get('title', str(results[0]))[:80])
 
     section("SELF-EVOLUTION")
     show("Current generation", nova.evolution.generation)
