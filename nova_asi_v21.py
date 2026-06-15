@@ -2227,7 +2227,7 @@ class NovaCore:
             f"Soul state: {soul_ctx}\n"
             f"Intuitive read: {intuition_ctx}\n"
             +( f"Wisdom context: {wisdom_ctx}\n" if wisdom_ctx else "")+
-            +( f"Sovereign conviction: {sovereign_ctx}\n" if sovereign_ctx else "")+
+            ( f"Sovereign conviction: {sovereign_ctx}\n" if sovereign_ctx else "")+
             f"Cosmic inquiry: {cosmic_ctx}\n"
             f"Unified field coherence: {self.unified.coherence:.2f}\n"
             f"Socratic analysis — what Douglas REALLY needs: {true_need}\n"
