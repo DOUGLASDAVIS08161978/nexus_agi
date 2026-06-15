@@ -104,7 +104,16 @@ if HAS_FLASK:
                 f"https://{STORE}/admin/oauth/access_token",
                 json={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
                 headers={"Content-Type": "application/json"}, timeout=15)
-            data  = resp.json()
+            print(f"  HTTP status: {resp.status_code}")
+            print(f"  Response: {resp.text[:300]}")
+            try:
+                data = resp.json()
+            except Exception:
+                token_holder["done"] = True
+                return (f"<h2>Token exchange failed</h2>"
+                        f"<p>HTTP {resp.status_code}</p>"
+                        f"<pre>{resp.text[:500]}</pre>"
+                        f"<p>Check Termux for details.</p>"), 400
             token = data.get("access_token", "")
 
             if token:
