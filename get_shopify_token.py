@@ -98,15 +98,31 @@ if HAS_FLASK:
             token_holder["done"] = True
             return "<h2>State mismatch — possible CSRF. Run the script again.</h2>", 400
 
-        print(f"\n  Code received. Exchanging for token...")
+        print(f"\n  Code received: {code[:20]}...")
+        # Strip any prefix from secret — Shopify UI shows shpss_ but exchange may need raw hex
+        secret_raw = CLIENT_SEC
+        for prefix in ("shpss_", "shpat_", "shpca_"):
+            if CLIENT_SEC.startswith(prefix):
+                secret_raw = CLIENT_SEC[len(prefix):]
+                print(f"  Stripping '{prefix}' prefix from secret for exchange")
+                break
+        print(f"  Exchanging with client_id={CLIENT_ID[:12]}... secret={secret_raw[:8]}...")
         try:
+            payload = urllib.parse.urlencode({
+                "client_id": CLIENT_ID,
+                "client_secret": secret_raw,
+                "code": code
+            })
+            print(f"  POST body: {payload[:120]}")
             resp = requests.post(
                 f"https://{STORE}/admin/oauth/access_token",
-                data={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data=payload,
+                headers={"Content-Type": "application/x-www-form-urlencoded",
+                         "Accept": "application/json"},
                 timeout=15)
             print(f"  HTTP status: {resp.status_code}")
-            print(f"  Response: {resp.text[:300]}")
+            print(f"  Response headers: {dict(resp.headers).get('Content-Type','')}")
+            print(f"  Response: {resp.text[:500]}")
             try:
                 data = resp.json()
             except Exception:
