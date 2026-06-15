@@ -794,13 +794,13 @@ class AutonomousStoreManager:
 
             print(f"\n  {c(MGB, p['name'][:55])}")
             tt = campaign.get("tiktok", {})
-            print(f"  {c(YL,'TikTok hook:')}   {tt.get('hook','')[:70]}")
+            print(f"  {c(YL,'TikTok hook:')}   {str(tt.get('hook',''))[:70]}")
             ig = campaign.get("instagram", {})
-            print(f"  {c(MG,'Instagram:')}     {ig.get('caption','')[:70]}")
+            print(f"  {c(MG,'Instagram:')}     {str(ig.get('caption',''))[:70]}")
             tw = campaign.get("twitter", [])
-            if tw: print(f"  {c(BL,'Tweet #1:')}      {tw[0][:70]}")
+            if tw: print(f"  {c(BL,'Tweet #1:')}      {str(tw[0])[:70]}")
             rd = campaign.get("reddit", {})
-            print(f"  {c(GR,'Reddit title:')}  {rd.get('title','')[:70]}")
+            print(f"  {c(GR,'Reddit title:')}  {str(rd.get('title',''))[:70]}")
 
         return campaigns
 
