@@ -892,38 +892,50 @@ SETUP_GUIDE = """
   ║         NOVA SHOPIFY STORE — ONE-TIME SETUP GUIDE               ║
   ╠══════════════════════════════════════════════════════════════════╣
   ║                                                                  ║
-  ║  You need a Shopify Admin API token (starts with shpat_).       ║
-  ║  Takes about 2 minutes. Do this ONCE.                           ║
+  ║  Get a Custom App token (shpat_) — takes ~2 minutes.            ║
+  ║  Do this from your store Admin — NOT the Partner Dashboard.      ║
   ║                                                                  ║
-  ║  STEP 1 — Shopify Admin (phone browser):                        ║
-  ║    nova-automation.myshopify.com/admin                          ║
+  ║  STEP 1 — Open your Shopify Admin in a browser:                 ║
+  ║    https://vqtkit-4a.myshopify.com/admin                        ║
   ║                                                                  ║
-  ║  STEP 2 — Go to:                                                ║
-  ║    Settings → Apps and sales channels → Develop apps            ║
-  ║    (If prompted, click "Allow custom app development")           ║
+  ║  STEP 2 — Navigate to:                                          ║
+  ║    Settings (bottom-left gear icon)                              ║
+  ║    → Apps and sales channels                                     ║
+  ║    → Develop apps                                                ║
+  ║    → Allow custom app development  (if prompted)                 ║
   ║                                                                  ║
-  ║  STEP 3 — Create a new app:                                     ║
-  ║    Click "Create an app" → name it "Nova Manager"               ║
+  ║  STEP 3 — Create the app:                                       ║
+  ║    Click "Create an app"                                         ║
+  ║    Name it: Nova Manager                                         ║
+  ║    Click "Create app"                                            ║
   ║                                                                  ║
-  ║  STEP 4 — Set API scopes. Click "Configure Admin API scopes":   ║
-  ║    ✓ read_products    ✓ write_products                          ║
-  ║    ✓ read_orders      ✓ write_orders                            ║
-  ║    ✓ read_inventory   ✓ write_inventory                         ║
-  ║    ✓ read_fulfillments ✓ write_fulfillments                     ║
-  ║    Save.                                                         ║
+  ║  STEP 4 — Set API scopes:                                       ║
+  ║    Click "Configure Admin API scopes"                            ║
+  ║    Check ALL of these:                                           ║
+  ║      read_products      write_products                           ║
+  ║      read_orders        write_orders                             ║
+  ║      read_inventory     write_inventory                          ║
+  ║      read_fulfillments  write_fulfillments                       ║
+  ║    Click "Save"                                                  ║
   ║                                                                  ║
   ║  STEP 5 — Install the app:                                      ║
-  ║    Click "Install app" → confirm installation                   ║
+  ║    Click the "API credentials" tab                               ║
+  ║    Click "Install app" → "Install"                               ║
   ║                                                                  ║
-  ║  STEP 6 — Copy your token:                                      ║
-  ║    Click "Reveal token once" — copy it (starts with shpat_)    ║
-  ║    YOU ONLY SEE IT ONCE. Copy it immediately.                   ║
+  ║  STEP 6 — Copy your token (YOU ONLY SEE IT ONCE!):             ║
+  ║    Under "Admin API access token" click "Reveal token once"      ║
+  ║    Copy the full token — it starts with  shpat_                 ║
   ║                                                                  ║
-  ║  STEP 7 — Save it in Termux:                                    ║
-  ║    echo "SHOPIFY_TOKEN=shpat_PASTE_HERE" >> ~/nexus_agi/.env   ║
+  ║  STEP 7 — Save it in Termux (paste your token):                 ║
+  ║    echo 'SHOPIFY_TOKEN=shpat_PASTE_YOUR_TOKEN_HERE' \\          ║
+  ║         >> ~/nexus_agi/.env                                      ║
   ║                                                                  ║
-  ║  STEP 8 — Run the store live:                                   ║
-  ║    python shopify_nova.py --live                                 ║
+  ║  STEP 8 — Load and launch:                                      ║
+  ║    source ~/nexus_agi/.env                                       ║
+  ║    python shopify_nova.py --live --products                      ║
+  ║                                                                  ║
+  ║  Or use the quick-save command:                                  ║
+  ║    python shopify_nova.py --save-token shpat_YOURTOKEN           ║
   ║                                                                  ║
   ╚══════════════════════════════════════════════════════════════════╝
 """
@@ -934,7 +946,9 @@ def main():
     parser.add_argument('--content',  action='store_true', help='Generate promotion content only')
     parser.add_argument('--products', action='store_true', help='Import products only')
     parser.add_argument('--watch',    action='store_true', help='Run order watcher loop')
-    parser.add_argument('--setup',    action='store_true', help='Show step-by-step Shopify token setup guide')
+    parser.add_argument('--setup',      action='store_true', help='Show step-by-step Shopify token setup guide')
+    parser.add_argument('--save-token', type=str, metavar='shpat_TOKEN',
+                        help='Save your shpat_ token to .env and test it')
     parser.add_argument('--campaign', type=str, help='Generate campaign for specific product name')
     args = parser.parse_args()
 
@@ -945,6 +959,33 @@ def main():
 
     if args.setup:
         print(SETUP_GUIDE)
+        return
+
+    if args.save_token:
+        tok = args.save_token.strip()
+        if not tok.startswith("shpat_"):
+            err("Token must start with shpat_ — copy it from the Custom App page.")
+            return
+        env_path = BASE_DIR / ".env"
+        lines = env_path.read_text().splitlines() if env_path.exists() else []
+        lines = [l for l in lines if not l.startswith("SHOPIFY_TOKEN=")]
+        lines.append(f"SHOPIFY_TOKEN={tok}")
+        env_path.write_text("\n".join(lines) + "\n")
+        ok(f"Token saved to {env_path}")
+        # Quick sanity-check
+        if REQUESTS_AVAILABLE:
+            try:
+                r = __import__('requests').get(
+                    f"https://{STORE_URL}/admin/api/{API_VERSION}/shop.json",
+                    headers={"X-Shopify-Access-Token": tok}, timeout=10)
+                if r.status_code == 200:
+                    shop = r.json().get("shop", {})
+                    ok(f"Connected! Store: {shop.get('name','?')} ({shop.get('domain','?')})")
+                    ok("Run:  python shopify_nova.py --live --products")
+                else:
+                    warn(f"Token saved but API returned {r.status_code} — double-check it.")
+            except Exception as e:
+                warn(f"Token saved. Could not verify online: {e}")
         return
 
     mgr = AutonomousStoreManager()
