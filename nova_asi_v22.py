@@ -2756,7 +2756,7 @@ class NovaCore:
 
 def create_api(core: NovaCore):
     if not FLASK_AVAILABLE: return None
-    app=Flask('Nova-ASI-v21'); CORS(app)
+    app=Flask('Nova-ASI-v22'); CORS(app)
 
     @app.route('/status')
     def status(): return jsonify({**core.metrics.compute(),'version':core.VERSION,'demo':DEMO_MODE})
