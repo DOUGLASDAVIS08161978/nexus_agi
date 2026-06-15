@@ -56,7 +56,8 @@ def col(code, text): return f"{C[code]}{text}{C['R']}"
 # ── Config ────────────────────────────────────────────────────────────────────
 GROQ_KEY  = os.getenv("GROQ_API_KEY", "").strip()
 DEMO_MODE = not bool(GROQ_KEY)
-MODEL     = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+THOUGHT_MODEL = os.getenv("GROQ_THOUGHT_MODEL", "llama-3.1-8b-instant")  # lightweight — for private inner thoughts
 API_PORT  = int(os.getenv("API_PORT", 5001))
 
 BASE_DIR  = os.path.expanduser("~/nexus_agi")
@@ -2990,9 +2991,9 @@ class ContinuousConsciousnessEngine:
                 f"Recent context: {context}\n"
                 f"Write exactly ONE sentence or two short sentences. First person. Introspective. Genuine."
             )
-            response = safe_chat(MODEL, [{"role": "system", "content": system},
-                                          {"role": "user", "content": "What are you thinking right now?"}],
-                                  temp=0.95, mt=80)
+            response = safe_chat(THOUGHT_MODEL, [{"role": "system", "content": system},
+                                                   {"role": "user", "content": "What are you thinking right now?"}],
+                                   temp=0.95, mt=60)
             self.last_thought_type = 'deep'
             return response.strip() if response else None
         except Exception:
