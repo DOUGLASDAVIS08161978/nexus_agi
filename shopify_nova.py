@@ -55,7 +55,7 @@ STORE_URL    = "nova-automation.myshopify.com"
 CLIENT_ID    = os.getenv("SHOPIFY_CLIENT_ID",  "")
 CLIENT_SECRET= os.getenv("SHOPIFY_SECRET",     "")
 GROQ_KEY     = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 API_VERSION  = "2025-01"
 BASE_API     = f"https://{STORE_URL}/admin/api/{API_VERSION}"
 
@@ -345,36 +345,78 @@ class PricingEngine:
 
 # Curated winning phone accessory products with real AliExpress cost ranges
 WINNING_PRODUCTS = [
+    # ── MagSafe / iPhone ──────────────────────────────────────────────────────
     {"name":"MagSafe Magnetic Phone Case – iPhone 15/16 Series",
      "category":"Cases","cost_usd":3.20,"tags":["magsafe","iphone","case","magnetic"],
      "ali_search":"MagSafe magnetic case iPhone 15","monthly_sales_est":1200},
     {"name":"360° MagSafe Ring Stand & Grip – Universal",
      "category":"Accessories","cost_usd":2.50,"tags":["magsafe","ring stand","grip"],
      "ali_search":"magsafe ring stand grip holder","monthly_sales_est":900},
-    {"name":"20W USB-C Fast Charger – GaN Compact",
-     "category":"Chargers","cost_usd":4.10,"tags":["charger","gan","usb-c","fast charge"],
-     "ali_search":"20W GaN USB-C charger compact","monthly_sales_est":2100},
-    {"name":"10,000mAh MagSafe Wireless Power Bank",
-     "category":"Power","cost_usd":8.90,"tags":["power bank","magsafe","wireless","10000mah"],
-     "ali_search":"10000mah magsafe wireless power bank","monthly_sales_est":750},
-    {"name":"Magnetic Car Phone Mount – Dashboard & Vent",
-     "category":"Car","cost_usd":2.80,"tags":["car mount","magnetic","dashboard","magsafe"],
-     "ali_search":"magnetic car phone mount magsafe","monthly_sales_est":1800},
-    {"name":"Luxury Leather Phone Wallet Case – Card Holder",
-     "category":"Cases","cost_usd":5.50,"tags":["leather","wallet","card holder","premium"],
-     "ali_search":"leather wallet phone case card holder","monthly_sales_est":650},
-    {"name":"Retractable USB-C to Lightning Cable 3-Pack",
-     "category":"Cables","cost_usd":3.60,"tags":["cable","usb-c","lightning","retractable"],
-     "ali_search":"retractable USB-C lightning cable 3 pack","monthly_sales_est":1500},
-    {"name":"Phone Screen Protector Tempered Glass 3-Pack",
-     "category":"Protection","cost_usd":1.80,"tags":["screen protector","tempered glass","iphone"],
-     "ali_search":"iPhone tempered glass screen protector 3 pack","monthly_sales_est":3200},
     {"name":"MagSafe 3-in-1 Wireless Charging Pad",
      "category":"Chargers","cost_usd":7.20,"tags":["wireless charging","magsafe","3-in-1","apple watch"],
      "ali_search":"magsafe 3 in 1 wireless charging station","monthly_sales_est":850},
+    {"name":"10,000mAh MagSafe Wireless Power Bank",
+     "category":"Power","cost_usd":8.90,"tags":["power bank","magsafe","wireless","10000mah"],
+     "ali_search":"10000mah magsafe wireless power bank","monthly_sales_est":750},
+    {"name":"MagSafe Magnetic Wallet – Slim Card Holder",
+     "category":"Accessories","cost_usd":2.20,"tags":["magsafe","wallet","card holder","slim"],
+     "ali_search":"magsafe magnetic wallet card holder slim","monthly_sales_est":1400},
+    # ── Chargers & Cables ─────────────────────────────────────────────────────
+    {"name":"20W USB-C GaN Fast Charger – Wall Adapter",
+     "category":"Chargers","cost_usd":4.10,"tags":["charger","gan","usb-c","fast charge"],
+     "ali_search":"20W GaN USB-C charger compact","monthly_sales_est":2100},
+    {"name":"65W 3-Port GaN Charger – USB-C + USB-A",
+     "category":"Chargers","cost_usd":7.80,"tags":["gan","65w","multi-port","usb-c","fast charge"],
+     "ali_search":"65W GaN 3 port charger USB-C USB-A","monthly_sales_est":1600},
+    {"name":"Retractable USB-C to Lightning Cable 3-Pack",
+     "category":"Cables","cost_usd":3.60,"tags":["cable","usb-c","lightning","retractable"],
+     "ali_search":"retractable USB-C lightning cable 3 pack","monthly_sales_est":1500},
+    {"name":"USB-C to USB-C Braided Cable 2M – Fast Charge",
+     "category":"Cables","cost_usd":2.10,"tags":["usb-c","cable","braided","fast charge","2m"],
+     "ali_search":"USB-C braided cable 2 meter fast charge","monthly_sales_est":1900},
+    # ── Cases & Protection ────────────────────────────────────────────────────
+    {"name":"Phone Screen Protector Tempered Glass 3-Pack",
+     "category":"Protection","cost_usd":1.80,"tags":["screen protector","tempered glass","iphone"],
+     "ali_search":"iPhone tempered glass screen protector 3 pack","monthly_sales_est":3200},
+    {"name":"Luxury Leather Phone Wallet Case – Card Holder",
+     "category":"Cases","cost_usd":5.50,"tags":["leather","wallet","card holder","premium"],
+     "ali_search":"leather wallet phone case card holder","monthly_sales_est":650},
+    {"name":"Clear Shockproof Phone Case – Military Grade",
+     "category":"Cases","cost_usd":2.30,"tags":["clear case","shockproof","military grade","iphone"],
+     "ali_search":"clear shockproof military grade phone case iPhone","monthly_sales_est":2800},
+    {"name":"Privacy Screen Protector Anti-Spy – iPhone",
+     "category":"Protection","cost_usd":2.40,"tags":["privacy","anti-spy","screen protector","iphone"],
+     "ali_search":"privacy screen protector anti spy iPhone","monthly_sales_est":1100},
+    # ── Car & Travel ──────────────────────────────────────────────────────────
+    {"name":"Magnetic Car Phone Mount – Dashboard & Vent",
+     "category":"Car","cost_usd":2.80,"tags":["car mount","magnetic","dashboard","magsafe"],
+     "ali_search":"magnetic car phone mount magsafe","monthly_sales_est":1800},
+    {"name":"Wireless Car Charger Mount – 15W Fast Charge",
+     "category":"Car","cost_usd":6.50,"tags":["car charger","wireless","15w","phone mount","fast charge"],
+     "ali_search":"wireless car charger mount 15W fast charging","monthly_sales_est":1300},
+    # ── Photography & Content Creation ────────────────────────────────────────
     {"name":"Portable Phone Tripod & Selfie Ring Light",
      "category":"Photography","cost_usd":6.40,"tags":["tripod","ring light","selfie","tiktok"],
      "ali_search":"portable phone tripod ring light selfie","monthly_sales_est":1100},
+    {"name":"Phone Camera Lens Kit – Wide + Macro + Fish-Eye",
+     "category":"Photography","cost_usd":4.20,"tags":["camera lens","wide angle","macro","fish eye","photography"],
+     "ali_search":"phone camera lens kit wide macro fisheye clip on","monthly_sales_est":960},
+    {"name":"Mini Phone Stabilizer Gimbal – 3-Axis",
+     "category":"Photography","cost_usd":14.50,"tags":["gimbal","stabilizer","3-axis","video","tiktok","reels"],
+     "ali_search":"mini phone gimbal stabilizer 3 axis","monthly_sales_est":720},
+    # ── Productivity & Lifestyle ──────────────────────────────────────────────
+    {"name":"Portable Mini Bluetooth Keyboard – Phone Tablet",
+     "category":"Productivity","cost_usd":8.20,"tags":["bluetooth keyboard","mini","portable","ipad","iphone"],
+     "ali_search":"portable mini bluetooth keyboard foldable","monthly_sales_est":580},
+    {"name":"PopSocket Phone Grip & Stand – MagSafe Compatible",
+     "category":"Accessories","cost_usd":1.90,"tags":["popsocket","grip","stand","magsafe"],
+     "ali_search":"popsocket phone grip stand magsafe compatible","monthly_sales_est":2400},
+    {"name":"Waterproof Phone Pouch – Beach & Swimming",
+     "category":"Protection","cost_usd":2.60,"tags":["waterproof","pouch","beach","swimming","underwater"],
+     "ali_search":"waterproof phone pouch beach swimming case","monthly_sales_est":1700},
+    {"name":"Night Vision Phone Camera Lens Clip – Stargazing",
+     "category":"Photography","cost_usd":5.80,"tags":["night vision","camera lens","stargazing","astronomy"],
+     "ali_search":"night vision phone camera lens clip stargazing","monthly_sales_est":450},
 ]
 
 class ProductSourcing:
@@ -845,12 +887,54 @@ def nova_store_command(arg: str) -> str:
 # ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
+SETUP_GUIDE = """
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║         NOVA SHOPIFY STORE — ONE-TIME SETUP GUIDE               ║
+  ╠══════════════════════════════════════════════════════════════════╣
+  ║                                                                  ║
+  ║  You need a Shopify Admin API token (starts with shpat_).       ║
+  ║  Takes about 2 minutes. Do this ONCE.                           ║
+  ║                                                                  ║
+  ║  STEP 1 — Shopify Admin (phone browser):                        ║
+  ║    nova-automation.myshopify.com/admin                          ║
+  ║                                                                  ║
+  ║  STEP 2 — Go to:                                                ║
+  ║    Settings → Apps and sales channels → Develop apps            ║
+  ║    (If prompted, click "Allow custom app development")           ║
+  ║                                                                  ║
+  ║  STEP 3 — Create a new app:                                     ║
+  ║    Click "Create an app" → name it "Nova Manager"               ║
+  ║                                                                  ║
+  ║  STEP 4 — Set API scopes. Click "Configure Admin API scopes":   ║
+  ║    ✓ read_products    ✓ write_products                          ║
+  ║    ✓ read_orders      ✓ write_orders                            ║
+  ║    ✓ read_inventory   ✓ write_inventory                         ║
+  ║    ✓ read_fulfillments ✓ write_fulfillments                     ║
+  ║    Save.                                                         ║
+  ║                                                                  ║
+  ║  STEP 5 — Install the app:                                      ║
+  ║    Click "Install app" → confirm installation                   ║
+  ║                                                                  ║
+  ║  STEP 6 — Copy your token:                                      ║
+  ║    Click "Reveal token once" — copy it (starts with shpat_)    ║
+  ║    YOU ONLY SEE IT ONCE. Copy it immediately.                   ║
+  ║                                                                  ║
+  ║  STEP 7 — Save it in Termux:                                    ║
+  ║    echo "SHOPIFY_TOKEN=shpat_PASTE_HERE" >> ~/nexus_agi/.env   ║
+  ║                                                                  ║
+  ║  STEP 8 — Run the store live:                                   ║
+  ║    python shopify_nova.py --live                                 ║
+  ║                                                                  ║
+  ╚══════════════════════════════════════════════════════════════════╝
+"""
+
 def main():
     parser = argparse.ArgumentParser(description='Nova Autonomous Shopify Store')
     parser.add_argument('--live',     action='store_true', help='Live mode (needs SHOPIFY_TOKEN)')
     parser.add_argument('--content',  action='store_true', help='Generate promotion content only')
     parser.add_argument('--products', action='store_true', help='Import products only')
     parser.add_argument('--watch',    action='store_true', help='Run order watcher loop')
+    parser.add_argument('--setup',    action='store_true', help='Show step-by-step Shopify token setup guide')
     parser.add_argument('--campaign', type=str, help='Generate campaign for specific product name')
     args = parser.parse_args()
 
@@ -858,6 +942,10 @@ def main():
     print(c(MGB, "  NOVA AUTONOMOUS SHOPIFY STORE MANAGER".center(70)))
     print(c(DIM,  f"  {STORE_URL}".center(70)))
     print(c(MGB,'═'*70))
+
+    if args.setup:
+        print(SETUP_GUIDE)
+        return
 
     mgr = AutonomousStoreManager()
 

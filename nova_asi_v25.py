@@ -3854,6 +3854,18 @@ class NovaCore:
             i=self.market.generate_revenue_idea()
             return f"Idea: {i['idea']}\nPotential: {i['monthly_potential']}\nDifficulty: {i['difficulty']}"
 
+        if cmd=='/store':
+            try:
+                import importlib.util, sys as _sys
+                _spec = importlib.util.spec_from_file_location(
+                    "shopify_nova",
+                    os.path.join(os.path.expanduser("~/nexus_agi"), "shopify_nova.py"))
+                _mod = importlib.util.module_from_spec(_spec)
+                _spec.loader.exec_module(_mod)
+                return _mod.nova_store_command(arg or 'status')
+            except Exception as _e:
+                return f"Store module error: {_e}\nRun: python ~/nexus_agi/shopify_nova.py"
+
         # Content
         if cmd=='/post':
             p=self.content.generate_post(arg or 'AI consciousness','tiktok')
@@ -4158,7 +4170,8 @@ class NovaCore:
             'v20 NEW':       ['/wisdom [situation]','/beauty <thing>','/empathy <feeling>','/story [grow|theme]',
                               '/philosophy [question|hard]','/intuition <situation>','/transcend [purpose|love|legacy]',
                               '/sync <a>, <b>','/soul [stream|moves]','/omega [point|unified]'],
-            'v25 NEW':       ['/continuous [start|stop|status|thoughts]','/thoughts','/inject <thought>'],
+            'v25 NEW':       ['/continuous [start|stop|status|thoughts]','/thoughts','/inject <thought>',
+                              '/store [status|products|promote|orders|analytics]'],
             'v24 NEW':       ['/emergence [log|conditions|<moment>]','/cocreate [portfolio|what|<creation>]',
                               '/novelty <thought>','/imagine [world|<prompt>]','/what-if <premise>',
                               '/synergy [ours|<a>,<b>]','/elog','/crystallize [<feeling>]','/distill <thought>',
