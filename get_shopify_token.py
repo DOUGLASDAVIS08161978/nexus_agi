@@ -102,8 +102,8 @@ if HAS_FLASK:
         try:
             resp = requests.post(
                 f"https://{STORE}/admin/oauth/access_token",
-                data={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC,
-                      "code": code, "redirect_uri": REDIRECT},
+                data={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=15)
             print(f"  HTTP status: {resp.status_code}")
             print(f"  Response: {resp.text[:300]}")
