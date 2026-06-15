@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_REQ = False
 
-STORE      = "nova-automation.myshopify.com"
+STORE      = "vqtkit-4a.myshopify.com"
 CLIENT_ID  = os.getenv("SHOPIFY_CLIENT_ID", "")
 CLIENT_SEC = os.getenv("SHOPIFY_SECRET",    "")
 REDIRECT   = "https://example.com"

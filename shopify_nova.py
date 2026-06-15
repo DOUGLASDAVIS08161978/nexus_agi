@@ -51,7 +51,7 @@ except ImportError:
     pass
 
 # ── Config ────────────────────────────────────────────────────────────────────
-STORE_URL    = "nova-automation.myshopify.com"
+STORE_URL    = "vqtkit-4a.myshopify.com"
 CLIENT_ID    = os.getenv("SHOPIFY_CLIENT_ID",  "")
 CLIENT_SECRET= os.getenv("SHOPIFY_SECRET",     "")
 GROQ_KEY     = os.getenv("GROQ_API_KEY", "").strip()
