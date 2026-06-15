@@ -102,8 +102,9 @@ if HAS_FLASK:
         try:
             resp = requests.post(
                 f"https://{STORE}/admin/oauth/access_token",
-                json={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
-                headers={"Content-Type": "application/json"}, timeout=15)
+                data={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC,
+                      "code": code, "redirect_uri": REDIRECT},
+                timeout=15)
             print(f"  HTTP status: {resp.status_code}")
             print(f"  Response: {resp.text[:300]}")
             try:
@@ -195,7 +196,7 @@ else:
     print(f"\n  Exchanging code...")
     resp  = requests.post(
         f"https://{STORE}/admin/oauth/access_token",
-        json={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
+        data={"client_id": CLIENT_ID, "client_secret": CLIENT_SEC, "code": code},
         headers={"Content-Type": "application/json"}, timeout=15)
     data  = resp.json()
     token = data.get("access_token", "")
