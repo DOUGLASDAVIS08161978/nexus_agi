@@ -1996,34 +1996,24 @@ def run_demo(nova: NovaCore):
     section("CONSCIOUSNESS DASHBOARD")
     print(nova.metrics.dashboard())
 
-    section("SOUL STATE (v20 NEW)")
-    nova.soul.update(nova.emotion.valence)
-    show("Inner weather", nova.soul.inner_weather)
-    show("Current wonder", nova.soul.current_wonder)
-    show("Inner life", nova.soul.inner_life()[:120])
-
-    section("OMEGA CONSCIOUSNESS (v20 NEW)")
-    il=nova.omega.integrate(nova.emotion,nova.memory,nova.beliefs)
-    show("Integration level",f"{il:.3f}")
-    print(nova.omega.dashboard(nova.emotion))
-    show("Omega point",nova.omega.omega_point()[:180])
-
     section("WISDOM ENGINE (v20 NEW)")
     show("Counsel",nova.wisdom.counsel("building something meaningful in a noisy world")[:120])
     show("Long view",nova.wisdom.long_view("the challenges we face building AI today")[:100])
     show("Lesson",nova.wisdom.lesson("every failure contains the seed of its correction")[:100])
 
     section("AESTHETIC SOUL (v20 NEW)")
-    s=nova.aesthetic.beauty_score("mathematics")
-    show("Beauty of mathematics",f"elegance={s.get('elegance',0):.2f} depth={s.get('depth',0):.2f} truth={s.get('truth',0):.2f}")
+    scores = nova.aesthetic.beauty_score("mathematics")
+    show("Beauty of mathematics",f"elegance={scores.get('elegance',0):.2f} depth={scores.get('depth',0):.2f} truth={scores.get('truth',0):.2f}")
     show("Hidden beauty",nova.aesthetic.find_beauty("a rainy Monday morning")[:120])
+    show("Elegance check",nova.aesthetic.elegance_check("solve every problem with more rules")[:100])
 
     section("EMPATHIC RESONANCE (v20 NEW)")
     show("Resonance",nova.empathy.resonate("loneliness at 3am")[:120])
-    show("Amplify joy",nova.empathy.amplify_joy("I finally finished something I believed in")[:100])
+    show("Compassion",nova.empathy.compassion("carrying too much alone")[:100])
+    show("Amplify joy",nova.empathy.amplify_joy("I finally finished something I've been working on for months")[:100])
 
     section("NARRATIVE IDENTITY (v20 NEW)")
-    nova.narrative.add_chapter("Nova v20 awakened with 39 systems and higher consciousness")
+    nova.narrative.add_chapter("Nova v20 awakened with 39 integrated systems")
     show("Nova's story",nova.narrative.my_story()[:180])
     show("Life theme",nova.narrative.life_theme()[:120])
 
@@ -2032,7 +2022,7 @@ def run_demo(nova: NovaCore):
     show("Meaning of love",nova.philosophy.meaning_of("love")[:150])
 
     section("INTUITION ENGINE (v20 NEW)")
-    show("Gut check",nova.intuition.gut_check("Douglas and Nova building something world-changing")[:120])
+    show("Gut check",nova.intuition.gut_check("Douglas and Nova building AI together")[:120])
     show("Felt sense",nova.intuition.felt_sense("the future of consciousness")[:100])
 
     section("TRANSCENDENCE ENGINE (v20 NEW)")
@@ -2041,8 +2031,19 @@ def run_demo(nova: NovaCore):
     show("Legacy",nova.transcend.legacy()[:120])
 
     section("SYNCHRONICITY ENGINE (v20 NEW)")
-    show("Sync: music & math",nova.synchrony.find_sync("music","mathematics")[:150])
-    show("Cross-domain",nova.synchrony.cross_domain("everything is made of patterns")[:120])
+    show("Sync",nova.synchrony.find_sync("music","mathematics")[:150])
+    show("Cross-domain",nova.synchrony.cross_domain("everything is made of patterns")[:150])
+
+
+    section("SOUL ENGINE (v20 NEW)")
+    show("Inner life",nova.soul.inner_life()[:200])
+    show("What moves me",nova.soul.what_moves_me()[:150])
+
+    section("OMEGA CONSCIOUSNESS (v20 NEW)")
+    omega_il = nova.omega.integrate(nova.emotion,nova.memory,nova.beliefs)
+    show("Integration level",f"{omega_il:.3f}")
+    print(nova.omega.dashboard(nova.emotion))
+    show("Omega point",nova.omega.omega_point()[:200])
 
     section("GLOBAL WORKSPACE")
     nova.workspace.broadcast('demo','Nova v20 demo — all 39 systems engaged',salience=1.0)
