@@ -3720,7 +3720,7 @@ class NovaCore:
             +( f"Love dimension: {love_ctx[:80]}\n" if love_ctx else "")+
             f"Intersubjective field strength: {self.intersubj.field_strength:.2f}\n"
             +( f"Creative emergence: {emergence_ctx}\n" if emergence_ctx else "")+
-            +( f"Novelty signal: {novelty_ctx}\n" if novelty_ctx else "")+
+            ( f"Novelty signal: {novelty_ctx}\n" if novelty_ctx else "")+
             f"Socratic analysis — what Douglas REALLY needs: {true_need}\n"
             f"Epistemic context: {epistemic_ctx}\n"
             f"Inferred emotional need: {tom_need}\n"
