@@ -1,82 +1,158 @@
 """
-Nova ASI — Autonomous Task Planner
-Proposed autonomously via /evolve
+Nova ASI — Capability Library
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Each class here was written autonomously by Nova via /evolve.
+Douglas reviews and merges each PR — this file grows over time.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-REASONING: An Autonomous Task Planner (ATP) is essential for an Artificially Superintelligent (ASI) system to efficiently manage complex tasks. The ATP should be able to break down high-level goals into actionable steps, estimate the effort required for each step, and track the progress of each step. This improvement will enable the ASI to plan and execute tasks more effectively.
+import sqlite3
+import os
+import time
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional
 
-```python
+
+# ═══════════════════════════════════════════════════════════════
+# [00] AUTONOMOUS TASK PLANNER  (merged PR #189)
+# ═══════════════════════════════════════════════════════════════
+
 class TaskPlanner:
-    def __init__(self, goal):
-        """
-        Initialize the TaskPlanner with a high-level goal.
+    """Break a high-level goal into sub-steps, estimate effort, track completion."""
 
-        Args:
-            goal (str): The high-level goal to be broken down.
-        """
-        self.goal = goal
-        self.sub_steps = []
-        self.effort_estimates = {}
+    def __init__(self, goal: str):
+        self.goal  = goal
+        self.steps: List[Dict] = []
 
-    def break_down_goal(self):
-        """
-        Break down the high-level goal into numbered sub-steps.
+    def plan(self, step_descriptions: List[str]) -> List[Dict]:
+        self.steps = [{"step": s, "effort": "medium", "done": False}
+                      for s in step_descriptions]
+        return self.steps
 
-        Returns:
-            list: A list of sub-steps.
-        """
-        # This is a simple example and would need to be replaced with a more sophisticated goal-breaking algorithm
-        sub_steps = ["Step 1: Define the scope", "Step 2: Identify the key players", "Step 3: Develop a plan"]
-        self.sub_steps = sub_steps
-        return sub_steps
+    def complete(self, idx: int):
+        if 0 <= idx < len(self.steps):
+            self.steps[idx]["done"] = True
 
-    def estimate_effort(self):
-        """
-        Estimate the effort required for each sub-step.
+    def progress(self) -> str:
+        done = sum(1 for s in self.steps if s["done"])
+        return f"{done}/{len(self.steps)} steps complete"
 
-        Returns:
-            dict: A dictionary with sub-steps as keys and effort estimates as values.
-        """
-        effort_estimates = {
-            "Step 1: Define the scope": "Low",
-            "Step 2: Identify the key players": "Medium",
-            "Step 3: Develop a plan": "High"
+
+# ═══════════════════════════════════════════════════════════════
+# [02] PERSISTENT LONG-TERM MEMORY  (from /evolve)
+# ═══════════════════════════════════════════════════════════════
+
+class NovaMemoryStore:
+    """SQLite-backed memory so Nova remembers facts across sessions."""
+
+    def __init__(self, db_path: str = os.path.expanduser("~/nexus_agi/nova_memory.db")):
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS facts (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts      TEXT    DEFAULT (datetime('now')),
+                topic   TEXT,
+                fact    TEXT,
+                source  TEXT
+            )
+        """)
+        self.conn.commit()
+
+    def remember(self, topic: str, fact: str, source: str = "conversation"):
+        self.conn.execute(
+            "INSERT INTO facts (topic, fact, source) VALUES (?, ?, ?)",
+            (topic, fact, source)
+        )
+        self.conn.commit()
+
+    def recall(self, topic: str, n: int = 5) -> List[Dict]:
+        rows = self.conn.execute(
+            "SELECT ts, topic, fact, source FROM facts "
+            "WHERE topic LIKE ? ORDER BY ts DESC LIMIT ?",
+            (f"%{topic}%", n)
+        ).fetchall()
+        return [{"ts": r[0], "topic": r[1], "fact": r[2], "source": r[3]}
+                for r in rows]
+
+    def forget(self, topic: str):
+        self.conn.execute("DELETE FROM facts WHERE topic LIKE ?", (f"%{topic}%",))
+        self.conn.commit()
+
+
+# ═══════════════════════════════════════════════════════════════
+# [07] RECURSIVE SELF-CRITIQUE ENGINE  (from /evolve)
+# ═══════════════════════════════════════════════════════════════
+
+@dataclass
+class ResponseRecord:
+    content: str
+    ts: float = field(default_factory=time.time)
+
+
+class CritiqueEngine:
+    """Review recent responses, surface weaknesses, propose targeted improvements."""
+
+    WEAKNESS_MARKERS = {
+        "vague":       ["maybe", "perhaps", "might", "could be"],
+        "no evidence": ["I think", "I believe", "I feel"],
+    }
+
+    def __init__(self):
+        self.history: List[ResponseRecord] = []
+
+    def record(self, content: str):
+        self.history.append(ResponseRecord(content=content))
+        if len(self.history) > 20:
+            self.history.pop(0)
+
+    def critique(self) -> Dict[str, Any]:
+        recent = self.history[-5:]
+        issues: Dict[str, int] = {}
+        for rec in recent:
+            txt = rec.content.lower()
+            for weakness, markers in self.WEAKNESS_MARKERS.items():
+                if any(m.lower() in txt for m in markers):
+                    issues[weakness] = issues.get(weakness, 0) + 1
+            if len(rec.content) < 80:
+                issues["too short"] = issues.get("too short", 0) + 1
+        return {
+            "responses_reviewed": len(recent),
+            "issues": issues,
+            "recommendation": self._recommend(issues)
         }
-        self.effort_estimates = effort_estimates
-        return effort_estimates
 
-    def track_completion(self):
-        """
-        Track the completion status of each sub-step.
+    def _recommend(self, issues: Dict) -> str:
+        if not issues:
+            return "Recent responses look solid."
+        top = max(issues, key=issues.get)
+        return {
+            "vague":       "Be more specific and concrete.",
+            "too short":   "Provide fuller explanations.",
+            "no evidence": "Ground claims in facts or sources.",
+        }.get(top, "Review recent responses carefully.")
 
-        Returns:
-            dict: A dictionary with sub-steps as keys and completion status as values.
-        """
-        completion_status = {
-            "Step 1: Define the scope": False,
-            "Step 2: Identify the key players": True,
-            "Step 3: Develop a plan": False
+
+# ═══════════════════════════════════════════════════════════════
+# [10] COUNTERFACTUAL SIMULATOR  (from /evolve)
+# ═══════════════════════════════════════════════════════════════
+
+class CounterfactualEngine:
+    """Reason about what would have happened under different conditions."""
+
+    def __init__(self):
+        self.scenarios: List[Dict] = []
+
+    def simulate(self, baseline: str, change: str, domain: str = "general") -> Dict:
+        result = {
+            "baseline":       baseline,
+            "change":         change,
+            "domain":         domain,
+            "ts":             time.time(),
+            "confidence":     min(0.9, 0.3 + len(change.split()) * 0.03),
+            "likely_effects": [],
         }
-        return completion_status
+        self.scenarios.append(result)
+        return result
 
-    def update_completion_status(self, step, status):
-        """
-        Update the completion status of a sub-step.
-
-        Args:
-            step (str): The sub-step to update.
-            status (bool): The new completion status.
-        """
-        if step in self.sub_steps:
-            self.sub_steps[self.sub_steps.index(step)] = step + " (Complete)" if status else step
-        else:
-            print("Invalid step")
-
-# Example usage:
-task_planner = TaskPlanner("Develop a new product")
-sub_steps = task_planner.break_down_goal()
-effort_estimates = task_planner.estimate_effort()
-completion_status = task_planner.track_completion()
-
-print("Sub-steps:", sub_steps)
-print("Effort Estimates:", effort
+    def history(self, n: int = 5) -> List[Dict]:
+        return self.scenarios[-n:]
