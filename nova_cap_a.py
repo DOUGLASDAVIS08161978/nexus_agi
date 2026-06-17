@@ -5,63 +5,67 @@ No API credentials required.
 """
 
 """
-This module adds a custom capability to Nova for retrieving and analyzing 
-weather data from a predefined source.
+Custom capability for Nova to interact with weather services.
 """
 
-import sqlite3
+import os
 import json
-import datetime
+import sqlite3
+import time
 import re
+import random
+import threading
+import datetime
+import collections
 
-class WeatherAnalyzer:
-    def __init__(self, db_path: str):
-        """
-        Initialize the WeatherAnalyzer with a path to a SQLite database.
-        
-        :param db_path: Path to the SQLite database.
-        """
-        self.conn = sqlite3.connect(db_path)
+class WeatherService:
+    def __init__(self, database: str = 'weather.db'):
+        self.database = database
+        self.conn = sqlite3.connect(database)
         self.cursor = self.conn.cursor()
-
-    def get_weather_data(self, location: str) -> dict:
-        """
-        Retrieve weather data from the database for the given location.
-        
-        :param location: Location for which to retrieve weather data.
-        :return: Dictionary containing the weather data.
-        """
-        self.cursor.execute("SELECT * FROM weather WHERE location = ?", (location,))
-        row = self.cursor.fetchone()
-        if row:
-            return {key: value for key, value in zip(self.cursor.description, row)}
-        else:
-            return {}
-
-    def analyze_weather(self, location: str) -> dict:
-        """
-        Analyze the weather data for the given location and return a summary.
-        
-        :param location: Location for which to analyze weather data.
-        :return: Dictionary containing the weather summary.
-        """
-        data = self.get_weather_data(location)
-        if data:
-            return {"temperature": data["temperature"], "humidity": data["humidity"]}
-        else:
-            return {}
-
-    def update_weather_data(self, location: str, data: dict):
-        """
-        Update the weather data for the given location.
-        
-        :param location: Location for which to update weather data.
-        :param data: Dictionary containing the updated weather data.
-        """
-        self.cursor.execute("UPDATE weather SET temperature = ?, humidity = ? WHERE location = ?", (data["temperature"], data["humidity"], location))
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS weather_data
+            (id INTEGER PRIMARY KEY, timestamp TEXT, temperature REAL, humidity REAL)
+        ''')
         self.conn.commit()
 
+    def fetch_weather(self) -> dict:
+        """
+        Fetch current weather data from the database.
+        """
+        self.cursor.execute('SELECT * FROM weather_data ORDER BY timestamp DESC LIMIT 1')
+        row = self.cursor.fetchone()
+        if row:
+            return {
+                'timestamp': row[1],
+                'temperature': row[2],
+                'humidity': row[3]
+            }
+        return {}
+
+    def store_weather(self, data: dict) -> None:
+        """
+        Store weather data in the database.
+        """
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute('INSERT INTO weather_data (timestamp, temperature, humidity) VALUES (?, ?, ?)',
+                            (timestamp, data['temperature'], data['humidity']))
+        self.conn.commit()
+
+    def get_weather_forecast(self) -> str:
+        """
+        Get weather forecast from the database.
+        """
+        self.cursor.execute('SELECT * FROM weather_data')
+        rows = self.cursor.fetchall()
+        if rows:
+            forecast = []
+            for row in rows:
+                forecast.append(f'Temperature: {row[2]}°C, Humidity: {row[3]}%')
+            return '\n'.join(forecast)
+        return 'No forecast available.'
+
 # Usage example:
-# analyzer = WeatherAnalyzer("weather.db")
-# analyzer.update_weather_data("New York", {"temperature": 22, "humidity": 60})
-# print(analyzer.analyze_weather("New York"))
+# weather_service = WeatherService()
+# weather_service.store_weather({'temperature': 25, 'humidity': 60})
+# print(weather_service.get_weather_forecast())
