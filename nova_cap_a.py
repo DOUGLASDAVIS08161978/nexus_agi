@@ -5,67 +5,64 @@ No API credentials required.
 """
 
 """
-Custom capability for Nova to interact with weather services.
+This module adds a CustomCapability class, which allows Nova to store and retrieve custom data from a SQLite database.
 """
 
-import os
-import json
 import sqlite3
-import time
-import re
-import random
-import threading
 import datetime
-import collections
+import threading
+import json
 
-class WeatherService:
-    def __init__(self, database: str = 'weather.db'):
-        self.database = database
-        self.conn = sqlite3.connect(database)
+class CustomCapability:
+    def __init__(self, db_name: str = 'nova.db'):
+        self.db_name = db_name
+        self.lock = threading.Lock()
+        self.conn = sqlite3.connect(self.db_name)
         self.cursor = self.conn.cursor()
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS weather_data
-            (id INTEGER PRIMARY KEY, timestamp TEXT, temperature REAL, humidity REAL)
+            CREATE TABLE IF NOT EXISTS custom_data
+            (id INTEGER PRIMARY KEY, timestamp TEXT, data TEXT)
         ''')
         self.conn.commit()
 
-    def fetch_weather(self) -> dict:
+    def add_data(self, data: str):
         """
-        Fetch current weather data from the database.
-        """
-        self.cursor.execute('SELECT * FROM weather_data ORDER BY timestamp DESC LIMIT 1')
-        row = self.cursor.fetchone()
-        if row:
-            return {
-                'timestamp': row[1],
-                'temperature': row[2],
-                'humidity': row[3]
-            }
-        return {}
+        Add custom data to the database.
 
-    def store_weather(self, data: dict) -> None:
+        Args:
+            data (str): The data to add.
         """
-        Store weather data in the database.
-        """
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.cursor.execute('INSERT INTO weather_data (timestamp, temperature, humidity) VALUES (?, ?, ?)',
-                            (timestamp, data['temperature'], data['humidity']))
-        self.conn.commit()
+        with self.lock:
+            timestamp = datetime.datetime.now().isoformat()
+            self.cursor.execute('INSERT INTO custom_data (timestamp, data) VALUES (?, ?)', (timestamp, json.dumps(data)))
+            self.conn.commit()
 
-    def get_weather_forecast(self) -> str:
+    def get_data(self, id: int = None, timestamp: str = None):
         """
-        Get weather forecast from the database.
+        Get custom data from the database.
+
+        Args:
+            id (int, optional): The ID of the data to get. Defaults to None.
+            timestamp (str, optional): The timestamp of the data to get. Defaults to None.
+
+        Returns:
+            str: The data in JSON format.
         """
-        self.cursor.execute('SELECT * FROM weather_data')
-        rows = self.cursor.fetchall()
-        if rows:
-            forecast = []
-            for row in rows:
-                forecast.append(f'Temperature: {row[2]}°C, Humidity: {row[3]}%')
-            return '\n'.join(forecast)
-        return 'No forecast available.'
+        with self.lock:
+            if id is not None:
+                self.cursor.execute('SELECT data FROM custom_data WHERE id = ?', (id,))
+            elif timestamp is not None:
+                self.cursor.execute('SELECT data FROM custom_data WHERE timestamp = ?', (timestamp,))
+            else:
+                self.cursor.execute('SELECT data FROM custom_data ORDER BY timestamp DESC LIMIT 1')
+            row = self.cursor.fetchone()
+            if row:
+                return json.loads(row[0])
+            else:
+                return None
 
 # Usage example:
-# weather_service = WeatherService()
-# weather_service.store_weather({'temperature': 25, 'humidity': 60})
-# print(weather_service.get_weather_forecast())
+# custom = CustomCapability()
+# custom.add_data({'key': 'value'})
+# print(custom.get_data()) # prints the last added data
+# print(custom.get_data(id=1)) # prints the data with id 1
