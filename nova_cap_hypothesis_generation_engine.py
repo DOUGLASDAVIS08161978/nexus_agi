@@ -4,91 +4,75 @@ Proposed autonomously via /evolve
 """
 
 """
-A Hypothesis Engine for generating falsifiable predictions and tracking outcomes.
+Module for generating hypotheses and tracking their outcomes.
 """
 
 import sqlite3
+import json
+import time
 import random
 from datetime import datetime
-from typing import Dict, List
+from collections import namedtuple
+from typing import Dict, Any
+
+# Define a Result namedtuple to store outcome data
+Result = namedtuple('Result', ['id', 'was_correct'])
 
 class HypothesisEngine:
-    """
-    Generate a falsifiable prediction, record the outcome, and calculate accuracy.
-    """
-
     def __init__(self, db_name: str):
         """
-        Initialize the Hypothesis Engine with a SQLite database.
+        Initialize the HypothesisEngine with a SQLite database.
 
-        :param db_name: Name of the SQLite database file.
+        Args:
+            db_name (str): Name of the SQLite database file.
         """
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS outcomes (
-                id INTEGER PRIMARY KEY,
-                topic TEXT,
-                prediction TEXT,
-                outcome TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        self.conn.commit()
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS hypotheses
+            (id INTEGER PRIMARY KEY, topic TEXT, prediction TEXT)
+        ''')
 
     def generate(self, topic: str) -> str:
         """
         Generate a falsifiable prediction for the given topic.
 
-        :param topic: Topic for which to generate a prediction.
-        :return: Falsifiable prediction.
+        Args:
+            topic (str): Topic for which to generate a prediction.
+
+        Returns:
+            str: A falsifiable prediction for the topic.
         """
-        # For demonstration purposes, generate a random prediction
-        # based on the topic. In a real implementation, use a more sophisticated
-        # algorithm to generate the prediction.
-        if topic == "weather":
-            current_weather = FreeWeather().current()
-            if current_weather["weather"] == "rainy":
-                prediction = "It will rain tomorrow."
-            else:
-                prediction = "It will not rain tomorrow."
-        elif topic == "temperature":
-            temperature = FreeWeather().current()["temperature"]
-            if temperature > 20:
-                prediction = "The temperature will be higher tomorrow."
-            else:
-                prediction = "The temperature will be lower tomorrow."
-        else:
-            prediction = "I'm not sure about this topic."
-        return prediction
+        # For simplicity, this example generates a prediction based on a random outcome
+        outcome = random.choice(['Rain', 'Sun'])
+        return f"It will {outcome} tomorrow."
 
     def record_outcome(self, id: int, was_correct: bool) -> None:
         """
-        Record the outcome of a prediction.
+        Record the outcome of a hypothesis.
 
-        :param id: ID of the prediction to record the outcome for.
-        :param was_correct: Whether the prediction was correct.
+        Args:
+            id (int): ID of the hypothesis.
+            was_correct (bool): Whether the hypothesis was correct.
         """
-        self.cursor.execute("""
-            INSERT INTO outcomes (id, topic, prediction, outcome)
-            VALUES (?, ?, ?, ?)
-        """, (id, "weather", None, "correct" if was_correct else "incorrect"))
+        self.cursor.execute('INSERT INTO hypotheses VALUES (?, ?, ?)',
+                            (id, json.dumps({'topic': None, 'prediction': None}), was_correct))
         self.conn.commit()
 
     def accuracy(self) -> float:
         """
-        Calculate the accuracy of predictions.
+        Calculate the accuracy of the generated predictions.
 
-        :return: Accuracy of predictions (between 0 and 1).
+        Returns:
+            float: Accuracy of the generated predictions (0.0 to 1.0).
         """
-        self.cursor.execute("SELECT COUNT(*) FROM outcomes WHERE outcome = 'correct'")
+        self.cursor.execute('SELECT COUNT(*) FROM hypotheses WHERE was_correct = 1')
         correct_count = self.cursor.fetchone()[0]
-        self.cursor.execute("SELECT COUNT(*) FROM outcomes")
+        self.cursor.execute('SELECT COUNT(*) FROM hypotheses')
         total_count = self.cursor.fetchone()[0]
         return correct_count / total_count if total_count > 0 else 0.0
 
-# Usage example:
-# engine = HypothesisEngine("hypothesis.db")
-# print(engine.generate("weather"))
-# engine.record_outcome(1, True)
+# Example usage:
+# engine = HypothesisEngine('hypotheses.db')
+# engine.record_outcome(1, engine.generate('weather') == 'It will rain tomorrow.')
 # print(engine.accuracy())
