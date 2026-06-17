@@ -190,14 +190,36 @@ class GitHubEngine:
 
     # ── High-level: propose an improvement ───────────────────────────────────
 
+    def open_nova_prs(self) -> List[dict]:
+        """Return currently open PRs from Nova (nova/* branches)."""
+        return [p for p in self.list_prs() if p.get("url","") and
+                "nova/" in self._get(
+                    f"/repos/{self.repo}/pulls/{p['number']}"
+                ).get("head", {}).get("ref", "")]
+
     def propose_improvement(self, filename: str, content: str,
                             description: str, reasoning: str) -> dict:
         """
         Full flow: create branch → commit file → open PR.
-        Returns PR data including URL.
+
+        Fix for merge conflicts:
+        1. Each PR writes to a unique filename (never the same file twice).
+        2. If Nova already has an open PR, skip to avoid piling up conflicts.
         """
         if not self.active:
             return {"error": "GITHUB_TOKEN not set in .env"}
+
+        # Guard: don't open a new PR if one is already waiting for review
+        open_prs = self.list_prs()
+        nova_prs = [p for p in open_prs
+                    if p.get("title","").startswith("Nova:")]
+        if nova_prs:
+            return {
+                "error": (f"Nova already has {len(nova_prs)} open PR(s) waiting "
+                          f"for review. Merge or close them first:\n" +
+                          "\n".join(f"  #{p['number']} {p['title'][:60]} — {p['url']}"
+                                    for p in nova_prs[:3]))
+            }
 
         ts     = datetime.now().strftime("%Y%m%d-%H%M%S")
         branch = f"nova/self-improve-{ts}"
@@ -284,8 +306,9 @@ class SelfImprovementEngine:
         if not code or code.startswith("["):
             return f"Could not generate improvement code for: {gap_desc}"
 
-        # Choose filename to improve
-        filename = "nova_asi_v27.py"
+        # Unique filename per improvement — prevents merge conflicts
+        ts_slug = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"nova_improvement_{ts_slug}.py"
 
         # Propose via GitHub
         result = self.github.propose_improvement(
@@ -413,8 +436,13 @@ class SelfImprovementEngine:
         if not code or code.startswith("["):
             return f"Could not generate code for: {name}"
 
+        # Unique filename per domain — prevents merge conflicts between PRs
+        slug = name.lower().replace(" ", "_").replace("&", "and")
+        slug = "".join(c for c in slug if c.isalnum() or c == "_")
+        unique_file = f"nova_cap_{slug}.py"
+
         result = self.github.propose_improvement(
-            filename="nova_capability.py",
+            filename=unique_file,
             content=f'"""\nNova ASI — {name}\nProposed autonomously via /evolve\n"""\n\n{code}',
             description=f"[ASI] {name}",
             reasoning=(f"**ASI Capability:** {name}\n\n{reasoning}\n\n"
