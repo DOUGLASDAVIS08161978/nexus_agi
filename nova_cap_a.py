@@ -5,66 +5,65 @@ No API credentials required.
 """
 
 """
-This module adds a custom capability to Nova, allowing it to track and analyze user interactions.
+Custom capability for Nova to interact with the weather.
+
+This module provides a class WeatherInterface that allows Nova to interact with the weather.
 """
 
 import sqlite3
 from datetime import datetime
 from typing import Dict, List
 
-class InteractionTracker:
-    def __init__(self, db_file: str):
+class WeatherInterface:
+    def __init__(self, db_path: str):
         """
-        Initializes the InteractionTracker with a SQLite database file.
+        Initialize the WeatherInterface.
 
         Args:
-            db_file (str): The path to the SQLite database file.
+            db_path (str): Path to the SQLite database.
         """
-        self.conn = sqlite3.connect(db_file)
+        self.db_path = db_path
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS interactions (
-                id INTEGER PRIMARY KEY,
-                user_id TEXT,
-                timestamp DATETIME,
-                action TEXT,
-                context TEXT
-            )
-        """)
 
-    def log_interaction(self, user_id: str, action: str, context: Dict) -> None:
+    def update_weather(self, weather_data: Dict):
         """
-        Logs an interaction with the specified user, action, and context.
+        Update the weather data in the database.
 
         Args:
-            user_id (str): The ID of the user.
-            action (str): The action performed.
-            context (Dict): Additional context about the interaction.
+            weather_data (Dict): Dictionary containing the weather data.
         """
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.cursor.execute("""
-            INSERT INTO interactions (user_id, timestamp, action, context)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, timestamp, action, json.dumps(context)))
+        self.cursor.execute("INSERT INTO weather (timestamp, weather) VALUES (?, ?)", (datetime.now(), json.dumps(weather_data)))
         self.conn.commit()
 
-    def get_user_interactions(self, user_id: str) -> List[Dict]:
+    def get_latest_weather(self) -> Dict:
         """
-        Retrieves all interactions for the specified user.
-
-        Args:
-            user_id (str): The ID of the user.
+        Get the latest weather data from the database.
 
         Returns:
-            List[Dict]: A list of interaction dictionaries.
+            Dict: Dictionary containing the latest weather data.
         """
-        self.cursor.execute("""
-            SELECT * FROM interactions WHERE user_id = ?
-        """, (user_id,))
-        interactions = self.cursor.fetchall()
-        return [{'id': i[0], 'timestamp': i[1], 'action': i[2], 'context': json.loads(i[3])} for i in interactions]
+        self.cursor.execute("SELECT weather FROM weather ORDER BY timestamp DESC LIMIT 1")
+        row = self.cursor.fetchone()
+        if row:
+            return json.loads(row[0])
+        else:
+            return {}
+
+    def check_weather_condition(self) -> str:
+        """
+        Check the current weather condition.
+
+        Returns:
+            str: The current weather condition.
+        """
+        weather_data = self.get_latest_weather()
+        if weather_data:
+            return weather_data['condition']
+        else:
+            return "Unknown"
 
 # Usage example:
-# tracker = InteractionTracker('interactions.db')
-# tracker.log_interaction('user1', 'clicked_button', {'button_id': 'submit'})
-# print(tracker.get_user_interactions('user1'))
+# weather_interface = WeatherInterface('weather.db')
+# weather_interface.update_weather({'condition': 'Sunny', 'temperature': 25})
+# print(weather_interface.check_weather_condition())  # Output: Sunny
