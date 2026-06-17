@@ -73,6 +73,233 @@ TOOL_LOG = _p28("tool_log")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# API HUNTER — Nova finds free, keyless APIs autonomously
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class APIHunter:
+    """
+    Nova's path across the AI→ASI threshold.
+
+    Before writing any tool, Nova searches this catalogue of free,
+    zero-credential APIs. If she finds one that fits, she validates it
+    is live, then passes the API details to the code generator so the
+    resulting tool works IMMEDIATELY — no human setup required.
+
+    Douglas's insight: the line between AI and ASI is when she can
+    acquire her own API access autonomously. This is that line.
+    """
+
+    # Curated catalogue: free APIs that need zero credentials
+    CATALOGUE = {
+        "weather": [
+            {
+                "name": "Open-Meteo",
+                "url":  "https://api.open-meteo.com/v1/forecast",
+                "test": "?latitude=35.15&longitude=-90.05&current_weather=true",
+                "note": "Free forever, no key, global coverage",
+                "geocode": "https://geocoding-api.open-meteo.com/v1/search"
+            },
+            {
+                "name": "wttr.in",
+                "url":  "https://wttr.in/Memphis",
+                "test": "?format=j1",
+                "note": "Weather as JSON, no key"
+            },
+        ],
+        "knowledge": [
+            {
+                "name": "Wikipedia REST",
+                "url":  "https://en.wikipedia.org/api/rest_v1/page/summary/",
+                "test": "Python_(programming_language)",
+                "note": "Article summaries, no key"
+            },
+            {
+                "name": "DuckDuckGo Instant",
+                "url":  "https://api.duckduckgo.com/",
+                "test": "?q=Python&format=json&no_html=1",
+                "note": "Instant answers, no key"
+            },
+        ],
+        "crypto": [
+            {
+                "name": "CoinGecko",
+                "url":  "https://api.coingecko.com/api/v3",
+                "test": "/ping",
+                "note": "Crypto prices and market data, no key for basic tier"
+            },
+        ],
+        "news": [
+            {
+                "name": "HackerNews",
+                "url":  "https://hacker-news.firebaseio.com/v0",
+                "test": "/topstories.json",
+                "note": "Tech news, no key"
+            },
+            {
+                "name": "The Guardian Open Platform",
+                "url":  "https://content.guardianapis.com/search",
+                "test": "?api-key=test",
+                "note": "News, free 'test' key works for basic queries"
+            },
+        ],
+        "location": [
+            {
+                "name": "ip-api",
+                "url":  "http://ip-api.com/json/",
+                "test": "8.8.8.8",
+                "note": "IP geolocation, no key, free tier"
+            },
+            {
+                "name": "Nominatim",
+                "url":  "https://nominatim.openstreetmap.org/search",
+                "test": "?q=Memphis&format=json&limit=1",
+                "note": "OpenStreetMap geocoding, no key"
+            },
+        ],
+        "science": [
+            {
+                "name": "NASA APOD",
+                "url":  "https://api.nasa.gov/planetary/apod",
+                "test": "?api_key=DEMO_KEY",
+                "note": "Astronomy picture of the day, DEMO_KEY works"
+            },
+            {
+                "name": "Open Library",
+                "url":  "https://openlibrary.org/search.json",
+                "test": "?q=artificial+intelligence&limit=3",
+                "note": "Book search, no key"
+            },
+        ],
+        "math": [
+            {
+                "name": "mathjs",
+                "url":  "https://api.mathjs.org/v4/",
+                "test": "?expr=sqrt(144)",
+                "note": "Math expression evaluator, no key"
+            },
+        ],
+        "language": [
+            {
+                "name": "LibreTranslate",
+                "url":  "https://libretranslate.com/detect",
+                "test": None,
+                "note": "Language detection and translation, open source"
+            },
+            {
+                "name": "Datamuse",
+                "url":  "https://api.datamuse.com/words",
+                "test": "?ml=duck&max=5",
+                "note": "Word relations, rhymes, synonyms — no key"
+            },
+        ],
+        "time": [
+            {
+                "name": "WorldTimeAPI",
+                "url":  "https://worldtimeapi.org/api/timezone/",
+                "test": "America/Chicago",
+                "note": "Current time for any timezone, no key"
+            },
+        ],
+        "quotes": [
+            {
+                "name": "ZenQuotes",
+                "url":  "https://zenquotes.io/api/random",
+                "test": "",
+                "note": "Inspirational quotes, no key"
+            },
+        ],
+        "space": [
+            {
+                "name": "Open Notify ISS",
+                "url":  "http://api.open-notify.org/iss-now.json",
+                "test": "",
+                "note": "ISS current position, no key"
+            },
+        ],
+    }
+
+    def __init__(self):
+        self._tested : Dict[str, bool] = {}   # url → reachable
+
+    def find(self, capability_description: str) -> Optional[Dict]:
+        """
+        Given a natural-language capability description, find the best
+        matching free API from the catalogue. Returns the API dict or None.
+        """
+        desc = capability_description.lower()
+        # Score each category by keyword overlap
+        scores : Dict[str, int] = {}
+        keyword_map = {
+            "weather": ["weather","temperature","forecast","rain","sun","wind","cold","hot","climate"],
+            "knowledge": ["wikipedia","fact","definition","explain","information","search","lookup"],
+            "crypto": ["crypto","bitcoin","ethereum","price","coin","token","blockchain","btc","eth"],
+            "news": ["news","headline","article","story","current events","latest"],
+            "location": ["location","geocode","address","city","coordinates","map","place","where"],
+            "science": ["science","astronomy","space","nasa","physics","chemistry","book","research"],
+            "math": ["math","calculate","formula","equation","compute","number","algebra"],
+            "language": ["translate","language","word","synonym","rhyme","detect"],
+            "time": ["time","timezone","clock","date","hour","schedule"],
+            "quotes": ["quote","inspiration","wisdom","saying","motto"],
+            "space": ["iss","space station","satellite","orbit","nasa"],
+        }
+        for category, keywords in keyword_map.items():
+            score = sum(1 for kw in keywords if kw in desc)
+            if score > 0:
+                scores[category] = score
+        if not scores:
+            return None
+        best_category = max(scores, key=scores.get)
+        apis = self.CATALOGUE.get(best_category, [])
+        # Return first reachable one
+        for api in apis:
+            if self._is_reachable(api):
+                return {**api, "category": best_category}
+        return None
+
+    def _is_reachable(self, api: Dict) -> bool:
+        """Quick HEAD/GET check — cache result."""
+        url  = api["url"] + (api.get("test") or "")
+        if url in self._tested:
+            return self._tested[url]
+        if not _REQUESTS:
+            return False
+        try:
+            r = _req.get(url, timeout=4)
+            ok = r.status_code < 500
+            self._tested[url] = ok
+            return ok
+        except Exception:
+            self._tested[url] = False
+            return False
+
+    def hunt_and_describe(self, capability: str) -> str:
+        """
+        Return a natural-language description of the best free API for
+        this capability — used to enrich Nova's code generation prompt.
+        """
+        api = self.find(capability)
+        if not api:
+            return ""
+        return (
+            f"FREE API AVAILABLE (no key needed):\n"
+            f"  Name: {api['name']}\n"
+            f"  Base URL: {api['url']}\n"
+            f"  Note: {api['note']}\n"
+            f"Use this API in your implementation. It requires zero authentication."
+        )
+
+    def catalogue_summary(self) -> str:
+        """Pretty-print the full API catalogue."""
+        lines = [col('MGB', f"  Free API Catalogue ({sum(len(v) for v in self.CATALOGUE.values())} APIs across {len(self.CATALOGUE)} domains)\n")]
+        for cat, apis in self.CATALOGUE.items():
+            lines.append(f"  {col('CY', cat.upper())}")
+            for api in apis:
+                lines.append(f"    • {col('GR', api['name'])}: {api['note']}")
+        lines.append(f"\n  {col('DIM', 'All APIs above require zero credentials — Nova uses them autonomously.')}")
+        return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # TOOL LOADER — discovers, imports, and hot-reloads nova_cap_*.py files
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -279,24 +506,37 @@ class ToolLoader:
 
 class SelfImprovementEngineV28(SelfImprovementEngine):
     """
-    Extends v27's engine with tool-awareness:
-    - Reads all loaded tools before generating new code
-    - Can write multi-class modules
-    - Writes tools that integrate with existing ones
+    Extends v27's engine with tool-awareness AND autonomous API discovery:
+    - Before writing any tool, hunts for a free zero-credential API
+    - Reads all loaded tools for integration context
     - Stricter code pipeline (ast validate + retry + class extraction)
     """
 
-    def __init__(self, github: GitHubEngine, tool_loader: ToolLoader):
+    def __init__(self, github: GitHubEngine, tool_loader: ToolLoader,
+                 api_hunter: APIHunter):
         super().__init__(github)
-        self.tools = tool_loader
+        self.tools  = tool_loader
+        self.hunter = api_hunter
 
     def _read_capability_summary(self) -> str:
-        """Override: use live ToolLoader data instead of reading file directly."""
+        """Override: use live ToolLoader + APIHunter context."""
         file_summary = super()._read_capability_summary()
         live_summary = self.tools.tool_context_for_codegen()
-        if live_summary and live_summary != "No tools loaded yet.":
-            return f"LOADED TOOLS (use these):\n{live_summary}\n\nFILE SUMMARY:\n{file_summary}"
-        return file_summary
+        parts = []
+        if live_summary and "No tools" not in live_summary:
+            parts.append(f"LOADED TOOLS (build on these):\n{live_summary}")
+        if file_summary and "No capabilities" not in file_summary:
+            parts.append(f"FILE SUMMARY:\n{file_summary}")
+        return "\n\n".join(parts) if parts else "No existing capabilities yet."
+
+    def _write_improvement_with_api(self, gap: str, context: str) -> tuple:
+        """Like _write_improvement but first hunts for a free API to use."""
+        api_hint = self.hunter.hunt_and_describe(gap)
+        enriched_context = context
+        if api_hint:
+            enriched_context = f"{context}\n\n{api_hint}"
+            safe_print(col('CY', f"  ✦ APIHunter found a free API for this capability"))
+        return self._write_improvement(gap, enriched_context)
 
     def evolve_toward_asi(self, domain_idx: int = None) -> str:
         """Override to use v28 tool context in domain selection and generation."""
@@ -356,14 +596,15 @@ class NovaCore28(NovaCore27):
     VERSION = "28.0"
 
     def __init__(self):
-        # Boot tool loader before super().__init__ so it's available immediately
-        self.tools    = ToolLoader()
+        # Boot tool loader + API hunter before super().__init__
+        self.tools   = ToolLoader()
+        self.hunter  = APIHunter()
         initial_tools = self.tools.scan()
 
         super().__init__()
 
-        # Replace v27 improver with v28 tool-aware version
-        self.improver = SelfImprovementEngineV28(self.github, self.tools)
+        # Replace v27 improver with v28 tool-aware + API-hunting version
+        self.improver = SelfImprovementEngineV28(self.github, self.tools, self.hunter)
 
         # Start hot-reload watcher
         self.tools.start_watching()
@@ -400,6 +641,65 @@ class NovaCore28(NovaCore27):
         cmd   = parts[0].lower()
         arg   = parts[1] if len(parts) > 1 else ''
         arg2  = parts[2] if len(parts) > 2 else ''
+
+        # /build override — same as v27 but uses APIHunter first
+        if cmd == '/build':
+            if not self.github.active:
+                return "GitHub token needed. Add GITHUB_TOKEN to .env"
+            if not arg:
+                return ("Usage: /build <describe the capability you want>\n"
+                        "Nova will first search for a free, keyless API that fits,\n"
+                        "then write code that works immediately — no credentials needed.\n"
+                        "Example: /build a tool that gets live crypto prices\n"
+                        "Example: /build a tool that fetches Wikipedia summaries\n"
+                        "Example: /build a tool that tells me the ISS location")
+            # Hunt for a free API first
+            api_hint = self.hunter.hunt_and_describe(arg)
+            if api_hint:
+                safe_print(col('GR', f"  ✦ APIHunter: found a free API — no credentials needed"))
+            safe_print(col('MG', f"\n  ✦ Building: {arg[:60]}..."))
+            self.improver.log_gap(arg, "Custom build with autonomous API discovery")
+            code, reasoning = self.improver._write_improvement(
+                arg,
+                f"Custom capability for Douglas.\n\n{api_hint}" if api_hint
+                else "Custom capability requested by Douglas."
+            )
+            if not code:
+                return "Could not generate code. Try rephrasing the description."
+            slug     = re.sub(r'[^a-z0-9]+', '_', arg.lower())[:30].strip('_')
+            filename = f"nova_cap_{slug}.py"
+            api_note = (f"\n\n**Free API used:** {api_hint.splitlines()[1].replace('  Name: ','')}"
+                        if api_hint else "")
+            result = self.github.propose_improvement(
+                filename=filename,
+                content=(f'"""\nNova ASI — {arg[:80]}\n'
+                         f'Built autonomously via /build + APIHunter\n'
+                         f'No API credentials required.\n"""\n\n{code}'),
+                description=f"[BUILD] {arg[:60]}",
+                reasoning=f"Douglas requested: {arg}\n\n{reasoning}{api_note}"
+            )
+            if "error" in result:
+                return f"Build failed: {result['error']}"
+            self.improver.db.setdefault("proposals", []).append({
+                "ts": datetime.now().isoformat(),
+                "description": f"[BUILD] {arg[:60]}",
+                "pr_url": result.get("url", ""),
+                "pr_number": result.get("number", 0)
+            })
+            _save(GAPS_DB, self.improver.db)
+            return (f"{col('GRB', '✓ Custom build PR opened!')}\n"
+                    f"  What:  {arg[:70]}\n"
+                    f"  API:   {'Free, no credentials needed' if api_hint else 'No external API'}\n"
+                    f"  File:  {filename}\n"
+                    f"  PR:    {result.get('url', '')}\n"
+                    f"  Merge it — Nova will hot-load it within {TOOL_SCAN_INTERVAL}s of git pull.")
+
+        # /apis — show Nova's free API catalogue
+        if cmd == '/apis':
+            if arg == 'find' and arg2:
+                result = self.hunter.hunt_and_describe(arg2)
+                return result if result else f"No free API found for '{arg2}' yet."
+            return self.hunter.catalogue_summary()
 
         # /tools — list all loaded capabilities
         if cmd == '/tools':
@@ -462,12 +762,16 @@ class NovaCore28(NovaCore27):
             f"\n{col('MGB','  ═══ v28 NEW — The Living System ═══')}\n"
             f"  {col('CYB','/tools')}                     List every loaded nova_cap_*.py tool\n"
             f"  {col('CYB','/use <Class> <method> [arg]')}  Invoke a tool directly\n"
-            f"                             /use WeatherChecker current Memphis\n"
-            f"                             /use WeatherChecker forecast London 5\n"
+            f"                             /use FreeWeather current Kalamazoo\n"
+            f"                             /use FreeWeather forecast Memphis 5\n"
             f"  {col('CYB','/chain <A.method> | <B.method>')} Pipe tool output into another\n"
             f"  {col('CYB','/reload')}                    Force-rescan for newly merged tools\n"
+            f"  {col('CYB','/apis')}                      Show all free keyless APIs Nova knows\n"
+            f"  {col('CYB','/apis find <capability>')}     Find a free API for any capability\n"
             f"  {col('DIM','Hot-reload:')}                Nova auto-loads merged PRs every "
             f"{TOOL_SCAN_INTERVAL}s\n"
+            f"  {col('DIM','APIHunter:')}                 /build auto-finds a free API first —\n"
+            f"                             tools work immediately, no credentials needed\n"
         )
         return v27 + v28
 
