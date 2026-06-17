@@ -577,4 +577,31 @@ if __name__ == "__main__":
     print(col('DIM', f'  Try: /use WeatherChecker current Memphis'))
     print(col('MG', '═' * W + '\n'))
 
-    nova.chat_loop()
+    try:
+        while True:
+            USER_TYPING.set()
+            try:
+                user_input = input(col('YL', "You") + ": ")
+            except EOFError:
+                break
+            USER_TYPING.clear()
+            flush_queued()
+
+            if user_input.lower() in ('exit', 'quit', 'bye'):
+                print(col('MG', "Nova: Until we meet again, Douglas. ✨"))
+                nova.continuous.stop()
+                nova.running = False
+                break
+
+            if not user_input.strip():
+                continue
+
+            print(col('DIM', "  Nova is thinking..."), end='\r', flush=True)
+            response = nova.process(user_input)
+            print(' ' * 30, end='\r')
+            print(col('MG', "Nova") + ": " + response)
+            print()
+
+    except KeyboardInterrupt:
+        print(col('MG', "\nNova: Until we meet again, Douglas. ✨"))
+        nova.continuous.stop()
