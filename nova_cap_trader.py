@@ -84,17 +84,24 @@ class PriceFeed:
             return {}
 
     def history(self, coin_id: str, days: int = 14) -> List[float]:
-        """Get daily closing prices for RSI calculation."""
+        """Get daily closing prices for RSI calculation (cached 5 min)."""
         if not _OK:
             return []
+        cache_key = f"hist_{coin_id}_{days}"
+        ts, cached = self._cache.get(cache_key, (0, []))
+        if time.time() - ts < 300 and cached:   # 5-minute cache
+            return cached
         try:
             r = _req.get(f"{self.BASE}/coins/{coin_id}/market_chart",
                          params={"vs_currency": "usd", "days": days,
                                  "interval": "daily"},
                          timeout=10)
-            return [p[1] for p in r.json().get("prices", [])]
+            prices = [p[1] for p in r.json().get("prices", [])]
+            if prices:
+                self._cache[cache_key] = (time.time(), prices)
+            return prices
         except Exception:
-            return []
+            return cached or []
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -385,6 +392,34 @@ class NovaTrader:
                 lines.append(f"  {t['ts'][:16]}  {t['side']:4} {t['coin']:12} "
                              f"${t['usd']:>8,.2f}  {t['reason']}")
         lines.append(f"{'─'*50}")
+        return "\n".join(lines)
+
+    def signals_report(self) -> str:
+        """Show current RSI, MA, and signal for every watched coin."""
+        prices = self.feed.prices(self.watchlist)
+        lines  = [f"{'─'*56}",
+                  f"  Nova Signal Scan  {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                  f"{'─'*56}",
+                  f"  {'Coin':12} {'Price':>10}  {'RSI':>6}  {'MA7':>10}  {'MA14':>10}  Signal"]
+        for coin in self.watchlist:
+            price = prices.get(coin)
+            if not price:
+                lines.append(f"  {coin:12}  (no price data)")
+                continue
+            hist  = self.feed.history(coin, days=16)
+            rsi   = self.strategy.rsi(hist) if len(hist) >= 15 else None
+            ma7   = self.strategy.ma(hist, 7)
+            ma14  = self.strategy.ma(hist, 14)
+            sig   = self.strategy.signal(hist)
+            rsi_s = f"{rsi:5.1f}" if rsi is not None else "  N/A"
+            ma7_s = f"{ma7:>10,.2f}" if ma7 else "       N/A"
+            ma14_s= f"{ma14:>10,.2f}" if ma14 else "       N/A"
+            flag  = " ◀ SIGNAL" if sig != "HOLD" else ""
+            lines.append(f"  {coin:12} ${price:>10,.2f}  {rsi_s}  {ma7_s}  {ma14_s}  {sig}{flag}")
+        lines.append(f"{'─'*56}")
+        lines.append("  BUY when RSI < 35 and MA7 > MA14 (bullish crossover)")
+        lines.append("  SELL when RSI > 70 and MA7 < MA14 (bearish crossover)")
+        lines.append(f"{'─'*56}")
         return "\n".join(lines)
 
     def start_auto(self, interval_minutes: int = 15):
