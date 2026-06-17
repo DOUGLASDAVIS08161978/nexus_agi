@@ -577,10 +577,11 @@ class NovaCore26(NovaCore):
             safe_print(col('CY', f"\n  ◌ Searching web for '{arg}'..."), end='\r', flush=True)
             result = self.web.research(arg)
             self.drive.add_interest(arg, 0.35)
+            n_sources = len(result.get('findings', []))
             return (f"{col('CYB','Web Research:')} {arg}\n"
                     f"{'─'*55}\n"
                     f"{result['synthesis']}\n"
-                    f"{col('DIM', f'Sources: {len(result[chr(34)+chr(102)+chr(105)+chr(110)+chr(100)+chr(105)+chr(110)+chr(103)+chr(115)+chr(34)])} found')}")
+                    f"{col('DIM', str(n_sources) + ' sources found')}")
 
         if cmd == '/know':
             return self.web.what_i_know(arg or 'everything')
@@ -597,7 +598,7 @@ class NovaCore26(NovaCore):
                     f"{col('CYB','─'*60)}\n"
                     f"{result['synthesis']}\n"
                     f"{col('DIM','─'*60)}\n"
-                    f"{col('DIM', f'{len(result[chr(102)+chr(105)+chr(110)+chr(100)+chr(105)+chr(110)+chr(103)+chr(115)])} sources reviewed')}")
+                    f"{col('DIM', str(len(result.get('findings', []))) + ' sources reviewed')}")
 
         # /creator — know her creators
         if cmd == '/creator':
