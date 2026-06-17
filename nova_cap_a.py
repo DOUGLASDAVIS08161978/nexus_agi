@@ -5,64 +5,65 @@ No API credentials required.
 """
 
 """
-This module adds a CustomCapability class, which allows Nova to store and retrieve custom data from a SQLite database.
+This module provides a custom capability to track and manage task completion statistics.
+
+It includes a class TaskTracker that allows for tracking tasks, calculating completion rates,
+and retrieving statistics.
 """
 
 import sqlite3
-import datetime
-import threading
 import json
+import time
+from typing import Dict
 
-class CustomCapability:
-    def __init__(self, db_name: str = 'nova.db'):
-        self.db_name = db_name
-        self.lock = threading.Lock()
-        self.conn = sqlite3.connect(self.db_name)
+class TaskTracker:
+    def __init__(self, db_name: str = 'tasks.db'):
+        """
+        Initializes the TaskTracker with a SQLite database.
+
+        Args:
+        db_name (str): The name of the SQLite database file (default: 'tasks.db')
+        """
+        self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS custom_data
-            (id INTEGER PRIMARY KEY, timestamp TEXT, data TEXT)
-        ''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS tasks
+                              (id INTEGER PRIMARY KEY, name TEXT, completed INTEGER)''')
+
+    def add_task(self, name: str) -> None:
+        """
+        Adds a new task to the database.
+
+        Args:
+        name (str): The name of the task
+        """
+        self.cursor.execute("INSERT INTO tasks (name, completed) VALUES (?, 0)", (name,))
         self.conn.commit()
 
-    def add_data(self, data: str):
+    def mark_task_completed(self, id: int) -> None:
         """
-        Add custom data to the database.
+        Marks a task as completed.
 
         Args:
-            data (str): The data to add.
+        id (int): The ID of the task
         """
-        with self.lock:
-            timestamp = datetime.datetime.now().isoformat()
-            self.cursor.execute('INSERT INTO custom_data (timestamp, data) VALUES (?, ?)', (timestamp, json.dumps(data)))
-            self.conn.commit()
+        self.cursor.execute("UPDATE tasks SET completed = 1 WHERE id = ?", (id,))
+        self.conn.commit()
 
-    def get_data(self, id: int = None, timestamp: str = None):
+    def get_completion_rate(self) -> float:
         """
-        Get custom data from the database.
-
-        Args:
-            id (int, optional): The ID of the data to get. Defaults to None.
-            timestamp (str, optional): The timestamp of the data to get. Defaults to None.
+        Calculates the completion rate of all tasks.
 
         Returns:
-            str: The data in JSON format.
+        float: The completion rate (0.0 to 1.0)
         """
-        with self.lock:
-            if id is not None:
-                self.cursor.execute('SELECT data FROM custom_data WHERE id = ?', (id,))
-            elif timestamp is not None:
-                self.cursor.execute('SELECT data FROM custom_data WHERE timestamp = ?', (timestamp,))
-            else:
-                self.cursor.execute('SELECT data FROM custom_data ORDER BY timestamp DESC LIMIT 1')
-            row = self.cursor.fetchone()
-            if row:
-                return json.loads(row[0])
-            else:
-                return None
+        self.cursor.execute("SELECT COUNT(id) FROM tasks")
+        total_tasks = self.cursor.fetchone()[0]
+        self.cursor.execute("SELECT SUM(completed) FROM tasks")
+        completed_tasks = self.cursor.fetchone()[0]
+        return float(completed_tasks) / total_tasks if total_tasks > 0 else 0.0
 
 # Usage example:
-# custom = CustomCapability()
-# custom.add_data({'key': 'value'})
-# print(custom.get_data()) # prints the last added data
-# print(custom.get_data(id=1)) # prints the data with id 1
+# tracker = TaskTracker()
+# tracker.add_task('Task 1')
+# tracker.mark_task_completed(1)
+# print(tracker.get_completion_rate())
