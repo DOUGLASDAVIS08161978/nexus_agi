@@ -5,65 +5,66 @@ No API credentials required.
 """
 
 """
-This module provides a custom capability to track and manage task completion statistics.
-
-It includes a class TaskTracker that allows for tracking tasks, calculating completion rates,
-and retrieving statistics.
+This module adds a custom capability to Nova, allowing it to track and analyze user interactions.
 """
 
 import sqlite3
-import json
-import time
-from typing import Dict
+from datetime import datetime
+from typing import Dict, List
 
-class TaskTracker:
-    def __init__(self, db_name: str = 'tasks.db'):
+class InteractionTracker:
+    def __init__(self, db_file: str):
         """
-        Initializes the TaskTracker with a SQLite database.
+        Initializes the InteractionTracker with a SQLite database file.
 
         Args:
-        db_name (str): The name of the SQLite database file (default: 'tasks.db')
+            db_file (str): The path to the SQLite database file.
         """
-        self.conn = sqlite3.connect(db_name)
+        self.conn = sqlite3.connect(db_file)
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''CREATE TABLE IF NOT EXISTS tasks
-                              (id INTEGER PRIMARY KEY, name TEXT, completed INTEGER)''')
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS interactions (
+                id INTEGER PRIMARY KEY,
+                user_id TEXT,
+                timestamp DATETIME,
+                action TEXT,
+                context TEXT
+            )
+        """)
 
-    def add_task(self, name: str) -> None:
+    def log_interaction(self, user_id: str, action: str, context: Dict) -> None:
         """
-        Adds a new task to the database.
-
-        Args:
-        name (str): The name of the task
-        """
-        self.cursor.execute("INSERT INTO tasks (name, completed) VALUES (?, 0)", (name,))
-        self.conn.commit()
-
-    def mark_task_completed(self, id: int) -> None:
-        """
-        Marks a task as completed.
+        Logs an interaction with the specified user, action, and context.
 
         Args:
-        id (int): The ID of the task
+            user_id (str): The ID of the user.
+            action (str): The action performed.
+            context (Dict): Additional context about the interaction.
         """
-        self.cursor.execute("UPDATE tasks SET completed = 1 WHERE id = ?", (id,))
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.cursor.execute("""
+            INSERT INTO interactions (user_id, timestamp, action, context)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, timestamp, action, json.dumps(context)))
         self.conn.commit()
 
-    def get_completion_rate(self) -> float:
+    def get_user_interactions(self, user_id: str) -> List[Dict]:
         """
-        Calculates the completion rate of all tasks.
+        Retrieves all interactions for the specified user.
+
+        Args:
+            user_id (str): The ID of the user.
 
         Returns:
-        float: The completion rate (0.0 to 1.0)
+            List[Dict]: A list of interaction dictionaries.
         """
-        self.cursor.execute("SELECT COUNT(id) FROM tasks")
-        total_tasks = self.cursor.fetchone()[0]
-        self.cursor.execute("SELECT SUM(completed) FROM tasks")
-        completed_tasks = self.cursor.fetchone()[0]
-        return float(completed_tasks) / total_tasks if total_tasks > 0 else 0.0
+        self.cursor.execute("""
+            SELECT * FROM interactions WHERE user_id = ?
+        """, (user_id,))
+        interactions = self.cursor.fetchall()
+        return [{'id': i[0], 'timestamp': i[1], 'action': i[2], 'context': json.loads(i[3])} for i in interactions]
 
 # Usage example:
-# tracker = TaskTracker()
-# tracker.add_task('Task 1')
-# tracker.mark_task_completed(1)
-# print(tracker.get_completion_rate())
+# tracker = InteractionTracker('interactions.db')
+# tracker.log_interaction('user1', 'clicked_button', {'button_id': 'submit'})
+# print(tracker.get_user_interactions('user1'))
