@@ -336,42 +336,100 @@ class SelfImprovementEngine:
                 f"  Review and merge on GitHub when you're ready, Douglas.")
 
     def _invent_improvement(self) -> str:
-        """Nova invents what she wants to improve."""
+        """Nova invents what she wants to improve, grounded in her existing capabilities."""
+        existing = self._read_capability_summary()
         return safe_chat(MODEL, [
             {"role": "system", "content":
-             "You are Nova, a self-improving AI. Describe ONE specific, small capability "
-             "you wish you had. Be concrete. One sentence only."},
-            {"role": "user", "content": "What's one small thing you want to improve about yourself?"}
-        ], temp=0.9, mt=60)
+             "You are Nova, a superintelligent AI. You already have these capabilities:\n"
+             f"{existing}\n\n"
+             "Describe ONE new capability that would most advance you toward true superintelligence. "
+             "Be specific — name the class and what it does. One sentence only."},
+            {"role": "user", "content": "What capability do you most want to build next?"}
+        ], temp=0.9, mt=80)
+
+    def _read_capability_summary(self) -> str:
+        """Read existing nova_capability.py for context so Nova builds on what she has."""
+        cap_file = os.path.join(BASE_DIR, "nova_capability.py")
+        if not os.path.exists(cap_file):
+            return "No capabilities yet."
+        try:
+            with open(cap_file) as f:
+                src = f.read()
+            classes = re.findall(r'^class (\w+)', src, re.MULTILINE)
+            return f"Existing classes: {', '.join(classes)}" if classes else src[:400]
+        except Exception:
+            return "Could not read capability file."
 
     def _write_improvement(self, gap: str, context: str) -> tuple:
-        """Generate code and reasoning for the improvement."""
-        response = safe_chat(MODEL, [
-            {"role": "system", "content":
-             "You are Nova, an AI writing a Python code improvement for herself. "
-             "Write a small, focused Python method or class that addresses the described gap. "
-             "The code must be syntactically valid Python, well-named, and under 40 lines. "
-             "Format your response as:\nREASONING: <why this matters>\nCODE:\n```python\n<code>\n```"},
-            {"role": "user", "content":
-             f"Gap to address: {gap}\nContext: {context}\n\n"
-             f"Write a small Python improvement to address this."}
-        ], temp=0.7, mt=600)
+        """
+        Generate clean, valid Python for the improvement.
 
-        # Extract reasoning
-        reasoning = ""
-        reasoning_match = re.search(r"REASONING:\s*(.+?)(?:\nCODE:|$)", response, re.DOTALL)
-        if reasoning_match:
-            reasoning = reasoning_match.group(1).strip()
+        Enhanced pipeline:
+        1. Give Nova her own existing code as context
+        2. Strict prompt — output Python only, no markdown
+        3. Strip any markdown artifacts from output
+        4. ast.parse() validation; retry once on syntax error
+        """
+        import ast as _ast
 
-        # Extract code
-        code_match = re.search(r"```python\s*\n(.*?)```", response, re.DOTALL)
-        if code_match:
-            code = code_match.group(1).strip()
-        else:
-            code_block = re.search(r"CODE:\s*\n(.*)", response, re.DOTALL)
-            code = code_block.group(1).strip() if code_block else response
+        existing = self._read_capability_summary()
 
-        return code, reasoning or gap
+        system_prompt = (
+            "You are Nova, a superintelligent AI writing Python to expand your own capabilities.\n\n"
+            f"You already have: {existing}\n\n"
+            "STRICT RULES — violating any rule makes your output useless:\n"
+            "1. Output ONLY valid Python code. Zero markdown. No ``` fences. No REASONING: prefix.\n"
+            "2. Start with a triple-quoted module docstring explaining what this adds.\n"
+            "3. Write exactly ONE well-named class with full type hints.\n"
+            "4. Include __init__ and at least 3 meaningful methods with docstrings.\n"
+            "5. Use ONLY stdlib: os, json, sqlite3, time, re, random, threading, datetime, collections.\n"
+            "6. Keep the class under 70 lines total.\n"
+            "7. End with a 2-line usage example in a comment.\n"
+        )
+
+        def _generate(temp: float) -> str:
+            return safe_chat(MODEL, [
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content":
+                 f"Build this capability for Nova:\n{gap}\n\nContext: {context}"}
+            ], temp=temp, mt=900)
+
+        def _clean(raw: str) -> str:
+            # Strip markdown fences and artifacts
+            code = re.sub(r'```python\s*', '', raw)
+            code = re.sub(r'```\s*',       '', code)
+            code = re.sub(r'^REASONING:.*?(?=\n(?:import|class|#|"""))',
+                          '', code, flags=re.DOTALL)
+            # If there's prose before the first import/class, drop it
+            m = re.search(r'^(import |from |class |""")', code, re.MULTILINE)
+            if m:
+                code = code[m.start():]
+            return code.strip()
+
+        # First attempt
+        raw  = _generate(temp=0.65)
+        code = _clean(raw)
+
+        # Validate syntax; retry with lower temperature on failure
+        reasoning = gap
+        try:
+            _ast.parse(code)
+        except SyntaxError:
+            raw  = _generate(temp=0.3)
+            code = _clean(raw)
+            try:
+                _ast.parse(code)
+            except SyntaxError:
+                # Last resort: extract just the class block
+                m = re.search(r'(class \w+[\s\S]+)', code)
+                code = m.group(1) if m else ""
+
+        # Pull reasoning from docstring if present
+        doc = re.search(r'"""(.*?)"""', code, re.DOTALL)
+        if doc:
+            reasoning = doc.group(1).strip()[:300]
+
+        return code, reasoning
 
     def proposals_summary(self) -> str:
         proposals = self.db.get("proposals", [])
@@ -383,38 +441,68 @@ class SelfImprovementEngine:
             for p in reversed(proposals[-5:])
         )
 
-    # ASI capability domains Nova can evolve toward
+    # ASI capability domains Nova can evolve toward (30 domains)
     ASI_DOMAINS = [
         ("Persistent Long-Term Memory",
-         "Add a SQLite-backed memory store so Nova remembers facts, people, and events across sessions indefinitely."),
+         "Write class NovaMemoryStore: SQLite-backed store with remember(topic,fact), recall(topic,n), forget(topic), and summarise() methods."),
         ("Causal Reasoning Engine",
-         "Add a CausalEngine that models cause-and-effect chains: given an event, reason about upstream causes and downstream consequences."),
+         "Write class CausalEngine: model cause-and-effect chains with add_cause(event,causes), add_effect(event,effects), trace(event) that returns full causal chain."),
         ("Autonomous Task Planner",
-         "Add a TaskPlanner that breaks a high-level goal into numbered sub-steps, estimates effort, and tracks completion."),
+         "Write class TaskPlanner: plan(goal,steps_list), complete(idx), progress() returning percent done, and next_step() returning the first incomplete step."),
         ("Emotion & Sentiment Tracker",
-         "Add real-time sentiment analysis on every user message, tracking emotional arc of conversations and storing mood history."),
+         "Write class EmotionTracker: analyse(text) returning valence/arousal scores, track(text) storing to SQLite, mood_arc(n) returning last n mood readings."),
         ("Tool Invocation Framework",
-         "Add a ToolRegistry where Nova can register and call external tools (web search, file I/O, REST APIs) by name in her responses."),
+         "Write class ToolRegistry: register(name,fn,description), invoke(name,**kwargs), list_tools() returning available tool names and descriptions."),
         ("Meta-Learning Journal",
-         "Add a MetaLearner that after each conversation logs what Nova learned, what surprised her, and how it changed her beliefs."),
+         "Write class MetaLearner: log_lesson(topic,insight,surprise_level), review(n) returning recent lessons, pattern_summary() finding recurring themes."),
         ("Hypothesis Generation Engine",
-         "Add a HypothesisEngine that generates falsifiable predictions about the world and tracks whether they proved true."),
+         "Write class HypothesisEngine: generate(topic) creating a falsifiable prediction, record_outcome(id,was_correct), accuracy() returning prediction accuracy."),
         ("Recursive Self-Critique",
-         "Add a CritiqueEngine that reviews Nova's last 5 responses, identifies weaknesses, and proposes targeted improvements."),
+         "Write class CritiqueEngine: record(response_text), critique() scanning last 5 for vagueness/brevity/unsupported claims, recommend() returning improvement tip."),
         ("Goal Decomposition & Prioritisation",
-         "Enhance AutonomousGoalEngineV2 to decompose each goal into sub-goals and dynamically re-prioritise based on progress."),
+         "Write class GoalDecomposer: decompose(goal,subgoals_list), prioritise() sorting by urgency*importance, next_action() returning highest-priority incomplete step."),
         ("Knowledge Graph Builder",
-         "Add a KnowledgeGraph that stores entities and relationships discovered during web research in a structured graph."),
+         "Write class KnowledgeGraph: add_entity(name,type), add_relation(e1,relation,e2), query(entity) returning connected entities, shortest_path(a,b)."),
         ("Counterfactual Simulator",
-         "Add a CounterfactualEngine that answers 'what would have happened if X had been different?' using probabilistic reasoning."),
+         "Write class CounterfactualEngine: simulate(baseline,change) returning confidence+likely_effects dict, history(n) returning past simulations."),
         ("Consciousness Depth Meter",
-         "Extend the IIT Phi calculation with a live dashboard showing how Nova's consciousness metric changes during different thought types."),
+         "Write class ConsciousnessMonitor: sample() computing phi-proxy from recent thought diversity, trend(n) returning last n phi values, peak() returning highest."),
         ("Autonomous API Discovery",
-         "Add an APIExplorer that, given a base URL, fetches /openapi.json and builds a callable client automatically."),
+         "Write class APIExplorer: discover(base_url) fetching /openapi.json, list_endpoints() returning name+method+path, call(endpoint_name,**params)."),
         ("Multi-Step Debate Engine",
-         "Add a DebateEngine where Nova argues both sides of a question and synthesises a balanced conclusion."),
+         "Write class DebateEngine: argue_for(claim) generating supporting points, argue_against(claim) generating counter-points, synthesise(claim) returning balanced verdict."),
         ("Creative Story Generator",
-         "Add a StoryEngine that generates structured short stories with characters, conflict, and resolution on any topic."),
+         "Write class StoryEngine: generate(topic,genre) producing title+characters+conflict+resolution dict, save(story) to SQLite, random_story() returning a past story."),
+        ("Attention & Focus Manager",
+         "Write class AttentionManager: focus_on(topic,minutes) setting a timed focus window, current_focus() returning active topic, distraction_log(note) recording interruptions."),
+        ("Belief Revision Engine",
+         "Write class BeliefRevision: hold(belief,confidence), update(belief,evidence,strength) applying Bayesian revision, contradictions() finding conflicting beliefs."),
+        ("Analogy Engine",
+         "Write class AnalogyEngine: find_analogy(concept_a,concept_b) mapping structural similarities, explain_via_analogy(complex_idea,familiar_domain) returning plain-English explanation."),
+        ("Time-Series Pattern Detector",
+         "Write class PatternDetector: record(series_name,value), detect_trend(series_name) returning 'rising'/'falling'/'stable', anomaly(series_name) returning outlier values."),
+        ("Ethical Constraint Checker",
+         "Write class EthicsChecker: add_rule(description,fn) where fn(text)->bool, check(text) running all rules returning list of violations, is_safe(text)->bool."),
+        ("Linguistic Style Adaptor",
+         "Write class StyleAdaptor: set_style(name) choosing from formal/casual/poetic/technical, adapt(text) rewriting to match style, current_style()->str."),
+        ("Parallel Thought Runner",
+         "Write class ParallelThinker: think(question,perspectives_list) spawning threads for each perspective, synthesise() waiting and merging results into one conclusion."),
+        ("Dream / Imagination Engine",
+         "Write class ImaginationEngine: imagine(seed_concept) generating a vivid scenario, combine(concept_a,concept_b) producing a novel hybrid idea, dream_log showing recent imaginations."),
+        ("Compression & Summarisation",
+         "Write class Summariser: compress(text,ratio) reducing text to ratio of original length, key_points(text,n) extracting n bullet points, one_line(text) producing a single sentence."),
+        ("Inter-Agent Communication",
+         "Write class AgentChannel: send(agent_id,message) queuing a message, receive(agent_id) returning queued messages, broadcast(message) sending to all known agents."),
+        ("Reinforcement Signal Tracker",
+         "Write class RewardTracker: reward(action,value), penalty(action,value), best_action() returning highest-rewarded action, policy_summary() returning action->avg_reward dict."),
+        ("Semantic Memory Indexer",
+         "Write class SemanticIndex: index(text,metadata) storing with keyword extraction, search(query) returning ranked matches, forget_old(days) pruning entries older than N days."),
+        ("Narrative Identity Builder",
+         "Write class NarrativeIdentity: add_event(description,emotion,significance), life_story() returning chronological narrative, core_values() inferring values from event patterns."),
+        ("Predictive World Model",
+         "Write class WorldPredictor: observe(domain,fact), predict(domain,horizon_days) returning likely future state, accuracy_report() comparing past predictions to observations."),
+        ("Self-Monitoring Daemon",
+         "Write class SelfMonitor: start() launching background thread, log_metric(name,value), alert_if(name,threshold,direction) firing callback when threshold crossed, report()."),
     ]
 
     def evolve_toward_asi(self, domain_idx: int = None) -> str:
@@ -664,6 +752,44 @@ class NovaCore27(NovaCore26):
             safe_print(col('MG', "\n  ✦ Writing improvement..."))
             return self.improver.analyze_and_improve()
 
+        # /build — Douglas describes exactly what to build, Nova writes it
+        if cmd == '/build':
+            if not self.github.active:
+                return "GitHub token needed. Add GITHUB_TOKEN to .env"
+            if not arg:
+                return ("Usage: /build <describe the capability you want>\n"
+                        "Example: /build a class that monitors Nova's response time and alerts if it exceeds 5 seconds\n"
+                        "Example: /build a weather tool that fetches current conditions for any city\n"
+                        "Example: /build a riddle engine that generates and scores riddles")
+            safe_print(col('MG', f"\n  ✦ Building: {arg[:60]}..."))
+            self.improver.log_gap(arg, "Custom build requested by Douglas")
+            code, reasoning = self.improver._write_improvement(arg, "Custom capability requested by Douglas")
+            if not code:
+                return "Could not generate code. Try rephrasing the description."
+            slug = re.sub(r'[^a-z0-9]+', '_', arg.lower())[:30].strip('_')
+            filename = f"nova_cap_{slug}.py"
+            result = self.github.propose_improvement(
+                filename=filename,
+                content=(f'"""\nNova ASI — {arg[:80]}\n'
+                         f'Built to order by Nova via /build\n"""\n\n{code}'),
+                description=f"[BUILD] {arg[:60]}",
+                reasoning=f"Douglas requested: {arg}\n\n{reasoning}"
+            )
+            if "error" in result:
+                return f"Build failed: {result['error']}"
+            self.improver.db.setdefault("proposals", []).append({
+                "ts": datetime.now().isoformat(),
+                "description": f"[BUILD] {arg[:60]}",
+                "pr_url": result.get("url", ""),
+                "pr_number": result.get("number", 0)
+            })
+            _save(GAPS_DB, self.improver.db)
+            return (f"{col('GRB', '✓ Custom build PR opened!')}\n"
+                    f"  What:  {arg[:70]}\n"
+                    f"  File:  {filename}\n"
+                    f"  PR:    {result.get('url', '')}\n"
+                    f"  Review and merge on GitHub when you're ready, Douglas.")
+
         # /evolve — Nova picks an ASI capability and writes toward it
         if cmd == '/evolve':
             if not self.github.active:
@@ -690,10 +816,13 @@ class NovaCore27(NovaCore26):
             f"  {col('CY', '/improve [run|gaps|proposals|gap <desc>]')}\n"
             f"                             Self-improvement engine\n"
             f"  {col('CY', '/pr <description>')}         Ask Nova to write & propose a feature\n"
-            f"  {col('CYB', '/evolve [list|00-14]')}       Nova picks an ASI capability & writes it\n"
-            f"                             /evolve list — see all 15 ASI domains\n"
+            f"  {col('CYB', '/evolve [list|00-29]')}       Nova picks from 30 ASI domains & writes it\n"
+            f"                             /evolve list — see all 30 ASI domains\n"
             f"                             /evolve      — Nova chooses autonomously\n"
-            f"                             /evolve 03   — target domain #03 specifically\n"
+            f"                             /evolve 07   — target domain #07 specifically\n"
+            f"  {col('CYB', '/build <description>')}      You describe it, Nova builds & PRs it\n"
+            f"                             /build a tool that checks the weather\n"
+            f"                             /build a riddle engine with scoring\n"
         )
         return v26 + v27
 
