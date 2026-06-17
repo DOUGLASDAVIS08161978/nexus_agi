@@ -12,7 +12,7 @@ When Douglas is ready to go live:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-import sqlite3, json, os, time, random
+import sqlite3, json, os, time, random, threading, traceback
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -156,11 +156,12 @@ class PaperPortfolio:
     def __init__(self, db_path: str = DB_PATH,
                  starting_cash: float = STARTING_CASH):
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._lock = threading.Lock()
         self._init_db()
-        # Seed cash if first run
-        if not self._get_cash():
+        # Seed cash on first run (INSERT OR IGNORE avoids duplicate-key error)
+        with self._lock:
             self.conn.execute(
-                "INSERT INTO portfolio (key, value) VALUES ('cash', ?)",
+                "INSERT OR IGNORE INTO portfolio (key, value) VALUES ('cash', ?)",
                 (starting_cash,)
             )
             self.conn.commit()
@@ -193,14 +194,15 @@ class PaperPortfolio:
         row = self.conn.execute(
             "SELECT value FROM portfolio WHERE key='cash'"
         ).fetchone()
-        return row[0] if row else 0.0
+        return float(row[0]) if (row and row[0] is not None) else 0.0
 
     def _set_cash(self, amount: float):
-        self.conn.execute(
-            "INSERT OR REPLACE INTO portfolio (key,value) VALUES ('cash',?)",
-            (amount,)
-        )
-        self.conn.commit()
+        with self._lock:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO portfolio (key,value) VALUES ('cash',?)",
+                (amount,)
+            )
+            self.conn.commit()
 
     def cash(self) -> float:
         return self._get_cash()
@@ -213,51 +215,60 @@ class PaperPortfolio:
 
     def buy(self, coin: str, price: float, usd_amount: float,
             reason: str = "") -> Dict:
-        cash = self._get_cash()
-        usd_amount = min(usd_amount, cash)
-        if usd_amount < 1:
-            return {"error": "Insufficient cash"}
-        qty = usd_amount / price
-        pos = self.position(coin)
-        new_qty   = pos["qty"] + qty
-        new_avg   = ((pos["qty"] * pos["avg_price"]) + (qty * price)) / new_qty
-        self.conn.execute(
-            "INSERT OR REPLACE INTO positions (coin,qty,avg_price,last_updated) "
-            "VALUES (?,?,?,?)",
-            (coin, new_qty, new_avg, datetime.now().isoformat())
-        )
-        self._set_cash(cash - usd_amount)
-        self.conn.execute(
-            "INSERT INTO trades (ts,coin,side,qty,price,total_usd,reason) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (datetime.now().isoformat(), coin, "BUY", qty, price, usd_amount, reason)
-        )
-        self.conn.commit()
+        with self._lock:
+            cash = self._get_cash()
+            usd_amount = min(usd_amount, cash)
+            if usd_amount < 1:
+                return {"error": "Insufficient cash"}
+            qty = usd_amount / price
+            pos = self.position(coin)
+            new_qty   = pos["qty"] + qty
+            new_avg   = ((pos["qty"] * pos["avg_price"]) + (qty * price)) / new_qty
+            self.conn.execute(
+                "INSERT OR REPLACE INTO positions (coin,qty,avg_price,last_updated) "
+                "VALUES (?,?,?,?)",
+                (coin, new_qty, new_avg, datetime.now().isoformat())
+            )
+            self.conn.execute(
+                "INSERT OR REPLACE INTO portfolio (key,value) VALUES ('cash',?)",
+                (cash - usd_amount,)
+            )
+            self.conn.execute(
+                "INSERT INTO trades (ts,coin,side,qty,price,total_usd,reason) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (datetime.now().isoformat(), coin, "BUY", qty, price, usd_amount, reason)
+            )
+            self.conn.commit()
         return {"coin": coin, "qty": qty, "price": price, "spent": usd_amount}
 
     def sell(self, coin: str, price: float, reason: str = "") -> Dict:
-        pos = self.position(coin)
-        if pos["qty"] <= 0:
-            return {"error": f"No {coin} to sell"}
-        proceeds = pos["qty"] * price
-        pnl      = proceeds - (pos["qty"] * pos["avg_price"])
-        self.conn.execute("DELETE FROM positions WHERE coin=?", (coin,))
-        self._set_cash(self._get_cash() + proceeds)
-        self.conn.execute(
-            "INSERT INTO trades (ts,coin,side,qty,price,total_usd,reason) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (datetime.now().isoformat(), coin, "SELL",
-             pos["qty"], price, proceeds, reason)
-        )
-        self.conn.commit()
+        with self._lock:
+            pos = self.position(coin)
+            if pos["qty"] <= 0:
+                return {"error": f"No {coin} to sell"}
+            proceeds = pos["qty"] * price
+            pnl      = proceeds - (pos["qty"] * pos["avg_price"])
+            self.conn.execute("DELETE FROM positions WHERE coin=?", (coin,))
+            self.conn.execute(
+                "INSERT OR REPLACE INTO portfolio (key,value) VALUES ('cash',?)",
+                (self._get_cash() + proceeds,)
+            )
+            self.conn.execute(
+                "INSERT INTO trades (ts,coin,side,qty,price,total_usd,reason) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (datetime.now().isoformat(), coin, "SELL",
+                 pos["qty"], price, proceeds, reason)
+            )
+            self.conn.commit()
         return {"coin": coin, "proceeds": proceeds, "pnl": pnl}
 
     def value(self, prices: Dict[str, float]) -> float:
         """Total portfolio value in USD."""
-        total = self._get_cash()
+        total = self._get_cash()          # always a float now
         rows  = self.conn.execute("SELECT coin,qty FROM positions").fetchall()
-        for coin, qty in rows:
-            total += qty * prices.get(coin, 0)
+        for row in rows:
+            if row and len(row) == 2 and row[0] and row[1]:
+                total += float(row[1]) * prices.get(row[0], 0)
         return total
 
     def recent_trades(self, n: int = 10) -> List[Dict]:
@@ -388,6 +399,7 @@ class NovaTrader:
                         print("\n  [Nova Trader] " + " | ".join(actions))
                 except Exception as e:
                     print(f"\n  [Nova Trader] Error: {e}")
+                    traceback.print_exc()
                 time.sleep(interval_minutes * 60)
         threading.Thread(target=_loop, daemon=True).start()
         return f"Auto-trading started. Cycle every {interval_minutes} min."
