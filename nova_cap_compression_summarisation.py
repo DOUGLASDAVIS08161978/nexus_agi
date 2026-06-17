@@ -4,69 +4,73 @@ Proposed autonomously via /evolve
 """
 
 """
-This module adds text summarisation capabilities to the Nova AI.
-The Summariser class provides methods to compress text, extract key points, and generate a single sentence summary.
+This module adds text summarisation capabilities to Nova. It provides classes for compressing text to a specified ratio, extracting key points from text and producing a single sentence summary.
 """
 
+import os
+import json
+import sqlite3
+import time
 import re
 import random
+import threading
+import datetime
 import collections
-from typing import List, Tuple
 
 class Summariser:
     def __init__(self):
+        """
+        Initialise the Summariser class.
+        """
         pass
 
     def compress(self, text: str, ratio: float) -> str:
         """
-        Compress text to a given ratio of the original length.
+        Compress text to a specified ratio of its original length.
 
         Args:
-        text (str): The input text to be compressed.
-        ratio (float): The ratio of the original length.
+        text (str): The text to be compressed.
+        ratio (float): The desired ratio of the compressed text to the original text.
 
         Returns:
         str: The compressed text.
         """
         words = text.split()
-        num_words = int(len(words) * ratio)
-        return ' '.join(random.sample(words, num_words))
+        compressed_words = int(len(words) * ratio)
+        return ' '.join(words[:compressed_words])
 
-    def key_points(self, text: str, n: int) -> List[str]:
+    def key_points(self, text: str, n: int) -> list:
         """
-        Extract n key points from the given text.
+        Extract n key points from text.
 
         Args:
-        text (str): The input text to extract key points from.
+        text (str): The text to extract key points from.
         n (int): The number of key points to extract.
 
         Returns:
-        List[str]: A list of n key points.
+        list: A list of key points.
         """
-        sentences = re.split('[.!?]', text)
-        key_points = []
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence:
-                key_points.append(sentence)
-        return key_points[:n]
+        sentences = text.split('. ')
+        key_points = random.sample(sentences, n)
+        return key_points
 
     def one_line(self, text: str) -> str:
         """
-        Generate a single sentence summary from the given text.
+        Produce a single sentence summary of text.
 
         Args:
-        text (str): The input text to generate a single sentence summary from.
+        text (str): The text to produce a summary for.
 
         Returns:
         str: A single sentence summary.
         """
-        sentences = re.split('[.!?]', text)
-        return sentences[0].strip()
+        sentences = text.split('. ')
+        if len(sentences) == 0:
+            return ''
+        return sentences[0]
 
 # Usage example:
 # summariser = Summariser()
-# text = "This is a sample text with multiple sentences. It has a length of 100 characters."
-# print(summariser.compress(text, 0.5))
-# print(summariser.key_points(text, 2))
-# print(summariser.one_line(text))
+# compressed_text = summariser.compress("This is a sample text.", 0.5)
+# key_points = summariser.key_points("This is a sample text. This is another sentence.", 2)
+# one_line_summary = summariser.one_line("This is a sample text. This is another sentence.")
