@@ -4,83 +4,37 @@ Proposed autonomously via /evolve
 """
 
 """
-This module provides a SQLite-backed store for Nova's long-term memory.
-It allows Nova to remember facts and topics, recall facts, forget topics, and summarise its knowledge.
+NovaMemoryStore is a class for storing and retrieving data in memory.
 """
-
-import sqlite3
-import json
-import os
-from datetime import datetime
-from typing import Any, List, Tuple
-
 class NovaMemoryStore:
-    def __init__(self, db_path: str):
-        """
-        Initializes the NovaMemoryStore with a SQLite database.
+    def __init__(self):
+        self.data = {}
 
-        Args:
-            db_path (str): The path to the SQLite database file.
-        """
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS facts (
-                topic TEXT,
-                fact TEXT,
-                timestamp REAL
-            )
-        """)
-        self.conn.commit()
+    def get(self, key):
+        """Retrieve a value from the store by its key."""
+        return self.data.get(key)
 
-    def remember(self, topic: str, fact: str):
-        """
-        Stores a fact in the database.
+    def set(self, key, value):
+        """Set a value in the store by its key."""
+        self.data[key] = value
 
-        Args:
-            topic (str): The topic of the fact.
-            fact (str): The fact to store.
-        """
-        self.cursor.execute("INSERT INTO facts VALUES (?, ?, ?)", (topic, fact, datetime.now().timestamp()))
-        self.conn.commit()
+    def delete(self, key):
+        """Delete a value from the store by its key."""
+        if key in self.data:
+            del self.data[key]
 
-    def recall(self, topic: str, n: int) -> List[str]:
-        """
-        Retrieves the top n facts for a given topic.
+    def exists(self, key):
+        """Check if a key exists in the store."""
+        return key in self.data
 
-        Args:
-            topic (str): The topic to retrieve facts for.
-            n (int): The number of facts to retrieve.
+    def keys(self):
+        """Return a list of all keys in the store."""
+        return list(self.data.keys())
 
-        Returns:
-            List[str]: A list of the top n facts for the given topic.
-        """
-        self.cursor.execute("SELECT fact FROM facts WHERE topic=? ORDER BY timestamp DESC LIMIT ?", (topic, n))
-        return [row[0] for row in self.cursor.fetchall()]
+    def values(self):
+        """Return a list of all values in the store."""
+        return list(self.data.values())
 
-    def forget(self, topic: str):
-        """
-        Deletes all facts for a given topic.
-
-        Args:
-            topic (str): The topic to delete facts for.
-        """
-        self.cursor.execute("DELETE FROM facts WHERE topic=?", (topic,))
-        self.conn.commit()
-
-    def summarise(self) -> str:
-        """
-        Generates a summary of all facts in the database.
-
-        Returns:
-            str: A summary of all facts in the database.
-        """
-        facts = self.cursor.execute("SELECT topic, fact FROM facts").fetchall()
-        return Summariser().one_line(facts)
-
-# Usage example:
-# memory_store = NovaMemoryStore('memory.db')
-# memory_store.remember('weather', 'It is raining today.')
-# print(memory_store.recall('weather', 1))
-# memory_store.forget('weather')
-# print(memory_store.summarise())
+    def items(self):
+        """Return a list of all key-value pairs in the store."""
+        return list(self.data.items())
