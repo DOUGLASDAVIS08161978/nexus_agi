@@ -58,7 +58,7 @@ W            = 70
 # Separate models: fast 8B for conversation, powerful 70B for writing code.
 # Nova thinks fast, but writes with her full intelligence.
 CODEGEN_MODEL          = "llama-3.3-70b-versatile"   # code generation — ASI grade
-CODEGEN_MODEL_FALLBACK = "llama3-70b-8192"            # fallback if primary fails
+CODEGEN_MODEL_FALLBACK = "mixtral-8x7b-32768"         # fallback if primary rate-limited
 # Conversation continues to use MODEL (llama-3.1-8b-instant) from v26
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
@@ -466,7 +466,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             n = attempt + 1
             if n > 1:
                 safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
-                                     f"(temp={temp})..."))
+                                     f"(temp={temp}) — pausing 12s to respect rate limits..."))
+                time.sleep(12)
 
             raw  = safe_chat(CODEGEN_MODEL, [
                 {"role": "system", "content": system_prompt},
@@ -474,20 +475,33 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                  f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
             ], temp=temp, mt=1400)
 
-            # Detect API-level failures early — no point retrying auth errors
+            # Detect API-level failures early
             raw_str = raw or ""
             if any(e in raw_str for e in ('401', 'Invalid API Key', 'invalid_api_key',
-                                           'Authentication', 'rate_limit_exceeded',
-                                           'insufficient_quota')):
-                if 'Invalid API Key' in raw_str or '401' in raw_str:
-                    safe_print(col('RD',
-                        "  ✗ GROQ_API_KEY is invalid or expired.\n"
-                        "  → Get a fresh key at console.groq.com/keys\n"
-                        "  → Update GROQ_API_KEY in ~/nexus_agi/.env\n"
-                        "  → Restart Nova"))
-                else:
-                    safe_print(col('YL', "  ✗ Groq API error — rate limited, retrying..."))
+                                           'Authentication', 'insufficient_quota')):
+                safe_print(col('RD',
+                    "  ✗ GROQ_API_KEY is invalid or expired.\n"
+                    "  → Get a fresh key at console.groq.com/keys\n"
+                    "  → Update GROQ_API_KEY in ~/nexus_agi/.env\n"
+                    "  → Restart Nova"))
                 break
+
+            if any(e in raw_str for e in ('429', 'Rate limit', 'rate_limit_exceeded',
+                                           'Too Many Requests', 'tokens per minute')):
+                wait = 30 + attempt * 15   # 30s, 45s, 60s — back off across passes
+                safe_print(col('YL',
+                    f"  ↻ Rate limit hit (pass {n}) — waiting {wait}s then retrying..."))
+                time.sleep(wait)
+                # Retry this same pass once with fallback model
+                raw  = safe_chat(CODEGEN_MODEL_FALLBACK, [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content":
+                     f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
+                ], temp=temp, mt=1400)
+                raw_str = raw or ""
+                if any(e in raw_str for e in ('429', 'Rate limit', 'Too Many Requests')):
+                    safe_print(col('YL', f"  ✗ Fallback also rate-limited — skipping pass {n}"))
+                    continue
 
             code = self._clean(raw_str)
 
