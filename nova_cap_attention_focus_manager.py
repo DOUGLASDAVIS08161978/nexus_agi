@@ -4,83 +4,67 @@ Proposed autonomously via /evolve
 """
 
 """
-This module adds an enhanced AttentionManager class with functionality for timed focus windows, active topic tracking, and interruption logging.
+Module for managing attention and focus in a superintelligent AI.
 """
 
-import threading
-import time
-import datetime
+import sqlite3
+from datetime import datetime, timedelta
+from typing import Optional
 
-class EnhancedAttentionManager:
-    """
-    Enhanced AttentionManager class with timed focus windows, active topic tracking, and interruption logging.
-    """
-    
-    def __init__(self):
+class AttentionManager:
+    def __init__(self) -> None:
         """
-        Initialize the EnhancedAttentionManager instance.
+        Initialize the attention manager with an empty focus window and distraction log.
         """
-        self.focus_topic = None
-        self.focus_end_time = None
-        self.distraction_log = []
-        self.current_focus_thread = None
+        self.conn = sqlite3.connect('attention_manager.db')
+        self.cursor = self.conn.cursor()
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS focus (topic TEXT, start_time TEXT, end_time TEXT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS distractions (note TEXT, time TEXT)')
+        self.conn.commit()
+        self.current_focus_topic: Optional[str] = None
+        self.current_focus_start_time: Optional[datetime] = None
 
-    def focus_on(self, topic, minutes):
+    def focus_on(self, topic: str, minutes: int) -> None:
         """
-        Set a timed focus window on the specified topic.
-
-        Args:
-            topic (str): The topic to focus on.
-            minutes (int): The number of minutes to focus on the topic.
-
-        Returns:
-            None
+        Set a timed focus window on a specific topic.
         """
-        self.focus_topic = topic
-        self.focus_end_time = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
-        self.current_focus_thread = threading.Thread(target=self.update_focus_status)
-        self.current_focus_thread.daemon = True
-        self.current_focus_thread.start()
+        try:
+            if self.current_focus_topic:
+                self.cursor.execute('UPDATE focus SET end_time = ? WHERE topic = ?', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), self.current_focus_topic))
+            self.cursor.execute('INSERT INTO focus (topic, start_time, end_time) VALUES (?, ?, ?)', (topic, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), (datetime.now() + timedelta(minutes=minutes)).strftime('%Y-%m-%d %H:%M:%S')))
+            self.conn.commit()
+            self.current_focus_topic = topic
+            self.current_focus_start_time = datetime.now()
+        except sqlite3.Error as e:
+            print(f"Error setting focus: {e}")
 
-    def update_focus_status(self):
+    def current_focus(self) -> Optional[str]:
         """
-        Update the focus status every minute.
-
-        Returns:
-            None
+        Return the currently active topic of focus.
         """
-        while datetime.datetime.now() < self.focus_end_time:
-            time.sleep(60)
-            if not self.current_focus():
-                self.distraction_log_now(f"Lost focus on {self.focus_topic} at {datetime.datetime.now()}")
+        try:
+            if self.current_focus_topic and self.current_focus_start_time and datetime.now() < self.current_focus_start_time + timedelta(minutes=30):
+                return self.current_focus_topic
+            else:
+                self.cursor.execute('SELECT topic FROM focus WHERE end_time > ?', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'),))
+                result = self.cursor.fetchone()
+                if result:
+                    self.current_focus_topic = result[0]
+                    return self.current_focus_topic
+                else:
+                    self.current_focus_topic = None
+                    return None
+        except sqlite3.Error as e:
+            print(f"Error getting current focus: {e}")
 
-    def current_focus(self):
+    def distraction_log(self, note: str) -> None:
         """
-        Get the currently active topic.
-
-        Returns:
-            str: The currently active topic, or None if no focus is set.
+        Record an interruption or distraction.
         """
-        if self.focus_end_time and self.focus_topic:
-            if datetime.datetime.now() < self.focus_end_time:
-                return self.focus_topic
-        return None
+        try:
+            self.cursor.execute('INSERT INTO distractions (note, time) VALUES (?, ?)', (note, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            print(f"Error logging distraction: {e}")
 
-    def distraction_log_now(self, note):
-        """
-        Log a distraction event with the current timestamp.
-
-        Args:
-            note (str): The distraction note.
-
-        Returns:
-            None
-        """
-        self.distraction_log.append((datetime.datetime.now(), note))
-
-# Usage example:
-# attention_manager = EnhancedAttentionManager()
-# attention_manager.focus_on("Task A", 30)
-# print(attention_manager.current_focus())  # Output: Task A
-# time.sleep(31)
-# print(attention_manager.current_focus())  # Output: None
+# Usage: obj = AttentionManager() | result = obj.focus_on("topic", 30)
