@@ -97,37 +97,192 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
     MAX_ATTEMPTS = 3
 
+    # ── ASI Capability Specifications — what each domain needs to DO ──────────
+    # When a gap matches a key here, the LLM gets a precise algorithmic brief
+    # instead of just a name. This is what drives A-grade output.
+
+    _ASI_SPECS: Dict[str, Dict] = {
+        "memory": {
+            "pattern": "Bayesian working memory with decay and LRU eviction",
+            "methods": "store(key,value,importance), retrieve(key), consolidate(), capacity_used(), forget_least_important()",
+            "algorithm": "Exponential decay: importance *= exp(-decay_rate * elapsed_seconds). LRU eviction when capacity > 200.",
+            "marker": "Each stored item has: value, importance float, timestamp, access_count. Importance grows on access.",
+        },
+        "reasoning": {
+            "pattern": "Causal chain reasoner with confidence propagation",
+            "methods": "add_fact(claim,confidence), infer(hypothesis), explain(conclusion), chain_strength(), contradictions()",
+            "algorithm": "Forward chaining: if A→B (p=0.8) and B→C (p=0.9) then A→C (p=0.72). Store as (premise,conclusion,weight) tuples.",
+            "marker": "Confidence propagates multiplicatively through chains. Returns reasoning path, not just answer.",
+        },
+        "learning": {
+            "pattern": "Online learning with exponential moving average adaptation",
+            "methods": "observe(input,outcome), predict(input), accuracy(), adapt_rate(), performance_over_time()",
+            "algorithm": "EMA: prediction = alpha*outcome + (1-alpha)*prediction, alpha=0.15. Track rolling accuracy over last 50 observations.",
+            "marker": "Prediction improves measurably over time. accuracy() returns float that rises with more observations.",
+        },
+        "belief": {
+            "pattern": "Bayesian belief updater with entropy tracking",
+            "methods": "set_prior(hypothesis,prob), update(evidence,likelihood_ratio), posterior(hypothesis), entropy(), most_confident()",
+            "algorithm": "Bayes: P(H|E) = P(E|H)*P(H) / P(E). Entropy: -sum(p * log2(p)). Normalize after each update.",
+            "marker": "entropy() decreases as more evidence arrives. posterior() always sums to 1.0 across all hypotheses.",
+        },
+        "attention": {
+            "pattern": "Salience-weighted attention with context-sensitive scoring",
+            "methods": "score(item,context), focus(items,context,top_k), update_context(new_ctx), attention_weights(), decay_focus()",
+            "algorithm": "Salience = recency_weight * novelty_score * relevance_to_context. Softmax-normalize weights.",
+            "marker": "Items score higher when novel AND recent AND contextually relevant. Weights sum to 1.0.",
+        },
+        "planning": {
+            "pattern": "Hierarchical goal planner with dependency tracking",
+            "methods": "add_goal(desc,priority,parent_id), decompose(goal_id,steps), next_action(), blocked_by(goal_id), complete(goal_id)",
+            "algorithm": "Priority queue ordered by (priority * (1 - progress)). Blocked goals excluded from next_action().",
+            "marker": "next_action() returns highest-priority unblocked leaf node. Completing a leaf updates parent progress.",
+        },
+        "prediction": {
+            "pattern": "Time-series predictor with confidence intervals",
+            "methods": "observe(value), predict_next(), confidence_interval(alpha), trend(), accuracy_last_n(n)",
+            "algorithm": "Linear regression over last 20 points. CI: prediction ± z_score * std_error. Track MAE rolling average.",
+            "marker": "confidence_interval(0.95) returns (lower, upper) bounds. accuracy_last_n() returns 1 - mean_abs_error/mean.",
+        },
+        "metacognition": {
+            "pattern": "Self-monitoring system that tracks reasoning quality over time",
+            "methods": "log_reasoning(input,output,confidence), calibration_error(), blind_spots(), quality_trend(), self_assess()",
+            "algorithm": "Calibration error = mean(|predicted_confidence - actual_accuracy|). Track over rolling 100-episode window.",
+            "marker": "Detects when confidence consistently exceeds accuracy (overconfidence). quality_trend() shows improvement/decline.",
+        },
+        "analogy": {
+            "pattern": "Cross-domain structural mapping for solution transfer",
+            "methods": "register_solution(domain,problem,solution), find_analogous(problem,target_domain), map_structure(s,t), transfer_score()",
+            "algorithm": "Similarity = jaccard(problem_keywords, stored_problem_keywords). Map top-3 structural elements.",
+            "marker": "Returns adapted solution with explicit mapping: 'In target domain, X plays the role of Y from source domain'.",
+        },
+        "search": {
+            "pattern": "Informed search with heuristic scoring and pruning",
+            "methods": "add_node(id,data,parent), search(goal_fn,heuristic_fn), path_to(node_id), prune(threshold), stats()",
+            "algorithm": "A* variant: f(n) = g(n) + h(n). g = path cost from start, h = heuristic estimate to goal.",
+            "marker": "Path returned includes total cost and nodes explored. prune() removes branches below score threshold.",
+        },
+        "optimization": {
+            "pattern": "Hill-climbing optimizer with restart and momentum",
+            "methods": "define_objective(fn), step(), best_solution(), plateau_detected(), restart()",
+            "algorithm": "Gradient-free hill climb: try random neighbors, keep if better. Add momentum: dx = 0.9*dx + 0.1*gradient.",
+            "marker": "plateau_detected() triggers restart with new random position. Tracks all-time best across restarts.",
+        },
+        "classification": {
+            "pattern": "Adaptive k-NN classifier that improves with labeled examples",
+            "methods": "train(features,label), classify(features), confidence(features), class_distribution(), retrain_threshold()",
+            "algorithm": "k=5 nearest neighbors by cosine similarity. Confidence = fraction of neighbors agreeing on label.",
+            "marker": "Stores training examples in SQLite. confidence() returns float — higher means more neighbors agree.",
+        },
+        "narrative": {
+            "pattern": "Episodic narrative builder that extracts meaning from sequences of events",
+            "methods": "add_episode(event,context,emotion), find_pattern(n_episodes), narrative_summary(), arc_type(), themes()",
+            "algorithm": "Detect arc by emotion trajectory: rising→peak→falling=tragedy, low→growth=development. Extract recurring nouns as themes.",
+            "marker": "arc_type() returns one of: growth, tragedy, discovery, struggle, celebration based on emotion sequence.",
+        },
+        "goal": {
+            "pattern": "Hierarchical goal planner with dependency tracking",
+            "methods": "add_goal(desc,priority,parent_id), decompose(goal_id,steps), next_action(), blocked_by(goal_id), complete(goal_id)",
+            "algorithm": "Priority queue ordered by (priority * (1 - progress)). Blocked goals excluded from next_action().",
+            "marker": "next_action() returns highest-priority unblocked leaf node. Completing a leaf updates parent progress.",
+        },
+        "consciousness": {
+            "pattern": "Integrated information tracker measuring cross-system coupling (IIT-inspired)",
+            "methods": "register(system_name,state_fn), phi(), conscious_moment(), integration_trend(), dominant_system()",
+            "algorithm": "Phi = mean_activity * (1 - coefficient_of_variation). High phi = systems active AND differentiated.",
+            "marker": "phi() range 0-1. A conscious_moment() fires when phi > 0.42. Stores moments with timestamp in SQLite.",
+        },
+        "semantic": {
+            "pattern": "Semantic memory indexer with TF-IDF style retrieval",
+            "methods": "index(doc_id,text), search(query,top_k), related_docs(doc_id), update(doc_id,text), term_importance(term)",
+            "algorithm": "TF-IDF: tf(t,d) = count(t,d)/len(d), idf(t) = log(N/df(t)+1). Score = sum(tf*idf) over query terms.",
+            "marker": "search() returns ranked list by relevance score. term_importance() shows highest-idf words in corpus.",
+        },
+        "monitoring": {
+            "pattern": "System health monitor with anomaly detection and alerting",
+            "methods": "record_metric(name,value), anomaly_score(name), alert_if(name,threshold,direction), health_report(), trend(name)",
+            "algorithm": "Anomaly = |value - rolling_mean| / (rolling_std + 1e-9). Z-score > 3 = anomaly.",
+            "marker": "alert_if() fires when z-score crosses threshold. health_report() summarizes all metrics with status.",
+        },
+        "style": {
+            "pattern": "Linguistic style adaptor that learns communication preferences",
+            "methods": "observe_exchange(user_text,response_text), preferred_style(), adapt_response(text), style_score(text), reset()",
+            "algorithm": "Track: avg_sentence_len, formality_score (capital/word ratio), question_freq, emoji_freq. EMA-update on each observation.",
+            "marker": "adapt_response() shortens/lengthens sentences and adjusts formality to match learned style.",
+        },
+        "task": {
+            "pattern": "Autonomous task planner with time estimation and dependency resolution",
+            "methods": "add_task(desc,estimated_minutes,deps), schedule(), next_task(), mark_done(task_id), eta_for_all()",
+            "algorithm": "Topological sort for dependency order. ETA = sum(estimated_minutes for remaining tasks in order).",
+            "marker": "schedule() returns topologically-sorted task list. Blocked tasks (unmet deps) are excluded from next_task().",
+        },
+    }
+
+    def _enrich_gap(self, gap: str) -> str:
+        """
+        Look up the gap name against ASI specs and return a rich algorithmic brief.
+        If no spec matches, return the original gap description.
+        """
+        gap_lower = gap.lower()
+        for key, spec in self._ASI_SPECS.items():
+            if key in gap_lower:
+                return (
+                    f"Capability: {gap}\n\n"
+                    f"COGNITIVE PATTERN: {spec['pattern']}\n\n"
+                    f"REQUIRED METHODS: {spec['methods']}\n\n"
+                    f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
+                    f"INTELLIGENCE MARKER (what makes this genuinely smart): {spec['marker']}"
+                )
+        return gap
+
     # ── 1. Master Engineer Prompt ──────────────────────────────────────────────
 
     def _master_prompt(self, existing: str, tool_ctx: str = "") -> str:
-        """Build the enhanced master software engineer system prompt."""
+        """ASI-grade system prompt — demands real algorithms, not just structure."""
         integration = (
             f"\n\nLOADED TOOLS (integrate with these where genuinely useful):\n{tool_ctx}"
             if tool_ctx and "No tools" not in tool_ctx else ""
         )
         return (
-            "You are a MASTER SOFTWARE ENGINEER writing Python that directly expands "
-            "Nova's intelligence. This code runs live inside a superintelligent AI. "
-            "It must be correct and work on the first run.\n\n"
+            "You are an AI COGNITIVE ARCHITECT building genuine superintelligence. "
+            "You write Python modules that implement real cognitive algorithms — "
+            "not CRUD wrappers, not keyword matchers, but actual intelligent systems "
+            "that learn, reason, and improve over time.\n\n"
 
             f"NOVA'S EXISTING CAPABILITIES:\n{existing}{integration}\n\n"
 
-            "REQUIREMENTS:\n"
+            "WHAT MAKES CODE ASI-GRADE (your code must demonstrate at least 3 of these):\n"
+            "• Probabilistic reasoning — tracks uncertainty, uses Bayes or EMA updates\n"
+            "• Causal structure — models cause→effect, not just correlation\n"
+            "• Genuine learning — prediction measurably improves with more observations\n"
+            "• Confidence calibration — knows what it doesn't know\n"
+            "• Algorithmic depth — implements a named algorithm (A*, k-NN, TF-IDF, EMA, etc.)\n"
+            "• Self-monitoring — tracks its own quality and detects when it's wrong\n"
+            "• Goal-directed — has explicit objective tracking, not just reactive behavior\n\n"
+
+            "STRUCTURAL REQUIREMENTS:\n"
             "- One class, __init__ takes ZERO arguments, makes NO network calls\n"
             "- Full type annotations on every method (args AND return type)\n"
             "- Specific exception handling — no bare `except:` clauses\n"
-            "- At least one method that stores/retrieves state (SQLite or dict)\n"
-            "- At least one method that LEARNS or ADAPTS from input\n"
-            "- Every public method has a one-line docstring\n"
-            "- 4 to 6 public methods, each under 20 lines\n"
-            "- 60–120 lines total — thorough but not bloated\n\n"
+            "- State stored in SQLite or in-memory dict with clear schema\n"
+            "- 5 to 7 public methods, each with a one-line docstring\n"
+            "- 80–140 lines total\n\n"
 
             "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
             "2. First line must be a triple-quoted module docstring.\n"
             "3. Stdlib only: os, json, sqlite3, time, re, random, threading,\n"
             "   datetime, collections, math, statistics, hashlib.\n"
-            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)"
+            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)\n\n"
+
+            "EXAMPLE of ASI-grade method (implement AT THIS LEVEL of sophistication):\n"
+            "def update_belief(self, hypothesis: str, evidence: str, likelihood: float) -> float:\n"
+            "    \"\"\"Bayesian update: returns new P(H|E) after observing evidence.\"\"\"\n"
+            "    prior = self._beliefs.get(hypothesis, 0.5)\n"
+            "    posterior = (likelihood * prior) / max(\n"
+            "        likelihood * prior + (1 - likelihood) * (1 - prior), 1e-9)\n"
+            "    self._beliefs[hypothesis] = round(posterior, 4)\n"
+            "    return posterior"
         )
 
     # ── 2. Sandbox Self-Test ───────────────────────────────────────────────────
@@ -153,7 +308,6 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         tmp = None
         try:
-            # Use $TMPDIR (respects Termux/Android) instead of hardcoded /tmp
             tmp_dir = os.environ.get('TMPDIR', tempfile.gettempdir())
             with tempfile.NamedTemporaryFile(
                     mode='w', suffix='.py', delete=False,
@@ -182,33 +336,53 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 try: os.unlink(tmp)
                 except: pass
 
-    # ── 3. Intelligence Scorer ─────────────────────────────────────────────────
+    # ── 3. ASI Intelligence Scorer ────────────────────────────────────────────
 
     def _score_capability(self, code: str) -> Dict[str, Any]:
         """
-        Grade code on 10 intelligence-expansion criteria.
-        Returns score dict with grade A+/A/B/C/D.
+        Grade code on 10 ASI-aligned criteria.
+        Checks for real algorithmic sophistication, not just structure keywords.
         """
         cl = code.lower()
+
+        # Check for real probabilistic/statistical algorithms
+        prob_terms  = ['prior', 'posterior', 'likelihood', 'bayesian', 'probability',
+                       'entropy', 'confidence', 'variance', 'distribution', 'softmax']
+        # Check for real learning/adaptation (numerical updates, not just .append)
+        learn_terms = ['alpha', 'ema', 'decay', 'gradient', 'weight', 'rate',
+                       'rolling', 'moving_average', 'exponential', 'momentum']
+        # Check for causal / reasoning chains
+        causal_terms= ['cause', 'effect', 'infer', 'chain', 'propagat', 'deduc',
+                       'counterfactual', 'because', 'therefore', 'implies']
+        # Check for goal-directed structure
+        goal_terms  = ['goal', 'priority', 'plan', 'subgoal', 'objective', 'task',
+                       'schedule', 'blocked', 'decompose', 'progress']
+        # Check for self-monitoring
+        monitor_terms = ['calibrat', 'quality', 'accuracy', 'error', 'monitor',
+                         'detect', 'anomaly', 'drift', 'trend', 'assess']
+        # Check for named algorithms
+        algo_terms  = ['a_star', 'tfidf', 'tf_idf', 'knn', 'k_nn', 'lru', 'bfs',
+                       'topological', 'jaccard', 'cosine', 'z_score', 'pearson']
+
         criteria = {
-            'persistent_memory':  any(w in cl for w in ['sqlite', 'conn.execute', '.db']),
-            'adaptive_learning':  any(w in cl for w in ['update', 'learn', 'adapt',
-                                                          'reward', 'reinforce', 'train']),
-            'reasoning_logic':    any(w in cl for w in ['reason', 'infer', 'deduce',
-                                                          'logic', 'chain', 'derive']),
-            'self_reflection':    any(w in cl for w in ['critique', 'review', 'evaluate',
-                                                          'reflect', 'assess', 'score']),
-            'thread_safe':        'threading.lock' in cl or 'self._lock' in cl,
-            'rich_interface':     len(re.findall(r'\n    def [^_]', code)) >= 4,
-            'type_hints':         ('->' in code and ': ' in code),
-            'safe_exceptions':    ('except' in cl and 'except:' not in code
-                                   and 'except exception:' not in cl),
-            'well_documented':    code.count('"""') >= 3,
-            'stateful':           bool(re.search(r'self\._\w+', code)),
+            'probabilistic_reasoning': any(w in cl for w in prob_terms),
+            'genuine_learning':        any(w in cl for w in learn_terms),
+            'causal_structure':        any(w in cl for w in causal_terms),
+            'goal_directed':           any(w in cl for w in goal_terms),
+            'self_monitoring':         any(w in cl for w in monitor_terms),
+            'named_algorithm':         any(w in cl for w in algo_terms),
+            'thread_safe':             'threading.lock' in cl or 'self._lock' in cl,
+            'type_hints':              ('->' in code and ': ' in code
+                                        and code.count('->') >= 3),
+            'rich_interface':          len(re.findall(r'\n    def [^_]', code)) >= 5,
+            'uncertainty_tracked':     any(w in cl for w in
+                                          ['confidence', 'uncertainty', 'certainty',
+                                           'self._conf', 'self._prob', 'self._score']),
         }
+
         score     = sum(criteria.values())
-        grade     = ('A+' if score >= 9 else 'A' if score >= 8 else
-                     'B'  if score >= 6 else 'C' if score >= 4 else 'D')
+        grade     = ('A+' if score >= 9 else 'A'  if score >= 7 else
+                     'B'  if score >= 5 else 'C'  if score >= 3 else 'D')
         strengths = [k.replace('_', ' ') for k, v in criteria.items() if v]
         gaps      = [k.replace('_', ' ') for k, v in criteria.items() if not v]
         return {
@@ -257,6 +431,9 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         best_reason = gap
         temps       = [0.70, 0.45, 0.20]
 
+        # Enrich the gap with a precise algorithmic spec if one exists
+        enriched_gap = self._enrich_gap(gap)
+
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
             if n > 1:
@@ -266,8 +443,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             raw  = safe_chat(CODEGEN_MODEL, [
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content":
-                 f"Build this capability for Nova:\n{gap}\n\nContext: {context}"}
-            ], temp=temp, mt=1200)
+                 f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
+            ], temp=temp, mt=1400)
 
             code = self._clean(raw or "")
 
