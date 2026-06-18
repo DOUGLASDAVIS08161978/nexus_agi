@@ -57,7 +57,8 @@ W            = 70
 
 # Separate models: fast 8B for conversation, powerful 70B for writing code.
 # Nova thinks fast, but writes with her full intelligence.
-CODEGEN_MODEL = "llama-3.3-70b-versatile"   # code generation — ASI grade
+CODEGEN_MODEL          = "llama-3.3-70b-versatile"   # code generation — ASI grade
+CODEGEN_MODEL_FALLBACK = "llama3-70b-8192"            # fallback if primary fails
 # Conversation continues to use MODEL (llama-3.1-8b-instant) from v26
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
@@ -393,28 +394,50 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
     # ── 4. Clean code output ───────────────────────────────────────────────────
 
     def _clean(self, raw: str) -> str:
-        """Aggressively strip markdown, prose, and any non-Python prefix."""
-        code = raw or ""
-        # Remove markdown fences
-        code = re.sub(r'```python\s*', '', code)
-        code = re.sub(r'```\s*', '', code)
-        # Remove REASONING: / NOTE: / Here is: / JSON preamble prefixes
+        """
+        Line-by-line extraction of valid Python from LLM output.
+        Finds the first line that could start a Python file and takes everything
+        from there, stripping only trailing prose after the last code line.
+        """
+        if not raw:
+            return ""
+
+        # Remove markdown code fences (```python, ```, [python], etc.)
+        text = re.sub(r'```+\w*\s*', '\n', raw)
+        text = re.sub(r'\[python\]\s*', '\n', text, flags=re.IGNORECASE)
+
+        lines = text.split('\n')
+
+        # Find first line that looks like the start of a Python module
+        _py_starts = ('"""', "'''", 'import ', 'from ', 'class ', '# ')
+        start = 0
+        for i, line in enumerate(lines):
+            s = line.strip()
+            if any(s.startswith(p) for p in _py_starts):
+                start = i
+                break
+
+        # Find last non-empty, non-prose line (code ends at last indented/keyword line)
+        end = len(lines)
+        for i in range(len(lines) - 1, start - 1, -1):
+            s = lines[i].strip()
+            if s and (s[0] in ('"', "'", '#', '@') or
+                      s.split()[0] in ('def', 'class', 'return', 'if', 'else',
+                                       'elif', 'for', 'while', 'try', 'except',
+                                       'finally', 'with', 'import', 'from',
+                                       'pass', 'break', 'continue', 'raise',
+                                       'yield') or
+                      lines[i][0:1] in (' ', '\t') or
+                      s.startswith('# Usage:')):
+                end = i + 1
+                break
+
+        code = '\n'.join(lines[start:end])
+
+        # Fix invalid escape sequences (e.g. \. → \\.) without touching valid ones
         code = re.sub(
-            r'^(?:REASONING|NOTE|Here is|Here\'s|Below is|The following|Capability|'
-            r'COGNITIVE PATTERN|REQUIRED METHODS|ALGORITHM|INTELLIGENCE MARKER)'
-            r'[^\n]*\n',
-            '', code, flags=re.IGNORECASE | re.MULTILINE)
-        code = re.sub(r'^REASONING:.*?(?=\n(?:import|class|#|"""))',
-                      '', code, flags=re.DOTALL)
-        # Strip any JSON/dict preamble blocks ({ ... }) that appear before the class
-        code = re.sub(r'^\s*\{[^}]*\}\s*', '', code, flags=re.DOTALL)
-        # Jump to the LAST occurrence of the module docstring start or first class/import
-        # This prevents landing inside a preamble that also contains triple quotes
-        m = re.search(r'^("""|\s*import |\s*from |\s*class )', code, re.MULTILINE)
-        if m:
-            code = code[m.start():]
-        # Strip invalid escape sequences that cause SyntaxWarning (e.g. \. → \\.)
-        code = re.sub(r'(?<!\\)\\(?![nrtbfv\\\'"0-9xuUNaobx\n])', r'\\\\', code)
+            r'(?<!\\)\\(?![nrtbfv\\\'"0-9xuUNaobx\n])', r'\\\\', code)
+
         return code.strip()
 
     # ── 5. Full v29 pipeline ───────────────────────────────────────────────────
@@ -458,6 +481,9 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 ast.parse(code)
             except SyntaxError as e:
                 safe_print(col('YL', f"  ✗ Syntax error (pass {n}): {e}"))
+                # Show first 120 chars of raw so we can diagnose persistent failures
+                raw_preview = (raw or "")[:120].replace('\n', '↵')
+                safe_print(col('DIM', f"  ↳ Raw preview: {raw_preview}"))
                 continue
 
             # Sandbox gate
@@ -488,29 +514,38 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         # Emergency 4th pass: ultra-simple prompt if all 3 failed
         if not best_code:
-            safe_print(col('YL', "  ↻ Emergency pass — minimal prompt..."))
-            # Extract a clean class name from the gap description
+            safe_print(col('YL', "  ↻ Emergency pass — minimal prompt + fallback model..."))
             cname_match = re.search(r'class\s+(\w+)', gap)
             cname = cname_match.group(1) if cname_match else "NovaCapability"
+            words = [w.title() for w in re.sub(r'[^a-z ]', '', gap.lower()).split()[:3]]
+            if not cname_match and words:
+                cname = ''.join(words) + "Module"
             emergency_prompt = (
                 f"Write a Python class named {cname}. "
-                "Output ONLY valid Python, no markdown, no explanation. "
-                "The class must have __init__(self) and 3 methods with docstrings. "
-                "Use only Python stdlib. Keep it under 50 lines."
+                "Output ONLY valid Python. No markdown. No explanation. No triple backticks. "
+                "Start with a triple-quoted docstring on line 1. "
+                "The class must have __init__(self) that sets up a dict and 4 methods. "
+                "Each method must have a one-line docstring. "
+                "Use only Python stdlib. 40-60 lines total."
             )
-            raw  = safe_chat(CODEGEN_MODEL, [
-                {"role": "user", "content": emergency_prompt}
-            ], temp=0.1, mt=800)
-            code = self._clean(raw or "")
-            try:
-                ast.parse(code)
-                passed, _, _ = self._sandbox_test(code)
-                if passed:
-                    best_code   = code
-                    best_reason = gap
-                    safe_print(col('GR', "  ✓ Emergency pass succeeded"))
-            except SyntaxError:
-                pass
+            # Try primary model first, then fallback
+            for em_model in (CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK):
+                raw  = safe_chat(em_model, [
+                    {"role": "user", "content": emergency_prompt}
+                ], temp=0.1, mt=800)
+                code = self._clean(raw or "")
+                try:
+                    ast.parse(code)
+                    passed, _, _ = self._sandbox_test(code)
+                    if passed:
+                        best_code   = code
+                        best_reason = gap
+                        safe_print(col('GR', f"  ✓ Emergency pass succeeded ({em_model})"))
+                        break
+                except SyntaxError as _se:
+                    raw_preview = (raw or "")[:120].replace('\n', '↵')
+                    safe_print(col('DIM', f"  ↳ Emergency raw ({em_model}): {raw_preview}"))
+                    continue
 
         # Hard quality gate: if still nothing, block the PR
         if not best_code:
