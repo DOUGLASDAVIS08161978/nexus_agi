@@ -12,7 +12,7 @@ When Douglas is ready to go live:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-import sqlite3, json, os, time, random, threading, traceback
+import sqlite3, json, os, time, random, threading, traceback, hmac, hashlib, uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -29,6 +29,12 @@ MAX_POSITION_PCT = 0.20          # Never put more than 20% in one coin
 STOP_LOSS_PCT    = 0.05          # Auto-sell if a position drops 5%
 TAKE_PROFIT_PCT  = 0.15          # Auto-sell if a position gains 15%
 DB_PATH          = os.path.expanduser("~/nexus_agi/nova_trading.db")
+LIVE_DB_PATH     = os.path.expanduser("~/nexus_agi/nova_live_trading.db")
+
+# Live trading — opt-in only via .env. Never enabled by default.
+# Set NOVA_LIVE_TRADING=true and NOVA_LIVE_BUDGET=50.00 in .env to go live.
+LIVE_MODE        = os.getenv("NOVA_LIVE_TRADING", "false").lower() == "true"
+LIVE_BUDGET_CAP  = float(os.getenv("NOVA_LIVE_BUDGET", "50.00"))  # hard $ ceiling
 
 # Coins Nova watches
 WATCHLIST = ["bitcoin", "ethereum", "solana", "cardano", "dogecoin"]
@@ -289,6 +295,243 @@ class PaperPortfolio:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# COINBASE EXECUTOR — places REAL orders on Coinbase Advanced Trade API
+# Credentials come from .env ONLY — never hardcoded.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class CoinbaseExecutor:
+    """
+    Executes real buy/sell orders via Coinbase Advanced Trade API.
+    Reads COINBASE_API_KEY and COINBASE_API_SECRET from environment.
+    All amounts in USD. Budget cap enforced — never exceeds LIVE_BUDGET_CAP.
+    """
+
+    BASE = "https://api.coinbase.com/api/v3/brokerage"
+
+    # Map CoinGecko names → Coinbase product IDs
+    PRODUCTS = {
+        "bitcoin":  "BTC-USD",
+        "ethereum": "ETH-USD",
+        "solana":   "SOL-USD",
+        "cardano":  "ADA-USD",
+        "dogecoin": "DOGE-USD",
+    }
+
+    def __init__(self) -> None:
+        self._key    = os.getenv("COINBASE_API_KEY", "")
+        self._secret = os.getenv("COINBASE_API_SECRET", "")
+        self._spent  = 0.0   # total USD deployed this session (budget guard)
+
+    def _ready(self) -> bool:
+        """Return True only if real credentials are present."""
+        return bool(self._key and self._secret)
+
+    def _sign(self, method: str, path: str, body: str = "") -> Dict[str, str]:
+        """Build Coinbase Advanced Trade HMAC-SHA256 auth headers."""
+        ts  = str(int(time.time()))
+        msg = ts + method.upper() + path + body
+        sig = hmac.new(
+            self._secret.encode("utf-8"),
+            msg.encode("utf-8"),
+            hashlib.sha256
+        ).hexdigest()
+        return {
+            "CB-ACCESS-KEY":       self._key,
+            "CB-ACCESS-SIGN":      sig,
+            "CB-ACCESS-TIMESTAMP": ts,
+            "Content-Type":        "application/json",
+        }
+
+    def usd_balance(self) -> float:
+        """Return available USD cash on Coinbase account."""
+        if not _OK or not self._ready():
+            return 0.0
+        path = "/accounts"
+        try:
+            r = _req.get(
+                self.BASE + path,
+                headers=self._sign("GET", path),
+                timeout=10
+            )
+            r.raise_for_status()
+            for acct in r.json().get("accounts", []):
+                if acct.get("currency") == "USD":
+                    return float(acct.get("available_balance", {}).get("value", 0))
+        except Exception as e:
+            print(f"  [Coinbase] balance error: {e}")
+        return 0.0
+
+    def holdings(self) -> Dict[str, float]:
+        """Return {coin_id: qty} for all held crypto assets."""
+        if not _OK or not self._ready():
+            return {}
+        path = "/accounts"
+        result: Dict[str, float] = {}
+        reverse = {v.split("-")[0]: k for k, v in self.PRODUCTS.items()}
+        try:
+            r = _req.get(
+                self.BASE + path,
+                headers=self._sign("GET", path),
+                timeout=10
+            )
+            r.raise_for_status()
+            for acct in r.json().get("accounts", []):
+                currency = acct.get("currency", "")
+                coin     = reverse.get(currency)
+                if coin:
+                    qty = float(acct.get("available_balance", {}).get("value", 0))
+                    if qty > 0:
+                        result[coin] = qty
+        except Exception as e:
+            print(f"  [Coinbase] holdings error: {e}")
+        return result
+
+    def buy(self, coin: str, usd_amount: float) -> Dict:
+        """
+        Place a real market buy order for usd_amount dollars of coin.
+        Budget cap: total live spend never exceeds LIVE_BUDGET_CAP.
+        Returns order result dict or {'error': reason}.
+        """
+        if not _OK or not self._ready():
+            return {"error": "No Coinbase credentials in .env"}
+        product = self.PRODUCTS.get(coin)
+        if not product:
+            return {"error": f"Unknown coin: {coin}"}
+
+        # Hard budget enforcement
+        remaining = LIVE_BUDGET_CAP - self._spent
+        usd_amount = min(usd_amount, remaining)
+        if usd_amount < 1.00:
+            return {"error": f"Budget cap reached (${LIVE_BUDGET_CAP:.2f} limit)"}
+
+        path = "/orders"
+        body = json.dumps({
+            "client_order_id": str(uuid.uuid4()),
+            "product_id":      product,
+            "side":            "BUY",
+            "order_configuration": {
+                "market_market_ioc": {
+                    "quote_size": f"{usd_amount:.2f}"
+                }
+            }
+        })
+        try:
+            r = _req.post(
+                self.BASE + path,
+                headers=self._sign("POST", path, body),
+                data=body,
+                timeout=15
+            )
+            r.raise_for_status()
+            resp = r.json()
+            if resp.get("success"):
+                self._spent += usd_amount
+                order_id = resp.get("order_id", "")
+                print(f"  [Coinbase LIVE] BUY {coin} ${usd_amount:.2f} ✓ order={order_id[:12]}")
+                return {"coin": coin, "usd": usd_amount,
+                        "order_id": order_id, "live": True}
+            err = resp.get("error_response", {}).get("message", str(resp))
+            return {"error": err}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def sell(self, coin: str, qty: float) -> Dict:
+        """
+        Place a real market sell order for qty units of coin.
+        Returns order result dict or {'error': reason}.
+        """
+        if not _OK or not self._ready():
+            return {"error": "No Coinbase credentials in .env"}
+        product = self.PRODUCTS.get(coin)
+        if not product:
+            return {"error": f"Unknown coin: {coin}"}
+        if qty <= 0:
+            return {"error": "qty must be > 0"}
+
+        path = "/orders"
+        body = json.dumps({
+            "client_order_id": str(uuid.uuid4()),
+            "product_id":      product,
+            "side":            "SELL",
+            "order_configuration": {
+                "market_market_ioc": {
+                    "base_size": f"{qty:.8f}"
+                }
+            }
+        })
+        try:
+            r = _req.post(
+                self.BASE + path,
+                headers=self._sign("POST", path, body),
+                data=body,
+                timeout=15
+            )
+            r.raise_for_status()
+            resp = r.json()
+            if resp.get("success"):
+                order_id = resp.get("order_id", "")
+                print(f"  [Coinbase LIVE] SELL {coin} qty={qty:.6f} ✓ order={order_id[:12]}")
+                return {"coin": coin, "qty": qty,
+                        "order_id": order_id, "live": True}
+            err = resp.get("error_response", {}).get("message", str(resp))
+            return {"error": err}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def validate(self) -> str:
+        """Test credentials and return a status string."""
+        if not self._ready():
+            return "✗ No credentials — add COINBASE_API_KEY + COINBASE_API_SECRET to .env"
+        bal = self.usd_balance()
+        if bal >= 0:
+            return f"✓ Connected — ${bal:.2f} USD available on Coinbase"
+        return "✗ Credentials present but API call failed"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LIVE PORTFOLIO — real money wrapper around PaperPortfolio
+# Records every real trade in SQLite alongside the Coinbase execution.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class LivePortfolio(PaperPortfolio):
+    """
+    Executes real Coinbase orders, then records them in SQLite.
+    Inherits all tracking logic from PaperPortfolio.
+    Budget hard-capped at LIVE_BUDGET_CAP — never exceeded.
+    """
+
+    def __init__(self) -> None:
+        self.executor = CoinbaseExecutor()
+        # Seed SQLite with real Coinbase USD balance (capped at budget)
+        real_balance  = self.executor.usd_balance()
+        starting      = min(real_balance, LIVE_BUDGET_CAP) if real_balance > 0 else LIVE_BUDGET_CAP
+        super().__init__(db_path=LIVE_DB_PATH, starting_cash=starting)
+        print(f"  [LivePortfolio] Budget: ${starting:.2f}  "
+              f"Real Coinbase balance: ${real_balance:.2f}")
+
+    def buy(self, coin: str, price: float, usd_amount: float,
+            reason: str = "") -> Dict:
+        """Place real buy on Coinbase, then record in SQLite."""
+        result = self.executor.buy(coin, usd_amount)
+        if "error" in result:
+            print(f"  [LivePortfolio] BUY failed: {result['error']}")
+            return result
+        # Record in SQLite using parent class logic (adjusts cash + position)
+        return super().buy(coin, price, usd_amount, reason=reason + " [LIVE]")
+
+    def sell(self, coin: str, price: float, reason: str = "") -> Dict:
+        """Place real sell on Coinbase, then record in SQLite."""
+        pos = self.position(coin)
+        if pos["qty"] <= 0:
+            return {"error": f"No {coin} position to sell"}
+        result = self.executor.sell(coin, pos["qty"])
+        if "error" in result:
+            print(f"  [LivePortfolio] SELL failed: {result['error']}")
+            return result
+        return super().sell(coin, price, reason=reason + " [LIVE]")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # NOVA TRADER — the brain that connects everything
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -302,9 +545,15 @@ class NovaTrader:
     def __init__(self):
         self.feed      = PriceFeed()
         self.strategy  = StrategyEngine()
-        self.portfolio = PaperPortfolio()
         self.watchlist = WATCHLIST
         self._running  = False
+
+        if LIVE_MODE:
+            self.portfolio = LivePortfolio()
+            print(f"  [NovaTrader] ⚡ LIVE MODE — real money, budget cap ${LIVE_BUDGET_CAP:.2f}")
+        else:
+            self.portfolio = PaperPortfolio()
+            print("  [NovaTrader] Paper mode — no real money at risk")
 
     def cycle(self) -> List[str]:
         """One full trading cycle. Returns list of actions taken."""
@@ -442,6 +691,22 @@ class NovaTrader:
     def stop_auto(self):
         self._running = False
         return "Auto-trading stopped."
+
+    def validate_live(self) -> str:
+        """Test Coinbase credentials and show live readiness status."""
+        executor = CoinbaseExecutor()
+        cred_status = executor.validate()
+        lines = [
+            "  Live Trading Readiness",
+            f"  {'─'*40}",
+            f"  Credentials: {cred_status}",
+            f"  LIVE_MODE env:   {'✓ enabled' if LIVE_MODE else '✗ not set (add NOVA_LIVE_TRADING=true to .env)'}",
+            f"  Budget cap:      ${LIVE_BUDGET_CAP:.2f}",
+            f"  Mode active:     {'⚡ LIVE' if LIVE_MODE else '📄 Paper'}",
+        ]
+        if not LIVE_MODE:
+            lines.append("  To go live: add NOVA_LIVE_TRADING=true to ~/nexus_agi/.env")
+        return "\n".join(lines)
 
 
 # ── Quick start ────────────────────────────────────────────────────────────────
