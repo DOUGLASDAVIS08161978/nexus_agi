@@ -18,7 +18,8 @@ What is new in v29 — Five pillars of code quality:
 ═══════════════════════════════════════════════════════════════════════
 """
 
-import os, sys, re, ast, subprocess, tempfile, threading, random
+import os, sys, re, ast, subprocess, tempfile, threading, random, io
+from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime
 from typing import Optional, Tuple, Dict, Any, List
 
@@ -53,6 +54,27 @@ except ImportError:
 VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SILENT TOOL LOADER — suppresses stdout/stderr during module loading
+# Prevents nova_cap_*.py files with print() at module level from polluting
+# the terminal. Any output is captured and discarded silently.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class SilentToolLoader(ToolLoader):
+    """ToolLoader that captures all stdout/stderr during module import."""
+
+    def _load_file(self, filepath: str) -> bool:
+        """Load a tool file while silencing any print() calls it makes."""
+        buf = io.StringIO()
+        with redirect_stdout(buf), redirect_stderr(buf):
+            result = super()._load_file(filepath)
+        captured = buf.getvalue().strip()
+        if captured:
+            # Log captured output at debug level but never print it
+            pass
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -132,8 +154,11 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         tmp = None
         try:
+            # Use $TMPDIR (respects Termux/Android) instead of hardcoded /tmp
+            tmp_dir = os.environ.get('TMPDIR', tempfile.gettempdir())
             with tempfile.NamedTemporaryFile(
-                    mode='w', suffix='.py', delete=False, dir='/tmp') as f:
+                    mode='w', suffix='.py', delete=False,
+                    dir=tmp_dir) as f:
                 f.write(test_code)
                 tmp = f.name
 
@@ -271,11 +296,11 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 safe_print(col('GRB', f"  ★ Grade {quality['grade']} achieved — done."))
                 break
 
-        # Last-resort: if nothing passed syntax, extract class block
+        # Quality gate: if nothing passed sandbox, return empty to block PR
         if not best_code:
-            safe_print(col('YL', "  ⚠ All passes failed — extracting best class block"))
-            m = re.search(r'(class \w+[\s\S]+)', self._clean(raw or ""))
-            best_code = m.group(1) if m else ""
+            safe_print(col('RD', "  ✗ Quality gate: all 3 passes failed — PR blocked."))
+            safe_print(col('YL', "  Try /evolve again or /build with a clearer description."))
+            return "", gap
 
         return best_code, best_reason
 
@@ -290,11 +315,25 @@ class NovaCore29(NovaCore28):
     VERSION = "29.0"
 
     def __init__(self):
-        super().__init__()
-        # Replace v28 improver with v29 quality-gated engine
+        # Swap ToolLoader for SilentToolLoader BEFORE super().__init__
+        # so all tool loading (including initial scan) is silenced
+        self.tools  = SilentToolLoader()
+        self.hunter = APIHunter()
+        initial_tools = self.tools.scan()
+
+        # Skip NovaCore28.__init__ tool setup, call NovaCore27's parent
+        from nova_asi_v27 import NovaCore27
+        NovaCore27.__init__(self)
+
         self.improver = SelfImprovementEngineV29(
             self.github, self.tools, self.hunter
         )
+        self.tools.start_watching()
+
+        if initial_tools:
+            safe_print(col('GR',
+                f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
+                + ", ".join(initial_tools)))
         safe_print(col('GR',
             "  ✓  Code Engine v29  — master prompt · sandbox · scoring · 3-pass refinement"))
 
