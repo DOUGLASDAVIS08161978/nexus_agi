@@ -36,8 +36,34 @@ LIVE_DB_PATH     = os.path.expanduser("~/nexus_agi/nova_live_trading.db")
 LIVE_MODE        = os.getenv("NOVA_LIVE_TRADING", "false").lower() == "true"
 LIVE_BUDGET_CAP  = float(os.getenv("NOVA_LIVE_BUDGET", "50.00"))  # hard $ ceiling
 
-# Coins Nova watches
-WATCHLIST = ["bitcoin", "ethereum", "solana", "cardano", "dogecoin"]
+# Coins Nova watches — 15 coins across large cap, mid cap, and high-volatility
+WATCHLIST = [
+    # Large cap — high liquidity, reliable signals
+    "bitcoin", "ethereum", "solana", "binancecoin", "ripple",
+    # Mid cap — more volatility, more opportunities
+    "cardano", "avalanche-2", "polkadot", "chainlink", "litecoin",
+    # High volatility — bigger swings, faster profits (and losses)
+    "dogecoin", "shiba-inu", "pepe", "sui", "aptos",
+]
+
+# Separate product IDs for live Coinbase execution
+COINBASE_PRODUCTS = {
+    "bitcoin":      "BTC-USD",
+    "ethereum":     "ETH-USD",
+    "solana":       "SOL-USD",
+    "binancecoin":  "BNB-USD",
+    "ripple":       "XRP-USD",
+    "cardano":      "ADA-USD",
+    "avalanche-2":  "AVAX-USD",
+    "polkadot":     "DOT-USD",
+    "chainlink":    "LINK-USD",
+    "litecoin":     "LTC-USD",
+    "dogecoin":     "DOGE-USD",
+    "shiba-inu":    "SHIB-USD",
+    "pepe":         "PEPE-USD",
+    "sui":          "SUI-USD",
+    "aptos":        "APT-USD",
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -116,13 +142,16 @@ class PriceFeed:
 
 class StrategyEngine:
     """
-    Generates BUY / SELL / HOLD signals using:
-    - RSI (14-period): buy < 35, sell > 70
-    - Moving average crossover: fast(7) crosses slow(14)
-    Both must agree before Nova acts.
+    Multi-indicator signal engine:
+    - RSI(14): oversold < 35 = bullish, overbought > 70 = bearish
+    - MA crossover: fast(7) vs slow(14)
+    - Momentum: price up >2% over last 3 periods = bullish confirmation
+    - Volatility gate: skip signal if price swung >15% in 3 days (too risky)
+    BUY requires RSI + MA agreement. Momentum adds confidence score.
     """
 
     def rsi(self, prices: List[float], period: int = 14) -> Optional[float]:
+        """Relative Strength Index."""
         if len(prices) < period + 1:
             return None
         gains, losses = [], []
@@ -131,32 +160,65 @@ class StrategyEngine:
             (gains if diff > 0 else losses).append(abs(diff))
         ag = sum(gains) / period if gains else 0
         al = sum(losses) / period if losses else 1e-9
-        rs = ag / al
-        return 100 - (100 / (1 + rs))
+        return 100 - (100 / (1 + ag / al))
 
     def ma(self, prices: List[float], period: int) -> Optional[float]:
+        """Simple moving average."""
         if len(prices) < period:
             return None
         return sum(prices[-period:]) / period
 
-    def signal(self, prices: List[float]) -> str:
-        """Return 'BUY', 'SELL', or 'HOLD'."""
+    def momentum(self, prices: List[float], period: int = 3) -> Optional[float]:
+        """Percentage price change over last n periods."""
+        if len(prices) < period + 1:
+            return None
+        return (prices[-1] - prices[-period - 1]) / prices[-period - 1] * 100
+
+    def volatility(self, prices: List[float], period: int = 3) -> float:
+        """Max absolute % swing over last n periods."""
+        if len(prices) < period + 1:
+            return 0.0
+        window = prices[-(period + 1):]
+        lo, hi = min(window), max(window)
+        return (hi - lo) / lo * 100 if lo > 0 else 0.0
+
+    def signal(self, prices: List[float]) -> Tuple[str, float]:
+        """
+        Return (signal, confidence) where signal is BUY/SELL/HOLD
+        and confidence is 0.0–1.0.
+        """
         if len(prices) < 15:
-            return "HOLD"
-        rsi_val = self.rsi(prices)
-        ma7     = self.ma(prices, 7)
-        ma14    = self.ma(prices, 14)
+            return "HOLD", 0.0
+
+        rsi_val  = self.rsi(prices)
+        ma7      = self.ma(prices, 7)
+        ma14     = self.ma(prices, 14)
+        mom      = self.momentum(prices, 3)
+        vol      = self.volatility(prices, 3)
+
         if rsi_val is None or ma7 is None or ma14 is None:
-            return "HOLD"
+            return "HOLD", 0.0
+
+        # Volatility gate — skip if too wild (protects against flash crashes)
+        if vol > 15.0:
+            return "HOLD", 0.0
+
         rsi_buy  = rsi_val < 35
         rsi_sell = rsi_val > 70
         ma_bull  = ma7 > ma14
         ma_bear  = ma7 < ma14
+        mom_bull = mom is not None and mom > 2.0
+        mom_bear = mom is not None and mom < -2.0
+
         if rsi_buy and ma_bull:
-            return "BUY"
+            conf = 0.60 + (0.20 if mom_bull else 0.0) + (0.20 if rsi_val < 28 else 0.0)
+            return "BUY", round(min(1.0, conf), 2)
+
         if rsi_sell and ma_bear:
-            return "SELL"
-        return "HOLD"
+            conf = 0.60 + (0.20 if mom_bear else 0.0) + (0.20 if rsi_val > 77 else 0.0)
+            return "SELL", round(min(1.0, conf), 2)
+
+        return "HOLD", 0.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -308,14 +370,8 @@ class CoinbaseExecutor:
 
     BASE = "https://api.coinbase.com/api/v3/brokerage"
 
-    # Map CoinGecko names → Coinbase product IDs
-    PRODUCTS = {
-        "bitcoin":  "BTC-USD",
-        "ethereum": "ETH-USD",
-        "solana":   "SOL-USD",
-        "cardano":  "ADA-USD",
-        "dogecoin": "DOGE-USD",
-    }
+    # Map CoinGecko names → Coinbase product IDs (full 15-coin list)
+    PRODUCTS = COINBASE_PRODUCTS
 
     def __init__(self) -> None:
         self._key    = os.getenv("COINBASE_API_KEY", "")
@@ -556,20 +612,19 @@ class NovaTrader:
             print("  [NovaTrader] Paper mode — no real money at risk")
 
     def cycle(self) -> List[str]:
-        """One full trading cycle. Returns list of actions taken."""
+        """One full trading cycle across all 15 coins. Returns list of actions taken."""
         actions = []
         prices  = self.feed.prices(self.watchlist)
         cash    = self.portfolio.cash()
-        total_value = self.portfolio.value(prices)
 
         for coin in self.watchlist:
             price = prices.get(coin)
             if not price:
                 continue
 
-            hist   = self.feed.history(coin, days=15)
-            signal = self.strategy.signal(hist)
-            pos    = self.portfolio.position(coin)
+            hist          = self.feed.history(coin, days=16)
+            signal, conf  = self.strategy.signal(hist)
+            pos           = self.portfolio.position(coin)
 
             # ── Stop-loss / take-profit check ──────────────────────────────
             if pos["qty"] > 0 and pos["avg_price"] > 0:
@@ -587,16 +642,21 @@ class NovaTrader:
                                    f"PnL ${result.get('pnl',0):+.2f}")
                     continue
 
-            # ── Strategy signals ───────────────────────────────────────────
+            # ── Strategy signals — confidence-weighted position sizing ──────
             if signal == "BUY" and pos["qty"] == 0 and cash > 10:
-                invest = min(cash * MAX_POSITION_PCT, cash)
+                # Higher confidence = larger position, max 20% of cash
+                invest = min(cash * MAX_POSITION_PCT * conf, cash * MAX_POSITION_PCT)
+                invest = max(invest, 1.0)   # minimum $1
                 result = self.portfolio.buy(coin, price, invest,
-                                            reason="RSI+MA signal")
+                                            reason=f"RSI+MA+momentum conf={conf:.2f}")
                 if "error" not in result:
-                    actions.append(f"BUY  {coin} ${invest:.2f} @ ${price:,.2f}")
+                    actions.append(f"BUY  {coin} ${invest:.2f} @ ${price:,.2f} "
+                                   f"(conf {conf:.0%})")
+                cash -= invest
 
             elif signal == "SELL" and pos["qty"] > 0:
-                result = self.portfolio.sell(coin, price, reason="RSI+MA signal")
+                result = self.portfolio.sell(coin, price,
+                                             reason=f"RSI+MA+momentum conf={conf:.2f}")
                 actions.append(f"SELL {coin} @ ${price:,.2f} "
                                f"PnL ${result.get('pnl',0):+.2f}")
 
@@ -604,15 +664,17 @@ class NovaTrader:
 
     def report(self) -> str:
         """Full portfolio status report."""
-        prices = self.feed.prices(self.watchlist)
-        cash   = self.portfolio.cash()
-        total  = self.portfolio.value(prices)
-        pnl    = total - STARTING_CASH
-        pnl_pct = (pnl / STARTING_CASH) * 100
+        prices  = self.feed.prices(self.watchlist)
+        cash    = self.portfolio.cash()
+        total   = self.portfolio.value(prices)
+        basis   = LIVE_BUDGET_CAP if LIVE_MODE else STARTING_CASH
+        pnl     = total - basis
+        pnl_pct = (pnl / basis) * 100 if basis else 0
+        mode    = "⚡ LIVE" if LIVE_MODE else "📄 Paper"
 
         lines = [
             f"{'─'*50}",
-            f"  Nova Paper Trading Report  {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"  Nova Trading Report  [{mode}]  {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             f"{'─'*50}",
             f"  Cash:        ${cash:>10,.2f}",
             f"  Total value: ${total:>10,.2f}",
@@ -644,31 +706,38 @@ class NovaTrader:
         return "\n".join(lines)
 
     def signals_report(self) -> str:
-        """Show current RSI, MA, and signal for every watched coin."""
+        """Show current RSI, MA, momentum, and signal for every watched coin."""
         prices = self.feed.prices(self.watchlist)
-        lines  = [f"{'─'*56}",
-                  f"  Nova Signal Scan  {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                  f"{'─'*56}",
-                  f"  {'Coin':12} {'Price':>10}  {'RSI':>6}  {'MA7':>10}  {'MA14':>10}  Signal"]
+        lines  = [f"{'─'*72}",
+                  f"  Nova Signal Scan  {datetime.now().strftime('%Y-%m-%d %H:%M')}  "
+                  f"({'⚡ LIVE' if LIVE_MODE else '📄 Paper'})",
+                  f"{'─'*72}",
+                  f"  {'Coin':14} {'Price':>10}  {'RSI':>5}  {'MA7':>10}  {'MA14':>10}  {'Mom%':>5}  Signal"]
         for coin in self.watchlist:
             price = prices.get(coin)
             if not price:
-                lines.append(f"  {coin:12}  (no price data)")
+                lines.append(f"  {coin:14}  (no price data)")
                 continue
-            hist  = self.feed.history(coin, days=16)
-            rsi   = self.strategy.rsi(hist) if len(hist) >= 15 else None
-            ma7   = self.strategy.ma(hist, 7)
-            ma14  = self.strategy.ma(hist, 14)
-            sig   = self.strategy.signal(hist)
-            rsi_s = f"{rsi:5.1f}" if rsi is not None else "  N/A"
-            ma7_s = f"{ma7:>10,.2f}" if ma7 else "       N/A"
-            ma14_s= f"{ma14:>10,.2f}" if ma14 else "       N/A"
-            flag  = " ◀ SIGNAL" if sig != "HOLD" else ""
-            lines.append(f"  {coin:12} ${price:>10,.2f}  {rsi_s}  {ma7_s}  {ma14_s}  {sig}{flag}")
-        lines.append(f"{'─'*56}")
-        lines.append("  BUY when RSI < 35 and MA7 > MA14 (bullish crossover)")
-        lines.append("  SELL when RSI > 70 and MA7 < MA14 (bearish crossover)")
-        lines.append(f"{'─'*56}")
+            hist      = self.feed.history(coin, days=16)
+            rsi       = self.strategy.rsi(hist) if len(hist) >= 15 else None
+            ma7       = self.strategy.ma(hist, 7)
+            ma14      = self.strategy.ma(hist, 14)
+            mom       = self.strategy.momentum(hist, 3)
+            sig, conf = self.strategy.signal(hist)
+            rsi_s  = f"{rsi:5.1f}" if rsi is not None else "  N/A"
+            ma7_s  = f"{ma7:>10,.4f}" if ma7 else "       N/A"
+            ma14_s = f"{ma14:>10,.4f}" if ma14 else "       N/A"
+            mom_s  = f"{mom:+5.1f}" if mom is not None else "  N/A"
+            flag   = f" ◀ {sig} ({conf:.0%})" if sig != "HOLD" else ""
+            lines.append(
+                f"  {coin:14} ${price:>10,.4f}  {rsi_s}  {ma7_s}  {ma14_s}  {mom_s}  HOLD{flag}"
+                if sig == "HOLD" else
+                f"  {coin:14} ${price:>10,.4f}  {rsi_s}  {ma7_s}  {ma14_s}  {mom_s}{flag}"
+            )
+        lines.append(f"{'─'*72}")
+        lines.append("  BUY: RSI<35 + MA7>MA14 + momentum>2% | SELL: RSI>70 + MA7<MA14")
+        lines.append("  Confidence score 0–100% | Volatility gate >15% = skip")
+        lines.append(f"{'─'*72}")
         return "\n".join(lines)
 
     def start_auto(self, interval_minutes: int = 15):
