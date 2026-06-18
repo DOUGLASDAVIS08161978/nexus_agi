@@ -4,72 +4,83 @@ Proposed autonomously via /evolve
 """
 
 """
-This module adds a class AttentionManager to help manage focus and distractions.
+This module adds an enhanced AttentionManager class with functionality for timed focus windows, active topic tracking, and interruption logging.
 """
 
-import sqlite3
 import threading
 import time
-from datetime import datetime
+import datetime
 
-class AttentionManager:
-    def __init__(self, db_name='distractions.db'):
+class EnhancedAttentionManager:
+    """
+    Enhanced AttentionManager class with timed focus windows, active topic tracking, and interruption logging.
+    """
+    
+    def __init__(self):
         """
-        Initialize the AttentionManager.
-
-        :param db_name: The name of the SQLite database to use for logging distractions.
+        Initialize the EnhancedAttentionManager instance.
         """
-        self.conn = sqlite3.connect(db_name)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS distractions
-            (id INTEGER PRIMARY KEY, topic TEXT, timestamp REAL)
-        ''')
-        self.topic = None
-        self.start_time = None
+        self.focus_topic = None
+        self.focus_end_time = None
+        self.distraction_log = []
+        self.current_focus_thread = None
 
     def focus_on(self, topic, minutes):
         """
-        Set a timed focus window on the given topic.
+        Set a timed focus window on the specified topic.
 
-        :param topic: The topic to focus on.
-        :param minutes: The number of minutes to focus on the topic.
+        Args:
+            topic (str): The topic to focus on.
+            minutes (int): The number of minutes to focus on the topic.
+
+        Returns:
+            None
         """
-        self.topic = topic
-        self.start_time = time.time()
-        threading.Timer(minutes * 60, self.log_distraction).start()
+        self.focus_topic = topic
+        self.focus_end_time = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
+        self.current_focus_thread = threading.Thread(target=self.update_focus_status)
+        self.current_focus_thread.daemon = True
+        self.current_focus_thread.start()
+
+    def update_focus_status(self):
+        """
+        Update the focus status every minute.
+
+        Returns:
+            None
+        """
+        while datetime.datetime.now() < self.focus_end_time:
+            time.sleep(60)
+            if not self.current_focus():
+                self.distraction_log_now(f"Lost focus on {self.focus_topic} at {datetime.datetime.now()}")
 
     def current_focus(self):
         """
-        Return the current topic being focused on.
+        Get the currently active topic.
 
-        :return: The current topic, or None if no focus is set.
+        Returns:
+            str: The currently active topic, or None if no focus is set.
         """
-        return self.topic
-
-    def distraction_log(self):
-        """
-        Log the current distraction in the database.
-        """
-        self.cursor.execute('INSERT INTO distractions (topic, timestamp) VALUES (?, ?)',
-                            (self.topic, time.time()))
-        self.conn.commit()
-        self.topic = None
-        self.start_time = None
+        if self.focus_end_time and self.focus_topic:
+            if datetime.datetime.now() < self.focus_end_time:
+                return self.focus_topic
+        return None
 
     def distraction_log_now(self, note):
         """
-        Log a distraction immediately, with an optional note.
+        Log a distraction event with the current timestamp.
 
-        :param note: The note to include in the distraction log.
+        Args:
+            note (str): The distraction note.
+
+        Returns:
+            None
         """
-        self.cursor.execute('INSERT INTO distractions (topic, timestamp, note) VALUES (?, ?, ?)',
-                            (self.topic, time.time(), note))
-        self.conn.commit()
+        self.distraction_log.append((datetime.datetime.now(), note))
 
 # Usage example:
-# attention_manager = AttentionManager()
-# attention_manager.focus_on('Work', 30)
-# # ... work for 30 minutes ...
-# print(attention_manager.current_focus())  # prints: None
-# attention_manager.distraction_log_now('Got a phone call')
+# attention_manager = EnhancedAttentionManager()
+# attention_manager.focus_on("Task A", 30)
+# print(attention_manager.current_focus())  # Output: Task A
+# time.sleep(31)
+# print(attention_manager.current_focus())  # Output: None
