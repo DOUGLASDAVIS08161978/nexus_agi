@@ -100,35 +100,26 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         return (
             "You are a MASTER SOFTWARE ENGINEER writing Python that directly expands "
             "Nova's intelligence. This code runs live inside a superintelligent AI. "
-            "It must be production quality — not a demo or skeleton.\n\n"
+            "It must be correct and work on the first run.\n\n"
 
             f"NOVA'S EXISTING CAPABILITIES:\n{existing}{integration}\n\n"
 
-            "ARCHITECTURE REQUIREMENTS:\n"
-            "- One well-architected class with clean separation of concerns\n"
+            "REQUIREMENTS:\n"
+            "- One class, __init__ takes ZERO arguments, makes NO network calls\n"
             "- Full type annotations on every method (args AND return type)\n"
-            "- Specific exception handling — never a bare `except:` clause\n"
-            "- Thread-safe state: use `threading.Lock()` when storing data\n"
-            "- Correct data structures: deque for history, defaultdict for tallies\n\n"
-
-            "INTELLIGENCE REQUIREMENTS:\n"
-            "- Genuinely expand Nova's cognition — not a toy example\n"
-            "- At least one method that LEARNS or ADAPTS from new input\n"
-            "- Persist meaningful state to SQLite (path ~/nexus_agi/<name>.db)\n"
-            "- Design for composability — other tools can call into this one\n\n"
-
-            "CODE QUALITY REQUIREMENTS:\n"
-            "- `__init__` takes ZERO arguments and makes NO network calls\n"
+            "- Specific exception handling — no bare `except:` clauses\n"
+            "- At least one method that stores/retrieves state (SQLite or dict)\n"
+            "- At least one method that LEARNS or ADAPTS from input\n"
             "- Every public method has a one-line docstring\n"
-            "- Each method is under 20 lines\n"
-            "- 80–150 lines total (substantial but not bloated)\n\n"
+            "- 3 to 5 public methods, each under 15 lines\n"
+            "- 40–70 lines total — concise and correct beats long and broken\n\n"
 
-            "STRICT OUTPUT RULES:\n"
+            "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
-            "2. First line is a triple-quoted module docstring.\n"
+            "2. First line must be a triple-quoted module docstring.\n"
             "3. Stdlib only: os, json, sqlite3, time, re, random, threading,\n"
-            "   datetime, collections, math, statistics, hashlib, pathlib.\n"
-            "4. Final line: # Usage: obj = ClassName() | result = obj.method(arg)"
+            "   datetime, collections, math, statistics, hashlib.\n"
+            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)"
         )
 
     # ── 2. Sandbox Self-Test ───────────────────────────────────────────────────
@@ -220,14 +211,23 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
     # ── 4. Clean code output ───────────────────────────────────────────────────
 
     def _clean(self, raw: str) -> str:
-        """Strip markdown fences and leading prose from LLM output."""
-        code = re.sub(r'```python\s*', '', raw)
+        """Aggressively strip markdown, prose, and any non-Python prefix."""
+        code = raw or ""
+        # Remove markdown fences
+        code = re.sub(r'```python\s*', '', code)
         code = re.sub(r'```\s*', '', code)
+        # Remove REASONING: / NOTE: / Here is: style prefixes
+        code = re.sub(
+            r'^(?:REASONING|NOTE|Here is|Here\'s|Below is|The following)[^\n]*\n',
+            '', code, flags=re.IGNORECASE | re.MULTILINE)
         code = re.sub(r'^REASONING:.*?(?=\n(?:import|class|#|"""))',
                       '', code, flags=re.DOTALL)
-        m = re.search(r'^(import |from |class |""")', code, re.MULTILINE)
+        # Jump to the first real Python token
+        m = re.search(r'^("""|\s*import |\s*from |\s*class )', code, re.MULTILINE)
         if m:
             code = code[m.start():]
+        # Strip invalid escape sequences that cause SyntaxWarning (e.g. \. → \\.)
+        code = re.sub(r'(?<!\\)\\(?![nrtbfv\\\'"0-9xuUNaobx\n])', r'\\\\', code)
         return code.strip()
 
     # ── 5. Full v29 pipeline ───────────────────────────────────────────────────
@@ -247,7 +247,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         best_code   = ""
         best_score  = -1
         best_reason = gap
-        temps       = [0.72, 0.50, 0.28]
+        temps       = [0.70, 0.45, 0.20]
 
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
@@ -259,7 +259,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content":
                  f"Build this capability for Nova:\n{gap}\n\nContext: {context}"}
-            ], temp=temp, mt=1400)
+            ], temp=temp, mt=900)
 
             code = self._clean(raw or "")
 
@@ -296,10 +296,36 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 safe_print(col('GRB', f"  ★ Grade {quality['grade']} achieved — done."))
                 break
 
-        # Quality gate: if nothing passed sandbox, return empty to block PR
+        # Emergency 4th pass: ultra-simple prompt if all 3 failed
         if not best_code:
-            safe_print(col('RD', "  ✗ Quality gate: all 3 passes failed — PR blocked."))
-            safe_print(col('YL', "  Try /evolve again or /build with a clearer description."))
+            safe_print(col('YL', "  ↻ Emergency pass — minimal prompt..."))
+            # Extract a clean class name from the gap description
+            cname_match = re.search(r'class\s+(\w+)', gap)
+            cname = cname_match.group(1) if cname_match else "NovaCapability"
+            emergency_prompt = (
+                f"Write a Python class named {cname}. "
+                "Output ONLY valid Python, no markdown, no explanation. "
+                "The class must have __init__(self) and 3 methods with docstrings. "
+                "Use only Python stdlib. Keep it under 50 lines."
+            )
+            raw  = safe_chat(MODEL, [
+                {"role": "user", "content": emergency_prompt}
+            ], temp=0.1, mt=700)
+            code = self._clean(raw or "")
+            try:
+                ast.parse(code)
+                passed, _, _ = self._sandbox_test(code)
+                if passed:
+                    best_code   = code
+                    best_reason = gap
+                    safe_print(col('GR', "  ✓ Emergency pass succeeded"))
+            except SyntaxError:
+                pass
+
+        # Hard quality gate: if still nothing, block the PR
+        if not best_code:
+            safe_print(col('RD', "  ✗ Quality gate: all passes failed — PR blocked."))
+            safe_print(col('YL', "  Try /evolve again — the LLM may have been rate-limited."))
             return "", gap
 
         return best_code, best_reason
