@@ -55,6 +55,11 @@ VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
 
+# Separate models: fast 8B for conversation, powerful 70B for writing code.
+# Nova thinks fast, but writes with her full intelligence.
+CODEGEN_MODEL = "llama-3.3-70b-versatile"   # code generation — ASI grade
+# Conversation continues to use MODEL (llama-3.1-8b-instant) from v26
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SILENT TOOL LOADER — suppresses stdout/stderr during module loading
@@ -111,8 +116,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "- At least one method that stores/retrieves state (SQLite or dict)\n"
             "- At least one method that LEARNS or ADAPTS from input\n"
             "- Every public method has a one-line docstring\n"
-            "- 3 to 5 public methods, each under 15 lines\n"
-            "- 40–70 lines total — concise and correct beats long and broken\n\n"
+            "- 4 to 6 public methods, each under 20 lines\n"
+            "- 60–120 lines total — thorough but not bloated\n\n"
 
             "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
@@ -255,11 +260,11 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
                                      f"(temp={temp})..."))
 
-            raw  = safe_chat(MODEL, [
+            raw  = safe_chat(CODEGEN_MODEL, [
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content":
                  f"Build this capability for Nova:\n{gap}\n\nContext: {context}"}
-            ], temp=temp, mt=900)
+            ], temp=temp, mt=1200)
 
             code = self._clean(raw or "")
 
@@ -308,9 +313,9 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 "The class must have __init__(self) and 3 methods with docstrings. "
                 "Use only Python stdlib. Keep it under 50 lines."
             )
-            raw  = safe_chat(MODEL, [
+            raw  = safe_chat(CODEGEN_MODEL, [
                 {"role": "user", "content": emergency_prompt}
-            ], temp=0.1, mt=700)
+            ], temp=0.1, mt=800)
             code = self._clean(raw or "")
             try:
                 ast.parse(code)
@@ -361,7 +366,7 @@ class NovaCore29(NovaCore28):
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
-            "  ✓  Code Engine v29  — master prompt · sandbox · scoring · 3-pass refinement"))
+            f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · scoring · 3-pass refinement"))
 
     def _command(self, raw: str) -> str:
         parts = raw.strip().split(maxsplit=2)
@@ -482,7 +487,7 @@ if __name__ == '__main__':
         print(col('DIM', '  ·  No tools yet — try /evolve or /build'))
 
     print(col('DIM', '\n  /tools · /use · /score · /evolve · /build · /chain · exit'))
-    print(col('DIM', '  /score shows intelligence grade for every capability'))
+    print(col('DIM', f'  Chat: {MODEL}  |  Code: {CODEGEN_MODEL}'))
     print(col('MG', '═' * W + '\n'))
 
     try:
