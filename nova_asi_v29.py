@@ -474,7 +474,22 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                  f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
             ], temp=temp, mt=1400)
 
-            code = self._clean(raw or "")
+            # Detect API-level failures early — no point retrying auth errors
+            raw_str = raw or ""
+            if any(e in raw_str for e in ('401', 'Invalid API Key', 'invalid_api_key',
+                                           'Authentication', 'rate_limit_exceeded',
+                                           'insufficient_quota')):
+                if 'Invalid API Key' in raw_str or '401' in raw_str:
+                    safe_print(col('RD',
+                        "  ✗ GROQ_API_KEY is invalid or expired.\n"
+                        "  → Get a fresh key at console.groq.com/keys\n"
+                        "  → Update GROQ_API_KEY in ~/nexus_agi/.env\n"
+                        "  → Restart Nova"))
+                else:
+                    safe_print(col('YL', "  ✗ Groq API error — rate limited, retrying..."))
+                break
+
+            code = self._clean(raw_str)
 
             # Syntax gate
             try:
