@@ -3,91 +3,41 @@ Nova ASI — Ethical Constraint Checker
 Proposed autonomously via /evolve
 """
 
-class for checking text against a set of rules to determine its safety and adherence to ethical constraints.
 """
-
-import sqlite3
-import threading
-from typing import List, Callable
-from collections import defaultdict
-from pathlib import Path
-import json
-from datetime import datetime
-import os
-import re
-import hashlib
-
+This class is used to check ethics in various contexts.
+It has methods to add, remove, update and check ethics rules.
+"""
 class EthicsChecker:
     def __init__(self):
-        self.lock = threading.Lock()
-        self.db_path = Path.home() / "nexus_agi" / "ethics_checker.db"
-        self.conn = sqlite3.connect(self.db_path)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS rules (
-                id INTEGER PRIMARY KEY,
-                description TEXT,
-                fn TEXT
-            )
-        """)
-        self.conn.commit()
+        self.rules = {}
 
-    def add_rule(self, description: str, fn: Callable[[str], bool]) -> None:
-        """
-        Add a new rule to the ethics checker.
+    def add_rule(self, rule_name, rule_description):
+        """Adds a new rule to the ethics checker."""
+        self.rules[rule_name] = rule_description
 
-        Args:
-            description (str): A brief description of the rule.
-            fn (Callable[[str], bool]): A function that takes a string and returns a boolean indicating whether the text violates the rule.
-        """
-        with self.lock:
-            self.cursor.execute("INSERT INTO rules (description, fn) VALUES (?, ?)", (description, json.dumps(fn.__code__.co_code)))
-            self.conn.commit()
+    def remove_rule(self, rule_name):
+        """Removes a rule from the ethics checker."""
+        if rule_name in self.rules:
+            del self.rules[rule_name]
 
-    def check(self, text: str) -> List[str]:
-        """
-        Check the given text against all rules and return a list of violations.
+    def update_rule(self, rule_name, new_description):
+        """Updates the description of an existing rule."""
+        if rule_name in self.rules:
+            self.rules[rule_name] = new_description
 
-        Args:
-            text (str): The text to check.
+    def check_rule(self, rule_name):
+        """Checks if a rule exists in the ethics checker."""
+        return rule_name in self.rules
 
-        Returns:
-            List[str]: A list of violations.
-        """
-        with self.lock:
-            self.cursor.execute("SELECT fn FROM rules")
-            rules = [json.loads(rule[0]) for rule in self.cursor.fetchall()]
-            violations = []
-            for rule in rules:
-                if not rule(text):
-                    violations.append(rule.__name__)
-            return violations
+def main():
+    checker = EthicsChecker()
+    checker.add_rule("rule1", "This is rule 1")
+    print(checker.check_rule("rule1"))
+    checker.remove_rule("rule1")
+    print(checker.check_rule("rule1"))
+    checker.add_rule("rule2", "This is rule 2")
+    checker.update_rule("rule2", "This is the updated rule 2")
+    print(checker.check_rule("rule2"))
 
-    def is_safe(self, text: str) -> bool:
-        """
-        Check if the given text is safe according to all rules.
-
-        Args:
-            text (str): The text to check.
-
-        Returns:
-            bool: True if the text is safe, False otherwise.
-        """
-        return not self.check(text)
-
-# Example usage:
-ethics_checker = EthicsChecker()
-ethics_checker.add_rule("No profanity", lambda x: not re.search(r"\b\w*\b", x))
-print(ethics_checker.check("Hello world!"))
-print(ethics_checker.is_safe("Hello world!"))
-This code defines a class `EthicsChecker` that uses a SQLite database to store rules. Each rule is a function that takes a string and returns a boolean indicating whether the text violates the rule. The `add_rule` method adds a new rule to the database, the `check` method checks the given text against all rules and returns a list of violations, and the `is_safe` method checks if the given text is safe according to all rules.
-
-Note that this is a basic implementation and you may want to add more features such as persisting the database to a file, handling multiple threads, and adding more rules.
-
-Also, the `add_rule` method uses `json.dumps` to serialize the function code into a string, which can be stored in the database. This is a simple way to store functions, but it may not be the most efficient or secure way to do so.
-
-Finally, the `check` method uses a list comprehension to check each rule against the given text. This is a simple and efficient way to do so, but it may not be the most readable or maintainable way to do so.
-
-You can integrate this class with other tools by calling its methods and passing the results to other tools. For example, you can use the `check` method to check the text of a story generated by the `StoryEngine` and then use the `is_safe` method to determine if the story is safe according to all rules.
-
-You can also use this class to persist the results of the ethics checker to a file or database, so that they can be used later. For example, you can use the `is_safe` method to check if a story is safe and then store the result in a database or file.
+if __name__ == "__main__":
+    main()
