@@ -268,21 +268,21 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "- 5 to 7 public methods, each with a one-line docstring\n"
             "- 80–140 lines total\n\n"
 
+            "ASI-GRADE METHOD EXAMPLES (write at this level of sophistication):\n"
+            "• Bayesian update: prior = self._beliefs.get(h, 0.5); "
+            "posterior = likelihood*prior / (likelihood*prior + (1-likelihood)*(1-prior)); "
+            "store posterior, return float\n"
+            "• EMA learning: self._prediction = alpha*outcome + (1-alpha)*self._prediction "
+            "where alpha=0.15; track rolling MAE over last 50 observations\n"
+            "• Causal chain: store (premise, conclusion, weight) tuples; "
+            "propagate confidence multiplicatively through chains\n\n"
+
             "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
             "2. First line must be a triple-quoted module docstring.\n"
             "3. Stdlib only: os, json, sqlite3, time, re, random, threading,\n"
             "   datetime, collections, math, statistics, hashlib.\n"
-            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)\n\n"
-
-            "EXAMPLE of ASI-grade method (implement AT THIS LEVEL of sophistication):\n"
-            "def update_belief(self, hypothesis: str, evidence: str, likelihood: float) -> float:\n"
-            "    \"\"\"Bayesian update: returns new P(H|E) after observing evidence.\"\"\"\n"
-            "    prior = self._beliefs.get(hypothesis, 0.5)\n"
-            "    posterior = (likelihood * prior) / max(\n"
-            "        likelihood * prior + (1 - likelihood) * (1 - prior), 1e-9)\n"
-            "    self._beliefs[hypothesis] = round(posterior, 4)\n"
-            "    return posterior"
+            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)"
         )
 
     # ── 2. Sandbox Self-Test ───────────────────────────────────────────────────
@@ -398,13 +398,18 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         # Remove markdown fences
         code = re.sub(r'```python\s*', '', code)
         code = re.sub(r'```\s*', '', code)
-        # Remove REASONING: / NOTE: / Here is: style prefixes
+        # Remove REASONING: / NOTE: / Here is: / JSON preamble prefixes
         code = re.sub(
-            r'^(?:REASONING|NOTE|Here is|Here\'s|Below is|The following)[^\n]*\n',
+            r'^(?:REASONING|NOTE|Here is|Here\'s|Below is|The following|Capability|'
+            r'COGNITIVE PATTERN|REQUIRED METHODS|ALGORITHM|INTELLIGENCE MARKER)'
+            r'[^\n]*\n',
             '', code, flags=re.IGNORECASE | re.MULTILINE)
         code = re.sub(r'^REASONING:.*?(?=\n(?:import|class|#|"""))',
                       '', code, flags=re.DOTALL)
-        # Jump to the first real Python token
+        # Strip any JSON/dict preamble blocks ({ ... }) that appear before the class
+        code = re.sub(r'^\s*\{[^}]*\}\s*', '', code, flags=re.DOTALL)
+        # Jump to the LAST occurrence of the module docstring start or first class/import
+        # This prevents landing inside a preamble that also contains triple quotes
         m = re.search(r'^("""|\s*import |\s*from |\s*class )', code, re.MULTILINE)
         if m:
             code = code[m.start():]
