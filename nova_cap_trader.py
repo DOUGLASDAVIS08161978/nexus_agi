@@ -16,6 +16,24 @@ import sqlite3, json, os, time, random, threading, traceback, hmac, hashlib, uui
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
+# Load .env file from ~/nexus_agi/.env into os.environ (no dotenv library needed)
+def _load_env() -> None:
+    env_path = os.path.expanduser("~/nexus_agi/.env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = val
+
+_load_env()
+
 try:
     import requests as _req
     _OK = True
