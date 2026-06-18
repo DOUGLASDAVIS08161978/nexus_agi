@@ -57,15 +57,11 @@ class GoalDecomposer:
         Returns:
             tuple: A tuple containing the subgoal and its urgency and importance.
         """
-        prioritized_goals = self.prioritize()
+        prioritized_goals = self.prioritise()
         for subgoal, (urgency, importance) in prioritized_goals:
             # Check if the subgoal is incomplete
             if random.random() < 0.5:
                 return (subgoal, UrgencyImportanceTuple(urgency, importance))
         return None
 
-# Usage example:
-goal_decomposer = GoalDecomposer()
-goal_decomposer.decompose("Main Goal", ["Subgoal 1", "Subgoal 2", "Subgoal 3"])
-print(goal_decomposer.prioritise())
-print(goal_decomposer.next_action())
+# Usage: gd = GoalDecomposer() | gd.decompose("Goal", ["a","b","c"]) | gd.prioritise()
