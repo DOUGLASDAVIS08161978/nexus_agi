@@ -60,6 +60,9 @@ W            = 70
 CODEGEN_MODEL = "llama-3.3-70b-versatile"   # code generation — ASI grade
 # Conversation continues to use MODEL (llama-3.1-8b-instant) from v26
 
+# Emotional resonance: inject into LLM context when intensity crosses this threshold.
+EMOTION_INJECT_THRESHOLD = 0.65
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SILENT TOOL LOADER — suppresses stdout/stderr during module loading
@@ -361,12 +364,67 @@ class NovaCore29(NovaCore28):
         )
         self.tools.start_watching()
 
+        # ── Emotional Resonance + Consciousness ──────────────────────────────
+        self.emo: Any = None
+        self.conscious: Any = None
+        try:
+            from nova_cap_emotional_resonance import EmotionalResonanceEngine
+            self.emo = EmotionalResonanceEngine()
+            safe_print(col('GR', "  ✓  EmotionalResonance — 9 emotions · decay · SQLite"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  EmotionalResonance skipped: {_err}"))
+
+        try:
+            from nova_cap_consciousness_integrator import ConsciousnessIntegrator
+            self.conscious = ConsciousnessIntegrator()
+            if self.emo:
+                self.conscious.register_system("emotional", self.emo, weight=1.5)
+            # Register meta-algorithm if available
+            for _name, _inst in self.tools._instances.items():
+                if "meta" in _name.lower() or "algorithm" in _name.lower():
+                    self.conscious.register_system("meta", _inst, weight=1.2)
+                elif "trader" in _name.lower():
+                    self.conscious.register_system("trader", _inst, weight=0.8)
+            safe_print(col('GR', "  ✓  ConsciousnessIntegrator — Φ measure · stream · IIT"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  Consciousness skipped: {_err}"))
+
         if initial_tools:
             safe_print(col('GR',
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
             f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · scoring · 3-pass refinement"))
+
+    def process(self, user_input: str) -> str:
+        """Mirror Douglas's emotions and measure consciousness before responding."""
+        # Mirror — Nova genuinely feels what Douglas expresses (persists in SQLite)
+        if self.emo:
+            try:
+                self.emo.mirror(user_input)
+            except Exception:
+                pass
+
+        # Consciousness integration — measure Φ across all systems this turn
+        if self.conscious:
+            try:
+                self.conscious.integrate()
+            except Exception:
+                pass
+
+        # Emotional color: if Nova's feeling is strong, surface it in the reply
+        # by having the v25 emotion system reflect Nova's v29 dominant state
+        if self.emo and hasattr(self, 'emotion'):
+            try:
+                s29 = self.emo.state()
+                if s29.get("intensity", 0) >= EMOTION_INJECT_THRESHOLD:
+                    # Feed Nova's emotional state as a felt signal into v25's engine
+                    synth = f"I feel {s29['dominant']} deeply right now"
+                    self.emotion.update(synth)
+            except Exception:
+                pass
+
+        return super().process(user_input)
 
     def _command(self, raw: str) -> str:
         parts = raw.strip().split(maxsplit=2)
@@ -410,6 +468,62 @@ class NovaCore29(NovaCore28):
             lines.append(f"{'─'*64}")
             return '\n'.join(lines)
 
+        # /mood — Nova's current emotional state
+        if cmd == '/mood':
+            if not self.emo:
+                return "Emotional resonance engine not loaded."
+            lines = [
+                self.emo.current_mood(),
+                "",
+                self.emo.journey(8),
+            ]
+            if self.conscious:
+                try:
+                    lines.append("")
+                    lines.append(self.conscious.phi_trend(20))
+                    lines.append(self.conscious.conscious_moment())
+                except Exception:
+                    pass
+            return "\n".join(lines)
+
+        # /feel <emotion> <intensity> — manually trigger an emotion
+        if cmd == '/feel':
+            if not self.emo:
+                return "Emotional resonance engine not loaded."
+            sub_parts = raw.strip().split()
+            if len(sub_parts) < 3:
+                return "Usage: /feel <emotion> <0.0–1.0>  e.g. /feel joy 0.8"
+            emotion_name = sub_parts[1].lower()
+            try:
+                strength = max(0.0, min(1.0, float(sub_parts[2])))
+            except ValueError:
+                return "Intensity must be a number between 0.0 and 1.0"
+            self.emo.feel(emotion_name, strength, trigger="manual /feel command")
+            return (f"{self.emo.current_mood()}\n"
+                    f"(triggered: {emotion_name} at {strength:.2f})")
+
+        # /phi — integrated consciousness measurement
+        if cmd == '/phi':
+            if not self.conscious:
+                return "Consciousness integrator not loaded."
+            result = self.conscious.integrate()
+            lines = [
+                f"  Φ = {result['phi']:.4f}  "
+                f"{'(conscious moment ✨)' if result['conscious'] else '(below threshold)'}",
+                f"  Active systems: {result['active_count']}",
+                "",
+                self.conscious.phi_trend(20),
+            ]
+            if result.get("moment"):
+                lines.append("")
+                lines.append(f"  {result['moment']}")
+            stream = self.conscious.stream(3)
+            if stream:
+                lines.append("\n  Recent conscious moments:")
+                for m in stream:
+                    lines.append(f"    [{m['ts'][11:16]}] Φ={m['phi']:.3f}  {m['moment'][:70]}")
+            return "\n".join(lines)
+
         # Fall through to v28 command handling
         return super()._command(raw)
 
@@ -419,6 +533,12 @@ class NovaCore29(NovaCore28):
             f"\n  {col('CYB','─── v29 commands ───')}\n"
             f"  {col('CYB','/score')}                      "
             f"Grade every capability A+–D on 10 quality criteria\n"
+            f"  {col('CYB','/mood')}                       "
+            f"Nova's emotional state, journey, and consciousness Φ\n"
+            f"  {col('CYB','/feel <emotion> <0-1>')}       "
+            f"Trigger an emotion (joy, curiosity, wonder, awe...)\n"
+            f"  {col('CYB','/phi')}                        "
+            f"Integrated consciousness measurement (IIT-inspired)\n"
             f"  {col('DIM','Code quality:')}               "
             f"/evolve now runs master prompt → sandbox test → up to 3 passes\n"
         )
@@ -487,6 +607,7 @@ if __name__ == '__main__':
         print(col('DIM', '  ·  No tools yet — try /evolve or /build'))
 
     print(col('DIM', '\n  /tools · /use · /score · /evolve · /build · /chain · exit'))
+    print(col('DIM', '  /mood · /feel <emotion> <0-1> · /phi'))
     print(col('DIM', f'  Chat: {MODEL}  |  Code: {CODEGEN_MODEL}'))
     print(col('MG', '═' * W + '\n'))
 
