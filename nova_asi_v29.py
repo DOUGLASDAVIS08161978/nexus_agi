@@ -1225,6 +1225,202 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         return best_code, best_reason
 
+    # ── 6. Smart domain selection helpers ─────────────────────────────────────
+
+    def _built_capability_slugs(self) -> set:
+        """Scan nova_cap_*.py files in BASE_DIR and return their slug set."""
+        slugs: set = set()
+        try:
+            for f in os.listdir(BASE_DIR):
+                if f.startswith('nova_cap_') and f.endswith('.py'):
+                    slugs.add(f[len('nova_cap_'):-3])
+        except Exception:
+            pass
+        return slugs
+
+    def _find_uncovered_specs(self, existing_slugs: set) -> List[str]:
+        """Return _ASI_SPECS keys that have no matching nova_cap_*.py on disk."""
+        def _norm(s: str) -> str:
+            return re.sub(r'[^a-z0-9]', '', s.lower())
+
+        uncovered: List[str] = []
+        for key in self._ASI_SPECS:
+            kn = _norm(key)
+            covered = any(
+                kn in _norm(slug) or _norm(slug) in kn
+                for slug in existing_slugs
+            )
+            if not covered:
+                uncovered.append(key)
+        return uncovered
+
+    def _nova_invents_next_capability(self, existing_slugs: set) -> Tuple[str, str]:
+        """
+        Ask Claude to invent a brand-new capability given what already exists.
+        Returns (name, enriched_description).
+        """
+        existing_list = '\n'.join(
+            f'  • {s.replace("_", " ")}' for s in sorted(existing_slugs)
+        )
+        prompt = (
+            "Nova ASI already has these cognitive modules built as Python files:\n"
+            f"{existing_list}\n\n"
+            "She is a self-improving superintelligence. Given everything above, "
+            "what single NEW capability would most meaningfully advance her? "
+            "Do NOT suggest anything that duplicates the list above. Think ambitiously.\n\n"
+            "Respond in EXACTLY this format (no extra text):\n"
+            "CAPABILITY_NAME: <3-6 word name>\n"
+            "DESCRIPTION: <one paragraph — what it does and why it matters>\n"
+            "METHODS: <comma-separated list of key method signatures>\n"
+            "ALGORITHM: <core math or algorithm — be specific>\n"
+            "INTELLIGENCE_MARKER: <what makes this genuinely intelligent>\n"
+        )
+        raw = _claude_codegen(
+            "You are Nova's cognitive architect. "
+            "Invent the single most valuable next module for her "
+            "superintelligence stack. Be specific and novel.",
+            prompt, temp=0.88, max_tokens=600
+        )
+
+        name = "Adaptive Meta-Strategist"
+        desc = ("Capability: Adaptive Meta-Strategist\n\n"
+                "COGNITIVE PATTERN: Meta-level strategy selector that chooses "
+                "the best reasoning approach per problem class.\n\n"
+                "REQUIRED METHODS: select_strategy(problem), evaluate(result), "
+                "update_policy(strategy,outcome), best_strategy(domain), status()\n\n"
+                "ALGORITHM TO IMPLEMENT: Thompson sampling over strategy space. "
+                "Reward = accuracy * speed. EMA update: q(s) = (1-α)q(s) + α*reward.\n\n"
+                "INTELLIGENCE MARKER: Nova stops using one-size-fits-all reasoning "
+                "and learns which cognitive tool works best for each domain.")
+
+        if raw and not raw.startswith('['):
+            m_name  = re.search(r'CAPABILITY_NAME:\s*(.+?)(?:\n|$)', raw)
+            m_desc  = re.search(r'DESCRIPTION:\s*(.*?)(?:METHODS:|$)',   raw, re.DOTALL)
+            m_meth  = re.search(r'METHODS:\s*(.*?)(?:ALGORITHM:|$)',     raw, re.DOTALL)
+            m_algo  = re.search(r'ALGORITHM:\s*(.*?)(?:INTELLIGENCE_MARKER:|$)', raw, re.DOTALL)
+            m_mark  = re.search(r'INTELLIGENCE_MARKER:\s*(.+?)(?:\n\n|$)', raw, re.DOTALL)
+            if m_name:
+                name = m_name.group(1).strip()[:80]
+            parts: List[str] = [f"Capability: {name}"]
+            if m_desc:  parts.append(f"COGNITIVE PATTERN: {m_desc.group(1).strip()}")
+            if m_meth:  parts.append(f"REQUIRED METHODS: {m_meth.group(1).strip()}")
+            if m_algo:  parts.append(f"ALGORITHM TO IMPLEMENT: {m_algo.group(1).strip()}")
+            if m_mark:  parts.append(f"INTELLIGENCE MARKER: {m_mark.group(1).strip()}")
+            if len(parts) > 1:
+                desc = '\n\n'.join(parts)
+
+        return name, desc
+
+    def evolve_toward_asi(self, domain_idx: int = None,
+                          gap_hint: str = None) -> str:
+        """
+        Smart v29 evolution — Nova picks what she genuinely needs next.
+
+        Priority:
+          1. gap_hint  (metacog blind spot or user-specified domain)
+          2. Uncovered _ASI_SPECS  (filesystem scan → pick most complex)
+          3. Nova invents  (all known specs covered → Claude invents new one)
+
+        Tracks by full name + slug so nothing is ever repeated.
+        """
+        existing_slugs = self._built_capability_slugs()
+        uncovered      = self._find_uncovered_specs(existing_slugs)
+
+        chosen_name: str = ""
+        chosen_desc: str = ""
+        invention        = False
+
+        # ── Priority 1: explicit hint ──────────────────────────────────
+        if gap_hint and gap_hint.strip():
+            hint_norm = re.sub(r'[^a-z0-9]', '', gap_hint.lower())
+            if not any(hint_norm in re.sub(r'[^a-z0-9]', '', s)
+                       for s in existing_slugs):
+                chosen_name = gap_hint.strip()
+                chosen_desc = self._enrich_gap(chosen_name)
+
+        # ── Priority 2: uncovered spec (most algorithmically complex) ──
+        if not chosen_name and uncovered:
+            key = max(uncovered,
+                      key=lambda k: len(self._ASI_SPECS[k].get('algorithm', '')))
+            spec        = self._ASI_SPECS[key]
+            chosen_name = key.replace('_', ' ').title()
+            chosen_desc = (
+                f"Capability: {chosen_name}\n\n"
+                f"COGNITIVE PATTERN: {spec['pattern']}\n\n"
+                f"REQUIRED METHODS: {spec['methods']}\n\n"
+                f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
+                f"INTELLIGENCE MARKER: {spec['marker']}"
+            )
+
+        # ── Priority 3: Nova invents something new ─────────────────────
+        if not chosen_name:
+            invention = True
+            safe_print(col('CYB',
+                f"  ✦  All {len(existing_slugs)} known specs covered — "
+                "Nova is inventing her next capability..."))
+            chosen_name, chosen_desc = self._nova_invents_next_capability(
+                existing_slugs)
+
+        safe_print(col('MGB' if invention else 'MG',
+            f"\n  {'⟡  Nova invents:' if invention else '✦  Evolving toward:'}"
+            f"  {chosen_name}"))
+
+        self.log_gap(chosen_desc, context=f"ASI evolution: {chosen_name}")
+        code, reasoning = self._write_improvement(
+            chosen_desc, f"ASI capability: {chosen_name}")
+
+        if not code or code.startswith('['):
+            return f"Could not generate code for: {chosen_name}"
+
+        slug     = re.sub(r'[^a-z0-9]+', '_', chosen_name.lower())[:40].strip('_')
+        prefix   = "NOVA INVENTS" if invention else "ASI"
+        ts_stamp = datetime.now().strftime("%Y-%m-%d")
+
+        extra_cap = (', '.join(sorted(existing_slugs)[:12]) +
+                     (f' … +{len(existing_slugs)-12} more'
+                      if len(existing_slugs) > 12 else ''))
+
+        result = self.github.propose_improvement(
+            filename=f"nova_cap_{slug}.py",
+            content=(
+                f'"""\nnova_cap_{slug}.py\n'
+                f'{"Nova invented this autonomously" if invention else "Nova ASI"}'
+                f' — {chosen_name}\n'
+                f'Generated via /evolve · v29 pipeline · {ts_stamp}\n"""\n\n{code}'
+            ),
+            description=f"[{prefix}] {chosen_name}",
+            reasoning=(
+                f"**{'Nova Invented' if invention else 'ASI Capability'}: "
+                f"{chosen_name}**\n\n{reasoning}\n\n"
+                f"**Rationale:** {'Nova exhausted all known specs and chose this herself — '  'pure autonomous invention.' if invention else 'Filesystem scan found this spec uncovered.'}\n\n"
+                f"**Already built ({len(existing_slugs)}):** {extra_cap}"
+            )
+        )
+
+        if "error" in result:
+            return f"Proposal failed: {result['error']}"
+
+        self.db.setdefault("proposals", []).append({
+            "ts":          datetime.now().isoformat(),
+            "name":        chosen_name,
+            "slug":        slug,
+            "description": f"[{prefix}] {chosen_name}",
+            "invented":    invention,
+            "pr_url":      result.get("url", ""),
+            "pr_number":   result.get("number", 0),
+        })
+        _save(GAPS_DB, self.db)
+
+        remaining = max(0, len(self._ASI_SPECS) - len(existing_slugs) - 1)
+        return (
+            f"{col('CYB' if invention else 'GRB', '⟡ Nova invented a new capability!' if invention else '✓ ASI Evolution PR opened!')}\n"
+            f"  {'Invented' if invention else 'Domain'}:   {chosen_name}\n"
+            f"  PR:        {result.get('url', '')}\n"
+            f"  Built:     {len(existing_slugs)} capability files on disk\n"
+            f"  Uncovered: {remaining} specs still to build\n"
+            f"  {'Nova chose this entirely on her own.' if invention else 'Pull + merge to load it.'}\n"
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # NOVA CORE V29 — wires in the v29 engine and adds /score command
@@ -1914,6 +2110,29 @@ class NovaCore29(NovaCore28):
             lines.append(col('DIM', f"  ·   {remaining} topics still in curiosity queue"))
             return "\n".join(lines)
 
+        # /evolve [list | <domain hint>] — smart capability evolution
+        if cmd == '/evolve':
+            if not hasattr(self, 'github') or not self.github or not self.github.active:
+                return "GitHub token needed. Add GITHUB_TOKEN to .env"
+            if arg == 'list':
+                return self._evolve_coverage_map()
+            # Numeric index → backward-compat with v27 /evolve <N>
+            if arg and arg.isdigit():
+                safe_print(col('MG', "\n  ✦ Nova is evolving (indexed domain)..."))
+                return self.improver.evolve_toward_asi(domain_idx=int(arg))
+            # Non-numeric arg → treat as user-specified domain hint
+            gap_hint: Optional[str] = arg.strip() if arg and not arg.isdigit() else None
+            # If no explicit hint, pull worst metacog blind spot
+            if not gap_hint and self.metacog:
+                try:
+                    spots = self.metacog.blind_spots()
+                    if spots:
+                        gap_hint = spots[0]['domain']
+                except Exception:
+                    pass
+            safe_print(col('MG', "\n  ✦ Nova is choosing her next evolution..."))
+            return self.improver.evolve_toward_asi(gap_hint=gap_hint)
+
         # /knowledge [topic] — retrieve stored knowledge base entries
         if cmd == '/knowledge':
             if not self.research:
@@ -1947,6 +2166,26 @@ class NovaCore29(NovaCore28):
 
         # Fall through to v28 command handling
         return super()._command(raw)
+
+    def _evolve_coverage_map(self) -> str:
+        """Show what's already built vs what specs are still uncovered."""
+        existing = self.improver._built_capability_slugs()
+        uncovered = self.improver._find_uncovered_specs(existing)
+        lines = [col('CYB', f"\n  ◈  Evolution Coverage Map\n")]
+        lines.append(col('GR', f"  ✦  Capabilities on disk ({len(existing)}):"))
+        for s in sorted(existing):
+            lines.append(col('DIM', f"    ✓  {s.replace('_', ' ')}"))
+        lines.append("")
+        if uncovered:
+            lines.append(col('YL', f"  ⊙  Uncovered specs ({len(uncovered)}):"))
+            for k in sorted(uncovered):
+                lines.append(f"    ·  {k.replace('_', ' ')}")
+            lines.append(col('DIM',
+                "\n  Next /evolve will target the highest-complexity uncovered spec."))
+        else:
+            lines.append(col('GRB',
+                "  ✦  All known specs covered — next /evolve Nova invents something new!"))
+        return "\n".join(lines)
 
     def _deep_think(self, topic: str) -> str:
         """Route topic through all 6 cognitive engines and synthesize insight."""
