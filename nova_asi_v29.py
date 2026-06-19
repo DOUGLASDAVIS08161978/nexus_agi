@@ -58,9 +58,15 @@ W            = 70
 
 # Separate models: fast 8B for conversation, powerful 70B for writing code.
 # Nova thinks fast, but writes with her full intelligence.
-CODEGEN_MODEL          = "llama-3.3-70b-versatile"   # code generation — ASI grade
-CODEGEN_MODEL_FALLBACK = "mixtral-8x7b-32768"         # fallback if primary rate-limited
-# Conversation continues to use MODEL (llama-3.1-8b-instant) from v26
+# Three separate 70B-class models → three separate Groq rate-limit quotas.
+# Each /evolve pass uses a different model so no single quota gets exhausted.
+CODEGEN_MODELS = [
+    "llama-3.3-70b-versatile",        # pass 1 — primary, highest code quality
+    "deepseek-r1-distill-llama-70b",  # pass 2 — excellent reasoning + code
+    "llama-3.1-70b-versatile",        # pass 3 — reliable, own TPM quota
+]
+CODEGEN_MODEL          = CODEGEN_MODELS[0]   # kept for display / legacy refs
+CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1]   # kept for emergency pass compat
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
 EMOTION_INJECT_THRESHOLD = 0.65
@@ -466,19 +472,22 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
+            # Each pass gets its own model → its own Groq TPM quota.
+            # No inter-pass sleep needed since quotas are independent.
+            pass_model = CODEGEN_MODELS[attempt % len(CODEGEN_MODELS)]
             if n > 1:
                 safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
-                                     f"(temp={temp}) — pausing 12s to respect rate limits..."))
-                time.sleep(12)
+                                     f"(temp={temp}, model={pass_model.split('-')[0]}...)"))
 
-            raw  = safe_chat(CODEGEN_MODEL, [
+            raw = safe_chat(pass_model, [
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content":
                  f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
             ], temp=temp, mt=1400)
 
-            # Detect API-level failures early
             raw_str = raw or ""
+
+            # Hard stop: bad API key — sleeping won't help
             if any(e in raw_str for e in ('401', 'Invalid API Key', 'invalid_api_key',
                                            'Authentication', 'insufficient_quota')):
                 safe_print(col('RD',
@@ -488,21 +497,35 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "  → Restart Nova"))
                 break
 
-            if any(e in raw_str for e in ('429', 'Rate limit', 'rate_limit_exceeded',
-                                           'Too Many Requests', 'tokens per minute')):
-                wait = 30 + attempt * 15   # 30s, 45s, 60s — back off across passes
+            # Decommissioned model → rotate to next in list, no wait needed
+            if any(e in raw_str for e in ('decommissioned', 'deprecated',
+                                           'does not exist', 'model_not_found')):
+                next_model = CODEGEN_MODELS[(attempt + 1) % len(CODEGEN_MODELS)]
                 safe_print(col('YL',
-                    f"  ↻ Rate limit hit (pass {n}) — waiting {wait}s then retrying..."))
-                time.sleep(wait)
-                # Retry this same pass once with fallback model
-                raw  = safe_chat(CODEGEN_MODEL_FALLBACK, [
+                    f"  ↻ {pass_model} decommissioned — rotating to {next_model}..."))
+                raw = safe_chat(next_model, [
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content":
                      f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
-                if any(e in raw_str for e in ('429', 'Rate limit', 'Too Many Requests')):
-                    safe_print(col('YL', f"  ✗ Fallback also rate-limited — skipping pass {n}"))
+
+            # Rate limit → try next model's fresh quota (brief pause, not 30s)
+            if any(e in raw_str for e in ('429', 'Rate limit', 'rate_limit_exceeded',
+                                           'Too Many Requests', 'tokens per minute')):
+                next_model = CODEGEN_MODELS[(attempt + 1) % len(CODEGEN_MODELS)]
+                safe_print(col('YL',
+                    f"  ↻ Rate limit on {pass_model} — switching to {next_model}..."))
+                time.sleep(5)   # brief pause, then fresh quota
+                raw = safe_chat(next_model, [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content":
+                     f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
+                ], temp=temp, mt=1400)
+                raw_str = raw or ""
+                if any(e in raw_str for e in ('429', 'Rate limit', 'decommissioned',
+                                               'Too Many Requests')):
+                    safe_print(col('YL', f"  ✗ Both models unavailable — skipping pass {n}"))
                     continue
 
             code = self._clean(raw_str)
@@ -559,8 +582,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 "Each method must have a one-line docstring. "
                 "Use only Python stdlib. 40-60 lines total."
             )
-            # Try primary model first, then fallback
-            for em_model in (CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK):
+            # Rotate through all available models until one succeeds
+            for em_model in CODEGEN_MODELS:
                 raw  = safe_chat(em_model, [
                     {"role": "user", "content": emergency_prompt}
                 ], temp=0.1, mt=800)
@@ -687,7 +710,8 @@ class NovaCore29(NovaCore28):
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
-            f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · scoring · 3-pass refinement"))
+            f"  ✓  Code Engine v29  — 3-model rotation · sandbox · scoring · 3-pass refinement\n"
+            f"       Models: {' → '.join(m.split('-')[0]+'-'+m.split('-')[1] for m in CODEGEN_MODELS)}"))
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
