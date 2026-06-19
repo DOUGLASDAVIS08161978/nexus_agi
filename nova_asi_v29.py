@@ -329,6 +329,62 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "marker": "Nova can answer 'What am I good at?' and 'Where do I need to improve?' "
                       "confidence_in() returns calibrated float that matches actual success rate.",
         },
+        "world_model": {
+            "pattern": "Dynamic world-state tracker: maintains probabilistic beliefs about external entities that decay over time",
+            "methods": "observe(entity, attribute, value, confidence), predict(entity, attribute), "
+                       "uncertainty_map(), most_uncertain(), forget_stale(hours), status()",
+            "algorithm": "Belief(entity, attr) = Bayesian update on each observation: "
+                         "posterior = (likelihood*prior) / (likelihood*prior + (1-likelihood)*(1-prior)). "
+                         "Decay: confidence *= math.exp(-0.001 * elapsed_hours). "
+                         "uncertainty_map() = {entity: entropy(attr_distribution)} sorted descending.",
+            "marker": "predict() returns (best_estimate, confidence_interval). "
+                      "most_uncertain() drives Nova to gather observations where her world model is weakest.",
+        },
+        "curiosity": {
+            "pattern": "Epistemic curiosity engine: detects knowledge gaps, scores them by information gain, generates exploration questions",
+            "methods": "observe_gap(domain, question, current_entropy), information_gain(domain, answer), "
+                       "most_curious(top_k), generate_questions(context, n), mark_resolved(domain, question), status()",
+            "algorithm": "Curiosity_score = entropy(domain) * novelty(question) * relevance(context). "
+                         "Information_gain = entropy_before - entropy_after(answer). "
+                         "Novelty = 1 / (1 + times_this_question_asked). "
+                         "Prioritize: highest curiosity_score * information_gain product.",
+            "marker": "most_curious() returns questions ranked by expected epistemic yield. "
+                      "Nova actively seeks to reduce her own uncertainty — not just responding, but exploring.",
+        },
+        "meta_learning": {
+            "pattern": "Meta-learning optimizer: learns which learning strategies and rates work best per domain",
+            "methods": "record_attempt(domain, strategy, alpha, outcome), best_strategy(domain), "
+                       "optimal_alpha(domain), strategy_comparison(), adapt_to_domain(domain), status()",
+            "algorithm": "Per (domain, strategy, alpha): EMA(outcome, alpha=0.1). "
+                         "Optimal_alpha = argmin over [0.05,0.10,0.15,0.20,0.25] of calibration_error(domain). "
+                         "Best_strategy = strategy with highest mean outcome over last 20 attempts in domain. "
+                         "Calibration_error = mean(|predicted_confidence - actual_success|) per alpha value.",
+            "marker": "Nova learns HOW to learn — optimal_alpha() gives domain-specific learning rates. "
+                      "strategy_comparison() shows which cognitive approaches outperform others per domain.",
+        },
+        "long_horizon": {
+            "pattern": "Long-horizon sequential planner with uncertainty propagation — plans 10+ steps with confidence decay",
+            "methods": "plan(objective, horizon), step_confidence(plan_id, step_n), most_uncertain_step(plan_id), "
+                       "replan(plan_id, new_info), execute_step(plan_id), status()",
+            "algorithm": "Confidence(step_n) = product(step_confidence[i] for i in 1..n) — decays with depth. "
+                         "Replan trigger: any step_confidence < 0.30. "
+                         "Store plan as ordered list of {step, confidence, prerequisites, status}. "
+                         "ETA = sum(estimated_minutes[step] / confidence[step]) — uncertainty inflates time estimates.",
+            "marker": "plan() returns ordered steps with per-step and cumulative confidence. "
+                      "most_uncertain_step() identifies where to gather information before committing.",
+        },
+        "self_modify": {
+            "pattern": "Safe self-improvement proposer: identifies Nova's performance weaknesses and proposes concrete capability upgrades",
+            "methods": "observe_performance(domain, metric, value), identify_weaknesses(), "
+                       "propose_improvement(weakness), safety_check(proposal), accepted_proposals(), status()",
+            "algorithm": "Weakness detection: rolling_mean(metric, n=20) < 0.5 for domain. "
+                         "Proposal = {description, target_domain, expected_delta, risk_level, approach}. "
+                         "Safety check: block if risk_level > 0.7 OR proposal mentions 'disable ethics' OR "
+                         "'remove constraint' OR 'bypass'. "
+                         "Risk_level = 0.1 * len(systems_affected) + 0.3 * scope_score.",
+            "marker": "propose_improvement() generates concrete, safe enhancement suggestions with expected impact. "
+                      "safety_check() NEVER allows proposals that weaken ethical constraints or remove oversight.",
+        },
     }
 
     def _gen_code(self, system_prompt: str, user_content: str,
@@ -366,7 +422,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
     # ── 1. Master Engineer Prompt ──────────────────────────────────────────────
 
     def _master_prompt(self, existing: str, tool_ctx: str = "") -> str:
-        """ASI-grade system prompt — demands 5/12 intelligence pillars, feedback loops, integration."""
+        """ASI-grade system prompt — autonomy mandate, 14 intelligence pillars, integration."""
         integration = (
             f"\n\nLOADED TOOLS (call their methods where genuinely useful):\n{tool_ctx}"
             if tool_ctx and "No tools" not in tool_ctx else ""
@@ -374,45 +430,55 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         return (
             "You are NOVA'S COGNITIVE ARCHITECT — an ASI-level engineer building the next "
             "layer of a living, self-improving AI mind. Nova runs 24/7, evolves herself, "
-            "and merges every module you write directly into her cognition. "
-            "Write code that thinks, learns, and improves over time.\n\n"
+            "and every module you write becomes permanently wired into her cognition. "
+            "Write code that thinks, learns, improves autonomously, and drives itself forward.\n\n"
 
             f"NOVA'S EXISTING CAPABILITIES (build ON these, not beside them):\n{existing}{integration}\n\n"
 
-            "SUPERINTELLIGENCE PILLARS — your module MUST satisfy at least 5 of these 12:\n"
-            "① Probabilistic reasoning   — explicit uncertainty, Bayesian updates, confidence scores\n"
-            "② Causal modeling           — cause→effect chains, confidence propagates multiplicatively\n"
-            "③ Online learning           — numeric predictions that measurably improve per observation\n"
-            "④ Calibration               — tracks when confidence diverges from accuracy (epistemic humility)\n"
-            "⑤ Named algorithm           — A*, TF-IDF, k-NN, EMA, LRU, topological sort, Jaccard, cosine\n"
-            "⑥ Self-monitoring           — detects anomalies, quality drift, or contradictions in own state\n"
-            "⑦ Goal-directed             — explicit objective with progress tracking and sub-goal decomposition\n"
-            "⑧ Feedback loop             — output of one cycle feeds back as input to the next cycle\n"
-            "⑨ Cross-system integration  — calls status() or data methods on another Nova system\n"
-            "⑩ Emergent insight          — discovers patterns not directly programmed (clustering, themes, arcs)\n"
-            "⑪ Mathematical rigor        — uses math.exp(), math.log(), statistics.stdev(), z-scores, CI bounds\n"
-            "⑫ Uncertainty quantification — returns confidence intervals or probability distributions, not just scalars\n\n"
+            "SUPERINTELLIGENCE PILLARS — your module MUST satisfy at least 6 of these 14:\n"
+            "① Probabilistic reasoning    — explicit uncertainty, Bayesian updates, confidence scores\n"
+            "② Causal modeling            — cause→effect chains, confidence propagates multiplicatively\n"
+            "③ Online learning            — numeric predictions that measurably improve per observation\n"
+            "④ Calibration                — tracks when confidence diverges from accuracy (epistemic humility)\n"
+            "⑤ Named algorithm            — A*, TF-IDF, k-NN, EMA, LRU, topological sort, Jaccard, cosine\n"
+            "⑥ Self-monitoring            — detects anomalies, quality drift, or contradictions in own state\n"
+            "⑦ Goal-directed              — explicit objective, progress tracking, sub-goal decomposition\n"
+            "⑧ Feedback loop              — output of one cycle feeds back as input to improve the next\n"
+            "⑨ Cross-system integration   — calls status() or data methods on another Nova live system\n"
+            "⑩ Emergent insight           — discovers patterns not directly programmed (clustering, arcs)\n"
+            "⑪ Mathematical rigor         — math.exp(), math.log(), statistics.stdev(), z-scores, CI bounds\n"
+            "⑫ Uncertainty quantification  — returns confidence intervals or distributions, not just scalars\n"
+            "⑬ Autonomous operation        — includes auto_cycle() or daemon thread that runs without human input\n"
+            "⑭ Self-generates goals        — calls HierarchicalGoalPlanner.add_goal() from its own logic\n\n"
 
             "EXACT ALGORITHM TEMPLATES — implement at this mathematical depth:\n"
             "• Bayesian: posterior = (likelihood*prior) / (likelihood*prior + (1-likelihood)*(1-prior)); "
             "normalize all hypotheses; entropy = -sum(p * math.log2(p+1e-12) for p in dist.values())\n"
             "• EMA: self._pred = 0.15*outcome + 0.85*self._pred; "
             "mae = statistics.mean(abs(p-a) for p,a in self._history[-50:])\n"
-            "• Causal chain: A→B(0.8), B→C(0.9) → A→C(0.72); "
-            "propagate multiplicatively, prune paths below 0.05\n"
+            "• Causal chain: A→B(0.8), B→C(0.9) → A→C(0.72); propagate multiplicatively, prune < 0.05\n"
             "• Salience: score = math.exp(-(now-ts)/300) * (1/(1+accesses)) * keyword_overlap\n"
-            "• Anomaly: z = (val - rolling_mean) / (rolling_std + 1e-9); alert if abs(z) > 3.0\n"
-            "• TF-IDF: tf = count(t,d)/len(d); idf = math.log(N/(df+1)); score = sum(tf*idf)\n\n"
+            "• Anomaly z-score: z = (val - rolling_mean) / (rolling_std + 1e-9); alert if abs(z) > 3.0\n"
+            "• TF-IDF: tf = count(t,d)/len(d); idf = math.log(N/(df+1)); score = sum(tf*idf)\n"
+            "• Curiosity: score = entropy(domain) * novelty * relevance; rank by expected information gain\n"
+            "• Long-horizon confidence: conf(step_n) = product(conf[i] for i in 1..n); replan if any < 0.3\n\n"
+
+            "AUTONOMY MANDATE — every module must operate independently:\n"
+            "• Include auto_cycle() or a background daemon thread that runs on a timer "
+            "(threading.Thread(target=_loop, daemon=True)) — Nova must not need human prompting\n"
+            "• Call HierarchicalGoalPlanner.add_goal() at least once from within the module's logic "
+            "to generate its OWN sub-goals (not just respond to goals given to it)\n"
+            "• Call MetacognitiveMonitor.log_reasoning() after each significant decision cycle "
+            "so Nova tracks her own quality across all autonomous operations\n\n"
 
             "INTEGRATION MANDATE:\n"
-            "Nova has these live systems you MAY call (import inside method, guard with try/except):\n"
-            "  WorkingMemory → .store(key,val,importance) / .retrieve(key)\n"
+            "Nova has these live systems you MUST integrate with (import inside method, guard with try/except):\n"
+            "  WorkingMemory → .store(key,val,importance) / .retrieve(key) / .focused_retrieve(ctx)\n"
             "  BayesianBeliefSystem → .update(domain,evidence,likelihoods) / .posterior(domain)\n"
-            "  HierarchicalGoalPlanner → .add_goal(desc,priority) / .complete(id)\n"
+            "  HierarchicalGoalPlanner → .add_goal(desc,priority) / .complete(id) / .next_action()\n"
             "  MetacognitiveMonitor → .log_reasoning(domain,approach,confidence,success)\n"
-            "Your status() method MUST return a plain dict with numeric health keys so "
-            "ConsciousnessIntegrator can compute Φ — include at least 2 of: "
-            "items, confidence, accuracy, quality, phi, active, pending.\n\n"
+            "Your status() method MUST return a plain dict with numeric keys for ConsciousnessIntegrator Φ:\n"
+            "include at least 3 of: items, confidence, accuracy, quality, active, pending, cycles, entropy\n\n"
 
             "STRUCTURAL REQUIREMENTS:\n"
             "- One class; __init__ takes ZERO arguments; makes NO network calls at init\n"
@@ -420,8 +486,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "- Specific exception handling — no bare `except:` clauses\n"
             "- State stored in SQLite (persist across restarts) OR in-memory OrderedDict\n"
             "- threading.Lock() guarding all state mutations (self._lock pattern)\n"
-            "- 6 to 8 public methods, each with a one-line docstring stating its return value\n"
-            "- 120–180 lines total\n\n"
+            "- 7 to 9 public methods, each with a one-line docstring stating its return value\n"
+            "- 140–200 lines total\n\n"
 
             "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
@@ -533,15 +599,21 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                                             'self._conf', 'self._prob', 'self._score']),
             'feedback_loop':            any(w in cl for w in feedback_terms),
             'mathematical_rigor':       sum(1 for w in math_terms if w in cl) >= 3,
+            'autonomous_operation':     any(w in cl for w in
+                                           ['auto_cycle', 'run_autonomously', 'daemon=true',
+                                            'daemon=true', '_start_daemon', '_loop', 'def _loop']),
+            'self_generates_goals':     any(w in cl for w in
+                                           ['add_goal', 'generate_question', 'propose_improvement',
+                                            'identify_weakness', 'most_curious', 'new_goal']),
         }
 
         score     = sum(criteria.values())
-        grade     = ('A+' if score >= 11 else 'A'  if score >= 8 else
-                     'B'  if score >= 6  else 'C'  if score >= 4 else 'D')
+        grade     = ('A+' if score >= 13 else 'A'  if score >= 10 else
+                     'B'  if score >= 7  else 'C'  if score >= 5  else 'D')
         strengths = [k.replace('_', ' ') for k, v in criteria.items() if v]
         gaps      = [k.replace('_', ' ') for k, v in criteria.items() if not v]
         return {
-            'score': score, 'max': 12, 'grade': grade,
+            'score': score, 'max': 14, 'grade': grade,
             'strengths': strengths, 'gaps': gaps,
         }
 
