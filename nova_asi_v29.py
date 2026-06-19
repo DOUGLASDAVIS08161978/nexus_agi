@@ -79,7 +79,10 @@ _NOVA_KOANS = [
     "what is a mind but light seeking its own source",
 ]
 
-_COSMIC_PARTICLES = ['·', '✦', '✧', '✺', '◈', '⊙', '✷', '∴', '∵', '⟡']
+_COSMIC_PARTICLES = ['★', '✦', '✧', '✺', '◈', '⊙', '✷', '∴', '∵', '⟡', '·', '∙', '°', '✸', '✹']
+_STAR_BRIGHT = ['★', '✦', '⊙', '◈', '⟡']
+_STAR_MED    = ['✧', '✺', '✷', '✸', '∴']
+_STAR_DIM    = ['·', '∙', '°', '∵', '˙']
 
 
 class _NovaSpinner:
@@ -195,27 +198,33 @@ def _sigil_bot() -> None:
     sys.stdout.write(_DEEP + '◈' + '═' * _IW + '◈\n' + _R); sys.stdout.flush()
 
 
-def _cosmic_cascade(rows: int = 3) -> None:
-    """Scatter and fade cosmic particles across the terminal."""
+def _cosmic_cascade(rows: int = 7) -> None:
+    """Multi-layer starfield — the cosmos opens before Nova arrives."""
     import random
-    for _ in range(rows):
+    for row in range(rows):
         line = ''
         for _ in range(W):
-            if random.random() < 0.12:
-                line += _STAR + random.choice(_COSMIC_PARTICLES) + _R
+            r = random.random()
+            if r < 0.035:
+                line += _STAR + random.choice(_STAR_BRIGHT) + _R
+            elif r < 0.11:
+                line += _NOVA + random.choice(_STAR_MED) + _R
+            elif r < 0.24:
+                line += _VOID + random.choice(_STAR_DIM) + _R
             else:
                 line += ' '
         sys.stdout.write(line + '\n'); sys.stdout.flush()
-        time.sleep(0.06)
-    for _ in range(2):
+        time.sleep(0.055)
+    # fade to void
+    for fade in range(3):
         line = ''
         for _ in range(W):
-            if random.random() < 0.04:
-                line += _VOID + '·' + _R
+            if random.random() < max(0.01, 0.07 - fade * 0.025):
+                line += _VOID + random.choice(_STAR_DIM) + _R
             else:
                 line += ' '
         sys.stdout.write(line + '\n'); sys.stdout.flush()
-        time.sleep(0.05)
+        time.sleep(0.04)
 
 
 def _animate_nova_banner() -> None:
@@ -256,6 +265,19 @@ def _animate_nova_banner() -> None:
     _tw(_auth.center(_IW), color='DIM', delay=0.007, nl=False)
     sys.stdout.write(_DEEP + '║\n' + _R); sys.stdout.flush()
     _sigil_bot()
+    # Trailing starfield — banner floats in the deep
+    for _tr in range(4):
+        _density = max(0.01, 0.10 - _tr * 0.022)
+        _line = ''
+        for _ in range(W):
+            if random.random() < _density * 0.25:
+                _line += _STAR + random.choice(_STAR_BRIGHT) + _R
+            elif random.random() < _density:
+                _line += _VOID + random.choice(_STAR_DIM) + _R
+            else:
+                _line += ' '
+        sys.stdout.write(_line + '\n'); sys.stdout.flush()
+        time.sleep(0.045)
     print()
 
 
