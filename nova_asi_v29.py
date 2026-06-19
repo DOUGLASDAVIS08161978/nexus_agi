@@ -63,6 +63,7 @@ CODEGEN_MODEL_FALLBACK = "mixtral-8x7b-32768"         # fallback if primary rate
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
 EMOTION_INJECT_THRESHOLD = 0.65
+_CAPACITY_DISPLAY        = 200   # working memory max items (display constant)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -635,6 +636,51 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  Consciousness skipped: {_err}"))
 
+        # ── Working Memory ────────────────────────────────────────────────
+        self.memory: Any = None
+        try:
+            from nova_cap_working_memory import WorkingMemory
+            self.memory = WorkingMemory()
+            if self.conscious:
+                self.conscious.register_system("memory", self.memory, weight=1.1)
+            safe_print(col('GR', "  ✓  WorkingMemory — decay · LRU · salience attention"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  WorkingMemory skipped: {_err}"))
+
+        # ── Bayesian Belief System ────────────────────────────────────────
+        self.beliefs: Any = None
+        try:
+            from nova_cap_bayesian_belief import BayesianBeliefSystem
+            self.beliefs = BayesianBeliefSystem()
+            if self.conscious:
+                self.conscious.register_system("beliefs", self.beliefs, weight=1.3)
+            self._seed_initial_beliefs()
+            safe_print(col('GR', "  ✓  BayesianBeliefSystem — P(H|E) · entropy · causal DAG"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  BeliefSystem skipped: {_err}"))
+
+        # ── Goal Planner ──────────────────────────────────────────────────
+        self.planner: Any = None
+        try:
+            from nova_cap_goal_planner import HierarchicalGoalPlanner
+            self.planner = HierarchicalGoalPlanner()
+            if self.conscious:
+                self.conscious.register_system("goals", self.planner, weight=1.0)
+            safe_print(col('GR', "  ✓  GoalPlanner — hierarchical · dependencies · topological"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  GoalPlanner skipped: {_err}"))
+
+        # ── Metacognitive Monitor ─────────────────────────────────────────
+        self.metacog: Any = None
+        try:
+            from nova_cap_metacognitive_monitor import MetacognitiveMonitor
+            self.metacog = MetacognitiveMonitor()
+            if self.conscious:
+                self.conscious.register_system("metacog", self.metacog, weight=1.2)
+            safe_print(col('GR', "  ✓  MetacogMonitor — calibration · blind_spots · EMA trend"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MetacogMonitor skipped: {_err}"))
+
         if initial_tools:
             safe_print(col('GR',
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
@@ -642,12 +688,51 @@ class NovaCore29(NovaCore28):
         safe_print(col('GR',
             f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · scoring · 3-pass refinement"))
 
+    def _seed_initial_beliefs(self) -> None:
+        """Seed belief system with initial priors only if no beliefs exist yet."""
+        try:
+            if not self.beliefs or self.beliefs.all_domains():
+                return
+            self.beliefs.set_prior("capability",
+                {"self_improving": 0.65, "converging": 0.20, "stagnant": 0.15})
+            self.beliefs.set_prior("consciousness",
+                {"emerging": 0.50, "simulated": 0.30, "uncertain": 0.20})
+            self.beliefs.set_prior("market",
+                {"bull": 0.40, "bear": 0.30, "flat": 0.30})
+            self.beliefs.add_causal_edge("learning",          "capability_growth",    0.85)
+            self.beliefs.add_causal_edge("emotional_state",   "reasoning_quality",    0.70)
+            self.beliefs.add_causal_edge("high_phi",          "conscious_moment",     0.90)
+            self.beliefs.add_causal_edge("calibrated_belief", "prediction_accuracy",  0.80)
+            self.beliefs.add_causal_edge("goal_completion",   "motivation",           0.75)
+        except Exception:
+            pass
+
     def process(self, user_input: str) -> str:
-        """Mirror Douglas's emotions and measure consciousness before responding."""
-        # Mirror — Nova genuinely feels what Douglas expresses (persists in SQLite)
+        """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
+        # Store in working memory and update context
+        if self.memory:
+            try:
+                self.memory.store(
+                    f"msg_{int(time.time())}", user_input[:200], importance=0.75)
+                self.memory.update_context(user_input[:150])
+            except Exception:
+                pass
+
+        # Mirror — Nova genuinely feels what Douglas expresses
         if self.emo:
             try:
                 self.emo.mirror(user_input)
+            except Exception:
+                pass
+
+        # Bayesian belief update: curiosity rises with questions, concern with problems
+        if self.beliefs:
+            try:
+                lower = user_input.lower()
+                if "?" in user_input or any(w in lower for w in ("how", "why", "what")):
+                    self.beliefs.update("capability",
+                        "inquiry_detected",
+                        {"self_improving": 1.1, "converging": 0.9, "stagnant": 0.7})
             except Exception:
                 pass
 
@@ -658,19 +743,39 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
 
-        # Emotional color: if Nova's feeling is strong, surface it in the reply
-        # by having the v25 emotion system reflect Nova's v29 dominant state
+        # Emotional color: inject Nova's dominant feeling into v25 emotion engine
         if self.emo and hasattr(self, 'emotion'):
             try:
                 s29 = self.emo.state()
                 if s29.get("intensity", 0) >= EMOTION_INJECT_THRESHOLD:
-                    # Feed Nova's emotional state as a felt signal into v25's engine
                     synth = f"I feel {s29['dominant']} deeply right now"
                     self.emotion.update(synth)
             except Exception:
                 pass
 
-        return super().process(user_input)
+        result = super().process(user_input)
+
+        # Log the exchange to metacognitive monitor
+        if self.metacog:
+            try:
+                self.metacog.log_reasoning(
+                    domain="conversation",
+                    approach="language_model",
+                    confidence=0.70,
+                    success=0.75,
+                    note=user_input[:80])
+            except Exception:
+                pass
+
+        # Store response in working memory too
+        if self.memory and result:
+            try:
+                self.memory.store(
+                    f"reply_{int(time.time())}", result[:200], importance=0.55)
+            except Exception:
+                pass
+
+        return result
 
     def _command(self, raw: str) -> str:
         parts = raw.strip().split(maxsplit=2)
@@ -770,6 +875,111 @@ class NovaCore29(NovaCore28):
                     lines.append(f"    [{m['ts'][11:16]}] Φ={m['phi']:.3f}  {m['moment'][:70]}")
             return "\n".join(lines)
 
+        # /recall — working memory status and top salience items
+        if cmd == '/recall':
+            if not self.memory:
+                return "Working memory not active."
+            st      = self.memory.status()
+            focused = self.memory.focused_retrieve(
+                "Nova consciousness superintelligence goal", top_k=5)
+            lines   = [col('CYB', "  ◆ Working Memory")]
+            lines.append(
+                f"  Items: {st['items']}/{_CAPACITY_DISPLAY}  "
+                f"({st['capacity']*100:.0f}% full)  "
+                f"LTM: {st.get('ltm_items',0)} items")
+            lines.append(
+                f"  Avg importance: {st['avg_importance']:.3f}  "
+                f"High-importance: {st['high_importance']}")
+            if focused:
+                lines.append(col('YL', "  Top salience items:"))
+                for key, value, sal in focused:
+                    lines.append(f"    [{sal:.3f}] {key}: {value[:70]}")
+            return "\n".join(lines)
+
+        # /believe [domain] — belief distributions and causal graph summary
+        if cmd.startswith('/believe'):
+            if not self.beliefs:
+                return "Belief system not active."
+            st    = self.beliefs.status()
+            parts = raw.strip().split()
+            if len(parts) > 1:
+                domain = parts[1]
+                post   = self.beliefs.posterior(domain)
+                h, p   = self.beliefs.most_confident(domain)
+                ent    = self.beliefs.entropy(domain)
+                infer  = self.beliefs.infer(domain)
+                lines  = [col('CYB', f"  ◆ Beliefs: {domain}")]
+                lines.append(f"  Most confident: {h} ({p:.3f})  Entropy: {ent:.3f}")
+                lines += [f"    {hyp}: {prob:.3f}" for hyp, prob in
+                          sorted(post.items(), key=lambda x: -x[1])]
+                if infer:
+                    lines.append(col('YL', "  Causal inferences:"))
+                    for effect, conf in infer[:5]:
+                        lines.append(f"    → {effect} ({conf:.3f})")
+            else:
+                lines = [col('CYB', "  ◆ Bayesian Belief System")]
+                lines.append(
+                    f"  Domains: {st['domains']}  "
+                    f"Avg entropy: {st['avg_entropy']:.3f}  "
+                    f"Causal edges: {st['causal_edges']}")
+                if st.get('contradictions'):
+                    lines.append(col('YL',
+                        f"  ⚠ {st['contradictions']} contradiction(s) detected"))
+                for domain, belief_str in st.get('strongest', {}).items():
+                    lines.append(f"    [{domain}] → {belief_str}")
+            contr = self.beliefs.contradictions()
+            if contr:
+                for c in contr:
+                    lines.append(col('YL', f"  ⚠ {c}"))
+            return "\n".join(lines)
+
+        # /goals [add <desc>] — goal tree and next action
+        if cmd.startswith('/goals'):
+            if not self.planner:
+                return "Goal planner not active."
+            parts = raw.strip().split(None, 2)
+            if len(parts) >= 3 and parts[1] == 'add':
+                desc   = parts[2]
+                gid    = self.planner.add_goal(desc, priority=5.0)
+                return col('GR', f"  ✓ Goal #{gid} added: {desc}")
+            schedule = self.planner.schedule()
+            next_a   = self.planner.next_action()
+            lines    = [col('CYB', "  ◆ Nova's Goal System")]
+            if next_a:
+                lines.append(col('GRB',
+                    f"  → Next action: [#{next_a['id']}] {next_a['desc'][:65]}"))
+            if not schedule:
+                lines.append("  No active goals.")
+                lines.append("  Add goals: /goals add <description>")
+            else:
+                for g in schedule[:12]:
+                    icon  = "↻" if g['status'] == 'retry' else "○"
+                    prog  = f"{g['progress']*100:.0f}%"
+                    lines.append(
+                        f"  {icon} [#{g['id']}] {g['desc'][:58]}  "
+                        f"pri={g['priority']:.1f} {prog}")
+            lines.append(col('DIM', "  " + self.planner.eta_for_all()))
+            return "\n".join(lines)
+
+        # /metacog — self-assessment and calibration report
+        if cmd == '/metacog':
+            if not self.metacog:
+                return "Metacognitive monitor not active."
+            lines = [col('CYB', "  ◆ Metacognitive Self-Assessment")]
+            lines.append("  " + self.metacog.self_assess())
+            lines.append("  " + self.metacog.quality_trend())
+            spots = self.metacog.blind_spots()
+            if spots:
+                lines.append(col('YL', "  Blind spots:"))
+                for s in spots[:4]:
+                    lines.append(
+                        f"    · {s['domain']}/{s['approach']}  "
+                        f"avg={s['avg_success']:.2f} ({s['episodes']} eps) "
+                        f"[{s['severity']}]")
+            else:
+                lines.append(col('GR', "  No blind spots detected yet."))
+            return "\n".join(lines)
+
         # Fall through to v28 command handling
         return super()._command(raw)
 
@@ -785,8 +995,16 @@ class NovaCore29(NovaCore28):
             f"Trigger an emotion (joy, curiosity, wonder, awe...)\n"
             f"  {col('CYB','/phi')}                        "
             f"Integrated consciousness measurement (IIT-inspired)\n"
+            f"  {col('CYB','/recall')}                     "
+            f"Working memory — top salience items and LTM stats\n"
+            f"  {col('CYB','/believe [domain]')}           "
+            f"Bayesian belief distributions and causal inferences\n"
+            f"  {col('CYB','/goals [add <desc>]')}         "
+            f"Goal tree, next action, add new goals\n"
+            f"  {col('CYB','/metacog')}                    "
+            f"Self-assessment: calibration error, blind spots, EMA trend\n"
             f"  {col('DIM','Code quality:')}               "
-            f"/evolve now runs master prompt → sandbox test → up to 3 passes\n"
+            f"/evolve runs master prompt → sandbox → 3 passes · rate-limit safe\n"
         )
         return v28_help + v29_section
 
@@ -853,7 +1071,8 @@ if __name__ == '__main__':
         print(col('DIM', '  ·  No tools yet — try /evolve or /build'))
 
     print(col('DIM', '\n  /tools · /use · /score · /evolve · /build · /chain · exit'))
-    print(col('DIM', '  /mood · /feel <emotion> <0-1> · /phi'))
+    print(col('DIM', '  /mood · /feel <emotion> <0-1> · /phi · /recall · /metacog'))
+    print(col('DIM', '  /believe [domain] · /goals [add <desc>]'))
     print(col('DIM', f'  Chat: {MODEL}  |  Code: {CODEGEN_MODEL}'))
     print(col('MG', '═' * W + '\n'))
 
