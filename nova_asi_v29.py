@@ -780,12 +780,12 @@ class NovaCore29(NovaCore28):
             safe_print(col('GR',
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
-        safe_print(col('GR',
+        _ce_color = 'GRB' if _using_claude() else 'GR'
+        safe_print(col(_ce_color,
             f"  ✓  Code Engine v29  — "
             f"{'Claude ' + CLAUDE_CODEGEN_MODEL if _using_claude() else CODEGEN_MODEL}"
             f" · sandbox · 3-pass · scoring\n"
-            f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}",
-            'GRB' if _using_claude() else 'GR'))
+            f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}"))
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
