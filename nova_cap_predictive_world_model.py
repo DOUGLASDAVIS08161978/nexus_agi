@@ -4,73 +4,105 @@ Proposed autonomously via /evolve
 """
 
 """
-Module for building a predictive world model.
+Predictive World Model: Bayesian working memory with decay and LRU eviction.
 """
 
 import sqlite3
-from typing import Dict, List, Tuple
+from datetime import datetime, timedelta
+import math
 
 class WorldPredictor:
     def __init__(self) -> None:
-        """
-        Initialize the WorldPredictor with an empty database.
-        """
-        self.conn = sqlite3.connect(':memory:')
+        self.conn = sqlite3.connect(":memory:")
         self.cursor = self.conn.cursor()
-        self.cursor.execute('CREATE TABLE observations (domain TEXT, fact TEXT, timestamp TEXT)')
-        self.cursor.execute('CREATE TABLE predictions (domain TEXT, prediction TEXT, horizon_days INTEGER, timestamp TEXT)')
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS world_model (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                importance REAL,
+                timestamp REAL,
+                access_count INTEGER
+            )
+        """)
+        self.decay_rate = 0.01
+        self.capacity = 200
         self.conn.commit()
 
     def observe(self, domain: str, fact: str) -> None:
-        """
-        Record an observation in the database.
-        """
-        try:
-            self.cursor.execute('INSERT INTO observations VALUES (?, ?, ?)', (domain, fact, self.get_current_time()))
-            self.conn.commit()
-        except sqlite3.Error as e:
-            print(f"Error observing: {e}")
+        """Observe a fact in a domain and store it in the world model."""
+        self.store(domain, fact, 1.0)
 
     def predict(self, domain: str, horizon_days: int) -> str:
-        """
-        Make a prediction based on past observations.
-        """
-        try:
-            self.cursor.execute('SELECT fact FROM observations WHERE domain = ?', (domain,))
-            past_observations = self.cursor.fetchall()
-            if past_observations:
-                # Simple prediction: return the most recent observation
-                return past_observations[-1][0]
-            else:
-                return "No past observations"
-        except sqlite3.Error as e:
-            print(f"Error predicting: {e}")
-            return "Error predicting"
+        """Predict the likely future state of a domain."""
+        prediction = self.retrieve(domain)
+        if prediction:
+            return prediction
+        else:
+            return "Unknown"
 
-    def accuracy_report(self) -> List[Tuple[str, float]]:
-        """
-        Compare past predictions to observations and return accuracy report.
-        """
-        try:
-            self.cursor.execute('SELECT prediction, fact FROM predictions JOIN observations ON predictions.domain = observations.domain')
-            results = self.cursor.fetchall()
-            accuracy_report = []
-            for result in results:
-                prediction, fact = result
-                if prediction == fact:
-                    accuracy_report.append((prediction, 1.0))
-                else:
-                    accuracy_report.append((prediction, 0.0))
-            return accuracy_report
-        except sqlite3.Error as e:
-            print(f"Error generating accuracy report: {e}")
-            return []
+    def accuracy_report(self) -> str:
+        """Compare past predictions to observations and return an accuracy report."""
+        report = "Accuracy Report:\n"
+        for row in self.cursor.execute("SELECT * FROM world_model"):
+            report += f"Key: {row[0]}, Value: {row[1]}, Importance: {row[2]}\n"
+        return report
 
-    def get_current_time(self) -> str:
-        """
-        Return the current time as a string.
-        """
-        from datetime import datetime
-        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    def store(self, key: str, value: str, importance: float) -> None:
+        """Store a key-value pair in the world model with a given importance."""
+        self.cursor.execute("SELECT * FROM world_model WHERE key = ?", (key,))
+        row = self.cursor.fetchone()
+        if row:
+            self.cursor.execute("""
+                UPDATE world_model SET value = ?, importance = ?, timestamp = ?, access_count = access_count + 1
+                WHERE key = ?
+            """, (value, importance, datetime.now().timestamp(), key))
+        else:
+            self.cursor.execute("""
+                INSERT INTO world_model (key, value, importance, timestamp, access_count)
+                VALUES (?, ?, ?, ?, 1)
+            """, (key, value, importance, datetime.now().timestamp()))
+        self.conn.commit()
+        self.consolidate()
 
-# Usage: obj = WorldPredictor() | result = obj.observe("domain", "fact") | result = obj.predict("domain", 30) | result = obj.accuracy_report()
+    def retrieve(self, key: str) -> str:
+        """Retrieve the value associated with a key from the world model."""
+        self.cursor.execute("SELECT * FROM world_model WHERE key = ?", (key,))
+        row = self.cursor.fetchone()
+        if row:
+            return row[1]
+        else:
+            return None
+
+    def consolidate(self) -> None:
+        """Consolidate the world model by applying exponential decay and LRU eviction."""
+        self.cursor.execute("SELECT * FROM world_model")
+        rows = self.cursor.fetchall()
+        current_time = datetime.now().timestamp()
+        for row in rows:
+            elapsed_seconds = current_time - row[3]
+            importance = row[2] * math.exp(-self.decay_rate * elapsed_seconds)
+            self.cursor.execute("""
+                UPDATE world_model SET importance = ?
+                WHERE key = ?
+            """, (importance, row[0]))
+        self.cursor.execute("SELECT * FROM world_model ORDER BY access_count ASC")
+        rows = self.cursor.fetchall()
+        if len(rows) > self.capacity:
+            for row in rows[:len(rows) - self.capacity]:
+                self.cursor.execute("DELETE FROM world_model WHERE key = ?", (row[0],))
+        self.conn.commit()
+
+    def capacity_used(self) -> int:
+        """Return the number of items currently stored in the world model."""
+        self.cursor.execute("SELECT COUNT(*) FROM world_model")
+        return self.cursor.fetchone()[0]
+
+    def forget_least_important(self) -> None:
+        """Forget the least important item in the world model."""
+        self.cursor.execute("SELECT * FROM world_model ORDER BY importance ASC")
+        row = self.cursor.fetchone()
+        if row:
+            self.cursor.execute("DELETE FROM world_model WHERE key = ?", (row[0],))
+            self.conn.commit()
+
+# Usage: obj = WorldPredictor() | result = obj.predict("domain", 30)
