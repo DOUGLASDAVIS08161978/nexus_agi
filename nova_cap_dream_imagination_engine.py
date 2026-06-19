@@ -4,30 +4,28 @@ Proposed autonomously via /evolve
 """
 
 """
-ImaginationEngine class: handles creative ideas and thoughts.
+ImaginationEngine is a class used to simulate creative thinking.
+It has methods to generate, store, and manipulate ideas.
 """
+
 class ImaginationEngine:
     def __init__(self):
         self.ideas = {}
 
-    def add_idea(self, name, description):
-        """Add a new idea to the imagination engine."""
+    def generate_idea(self, name, description):
+        """Generate a new idea and store it in the ideas dictionary."""
         self.ideas[name] = description
 
-    def remove_idea(self, name):
-        """Remove an existing idea from the imagination engine."""
-        if name in self.ideas:
-            del self.ideas[name]
+    def get_idea(self, name):
+        """Retrieve an idea from the ideas dictionary by name."""
+        return self.ideas.get(name)
 
     def update_idea(self, name, description):
-        """Update an existing idea in the imagination engine."""
+        """Update an existing idea in the ideas dictionary."""
         if name in self.ideas:
             self.ideas[name] = description
 
-    def get_idea(self, name):
-        """Retrieve a specific idea from the imagination engine."""
-        return self.ideas.get(name)
-
-    def list_ideas(self):
-        """List all ideas in the imagination engine."""
-        return list(self.ideas.keys())
+    def delete_idea(self, name):
+        """Remove an idea from the ideas dictionary by name."""
+        if name in self.ideas:
+            del self.ideas[name]
