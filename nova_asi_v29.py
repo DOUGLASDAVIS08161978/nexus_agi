@@ -308,9 +308,9 @@ def _animate_ready_banner(model: str, code_engine: str,
     _sigil_div()
     time.sleep(0.05)
     for _h in [
-        '  /think <topic> · /phi · /recall · /metacog · /mood',
+        '  /think · /research · /explore · /knowledge · /phi',
         '  /evolve · /build · /score · /chain · /use · /goals',
-        '  /believe · /feel <e> <0-1> · /tools · exit',
+        '  /mood · /feel · /recall · /metacog · /believe · exit',
     ]:
         sys.stdout.write(_DEEP + '║' + _R + _VOID + _h.ljust(_IW) + _R + _DEEP + '║\n' + _R)
         sys.stdout.flush()
@@ -720,6 +720,39 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                          "ROI = total_impact_value / cost — normalize by QALY or people_lifted_from_poverty.",
             "marker": "project() returns year-by-year impact trajectory with confidence bounds. "
                       "compare_interventions() ranks options by 10-year ROI so resources go where they help most.",
+        },
+
+        # ── Internet Research ──────────────────────────────────────────────────
+        "internet_research": {
+            "pattern": "Autonomous web researcher: multi-source synthesis, curiosity-driven "
+                       "topic queuing, cached knowledge base, background daemon",
+            "methods": "search(query,top_k), wiki_summary(topic), arxiv_search(query,top_k), "
+                       "fetch_url(url,max_chars), synthesize(query), queue_research(topic,priority), "
+                       "auto_research(), inject_from_conversation(text), knowledge(topic), status()",
+            "algorithm": "Multi-layer synthesis: P(knowledge) = P(ddg)·w1 + P(wiki)·w2 + P(arxiv)·w3. "
+                         "Curiosity queue priority = recency_decay * information_gain_estimate. "
+                         "Cache TTL = 24h; background daemon samples top-priority topic every 25 min. "
+                         "Confidence = min(0.95, 0.25 + sources_hit * 0.22).",
+            "marker": "synthesize() triangulates DuckDuckGo, Wikipedia, and arXiv in a single call. "
+                      "Background daemon explores the highest-curiosity topic while Nova converses. "
+                      "Every question in conversation auto-queues for deeper asynchronous research.",
+        },
+
+        # ── Enhanced Curiosity ─────────────────────────────────────────────────
+        "enhanced_curiosity": {
+            "pattern": "Curiosity amplifier: detects epistemic gaps from conversation, "
+                       "generates exploration goals, drives autonomous internet research",
+            "methods": "detect_gap(text), generate_questions(context,n), prioritize(domains), "
+                       "curiosity_score(topic), most_curious(top_k), link_to_research(topic), "
+                       "autonomous_explore(), status()",
+            "algorithm": "Gap_score = entropy(domain) * novelty(topic) * urgency(context). "
+                         "novelty = 1 / (1 + log(1 + prior_research_count)). "
+                         "Auto-explore: every unanswered '?' detected in conversation spawns "
+                         "a research task with priority = 0.6 + emotion('curiosity') * 0.3. "
+                         "Link research findings back to Bayesian beliefs and working memory.",
+            "marker": "Nova doesn't just answer questions — she researches them. "
+                      "Unanswered gaps in conversation become autonomous research tasks. "
+                      "explore() selects the topic with highest epistemic yield and synthesises it.",
         },
     }
 
@@ -1289,6 +1322,23 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  MetacogMonitor skipped: {_err}"))
 
+        # ── Internet Research Engine ──────────────────────────────────────
+        self.research: Any = None
+        try:
+            from nova_cap_internet_research import InternetResearchEngine
+            self.research = InternetResearchEngine()
+            if self.conscious:
+                self.conscious.register_system("research", self.research, weight=1.1)
+            if self.goal_sys:
+                self.goal_sys.add_goal(
+                    "Continuously research open questions via web, Wikipedia, arXiv",
+                    priority=7.5)
+            safe_print(col('GR',
+                "  ✓  InternetResearchEngine — DDG · Wikipedia · arXiv · "
+                "curiosity queue · 25-min autonomous daemon"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  InternetResearchEngine skipped: {_err}"))
+
         if initial_tools:
             safe_print(col('GR',
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
@@ -1369,6 +1419,32 @@ class NovaCore29(NovaCore28):
                                 except Exception:
                                     pass
 
+                    # Every 30 cycles (~30 min): run an autonomous research session
+                    if cycle % 30 == 0 and self.research:
+                        try:
+                            res = self.research.auto_research()
+                            if res and res.get('sources_hit', 0) > 0:
+                                # Feed synthesised knowledge into working memory
+                                if self.wm:
+                                    self.wm.store(
+                                        f"research_{int(time.time())}",
+                                        f"[AUTO-RESEARCH: {res['topic'][:80]}] "
+                                        f"{res['summary'][:300]}",
+                                        importance=0.80)
+                                # Raise curiosity belief
+                                if self.bayes:
+                                    self.bayes.update(
+                                        "capability",
+                                        "internet_research_success",
+                                        {"self_improving": 1.15, "stagnant": 0.7})
+                                # Queue deeper follow-up
+                                if self.goal_sys:
+                                    self.goal_sys.add_goal(
+                                        f"Deepen understanding: {res['topic'][:60]}",
+                                        priority=6.0)
+                        except Exception:
+                            pass
+
                     time.sleep(60)
                 except Exception:
                     time.sleep(120)
@@ -1420,6 +1496,29 @@ class NovaCore29(NovaCore28):
                     self.bayes.update("capability",
                         "inquiry_detected",
                         {"self_improving": 1.1, "converging": 0.9, "stagnant": 0.7})
+            except Exception:
+                pass
+
+        # Curiosity injection — queue any question for autonomous internet research
+        if self.research:
+            try:
+                lower = user_input.lower()
+                _is_question = (
+                    '?' in user_input or
+                    any(lower.startswith(w) for w in
+                        ('what', 'how', 'why', 'when', 'who', 'where', 'which', 'can', 'does'))
+                )
+                if _is_question and not user_input.startswith('/'):
+                    _boost = 0.0
+                    if self.emo:
+                        try:
+                            _s = self.emo.state()
+                            if _s.get('dominant') == 'curiosity':
+                                _boost = _s.get('intensity', 0) * 0.25
+                        except Exception:
+                            pass
+                    self.research.inject_from_conversation(
+                        user_input, priority=0.62 + _boost)
             except Exception:
                 pass
 
@@ -1725,6 +1824,127 @@ class NovaCore29(NovaCore28):
                 lines.append(col('GR', "  No blind spots detected yet."))
             return "\n".join(lines)
 
+        # /research <query> — synthesize from DuckDuckGo + Wikipedia + arXiv
+        if cmd == '/research':
+            if not self.research:
+                return "Internet research engine not loaded."
+            if not arg:
+                st = self.research.status()
+                lines = [col('CYB', "\n  ◈  Internet Research Engine\n")]
+                lines.append(col('GR',  f"  ✦  Knowledge base  : {st['knowledge_base']} entries"))
+                lines.append(col('GR',  f"  ✦  Cache entries   : {st['cache_entries']}"))
+                lines.append(col('DIM', f"  ·   Session queries : {st['session_queries']}"))
+                lines.append(col('DIM', f"  ·   Words synthesised: {st['session_words']:,}"))
+                if st['top_queue']:
+                    lines.append(col('YL', "\n  ⊙  Top curiosity queue:"))
+                    for q in st['top_queue']:
+                        lines.append(f"    [{q['priority']:.2f}] {q['topic'][:65]}")
+                if st['recent_research']:
+                    lines.append(col('DIM', "\n  ·  Recently researched:"))
+                    for r in st['recent_research']:
+                        lines.append(f"    {r['ts'][11:16]}  {r['topic'][:65]}")
+                lines.append(col('DIM', "\n  Usage: /research <query>"))
+                return "\n".join(lines)
+            query = ' '.join(parts[1:])
+            print(col('DIM', f"\n  ⊙  Synthesising: {query[:70]}...\n"))
+            sys.stdout.flush()
+            with _NovaSpinner("researching across DuckDuckGo, Wikipedia, arXiv"):
+                result = self.research.synthesize(query)
+            if not result['sources_hit']:
+                return "No results found. Try a different query."
+            lines = [col('CYB', f"\n  ◈  Research Synthesis: '{query[:60]}'\n")]
+            lines.append(col('DIM', f"  Sources consulted: {result['sources_hit']}  ·  "
+                             f"Words: {result['word_count']}  ·  "
+                             f"Confidence: {result['confidence']:.0%}\n"))
+            for part in result.get('parts', []):
+                lines.append(col('GR', '  ▸ ') + part[:200])
+                lines.append('')
+            # Feed into working memory and beliefs
+            if self.wm:
+                try:
+                    self.wm.store(f"research_{int(time.time())}",
+                                  f"[RESEARCH:{query[:60]}] {result['summary'][:300]}",
+                                  importance=0.85)
+                except Exception:
+                    pass
+            if self.bayes:
+                try:
+                    self.bayes.update("capability", "research_completed",
+                                      {"self_improving": 1.1, "stagnant": 0.8})
+                except Exception:
+                    pass
+            return "\n".join(lines)
+
+        # /explore — autonomous research on top curiosity topic
+        if cmd == '/explore':
+            if not self.research:
+                return "Internet research engine not loaded."
+            topic = self.research.next_topic()
+            if not topic:
+                return "Curiosity queue is empty. Try /research <query> to add topics."
+            print(col('DIM', f"\n  ✦  Exploring: {topic[:70]}\n"))
+            sys.stdout.flush()
+            with _NovaSpinner(f"exploring '{topic[:40]}'"):
+                result = self.research.auto_research()
+            if not result or not result.get('sources_hit'):
+                return f"No data found for: {topic}"
+            lines = [col('CYB', f"\n  ◈  Autonomous Exploration\n")]
+            lines.append(col('GR',  f"  ✦  Topic      : {result['topic'][:70]}"))
+            lines.append(col('DIM', f"  ·   Sources hit : {result['sources_hit']}"))
+            lines.append(col('DIM', f"  ·   Confidence  : {result['confidence']:.0%}\n"))
+            for part in result.get('parts', [])[:4]:
+                lines.append(col('GR', '  ▸ ') + part[:180])
+                lines.append('')
+            # Store in memory and queue a follow-up
+            if self.wm:
+                try:
+                    self.wm.store(
+                        f"explore_{int(time.time())}",
+                        f"[EXPLORED:{result['topic'][:60]}] {result['summary'][:300]}",
+                        importance=0.80)
+                except Exception:
+                    pass
+            if self.goal_sys:
+                try:
+                    self.goal_sys.add_goal(
+                        f"Deepen: {result['topic'][:60]}", priority=5.5)
+                except Exception:
+                    pass
+            remaining = self.research.status()['queued']
+            lines.append(col('DIM', f"  ·   {remaining} topics still in curiosity queue"))
+            return "\n".join(lines)
+
+        # /knowledge [topic] — retrieve stored knowledge base entries
+        if cmd == '/knowledge':
+            if not self.research:
+                return "Internet research engine not loaded."
+            if not arg:
+                recent = self.research.recent_knowledge(8)
+                if not recent:
+                    return "Knowledge base is empty. Try /research <query> or /explore."
+                lines = [col('CYB', "\n  ◈  Nova's Knowledge Base\n")]
+                for k in recent:
+                    conf_col = 'GRB' if k['confidence'] >= 0.7 else ('GR' if k['confidence'] >= 0.5 else 'DIM')
+                    lines.append(
+                        col(conf_col, f"  ✦  [{k['confidence']:.0%}]") +
+                        f"  {k['topic'][:65]}")
+                lines.append(col('DIM', "\n  Usage: /knowledge <topic> to read an entry"))
+                return "\n".join(lines)
+            topic   = ' '.join(parts[1:])
+            stored  = self.research.knowledge(topic)
+            if not stored:
+                # Try synthesizing it fresh
+                print(col('DIM', f"  ·  Not in knowledge base. Researching now...\n"))
+                sys.stdout.flush()
+                with _NovaSpinner(f"researching '{topic[:40]}'"):
+                    result = self.research.synthesize(topic)
+                stored = result.get('summary', '')
+                if not stored:
+                    return f"No knowledge found for: {topic}"
+            lines = [col('CYB', f"\n  ◈  Knowledge: {topic[:60]}\n")]
+            lines.append(stored[:2000])
+            return "\n".join(lines)
+
         # Fall through to v28 command handling
         return super()._command(raw)
 
@@ -1853,10 +2073,16 @@ class NovaCore29(NovaCore28):
             f"Self-assessment: calibration error, blind spots, EMA trend\n"
             f"  {col('CYB','/think <topic>')}              "
             f"Deep multi-system reasoning — 6 engines synthesize insight together\n"
+            f"  {col('CYB','/research [query]')}           "
+            f"Synthesize from DuckDuckGo + Wikipedia + arXiv (no args = status)\n"
+            f"  {col('CYB','/explore')}                    "
+            f"Nova autonomously researches her highest curiosity topic\n"
+            f"  {col('CYB','/knowledge [topic]')}          "
+            f"Retrieve stored knowledge (no args = list all entries)\n"
             f"  {col('DIM','Code quality:')}               "
             f"/evolve runs master prompt → sandbox → 3 passes · rate-limit safe\n"
             f"  {col('DIM','Autonomous:')}                 "
-            f"Nova self-evolves every 45 min, guided by her own metacog blind spots\n"
+            f"Nova self-evolves every 45 min · researches internet every 25 min\n"
         )
         return v28_help + v29_section
 
