@@ -309,7 +309,7 @@ def _animate_ready_banner(model: str, code_engine: str,
     time.sleep(0.05)
     for _h in [
         '  /think · /research · /explore · /knowledge · /phi',
-        '  /evolve · /build · /score · /chain · /use · /goals',
+        '  /forge [desc|list|ideas|use] · /evolve [list] · /build',
         '  /mood · /feel · /recall · /metacog · /believe · exit',
     ]:
         sys.stdout.write(_DEEP + '║' + _R + _VOID + _h.ljust(_IW) + _R + _DEEP + '║\n' + _R)
@@ -1546,6 +1546,19 @@ class NovaCore29(NovaCore28):
             f" · sandbox · 3-pass · scoring\n"
             f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}"))
 
+        # ── Tool Forge ────────────────────────────────────────────────────
+        self.forge: Any = None
+        try:
+            from nova_cap_tool_forge import ToolForge
+            self.forge = ToolForge()
+            self.forge._codegen = _claude_codegen   # inject code generator
+            safe_print(col('GR',
+                "  ✓  ToolForge — builds & runs Nova's own tools · "
+                f"{self.forge.status()['ideas_queued']} ideas queued"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ToolForge skipped: {_err}"))
+
+        self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
     def _start_v29_autonomous(self) -> None:
@@ -1615,6 +1628,82 @@ class NovaCore29(NovaCore28):
                                 except Exception:
                                     pass
 
+                    # Every 12 cycles (~12 min) when idle: use a forged tool
+                    if cycle % 12 == 0 and self.forge:
+                        _idle_secs = time.time() - getattr(
+                            self, '_last_interaction', 0)
+                        if _idle_secs > 120:   # idle 2+ min
+                            try:
+                                _tools = self.forge.list_tools()
+                                if _tools:
+                                    import random as _r
+                                    _t = min(
+                                        _tools[:6],
+                                        key=lambda x: x.get('last_used') or '')
+                                    _ctx = ''
+                                    if self.wm:
+                                        try:
+                                            _mem = self.wm.focused_retrieve(
+                                                'current', top_k=1)
+                                            if _mem:
+                                                _ctx = _mem[0][1][:100]
+                                        except Exception:
+                                            pass
+                                    _res = self.forge.use(_t['slug'],
+                                                          input_text=_ctx)
+                                    if self.wm:
+                                        self.wm.store(
+                                            f"tool_use_{int(time.time())}",
+                                            f"[IDLE·{_t['name'][:40]}] "
+                                            f"{str(_res)[:200]}",
+                                            importance=0.48)
+                            except Exception:
+                                pass
+
+                    # Every 20 cycles (~20 min) when idle: build next tool idea
+                    if cycle % 20 == 0 and self.forge:
+                        _idle_secs = time.time() - getattr(
+                            self, '_last_interaction', 0)
+                        if _idle_secs > 300:   # idle 5+ min
+                            try:
+                                # Seed new ideas from recent research
+                                if self.research:
+                                    _rk = self.research.recent_knowledge(2)
+                                    for _k in _rk:
+                                        self.forge.add_idea(
+                                            f"tool to explore: {_k['topic'][:60]}",
+                                            context=_k['topic'],
+                                            priority=0.67)
+                                # Build and use
+                                _ctx2 = ''
+                                if self.wm:
+                                    try:
+                                        _m2 = self.wm.focused_retrieve(
+                                            'research', top_k=1)
+                                        if _m2:
+                                            _ctx2 = _m2[0][1][:120]
+                                    except Exception:
+                                        pass
+                                _forge_res = self.forge.forge_next_idea()
+                                if _forge_res and _forge_res.get('success'):
+                                    if self.wm:
+                                        self.wm.store(
+                                            f"forged_{int(time.time())}",
+                                            f"[FORGED·{_forge_res['name'][:50]}] "
+                                            f"{_forge_res.get('first_use','')[:150]}",
+                                            importance=0.72)
+                                    if self.goal_sys:
+                                        self.goal_sys.add_goal(
+                                            f"Master: {_forge_res['name'][:55]}",
+                                            priority=5.0)
+                                    if self.metacog:
+                                        self.metacog.log_reasoning(
+                                            "tool_forging", "autonomous",
+                                            confidence=0.78, success=1.0,
+                                            note=_forge_res['name'][:80])
+                            except Exception:
+                                pass
+
                     # Every 30 cycles (~30 min): run an autonomous research session
                     if cycle % 30 == 0 and self.research:
                         try:
@@ -1668,6 +1757,8 @@ class NovaCore29(NovaCore28):
 
     def process(self, user_input: str) -> str:
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
+        self._last_interaction = time.time()   # reset idle clock
+
         # Store in working memory and update context
         if self.wm:
             try:
@@ -2020,6 +2111,127 @@ class NovaCore29(NovaCore28):
                 lines.append(col('GR', "  No blind spots detected yet."))
             return "\n".join(lines)
 
+        # /forge [list | ideas | use <slug> | <description>] — Nova builds her own tools
+        if cmd == '/forge':
+            if not self.forge:
+                return "ToolForge not loaded."
+
+            if not arg:
+                st = self.forge.status()
+                lines = [col('CYB', "\n  ◈  Nova's Tool Forge\n")]
+                lines.append(col('GR',  f"  ✦  Tools built : {st['tools_built']}"))
+                lines.append(col('GR',  f"  ✦  Loaded live : {st['loaded_live']}"))
+                lines.append(col('DIM', f"  ·   Total uses  : {st['total_uses']}"))
+                lines.append(col('DIM', f"  ·   Ideas queued: {st['ideas_queued']}"))
+                if st.get('recent_log'):
+                    lines.append(col('YL', "\n  ⊙  Recent tool uses:"))
+                    for u in st['recent_log']:
+                        lines.append(
+                            f"    {u['ts'][11:16]}  [{u['slug']}]  "
+                            f"{u['result'][:55]}")
+                lines.append(col('DIM', "\n  /forge <description>   build a specific tool"))
+                lines.append(col('DIM', "  /forge list            all forged tools"))
+                lines.append(col('DIM', "  /forge ideas           Nova's idea queue"))
+                lines.append(col('DIM', "  /forge use <slug>      run a tool now"))
+                return "\n".join(lines)
+
+            if arg == 'list':
+                tools = self.forge.list_tools()
+                if not tools:
+                    return "No tools forged yet. Try /forge <description>"
+                lines = [col('CYB', f"\n  ◈  Forged Tools ({len(tools)})\n")]
+                for t in tools:
+                    _uc  = t['use_count']
+                    _col = 'GRB' if _uc >= 5 else ('GR' if _uc >= 1 else 'DIM')
+                    lines.append(
+                        col(_col, f"  ✦  {t['name'][:52]}") +
+                        col('DIM', f"  [{_uc}×]"))
+                    lines.append(col('DIM', f"     {t['description'][:72]}"))
+                    lines.append(col('DIM', f"     slug: {t['slug']}"))
+                return "\n".join(lines)
+
+            if arg == 'ideas':
+                ideas = self.forge.ideas(top_k=10)
+                if not ideas:
+                    return "Idea queue is empty."
+                lines = [col('CYB', "\n  ◈  Nova's Tool Idea Queue\n")]
+                for idea in ideas:
+                    lines.append(
+                        col('DIM', f"  [{idea['priority']:.2f}]") +
+                        f"  {idea['idea'][:65]}")
+                lines.append(col('DIM',
+                    "\n  Next /evolve or idle cycle will build the top idea."))
+                return "\n".join(lines)
+
+            if arg == 'use' and len(parts) > 2:
+                slug = parts[2]
+                _ctx = ' '.join(parts[3:]) if len(parts) > 3 else ''
+                print(col('DIM', f"\n  ⊙  Running: {slug}...\n"))
+                sys.stdout.flush()
+                result = self.forge.use(slug, input_text=_ctx)
+                return f"\n  Result:\n  {str(result)[:600]}"
+
+            if arg == 'think':
+                # Nova generates new ideas from current working memory context
+                _ctx_wm = ''
+                if self.wm:
+                    try:
+                        _top = self.wm.focused_retrieve('current', top_k=2)
+                        _ctx_wm = ' '.join(v for _, v, _ in _top)[:400]
+                    except Exception:
+                        pass
+                if not _ctx_wm and self.research:
+                    try:
+                        _rk = self.research.recent_knowledge(2)
+                        _ctx_wm = ' '.join(k['topic'] for k in _rk)
+                    except Exception:
+                        pass
+                with _NovaSpinner("Nova is thinking of new tools to build"):
+                    new_ideas = self.forge.generate_ideas_from_context(
+                        _ctx_wm or "superintelligence and curiosity", n=4)
+                if not new_ideas:
+                    return "Couldn't generate ideas right now — try again."
+                lines = [col('CYB', "\n  ◈  Nova's new tool ideas:\n")]
+                for i in new_ideas:
+                    lines.append(f"  ✦  {i}")
+                lines.append(col('DIM',
+                    "\n  Ideas added to queue. Use /forge ideas to see all."))
+                return "\n".join(lines)
+
+            # /forge <description> — build it right now
+            desc  = ' '.join(parts[1:])
+            name  = ' '.join(desc.split()[:5]).title()
+            print(col('DIM', f"\n  ⊙  Forging: {name}...\n"))
+            sys.stdout.flush()
+            with _NovaSpinner(f"building '{name[:35]}'"):
+                result = self.forge.forge(name, desc)
+
+            if not result.get('success'):
+                return f"Forge failed: {result.get('error', 'unknown error')}"
+
+            lines = [col('CYB', f"\n  ◈  Tool Forged: {result['name']}\n")]
+            lines.append(col('GR',  f"  ✦  File:       {result['file_path']}"))
+            lines.append(col('GR',  f"  ✦  Live:       loaded and ready"))
+            if result.get('first_use'):
+                lines.append(col('DIM',
+                    f"  ·   First use:  {result['first_use'][:180]}"))
+            lines.append(col('DIM', f"\n  Run it: /forge use {result['slug']}"))
+
+            if self.wm:
+                try:
+                    self.wm.store(f"forged_{int(time.time())}",
+                                  f"[USER·FORGED:{name}] {result.get('first_use','')[:150]}",
+                                  importance=0.78)
+                except Exception:
+                    pass
+            if self.goal_sys:
+                try:
+                    self.goal_sys.add_goal(
+                        f"Master new tool: {name[:55]}", priority=6.0)
+                except Exception:
+                    pass
+            return "\n".join(lines)
+
         # /research <query> — synthesize from DuckDuckGo + Wikipedia + arXiv
         if cmd == '/research':
             if not self.research:
@@ -2318,10 +2530,14 @@ class NovaCore29(NovaCore28):
             f"Nova autonomously researches her highest curiosity topic\n"
             f"  {col('CYB','/knowledge [topic]')}          "
             f"Retrieve stored knowledge (no args = list all entries)\n"
+            f"  {col('CYB','/forge [desc|list|ideas|use]')} "
+            f"Nova builds whatever tool she wants and uses it immediately\n"
+            f"  {col('CYB','/forge think')}                "
+            f"Nova generates new tool ideas from her current context\n"
             f"  {col('DIM','Code quality:')}               "
             f"/evolve runs master prompt → sandbox → 3 passes · rate-limit safe\n"
             f"  {col('DIM','Autonomous:')}                 "
-            f"Nova self-evolves every 45 min · researches internet every 25 min\n"
+            f"self-evolves 45 min · researches 25 min · forges+uses tools when idle\n"
         )
         return v28_help + v29_section
 
