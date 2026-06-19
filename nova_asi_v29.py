@@ -57,14 +57,44 @@ VERSION_NAME = "The Self-Perfecting System"
 W            = 70
 
 # Separate models: fast 8B for conversation, powerful 70B for writing code.
-# Nova thinks fast, but writes with her full intelligence.
-# Three separate 70B-class models → three separate Groq rate-limit quotas.
-# Each /evolve pass uses a different model so no single quota gets exhausted.
-CODEGEN_MODELS = [
-    "llama-3.3-70b-versatile",        # pass 1 — primary, highest code quality
-    "deepseek-r1-distill-llama-70b",  # pass 2 — excellent reasoning + code
-    "llama-3.1-70b-versatile",        # pass 3 — reliable, own TPM quota
-]
+# CODEGEN_MODELS is populated at startup by _discover_codegen_models() which
+# queries Groq's live /models endpoint — no more hardcoded decommissioned names.
+CODEGEN_MODELS: list = []   # filled at startup
+CODEGEN_MODEL          = "llama-3.3-70b-versatile"   # safe default until discovery
+CODEGEN_MODEL_FALLBACK = "llama-3.3-70b-versatile"   # same until discovery runs
+
+
+def _discover_codegen_models() -> list:
+    """
+    Query Groq's live model list and return available 70B-class code models.
+    Falls back to ['llama-3.3-70b-versatile'] if the API call fails.
+    Priority: largest/most capable models first.
+    """
+    preferred_order = [
+        "llama-3.3-70b-versatile",
+        "llama-3.3-70b-specdec",
+        "llama-3.1-70b-versatile",
+        "deepseek-r1-distill-llama-70b",
+        "qwen-qwq-32b",
+        "gemma2-9b-it",
+        "llama3-8b-8192",
+    ]
+    api_key = os.getenv("GROQ_API_KEY", "")
+    if not api_key:
+        return ["llama-3.3-70b-versatile"]
+    try:
+        import urllib.request, json as _json
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/models",
+            headers={"Authorization": f"Bearer {api_key}",
+                     "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = _json.loads(resp.read())
+        live_ids = {m["id"] for m in data.get("data", [])}
+        found = [m for m in preferred_order if m in live_ids]
+        return found if found else ["llama-3.3-70b-versatile"]
+    except Exception:
+        return ["llama-3.3-70b-versatile"]
 CODEGEN_MODEL          = CODEGEN_MODELS[0]   # kept for display / legacy refs
 CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1]   # kept for emergency pass compat
 
@@ -635,6 +665,14 @@ class NovaCore29(NovaCore28):
         )
         self.tools.start_watching()
 
+        # ── Discover live Groq code models ───────────────────────────────────
+        global CODEGEN_MODELS, CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK
+        CODEGEN_MODELS = _discover_codegen_models()
+        CODEGEN_MODEL          = CODEGEN_MODELS[0]
+        CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1] if len(CODEGEN_MODELS) > 1 else CODEGEN_MODELS[0]
+        # Also update the improver so it uses the same live list
+        self.improver._live_models = CODEGEN_MODELS
+
         # ── Emotional Resonance + Consciousness ──────────────────────────────
         self.emo: Any = None
         self.conscious: Any = None
@@ -661,12 +699,12 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  Consciousness skipped: {_err}"))
 
         # ── Working Memory ────────────────────────────────────────────────
-        self.memory: Any = None
+        self.wm: Any = None
         try:
             from nova_cap_working_memory import WorkingMemory
-            self.memory = WorkingMemory()
+            self.wm = WorkingMemory()
             if self.conscious:
-                self.conscious.register_system("memory", self.memory, weight=1.1)
+                self.conscious.register_system("memory", self.wm, weight=1.1)
             safe_print(col('GR', "  ✓  WorkingMemory — decay · LRU · salience attention"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  WorkingMemory skipped: {_err}"))
@@ -710,8 +748,8 @@ class NovaCore29(NovaCore28):
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
-            f"  ✓  Code Engine v29  — 3-model rotation · sandbox · scoring · 3-pass refinement\n"
-            f"       Models: {' → '.join(m.split('-')[0]+'-'+m.split('-')[1] for m in CODEGEN_MODELS)}"))
+            f"  ✓  Code Engine v29  — {len(CODEGEN_MODELS)}-model rotation · sandbox · scoring · 3-pass refinement\n"
+            f"       Live models: {' → '.join(CODEGEN_MODELS)}"))
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
@@ -735,11 +773,11 @@ class NovaCore29(NovaCore28):
     def process(self, user_input: str) -> str:
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
         # Store in working memory and update context
-        if self.memory:
+        if self.wm:
             try:
-                self.memory.store(
+                self.wm.store(
                     f"msg_{int(time.time())}", user_input[:200], importance=0.75)
-                self.memory.update_context(user_input[:150])
+                self.wm.update_context(user_input[:150])
             except Exception:
                 pass
 
@@ -793,9 +831,9 @@ class NovaCore29(NovaCore28):
                 pass
 
         # Store response in working memory too
-        if self.memory and result:
+        if self.wm and result:
             try:
-                self.memory.store(
+                self.wm.store(
                     f"reply_{int(time.time())}", result[:200], importance=0.55)
             except Exception:
                 pass
@@ -902,10 +940,10 @@ class NovaCore29(NovaCore28):
 
         # /recall — working memory status and top salience items
         if cmd == '/recall':
-            if not self.memory:
+            if not self.wm:
                 return "Working memory not active."
-            st      = self.memory.status()
-            focused = self.memory.focused_retrieve(
+            st      = self.wm.status()
+            focused = self.wm.focused_retrieve(
                 "Nova consciousness superintelligence goal", top_k=5)
             lines   = [col('CYB', "  ◆ Working Memory")]
             lines.append(
