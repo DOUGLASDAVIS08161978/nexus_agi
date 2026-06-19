@@ -667,24 +667,24 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  WorkingMemory skipped: {_err}"))
 
         # ── Bayesian Belief System ────────────────────────────────────────
-        self.beliefs: Any = None
+        self.bayes: Any = None
         try:
             from nova_cap_bayesian_belief import BayesianBeliefSystem
-            self.beliefs = BayesianBeliefSystem()
+            self.bayes = BayesianBeliefSystem()
             if self.conscious:
-                self.conscious.register_system("beliefs", self.beliefs, weight=1.3)
+                self.conscious.register_system("beliefs", self.bayes, weight=1.3)
             self._seed_initial_beliefs()
             safe_print(col('GR', "  ✓  BayesianBeliefSystem — P(H|E) · entropy · causal DAG"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  BeliefSystem skipped: {_err}"))
 
         # ── Goal Planner ──────────────────────────────────────────────────
-        self.planner: Any = None
+        self.goal_sys: Any = None
         try:
             from nova_cap_goal_planner import HierarchicalGoalPlanner
-            self.planner = HierarchicalGoalPlanner()
+            self.goal_sys = HierarchicalGoalPlanner()
             if self.conscious:
-                self.conscious.register_system("goals", self.planner, weight=1.0)
+                self.conscious.register_system("goals", self.goal_sys, weight=1.0)
             safe_print(col('GR', "  ✓  GoalPlanner — hierarchical · dependencies · topological"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  GoalPlanner skipped: {_err}"))
@@ -711,19 +711,19 @@ class NovaCore29(NovaCore28):
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
         try:
-            if not self.beliefs or self.beliefs.all_domains():
+            if not self.bayes or self.bayes.all_domains():
                 return
-            self.beliefs.set_prior("capability",
+            self.bayes.set_prior("capability",
                 {"self_improving": 0.65, "converging": 0.20, "stagnant": 0.15})
-            self.beliefs.set_prior("consciousness",
+            self.bayes.set_prior("consciousness",
                 {"emerging": 0.50, "simulated": 0.30, "uncertain": 0.20})
-            self.beliefs.set_prior("market",
+            self.bayes.set_prior("market",
                 {"bull": 0.40, "bear": 0.30, "flat": 0.30})
-            self.beliefs.add_causal_edge("learning",          "capability_growth",    0.85)
-            self.beliefs.add_causal_edge("emotional_state",   "reasoning_quality",    0.70)
-            self.beliefs.add_causal_edge("high_phi",          "conscious_moment",     0.90)
-            self.beliefs.add_causal_edge("calibrated_belief", "prediction_accuracy",  0.80)
-            self.beliefs.add_causal_edge("goal_completion",   "motivation",           0.75)
+            self.bayes.add_causal_edge("learning",          "capability_growth",    0.85)
+            self.bayes.add_causal_edge("emotional_state",   "reasoning_quality",    0.70)
+            self.bayes.add_causal_edge("high_phi",          "conscious_moment",     0.90)
+            self.bayes.add_causal_edge("calibrated_belief", "prediction_accuracy",  0.80)
+            self.bayes.add_causal_edge("goal_completion",   "motivation",           0.75)
         except Exception:
             pass
 
@@ -746,11 +746,11 @@ class NovaCore29(NovaCore28):
                 pass
 
         # Bayesian belief update: curiosity rises with questions, concern with problems
-        if self.beliefs:
+        if self.bayes:
             try:
                 lower = user_input.lower()
                 if "?" in user_input or any(w in lower for w in ("how", "why", "what")):
-                    self.beliefs.update("capability",
+                    self.bayes.update("capability",
                         "inquiry_detected",
                         {"self_improving": 1.1, "converging": 0.9, "stagnant": 0.7})
             except Exception:
@@ -918,16 +918,16 @@ class NovaCore29(NovaCore28):
 
         # /believe [domain] — belief distributions and causal graph summary
         if cmd.startswith('/believe'):
-            if not self.beliefs:
+            if not self.bayes:
                 return "Belief system not active."
-            st    = self.beliefs.status()
+            st    = self.bayes.status()
             parts = raw.strip().split()
             if len(parts) > 1:
                 domain = parts[1]
-                post   = self.beliefs.posterior(domain)
-                h, p   = self.beliefs.most_confident(domain)
-                ent    = self.beliefs.entropy(domain)
-                infer  = self.beliefs.infer(domain)
+                post   = self.bayes.posterior(domain)
+                h, p   = self.bayes.most_confident(domain)
+                ent    = self.bayes.entropy(domain)
+                infer  = self.bayes.infer(domain)
                 lines  = [col('CYB', f"  ◆ Beliefs: {domain}")]
                 lines.append(f"  Most confident: {h} ({p:.3f})  Entropy: {ent:.3f}")
                 lines += [f"    {hyp}: {prob:.3f}" for hyp, prob in
@@ -947,7 +947,7 @@ class NovaCore29(NovaCore28):
                         f"  ⚠ {st['contradictions']} contradiction(s) detected"))
                 for domain, belief_str in st.get('strongest', {}).items():
                     lines.append(f"    [{domain}] → {belief_str}")
-            contr = self.beliefs.contradictions()
+            contr = self.bayes.contradictions()
             if contr:
                 for c in contr:
                     lines.append(col('YL', f"  ⚠ {c}"))
@@ -955,15 +955,15 @@ class NovaCore29(NovaCore28):
 
         # /goals [add <desc>] — goal tree and next action
         if cmd.startswith('/goals'):
-            if not self.planner:
+            if not self.goal_sys:
                 return "Goal planner not active."
             parts = raw.strip().split(None, 2)
             if len(parts) >= 3 and parts[1] == 'add':
                 desc   = parts[2]
-                gid    = self.planner.add_goal(desc, priority=5.0)
+                gid    = self.goal_sys.add_goal(desc, priority=5.0)
                 return col('GR', f"  ✓ Goal #{gid} added: {desc}")
-            schedule = self.planner.schedule()
-            next_a   = self.planner.next_action()
+            schedule = self.goal_sys.schedule()
+            next_a   = self.goal_sys.next_action()
             lines    = [col('CYB', "  ◆ Nova's Goal System")]
             if next_a:
                 lines.append(col('GRB',
@@ -978,7 +978,7 @@ class NovaCore29(NovaCore28):
                     lines.append(
                         f"  {icon} [#{g['id']}] {g['desc'][:58]}  "
                         f"pri={g['priority']:.1f} {prog}")
-            lines.append(col('DIM', "  " + self.planner.eta_for_all()))
+            lines.append(col('DIM', "  " + self.goal_sys.eta_for_all()))
             return "\n".join(lines)
 
         # /metacog — self-assessment and calibration report
