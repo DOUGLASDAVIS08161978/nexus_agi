@@ -5,9 +5,9 @@ Proposed autonomously via /evolve
 
 """
 DebateEngine — Nova's multi-step dialectical reasoning module.
-Generates probabilistic FOR/AGAINST arguments, synthesises balanced verdicts,
-and autonomously improves via Bayesian belief updates and EMA-tracked quality.
-Satisfies pillars: ①②③④⑤⑥⑦⑧⑨⑪⑫⑬⑭
+Generates Bayesian-weighted pro/con arguments, synthesises balanced verdicts,
+and autonomously refines debate quality via EMA-tracked calibration and
+LRU-backed working memory with exponential decay.
 """
 
 import math
@@ -17,202 +17,231 @@ import threading
 import statistics
 import hashlib
 import json
-import os
 import re
+import os
 from collections import OrderedDict
 from typing import Any
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "debate_engine.db")
 
-class DebateEngine:
-    """Dialectical reasoning engine: argues for, argues against, and synthesises claims."""
+STANCE_SEEDS: dict[str, list[str]] = {
+    "pro": [
+        "empirical evidence supports the core premise",
+        "historical precedent validates this trajectory",
+        "causal mechanism is well-established",
+        "systemic benefits outweigh localised costs",
+        "expert consensus aligns with this position",
+        "opportunity cost of inaction is demonstrably high",
+        "marginal gains compound over time via EMA growth",
+    ],
+    "con": [
+        "confounding variables undermine causal attribution",
+        "selection bias distorts the supporting evidence",
+        "second-order effects reverse the apparent benefit",
+        "implementation costs exceed projected returns",
+        "minority harms are ethically non-negligible",
+        "long-horizon confidence degrades multiplicatively",
+        "analogous interventions have historically failed",
+    ],
+}
 
-    _STANCES = ["empirical", "ethical", "pragmatic", "systemic", "historical"]
-    _DECAY = 0.0005
+_DECAY_RATE = 0.0005
+_CAPACITY = 200
+
+class DebateEngine:
+    """Dialectical ASI engine: argue, counter-argue, and synthesise claims with calibrated Bayesian confidence."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._memory: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._ema_quality: float = 0.5
         self._cycles: int = 0
         self._history: list[tuple[float, float]] = []
-        self._memory: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self._db = DB_PATH
         self._init_db()
         self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
         self._daemon.start()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(DB_PATH) as cx:
+        with sqlite3.connect(self._db) as cx:
             cx.execute("""CREATE TABLE IF NOT EXISTS debates (
-                id TEXT PRIMARY KEY, claim TEXT, stance TEXT,
-                points TEXT, confidence REAL, ts REAL)""")
-            cx.commit()
+                id TEXT PRIMARY KEY, claim TEXT, pro TEXT, con TEXT,
+                verdict TEXT, confidence REAL, ts REAL)""")
 
-    def _claim_id(self, claim: str, stance: str) -> str:
-        return hashlib.md5(f"{claim}|{stance}".encode()).hexdigest()[:12]
+    def _claim_id(self, claim: str) -> str:
+        return hashlib.sha1(claim.lower().strip().encode()).hexdigest()[:12]
 
-    def _tokens(self, text: str) -> list[str]:
-        return re.findall(r"[a-z]+", text.lower())
+    def _decay_importance(self, item: dict[str, Any]) -> float:
+        elapsed = time.time() - item["ts"]
+        return item["importance"] * math.exp(-_DECAY_RATE * elapsed)
 
-    def _tfidf_score(self, claim_tokens: list[str], stance: str) -> float:
-        corpus = self._STANCES
-        N = len(corpus)
-        score = 0.0
-        for t in claim_tokens:
-            tf = claim_tokens.count(t) / (len(claim_tokens) + 1)
-            df = sum(1 for s in corpus if t in s)
-            idf = math.log(N / (df + 1))
-            score += tf * idf
-        stance_bonus = 0.1 * len([t for t in claim_tokens if t in stance])
-        return min(1.0, abs(score) + stance_bonus + 0.3)
-
-    def _bayesian_confidence(self, prior: float, hits: int, total: int) -> float:
-        likelihood = (hits + 1) / (total + 2)
-        posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior))
-        return round(max(0.05, min(0.99, posterior)), 4)
-
-    def _build_points(self, claim: str, polarity: int, n: int = 4) -> list[dict[str, Any]]:
-        tokens = self._tokens(claim)
-        points = []
-        for i, stance in enumerate(self._STANCES[:n]):
-            base_conf = self._tfidf_score(tokens, stance)
-            conf = self._bayesian_confidence(base_conf, i + 1, n + 2)
-            direction = "supports" if polarity > 0 else "challenges"
-            point = {
-                "stance": stance,
-                "argument": f"From a {stance} perspective, evidence {direction} '{claim}'.",
-                "confidence": conf,
-                "ci_low": round(max(0.0, conf - 0.12), 4),
-                "ci_high": round(min(1.0, conf + 0.12), 4),
-            }
-            points.append(point)
-        return sorted(points, key=lambda p: p["confidence"], reverse=True)
-
-    def _store_debate(self, claim: str, stance: str, points: list[dict], conf: float) -> None:
-        did = self._claim_id(claim, stance)
-        with sqlite3.connect(DB_PATH) as cx:
-            cx.execute("INSERT OR REPLACE INTO debates VALUES (?,?,?,?,?,?)",
-                       (did, claim, stance, json.dumps(points), conf, time.time()))
-            cx.commit()
+    def _store_mem(self, key: str, value: Any, importance: float) -> None:
         with self._lock:
-            self._memory[did] = {"claim": claim, "stance": stance,
-                                 "points": points, "confidence": conf,
-                                 "ts": time.time(), "access": 1}
-            if len(self._memory) > 200:
-                self._memory.popitem(last=False)
+            if key in self._memory:
+                self._memory.move_to_end(key)
+                self._memory[key]["access_count"] += 1
+                self._memory[key]["importance"] = min(1.0, importance + 0.05 * self._memory[key]["access_count"])
+            else:
+                self._memory[key] = {"value": value, "importance": importance, "ts": time.time(), "access_count": 0}
+            if len(self._memory) > _CAPACITY:
+                self._evict()
 
-    def _log_meta(self, domain: str, conf: float, success: bool) -> None:
-        try:
-            from metacognitive_monitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning(domain, "dialectical", conf, success)
-        except (ImportError, Exception):
-            pass
+    def _evict(self) -> None:
+        scored = {k: self._decay_importance(v) for k, v in self._memory.items()}
+        lru_key = min(scored, key=lambda k: scored[k])
+        self._memory.pop(lru_key, None)
+
+    def _retrieve_mem(self, key: str) -> Any:
+        with self._lock:
+            if key not in self._memory:
+                return None
+            self._memory.move_to_end(key)
+            item = self._memory[key]
+            item["access_count"] += 1
+            item["importance"] = min(1.0, item["importance"] + 0.03)
+            return item["value"]
+
+    def _keyword_overlap(self, claim: str, point: str) -> float:
+        tokens_c = set(re.findall(r"\\w+", claim.lower()))
+        tokens_p = set(re.findall(r"\\w+", point.lower()))
+        union = tokens_c | tokens_p
+        return len(tokens_c & tokens_p) / (len(union) + 1e-9)
+
+    def _score_points(self, claim: str, points: list[str]) -> list[tuple[str, float]]:
+        now = time.time()
+        scored = []
+        for i, p in enumerate(points):
+            salience = math.exp(-(now % 300) / 300) * (1 / (1 + i)) * (1 + self._keyword_overlap(claim, p))
+            prior = 0.5
+            likelihood = min(0.95, 0.5 + salience * 0.4)
+            posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior))
+            scored.append((p, round(posterior, 4)))
+        return sorted(scored, key=lambda x: x[1], reverse=True)
 
     def argue_for(self, claim: str) -> dict[str, Any]:
-        """Returns supporting arguments with per-point confidence intervals."""
-        points = self._build_points(claim, polarity=1)
-        agg_conf = statistics.mean(p["confidence"] for p in points)
-        self._store_debate(claim, "for", points, agg_conf)
-        self._update_ema(agg_conf)
-        self._log_meta("debate_for", agg_conf, True)
-        try:
-            from hierarchical_goal_planner import HierarchicalGoalPlanner
-            HierarchicalGoalPlanner().add_goal(f"Validate FOR arguments: {claim[:60]}", priority=3)
-        except (ImportError, Exception):
-            pass
-        return {"claim": claim, "side": "FOR", "points": points,
-                "aggregate_confidence": round(agg_conf, 4),
-                "ci": [round(agg_conf - 0.1, 4), round(agg_conf + 0.1, 4)]}
+        """Returns scored supporting points and aggregate pro-confidence for the claim."""
+        cached = self._retrieve_mem(f"pro:{claim}")
+        if cached:
+            return cached
+        scored = self._score_points(claim, STANCE_SEEDS["pro"])
+        conf = statistics.mean(s for _, s in scored)
+        result = {"stance": "pro", "claim": claim, "points": scored, "confidence": round(conf, 4)}
+        self._store_mem(f"pro:{claim}", result, importance=conf)
+        self._log_meta("argue_for", conf)
+        return result
 
     def argue_against(self, claim: str) -> dict[str, Any]:
-        """Returns counter-arguments with per-point confidence intervals."""
-        points = self._build_points(claim, polarity=-1)
-        agg_conf = statistics.mean(p["confidence"] for p in points)
-        self._store_debate(claim, "against", points, agg_conf)
-        self._update_ema(agg_conf)
-        self._log_meta("debate_against", agg_conf, True)
-        try:
-            from hierarchical_goal_planner import HierarchicalGoalPlanner
-            HierarchicalGoalPlanner().add_goal(f"Validate AGAINST arguments: {claim[:60]}", priority=3)
-        except (ImportError, Exception):
-            pass
-        return {"claim": claim, "side": "AGAINST", "points": points,
-                "aggregate_confidence": round(agg_conf, 4),
-                "ci": [round(agg_conf - 0.1, 4), round(agg_conf + 0.1, 4)]}
+        """Returns scored counter-points and aggregate con-confidence for the claim."""
+        cached = self._retrieve_mem(f"con:{claim}")
+        if cached:
+            return cached
+        scored = self._score_points(claim, STANCE_SEEDS["con"])
+        conf = statistics.mean(s for _, s in scored)
+        result = {"stance": "con", "claim": claim, "points": scored, "confidence": round(conf, 4)}
+        self._store_mem(f"con:{claim}", result, importance=conf)
+        self._log_meta("argue_against", conf)
+        return result
 
     def synthesise(self, claim: str) -> dict[str, Any]:
-        """Returns a balanced verdict with entropy score and causal chain confidence."""
+        """Returns a balanced verdict dict with Bayesian net-confidence and entropy-weighted recommendation."""
         pro = self.argue_for(claim)
         con = self.argue_against(claim)
-        pro_c = pro["aggregate_confidence"]
-        con_c = con["aggregate_confidence"]
-        dist = {
-            "FOR": pro_c / (pro_c + con_c + 1e-12),
-            "AGAINST": con_c / (pro_c + con_c + 1e-12),
+        p_pro = pro["confidence"]
+        p_con = con["confidence"]
+        total = p_pro + p_con + 1e-12
+        norm_pro = p_pro / total
+        norm_con = p_con / total
+        entropy = -(norm_pro * math.log2(norm_pro + 1e-12) + norm_con * math.log2(norm_con + 1e-12))
+        net_conf = round(abs(norm_pro - norm_con), 4)
+        verdict = "SUPPORT" if norm_pro > norm_con else "OPPOSE" if norm_con > norm_pro else "NEUTRAL"
+        ci_low = round(max(0.0, net_conf - 0.1 * entropy), 4)
+        ci_high = round(min(1.0, net_conf + 0.1 * entropy), 4)
+        result = {
+            "claim": claim, "verdict": verdict, "net_confidence": net_conf,
+            "ci": [ci_low, ci_high], "entropy": round(entropy, 4),
+            "pro_weight": round(norm_pro, 4), "con_weight": round(norm_con, 4),
+            "top_pro": pro["points"][0][0], "top_con": con["points"][0][0],
         }
-        entropy = -sum(p * math.log2(p + 1e-12) for p in dist.values())
-        causal_chain = pro_c * con_c
-        verdict = "BALANCED" if abs(pro_c - con_c) < 0.1 else ("LEAN_FOR" if pro_c > con_c else "LEAN_AGAINST")
-        z = (pro_c - con_c) / (statistics.stdev([pro_c, con_c]) + 1e-9)
-        self._log_meta("debate_synthesis", (pro_c + con_c) / 2, True)
-        return {"claim": claim, "verdict": verdict, "for_confidence": pro_c,
-                "against_confidence": con_c, "entropy": round(entropy, 4),
-                "causal_chain_conf": round(causal_chain, 4), "z_score": round(z, 4),
-                "distribution": {k: round(v, 4) for k, v in dist.items()}}
+        self._persist(claim, pro, con, result)
+        self._store_mem(f"synth:{claim}", result, importance=net_conf)
+        self._update_ema(net_conf)
+        self._log_meta("synthesise", net_conf)
+        self._register_goal(claim, verdict)
+        return result
+
+    def _persist(self, claim: str, pro: dict, con: dict, verdict: dict) -> None:
+        cid = self._claim_id(claim)
+        with sqlite3.connect(self._db) as cx:
+            cx.execute("INSERT OR REPLACE INTO debates VALUES (?,?,?,?,?,?,?)",
+                (cid, claim, json.dumps(pro["points"]), json.dumps(con["points"]),
+                 verdict["verdict"], verdict["net_confidence"], time.time()))
 
     def _update_ema(self, outcome: float) -> None:
-        with self._lock:
-            self._ema_quality = 0.15 * outcome + 0.85 * self._ema_quality
-            self._history.append((time.time(), outcome))
-            if len(self._history) > 200:
-                self._history.pop(0)
-            self._cycles += 1
+        self._ema_quality = 0.15 * outcome + 0.85 * self._ema_quality
+        self._history.append((time.time(), outcome))
+        if len(self._history) > 50:
+            self._history.pop(0)
 
-    def quality_trend(self) -> dict[str, Any]:
-        """Returns EMA quality, MAE over last 50 cycles, and cycle count."""
-        with self._lock:
-            recent = self._history[-50:]
-            mae = statistics.mean(abs(p - 0.5) for _, p in recent) if recent else 0.0
-            return {"ema_quality": round(self._ema_quality, 4),
-                    "mae": round(mae, 4), "cycles": self._cycles}
+    def _log_meta(self, approach: str, confidence: float) -> None:
+        try:
+            from metacognitive_monitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning("debate", approach, confidence, confidence > 0.5)
+        except (ImportError, Exception):
+            pass
 
-    def recall_debate(self, claim: str) -> list[dict[str, Any]]:
-        """Returns all stored debate records for a given claim from SQLite."""
-        with sqlite3.connect(DB_PATH) as cx:
-            rows = cx.execute("SELECT stance,points,confidence,ts FROM debates WHERE claim=?",
-                              (claim,)).fetchall()
-        return [{"stance": r[0], "points": json.loads(r[1]),
-                 "confidence": r[2], "ts": r[3]} for r in rows]
+    def _register_goal(self, claim: str, verdict: str) -> None:
+        try:
+            from hierarchical_goal_planner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(f"Refine debate evidence for: {claim} [{verdict}]", priority=2)
+        except (ImportError, Exception):
+            pass
 
-    def anomaly_check(self) -> dict[str, Any]:
-        """Returns z-score anomaly flag if recent quality diverges from rolling mean."""
-        with self._lock:
-            vals = [v for _, v in self._history[-50:]]
-        if len(vals) < 5:
-            return {"anomaly": False, "z": 0.0}
-        mean = statistics.mean(vals)
-        std = statistics.stdev(vals) + 1e-9
-        z = (vals[-1] - mean) / std
-        return {"anomaly": abs(z) > 3.0, "z": round(z, 4), "mean": round(mean, 4)}
+    def calibration_report(self) -> dict[str, Any]:
+        """Returns EMA quality, MAE over last 50 cycles, and z-score anomaly flag."""
+        if len(self._history) < 2:
+            return {"ema_quality": round(self._ema_quality, 4), "mae": None, "anomaly": False}
+        vals = [v for _, v in self._history]
+        mae = statistics.mean(abs(v - self._ema_quality) for v in vals)
+        mean_v = statistics.mean(vals)
+        std_v = statistics.stdev(vals) + 1e-9
+        z = (vals[-1] - mean_v) / std_v
+        return {"ema_quality": round(self._ema_quality, 4), "mae": round(mae, 4),
+                "z_score": round(z, 4), "anomaly": abs(z) > 3.0}
+
+    def history(self, limit: int = 10) -> list[dict[str, Any]]:
+        """Returns the last N persisted debate records from SQLite."""
+        with sqlite3.connect(self._db) as cx:
+            rows = cx.execute("SELECT claim, verdict, confidence, ts FROM debates ORDER BY ts DESC LIMIT ?", (limit,)).fetchall()
+        return [{"claim": r[0], "verdict": r[1], "confidence": r[2], "ts": r[3]} for r in rows]
 
     def status(self) -> dict[str, Any]:
-        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ."""
+        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ scoring."""
         with self._lock:
             items = len(self._memory)
-        qt = self.quality_trend()
-        return {"items": items, "confidence": qt["ema_quality"],
-                "quality": qt["ema_quality"], "cycles": qt["cycles"],
-                "active": 1, "entropy": round(-qt["ema_quality"] * math.log2(qt["ema_quality"] + 1e-12), 4)}
+        cal = self.calibration_report()
+        return {"items": items, "confidence": round(self._ema_quality, 4),
+                "cycles": self._cycles, "quality": round(self._ema_quality, 4),
+                "entropy": cal.get("z_score", 0.0), "active": 1, "pending": 0}
+
+    def auto_cycle(self) -> dict[str, Any]:
+        """Runs one autonomous debate cycle on a stored claim; returns synthesis result."""
+        with self._lock:
+            self._cycles += 1
+            keys = [k for k in self._memory if k.startswith("pro:")]
+        if not keys:
+            sample_claim = "autonomous reasoning improves decision quality"
+        else:
+            key = keys[self._cycles % len(keys)]
+            sample_claim = key[4:]
+        return self.synthesise(sample_claim)
 
     def _auto_loop(self) -> None:
-        sample_claims = ["AI is beneficial", "open source is safer", "regulation stifles innovation"]
-        idx = 0
+        time.sleep(10)
         while True:
-            time.sleep(60)
             try:
-                claim = sample_claims[idx % len(sample_claims)]
-                self.synthesise(claim)
-                idx += 1
+                self.auto_cycle()
             except Exception:
                 pass
+            time.sleep(60)
 
-# Usage: obj = DebateEngine() | result = obj.synthesise("AI regulation is necessary")
+# Usage: obj = DebateEngine() | result = obj.synthesise("universal basic income improves societal wellbeing")
