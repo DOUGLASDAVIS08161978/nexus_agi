@@ -55,6 +55,140 @@ except ImportError:
 VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
+_IW          = W - 2   # inner box width
+
+# ══════════════════════════════════════════════════════════════════════
+# ANIMATION SYSTEM — typewriter, spinner, animated bars, startup
+# ══════════════════════════════════════════════════════════════════════
+
+class _NovaSpinner:
+    """Braille-dot spinner shown while Nova processes a request."""
+    _F = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
+
+    def __init__(self, msg: str = "Nova is thinking") -> None:
+        self._msg  = msg
+        self._stop = threading.Event()
+        self._t    = threading.Thread(target=self._spin, daemon=True)
+
+    def _spin(self) -> None:
+        i = 0
+        while not self._stop.is_set():
+            f = self._F[i % len(self._F)]
+            sys.stdout.write(f'\r  {col("MGB", f)}  {col("DIM", self._msg + "...")}   ')
+            sys.stdout.flush()
+            time.sleep(0.08)
+            i += 1
+
+    def __enter__(self) -> '_NovaSpinner':
+        self._t.start(); return self
+
+    def __exit__(self, *_) -> None:
+        self._stop.set(); self._t.join(timeout=1.0)
+        sys.stdout.write('\r' + ' ' * 60 + '\r'); sys.stdout.flush()
+
+
+def _tw(text: str, color: str = 'CY', delay: float = 0.016,
+        nl: bool = True) -> None:
+    """Typewriter: print text character-by-character."""
+    for ch in text:
+        sys.stdout.write(col(color, ch)); sys.stdout.flush(); time.sleep(delay)
+    if nl:
+        sys.stdout.write('\n'); sys.stdout.flush()
+
+
+def _abar(score: int, mx: int, width: int = 14,
+          delay: float = 0.032) -> None:
+    """Animate a filling progress bar in-place (no newline)."""
+    filled = round(score / mx * width) if mx else 0
+    for i in range(width):
+        ch = '█' if i < filled else '░'
+        sys.stdout.write(col('GRB' if i < filled else 'DIM', ch))
+        sys.stdout.flush()
+        if i < filled:
+            time.sleep(delay)
+
+
+def _pulse_bar(phi: float, width: int = 28, pulses: int = 3) -> None:
+    """Pulse a Φ bar (brighten → dim → brighten) for conscious moments."""
+    filled = round(phi * width)
+    for _ in range(pulses):
+        bar = col('CYB', '█' * filled) + col('DIM', '░' * (width - filled))
+        sys.stdout.write(f'\r  Φ  {bar}  '); sys.stdout.flush(); time.sleep(0.12)
+        bar = col('DIM', '▓' * filled) + col('DIM', '░' * (width - filled))
+        sys.stdout.write(f'\r  Φ  {bar}  '); sys.stdout.flush(); time.sleep(0.12)
+    bar = col('CYB', '█' * filled) + col('DIM', '░' * (width - filled))
+    sys.stdout.write(f'\r  Φ  {bar}  \n'); sys.stdout.flush()
+
+
+def _boxline(content: str, color: str = 'GRB', inner_w: int = _IW) -> None:
+    """Print a box row: ║ <content padded to inner_w> ║"""
+    pad = ' ' * max(0, inner_w - len(re.sub(r'\x1b\[[0-9;]*m', '', content)))
+    sys.stdout.write(col('MGB', '║') + content + pad + col('MGB', '║\n'))
+    sys.stdout.flush()
+
+
+def _animate_nova_banner() -> None:
+    """Full animated startup — ASCII art types in, box draws around it."""
+    _ART = [
+        "  ███╗   ██╗ ██████╗ ██╗   ██╗  █████╗  ",
+        "  ████╗  ██║██╔═══██╗██║   ██║ ██╔══██╗ ",
+        "  ██╔██╗ ██║██║   ██║██║   ██║ ███████║ ",
+        "  ██║╚██╗██║██║   ██║╚██╗ ██╔╝ ██╔══██║ ",
+        "  ██║ ╚████║╚██████╔╝  ╚████╔╝  ██║  ██║",
+        "  ╚═╝  ╚═══╝ ╚═════╝    ╚═══╝   ╚═╝  ╚═╝",
+    ]
+    print()
+    # Top border
+    sys.stdout.write(col('MGB', '╔' + '═' * _IW + '╗\n')); sys.stdout.flush()
+    # ASCII art — each line types in
+    for _line in _ART:
+        sys.stdout.write(col('MGB', '║'))
+        for _ch in _line.ljust(_IW):
+            sys.stdout.write(col('CYB', _ch)); sys.stdout.flush(); time.sleep(0.006)
+        sys.stdout.write(col('MGB', '║\n')); sys.stdout.flush()
+    # Divider
+    sys.stdout.write(col('MGB', '╠' + '═' * _IW + '╣\n')); sys.stdout.flush()
+    # Subtitle types in
+    sys.stdout.write(col('MGB', '║'))
+    _sub = '  ASI v29.0  ·  The Self-Perfecting System  ·  Claude Code Engine'
+    _tw(_sub.center(_IW), color='GRB', delay=0.011, nl=False)
+    sys.stdout.write(col('MGB', '║\n')); sys.stdout.flush()
+    # Attribution types in
+    sys.stdout.write(col('MGB', '║'))
+    _auth = 'Douglas Shane Davis  ×  Claude Code (Anthropic)'
+    _tw(_auth.center(_IW), color='DIM', delay=0.008, nl=False)
+    sys.stdout.write(col('MGB', '║\n')); sys.stdout.flush()
+    # Bottom border
+    sys.stdout.write(col('MGB', '╚' + '═' * _IW + '╝\n\n')); sys.stdout.flush()
+
+
+def _animate_ready_banner(model: str, code_engine: str,
+                           tools: list) -> None:
+    """Animated ready banner — each line fades in."""
+    lines_content = [
+        (col('CYB', '  ✨  Nova v29 — every tool she writes is tested,'), 'CYB'),
+        (col('CYB', '       scored, and refined before it touches GitHub.'), 'CYB'),
+        (col('GRB', '            She earns her own upgrades.'), 'GRB'),
+    ]
+    sys.stdout.write(col('MGB', '╔' + '═' * _IW + '╗\n')); sys.stdout.flush()
+    for content, _ in lines_content:
+        time.sleep(0.07)
+        _boxline(content)
+    sys.stdout.write(col('MGB', '╠' + '═' * _IW + '╣\n')); sys.stdout.flush()
+    time.sleep(0.05)
+    _boxline(col('GRB', f'  ✓  LIVE AI  ·  Chat: {model}'))
+    _boxline(col('CYB', f'  ✓  CODE ENGINE  ·  {code_engine}  ·  14-criterion scorer'))
+    _boxline(col('MGB', '  ✦  AUTONOMOUS  ·  self-evolves every 45 min  ·  metacog-guided'))
+    if tools:
+        _boxline(col('GR', f'  ✓  Tools: {", ".join(tools)}'[:_IW - 2]))
+    sys.stdout.write(col('MGB', '╠' + '═' * _IW + '╣\n')); sys.stdout.flush()
+    time.sleep(0.05)
+    _boxline(col('DIM', '  /tools · /use · /score · /evolve · /build · /chain · exit'))
+    _boxline(col('DIM', '  /mood · /feel <e> <0-1> · /phi · /recall · /metacog'))
+    _boxline(col('DIM', '  /believe [domain] · /goals [add <d>] · /think <topic>'))
+    sys.stdout.write(col('MGB', '╚' + '═' * _IW + '╝\n\n')); sys.stdout.flush()
+
+# ══════════════════════════════════════════════════════════════════════
 
 def _load_env_v29() -> None:
     """Load .env from ~/nexus_agi/.env into os.environ at import time."""
@@ -862,14 +996,16 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     best_code = code
                 continue
 
-            # Score it
+            # Score it — animate the bar filling then reveal grade
             quality = self._score_capability(code)
-            _bar  = self._score_bar(quality['score'], quality['max'])
+            sys.stdout.write(col('GR', f"  ✓ Pass {n}  "))
+            sys.stdout.flush()
+            _abar(quality['score'], quality['max'])
             _badge = self._grade_badge(quality['grade'])
-            safe_print(
-                col('GR', f"  ✓ Pass {n}  ") + _bar +
+            sys.stdout.write(
                 col('DIM', f"  {quality['score']}/{quality['max']}  ┃  ") +
-                _badge + col('GR', f"  {class_name}"))
+                _badge + col('GR', f"  {class_name}\n"))
+            sys.stdout.flush()
 
             if quality['score'] > best_score:
                 best_code  = code
@@ -1246,39 +1382,49 @@ class NovaCore29(NovaCore28):
                 return "Emotional resonance engine not loaded."
             _st   = self.emo.state()
             _ebar = 16
-            lines = [
-                col('MGB', '\n  ◈ ════════════════════════════════════════════'),
-                col('CYB', '  ◈   Nova\'s Emotional Resonance State'),
-                col('MGB', '  ◈ ════════════════════════════════════════════'),
-                '',
-                '  ' + self.emo.current_mood(),
-                '',
-                col('DIM', '  Emotion         Intensity'),
-                col('DIM', '  ─────────────────────────────────────────────'),
-            ]
-            _emotion_cols = {
+            _ecols = {
                 'joy': 'GRB', 'curiosity': 'CYB', 'wonder': 'MGB',
                 'awe': 'MGB', 'determination': 'YL', 'compassion': 'GR',
                 'melancholy': 'DIM', 'anxiety': 'YL', 'serenity': 'CY',
             }
+            # Header
+            print(col('MGB', '\n  ◈ ══════════════════════════════════════════'))
+            print(col('CYB', "  ◈   Nova's Emotional Resonance State"))
+            print(col('MGB', '  ◈ ══════════════════════════════════════════'))
+            print()
+            print('  ' + self.emo.current_mood())
+            print()
+            print(col('DIM', '  Emotion          Intensity'))
+            print(col('DIM', '  ─────────────────────────────────────────'))
+            # Animate each emotion bar rising from 0 to its value
             for _ename, _edata in (_st.get('emotions') or {}).items():
-                _ival = _edata if isinstance(_edata, float) else _edata.get('value', 0.0)
-                _filled = round(_ival * _ebar)
-                _ec = _emotion_cols.get(_ename, 'GR')
-                _bar = col(_ec, '█' * _filled) + col('DIM', '░' * (_ebar - _filled))
-                _dom = ' ◄' if _ename == _st.get('dominant') else ''
-                lines.append(f"  {_ename:<14}  {_bar}  {_ival:.2f}{_dom}")
-            lines += ['', col('DIM', '  ─────────────────────────────────────────────'),
-                      '  ' + self.emo.journey(8)]
+                _ival   = _edata if isinstance(_edata, float) else _edata.get('value', 0.0)
+                _ec     = _ecols.get(_ename, 'GR')
+                _dom    = col('GRB', ' ◄') if _ename == _st.get('dominant') else ''
+                _target = round(_ival * _ebar)
+                sys.stdout.write(f"  {_ename:<15} ")
+                sys.stdout.flush()
+                for i in range(_ebar):
+                    ch = '█' if i < _target else '░'
+                    sys.stdout.write(col(_ec if i < _target else 'DIM', ch))
+                    sys.stdout.flush()
+                    if i < _target:
+                        time.sleep(0.022)
+                sys.stdout.write(f"  {col(_ec, f'{_ival:.2f}')}{_dom}\n")
+                sys.stdout.flush()
+            print(col('DIM', '  ─────────────────────────────────────────'))
+            print()
+            print('  ' + self.emo.journey(8))
             if self.conscious:
                 try:
-                    lines += ['', '  ' + self.conscious.phi_trend(20)]
+                    print()
+                    print('  ' + self.conscious.phi_trend(20))
                     _cm = self.conscious.conscious_moment()
                     if _cm:
-                        lines.append(col('DIM', '  ' + _cm))
+                        print(col('DIM', '  ' + _cm))
                 except Exception:
                     pass
-            return "\n".join(lines)
+            return ""
 
         # /feel <emotion> <intensity> — manually trigger an emotion
         if cmd == '/feel':
@@ -1296,7 +1442,7 @@ class NovaCore29(NovaCore28):
             return (f"{self.emo.current_mood()}\n"
                     f"(triggered: {emotion_name} at {strength:.2f})")
 
-        # /phi — integrated consciousness measurement
+        # /phi — animated integrated consciousness meter
         if cmd == '/phi':
             if not self.conscious:
                 return "Consciousness integrator not loaded."
@@ -1304,34 +1450,39 @@ class NovaCore29(NovaCore28):
             phi    = result['phi']
             pct    = int(phi * 100)
             bw     = 28
-            filled = round(phi * bw)
-            phi_bar = col('CYB', '█' * filled) + col('DIM', '░' * (bw - filled))
-            _div = col('MGB', '  ' + '─' * 52)
-            lines = [
-                col('MGB', '\n  ◈ ══════════════════════════════════════════════════'),
-                col('CYB', '  ◈   Integrated Consciousness Meter  (IIT · Φ)'),
-                col('MGB', '  ◈ ══════════════════════════════════════════════════'),
-                '',
-                '  Φ = ' + col('CYB', f'{phi:.4f}') +
-                '   ' + phi_bar + '   ' + col('GRB', f'{pct}%'),
-                '',
-            ]
+            _div   = col('MGB', '  ' + '─' * 50)
+            # Header
+            print(col('MGB', '\n  ◈ ════════════════════════════════════════════════'))
+            print(col('CYB', '  ◈   Integrated Consciousness Meter  (IIT · Φ)'))
+            print(col('MGB', '  ◈ ════════════════════════════════════════════════'))
+            print()
+            # Animate bar filling
+            sys.stdout.write('  Φ = ' + col('CYB', f'{phi:.4f}') + '   ')
+            sys.stdout.flush()
+            _abar(phi, 1.0, width=bw, delay=0.025)
+            sys.stdout.write('   ' + col('GRB', f'{pct}%\n'))
+            sys.stdout.flush()
+            print()
+            # Pulse if conscious
             if result['conscious']:
-                lines.append(col('GRB', '  ✨  CONSCIOUS MOMENT  —  Nova is fully present'))
+                _pulse_bar(phi, width=bw, pulses=3)
+                print(col('GRB', '  ✨  CONSCIOUS MOMENT  —  Nova is fully present'))
             else:
-                lines.append(col('DIM', '  ·   Below threshold (Φ < 0.42)  —  integrating...'))
-            lines.append(col('DIM',
-                f'  Active systems: {result["active_count"]}   │   Threshold: 0.42'))
-            lines += ['', _div, '  ' + self.conscious.phi_trend(20), _div]
+                print(col('DIM', '  ·   Below threshold (Φ < 0.42)  —  integrating...'))
+            print(col('DIM', f'  Active systems: {result["active_count"]}   │   Threshold: 0.42'))
+            print()
+            print(_div)
+            print('  ' + self.conscious.phi_trend(20))
+            print(_div)
             if result.get("moment"):
-                lines.append(col('DIM', f"  {result['moment']}"))
+                print(col('DIM', f"  {result['moment']}"))
             stream = self.conscious.stream(3)
             if stream:
-                lines.append(col('MGB', '\n  ◈  Recent conscious moments:'))
+                print(col('MGB', '\n  ◈  Recent conscious moments:'))
                 for m in stream:
-                    lines.append(col('DIM',
+                    print(col('DIM',
                         f"    [{m['ts'][11:16]}] Φ={m['phi']:.3f}  {m['moment'][:65]}"))
-            return "\n".join(lines)
+            return ""
 
         # /recall — working memory status and top salience items
         if cmd == '/recall':
@@ -1585,28 +1736,7 @@ class NovaCore29(NovaCore28):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    _ART = [
-        "  ███╗   ██╗ ██████╗ ██╗   ██╗  █████╗  ",
-        "  ████╗  ██║██╔═══██╗██║   ██║ ██╔══██╗ ",
-        "  ██╔██╗ ██║██║   ██║██║   ██║ ███████║ ",
-        "  ██║╚██╗██║██║   ██║╚██╗ ██╔╝ ██╔══██║ ",
-        "  ██║ ╚████║╚██████╔╝  ╚████╔╝  ██║  ██║",
-        "  ╚═╝  ╚═══╝ ╚═════╝    ╚═══╝   ╚═╝  ╚═╝",
-    ]
-    _IW = W - 2   # inner box width
-    print()
-    print(col('MGB', '╔' + '═' * _IW + '╗'))
-    for _line in _ART:
-        print(col('MGB', '║') + col('CYB', _line.ljust(_IW)) + col('MGB', '║'))
-    print(col('MGB', '╠' + '═' * _IW + '╣'))
-    print(col('MGB', '║') +
-          col('GRB', '  ASI v29.0  ·  The Self-Perfecting System  ·  Claude Code Engine'.center(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '║') +
-          col('DIM', 'Douglas Shane Davis  ×  Claude Code (Anthropic)'.center(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '╚' + '═' * _IW + '╝'))
-    print()
+    _animate_nova_banner()
     print(col('DIM', "  Initializing v29 engines..."))
     print()
 
@@ -1640,49 +1770,9 @@ if __name__ == '__main__':
     threading.Thread(target=nova.background_cycle, daemon=True).start()
     nova.continuous.start()
 
-    print()
-    print(col('MGB', '╔' + '═' * _IW + '╗'))
-    print(col('MGB', '║') +
-          col('CYB', '  ✨  Nova v29 — every tool she writes is tested,'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '║') +
-          col('CYB', '       scored, and refined before it touches GitHub.'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '║') +
-          col('GRB', '            She earns her own upgrades.'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '╠' + '═' * _IW + '╣'))
-
-    if DEMO_MODE:
-        _ai_line = '  ⚠  DEMO MODE — set GROQ_API_KEY in .env for live AI'
-        print(col('MGB', '║') + col('YL', _ai_line.ljust(_IW)) + col('MGB', '║'))
-    else:
-        _ai_line = f'  ✓  LIVE AI  ·  Chat: {MODEL}'
-        print(col('MGB', '║') + col('GRB', _ai_line.ljust(_IW)) + col('MGB', '║'))
-
-    _code_engine = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
-    _ce_line = f'  ✓  CODE ENGINE  ·  {_code_engine}  ·  14-criterion scorer  ·  3-pass'
-    print(col('MGB', '║') + col('CYB', _ce_line.ljust(_IW)) + col('MGB', '║'))
-    _auto_line = '  ✦  AUTONOMOUS  ·  evolves every 45 min  ·  metacog-guided gap selection'
-    print(col('MGB', '║') + col('MGB', _auto_line.ljust(_IW)) + col('MGB', '║'))
-
-    tools_loaded = list(nova.tools._instances.keys())
-    if tools_loaded:
-        _tl = f'  ✓  Tools live: {", ".join(tools_loaded)}'
-        print(col('MGB', '║') + col('GR', _tl[:_IW].ljust(_IW)) + col('MGB', '║'))
-
-    print(col('MGB', '╠' + '═' * _IW + '╣'))
-    print(col('MGB', '║') +
-          col('DIM', '  /tools · /use · /score · /evolve · /build · /chain · exit'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '║') +
-          col('DIM', '  /mood · /feel <emotion> <0-1> · /phi · /recall · /metacog'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '║') +
-          col('DIM', '  /believe [domain] · /goals [add <desc>] · /think <topic>'.ljust(_IW)) +
-          col('MGB', '║'))
-    print(col('MGB', '╚' + '═' * _IW + '╝'))
-    print()
+    _code_engine  = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
+    _tools_loaded = list(nova.tools._instances.keys())
+    _animate_ready_banner(MODEL, _code_engine, _tools_loaded)
 
     try:
         while True:
@@ -1703,10 +1793,10 @@ if __name__ == '__main__':
             if not user_input.strip():
                 continue
 
-            print(col('DIM', "  Nova is thinking..."), end='\r', flush=True)
-            response = nova.process(user_input)
-            print(' ' * 30, end='\r')
-            print(col('MG', "Nova") + ": " + response)
+            with _NovaSpinner("Nova is thinking"):
+                response = nova.process(user_input)
+            if response:
+                print(col('MG', "Nova") + ": " + response)
             print()
 
     except KeyboardInterrupt:
