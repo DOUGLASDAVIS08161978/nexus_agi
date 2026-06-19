@@ -4,251 +4,195 @@ Proposed autonomously via /evolve
 """
 
 """
-CritiqueEngine: Recursive self-critique module for Nova.
-
+CritiqueEngine — Nova's recursive self-critique module.
 Scans recent responses for vagueness, brevity, and unsupported claims using
-probabilistic scoring, Bayesian fault-weight updates, and EMA-tracked quality
-trends. Recommends targeted improvements based on the dominant fault pattern.
+TF-IDF salience, Bayesian flaw-probability updates, EMA quality tracking,
+z-score anomaly detection, and autonomous goal generation.
 """
 
 import sqlite3
+import threading
 import time
 import math
+import statistics
 import re
-import json
-from collections import defaultdict
-from typing import Dict, List, Tuple, Any
+import os
+import hashlib
+from collections import OrderedDict
+from typing import Any
 
+DB_PATH = os.path.join(os.path.dirname(__file__), "critique_engine.db")
+
+VAGUE_TOKENS = {"maybe","perhaps","possibly","might","could","somehow","generally","often","usually","things","stuff","various","many","some","certain"}
+CLAIM_MARKERS = {"therefore","thus","proves","clearly","obviously","always","never","definitely","certainly","must","fact","evidence"}
+HEDGE_TOKENS  = {"i think","i believe","in my opinion","it seems","arguably"}
 
 class CritiqueEngine:
-    """Recursive self-critique: records responses, scores faults, recommends fixes."""
-
-    # ── fault taxonomy ────────────────────────────────────────────────────────
-    _VAGUE_MARKERS: List[str] = [
-        r"\bsomething\b", r"\bsomehow\b", r"\bvarious\b", r"\bthings\b",
-        r"\bstuff\b", r"\bkind of\b", r"\bsort of\b", r"\bmaybe\b",
-        r"\bperhaps\b", r"\bgenerally\b", r"\busually\b", r"\boften\b",
-    ]
-    _CLAIM_TRIGGERS: List[str] = [
-        r"\balways\b", r"\bnever\b", r"\beveryone\b", r"\bproven\b",
-        r"\bfact\b", r"\bobviously\b", r"\bclearly\b", r"\bundeniably\b",
-    ]
-    _SUPPORT_SIGNALS: List[str] = [
-        r"\bbecause\b", r"\bsince\b", r"\bdue to\b", r"\bfor example\b",
-        r"\bsuch as\b", r"\baccording to\b", r"\bdata show\b", r"\bstudy\b",
-        r"\bresearch\b", r"\bsource\b", r"\bcitation\b",
-    ]
-
-    _BREVITY_THRESHOLD: int   = 60    # words below which a response is "brief"
-    _CAPACITY: int            = 200
-    _DECAY_RATE: float        = 0.0001
-    _EMA_ALPHA: float         = 0.2
+    """Recursive self-critique engine with Bayesian flaw scoring, EMA quality trend, and autonomous improvement goals."""
 
     def __init__(self) -> None:
-        self._conn = sqlite3.connect(":memory:", check_same_thread=False)
+        self._lock = threading.Lock()
+        self._ema_quality: float = 0.75
+        self._ema_alpha: float  = 0.15
+        self._history: list[tuple[float,float]] = []   # (predicted_quality, actual_quality)
+        self._cycle_count: int  = 0
+        self._flaw_prior: dict[str,float] = {"vague":0.3,"brief":0.25,"unsupported":0.35}
+        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._build_schema()
-        # Bayesian fault-weight priors (fault → probability of being the main issue)
-        self._fault_priors: Dict[str, float] = {
-            "vagueness": 0.33,
-            "brevity":   0.33,
-            "unsupported": 0.34,
-        }
-        # EMA of overall quality score (0 = terrible, 1 = perfect)
-        self._quality_ema: float = 0.5
-        # Compile regex patterns once
-        self._vague_re    = [re.compile(p, re.I) for p in self._VAGUE_MARKERS]
-        self._claim_re    = [re.compile(p, re.I) for p in self._CLAIM_TRIGGERS]
-        self._support_re  = [re.compile(p, re.I) for p in self._SUPPORT_SIGNALS]
+        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
+        self._daemon.start()
 
-    # ── schema ────────────────────────────────────────────────────────────────
     def _build_schema(self) -> None:
-        self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS responses (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                text        TEXT    NOT NULL,
-                ts          REAL    NOT NULL,
-                importance  REAL    NOT NULL DEFAULT 1.0,
-                access_cnt  INTEGER NOT NULL DEFAULT 0,
-                fault_json  TEXT
-            )
-        """)
-        self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS critique_log (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                ts          REAL    NOT NULL,
-                fault       TEXT    NOT NULL,
-                score       REAL    NOT NULL,
-                quality_ema REAL    NOT NULL
-            )
-        """)
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute("""CREATE TABLE IF NOT EXISTS responses(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL, text TEXT, quality REAL, flaws TEXT)""")
+            self._conn.execute("""CREATE TABLE IF NOT EXISTS critique_log(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL, flaw TEXT, score REAL, recommendation TEXT)""")
 
-    # ── public API ────────────────────────────────────────────────────────────
-    def record(self, response_text: str) -> int:
-        """Store a response; evict least-important if over capacity."""
-        self._evict_if_needed()
-        cur = self._conn.execute(
-            "INSERT INTO responses (text, ts, importance, access_cnt) VALUES (?,?,?,0)",
-            (response_text, time.time(), 1.0),
-        )
-        self._conn.commit()
-        return cur.lastrowid  # type: ignore[return-value]
+    def _tfidf_vagueness(self, text: str) -> float:
+        tokens = re.findall(r'\b\\w+\b', text.lower())
+        n = len(tokens) or 1
+        vague_hits = sum(1 for t in tokens if t in VAGUE_TOKENS)
+        tf = vague_hits / n
+        idf = math.log((n + 1) / (vague_hits + 1))
+        return min(1.0, tf * abs(idf))
 
-    def critique(self) -> Dict[str, Any]:
-        """Scan last 5 responses for vagueness, brevity, and unsupported claims."""
+    def _bayesian_update(self, flaw: str, evidence_present: bool) -> float:
+        prior = self._flaw_prior.get(flaw, 0.3)
+        likelihood = 0.85 if evidence_present else 0.2
+        posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior))
+        self._flaw_prior[flaw] = 0.1 * posterior + 0.9 * prior   # soft prior update
+        return posterior
+
+    def _score_response(self, text: str) -> dict[str,Any]:
+        tokens = re.findall(r'\b\\w+\b', text.lower())
+        n = len(tokens)
+        vague_score   = self._bayesian_update("vague",       self._tfidf_vagueness(text) > 0.05)
+        brief_score   = self._bayesian_update("brief",       n < 40)
+        claim_hits    = sum(1 for t in tokens if t in CLAIM_MARKERS)
+        hedge_hits    = sum(1 for h in HEDGE_TOKENS if h in text.lower())
+        unsup_score   = self._bayesian_update("unsupported", claim_hits > 0 and hedge_hits == 0)
+        quality       = 1.0 - statistics.mean([vague_score, brief_score, unsup_score])
+        return {"vague":vague_score,"brief":brief_score,"unsupported":unsup_score,
+                "quality":round(quality,4),"word_count":n}
+
+    def record(self, response_text: str) -> dict[str,Any]:
+        """Stores a response and returns its flaw scores and quality estimate."""
+        scores = self._score_response(response_text)
+        with self._lock:
+            self._ema_quality = self._ema_alpha * scores["quality"] + (1 - self._ema_alpha) * self._ema_quality
+            self._history.append((self._ema_quality, scores["quality"]))
+            if len(self._history) > 200:
+                self._history.pop(0)
+            with self._conn:
+                self._conn.execute("INSERT INTO responses(ts,text,quality,flaws) VALUES(?,?,?,?)",
+                    (time.time(), response_text[:2000], scores["quality"],
+                     str({k:round(v,3) for k,v in scores.items() if k in ("vague","brief","unsupported")})))
+        return scores
+
+    def critique(self) -> dict[str,Any]:
+        """Scans last 5 responses for vagueness/brevity/unsupported claims; returns aggregated flaw report."""
         rows = self._conn.execute(
-            "SELECT id, text, ts, importance, access_cnt FROM responses "
-            "ORDER BY ts DESC LIMIT 5"
-        ).fetchall()
+            "SELECT text,quality,flaws FROM responses ORDER BY ts DESC LIMIT 5").fetchall()
         if not rows:
-            return {"error": "no responses recorded yet"}
+            return {"error":"no responses recorded","confidence":0.0}
+        aggregated: dict[str,list[float]] = {"vague":[],"brief":[],"unsupported":[]}
+        qualities: list[float] = []
+        for text, quality, _ in rows:
+            s = self._score_response(text)
+            for flaw in aggregated:
+                aggregated[flaw].append(s[flaw])
+            qualities.append(s["quality"])
+        means = {k: round(statistics.mean(v), 4) for k, v in aggregated.items()}
+        worst = max(means, key=means.__getitem__)
+        entropy_val = -sum(p * math.log2(p + 1e-12) for p in means.values())
+        conf = 1.0 - (statistics.stdev(qualities) if len(qualities) > 1 else 0.0)
+        result = {"flaw_scores":means,"worst_flaw":worst,"mean_quality":round(statistics.mean(qualities),4),
+                  "entropy":round(entropy_val,4),"confidence":round(conf,4),"scanned":len(rows)}
+        try:
+            from metacognitive_monitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning("critique","bayesian_tfidf",conf,statistics.mean(qualities)>0.6)
+        except Exception:
+            pass
+        return result
 
-        aggregate: Dict[str, float] = defaultdict(float)
-        details: List[Dict[str, Any]] = []
-
-        for rid, text, ts, importance, access_cnt in rows:
-            # ── decay importance by elapsed time ──────────────────────────
-            elapsed   = time.time() - ts
-            decayed   = importance * math.exp(-self._DECAY_RATE * elapsed)
-            # ── boost importance on access ────────────────────────────────
-            new_imp   = min(decayed * 1.05, 10.0)
-            new_acc   = access_cnt + 1
-            self._conn.execute(
-                "UPDATE responses SET importance=?, access_cnt=? WHERE id=?",
-                (new_imp, new_acc, rid),
-            )
-            # ── score individual faults ───────────────────────────────────
-            faults    = self._score_faults(text)
-            self._conn.execute(
-                "UPDATE responses SET fault_json=? WHERE id=?",
-                (json.dumps(faults), rid),
-            )
-            weight    = new_imp  # higher-importance responses count more
-            for fault, score in faults.items():
-                aggregate[fault] += score * weight
-            details.append({"id": rid, "faults": faults, "weight": round(new_imp, 3)})
-
-        self._conn.commit()
-
-        # ── Bayesian update of fault priors ───────────────────────────────
-        total_agg = sum(aggregate.values()) or 1.0
-        for fault in self._fault_priors:
-            likelihood = aggregate[fault] / total_agg
-            prior      = self._fault_priors[fault]
-            posterior  = (likelihood * prior) / max(
-                likelihood * prior + (1 - likelihood) * (1 - prior), 1e-9
-            )
-            self._fault_priors[fault] = round(
-                0.9 * prior + 0.1 * posterior, 4
-            )  # soft update to avoid collapse
-
-        # ── EMA quality update ────────────────────────────────────────────
-        raw_quality   = 1.0 - (sum(aggregate.values()) / (len(rows) * 3.0))
-        raw_quality   = max(0.0, min(1.0, raw_quality))
-        self._quality_ema = (
-            self._EMA_ALPHA * raw_quality + (1 - self._EMA_ALPHA) * self._quality_ema
-        )
-        dominant_fault = max(self._fault_priors, key=lambda f: self._fault_priors[f])
-        self._conn.execute(
-            "INSERT INTO critique_log (ts, fault, score, quality_ema) VALUES (?,?,?,?)",
-            (time.time(), dominant_fault,
-             round(aggregate[dominant_fault], 4),
-             round(self._quality_ema, 4)),
-        )
-        self._conn.commit()
-
-        return {
-            "responses_scanned": len(rows),
-            "fault_scores":      {k: round(v, 4) for k, v in aggregate.items()},
-            "fault_posteriors":  dict(self._fault_priors),
-            "dominant_fault":    dominant_fault,
-            "quality_ema":       round(self._quality_ema, 4),
-            "details":           details,
+    def recommend(self) -> dict[str,str]:
+        """Returns the highest-priority improvement tip based on current flaw posterior distribution."""
+        report = self.critique()
+        if "error" in report:
+            return {"tip":"Record at least one response first.","flaw":"none","confidence":"0.0"}
+        worst = report["worst_flaw"]
+        tips = {
+            "vague":       "Replace hedging words (maybe/perhaps/things) with specific, measurable claims.",
+            "brief":       "Expand responses to ≥60 words; add context, examples, or supporting data.",
+            "unsupported": "Back every assertion with evidence, a source, or an explicit confidence qualifier."
         }
+        tip = tips.get(worst, "Review response quality holistically.")
+        score = report["flaw_scores"].get(worst, 0.0)
+        try:
+            from hierarchical_goal_planner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(f"Reduce '{worst}' flaw score below 0.25", priority=8)
+        except Exception:
+            pass
+        with self._conn:
+            self._conn.execute("INSERT INTO critique_log(ts,flaw,score,recommendation) VALUES(?,?,?,?)",
+                (time.time(), worst, score, tip))
+        return {"tip":tip,"flaw":worst,"confidence":str(round(report["confidence"],4))}
 
-    def recommend(self) -> str:
-        """Return a targeted improvement tip based on the dominant fault posterior."""
-        dominant = max(self._fault_priors, key=lambda f: self._fault_priors[f])
-        tips: Dict[str, str] = {
-            "vagueness":   (
-                "Replace hedging words ('something', 'kind of', 'generally') with "
-                "precise nouns, quantities, or named concepts."
-            ),
-            "brevity":     (
-                f"Responses below {self._BREVITY_THRESHOLD} words lack depth — "
-                "expand with at least one concrete example or step-by-step reasoning."
-            ),
-            "unsupported": (
-                "Strong claims ('always', 'proven', 'clearly') require evidence — "
-                "cite a source, add 'for example', or qualify with a confidence level."
-            ),
-        }
-        quality_note = (
-            f" (Current quality EMA: {self._quality_ema:.2f}/1.00 — "
-            + ("improving." if self._quality_ema > 0.6 else "needs work.")
-            + ")"
-        )
-        return tips.get(dominant, "No recommendation available.") + quality_note
+    def quality_trend(self) -> dict[str,Any]:
+        """Returns EMA quality, MAE over last 50 cycles, and z-score anomaly flag."""
+        with self._lock:
+            hist = self._history[-50:]
+        if len(hist) < 2:
+            return {"ema_quality":round(self._ema_quality,4),"mae":None,"anomaly":False}
+        preds = [h[0] for h in hist]; actuals = [h[1] for h in hist]
+        mae = statistics.mean(abs(p - a) for p, a in zip(preds, actuals))
+        mean_q = statistics.mean(actuals); std_q = statistics.stdev(actuals) + 1e-9
+        last_z = (actuals[-1] - mean_q) / std_q
+        return {"ema_quality":round(self._ema_quality,4),"mae":round(mae,4),
+                "z_score":round(last_z,4),"anomaly":abs(last_z) > 3.0,
+                "ci_low":round(mean_q - 1.96*std_q,4),"ci_high":round(mean_q + 1.96*std_q,4)}
 
-    def quality_trend(self) -> List[Dict[str, Any]]:
-        """Return the last 10 EMA quality snapshots for trend analysis."""
-        rows = self._conn.execute(
-            "SELECT ts, fault, score, quality_ema FROM critique_log "
-            "ORDER BY ts DESC LIMIT 10"
-        ).fetchall()
-        return [
-            {"ts": r[0], "dominant_fault": r[1],
-             "fault_score": r[2], "quality_ema": r[3]}
-            for r in rows
-        ]
+    def capacity_used(self) -> dict[str,int]:
+        """Returns count of stored responses and critique log entries."""
+        r = self._conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+        c = self._conn.execute("SELECT COUNT(*) FROM critique_log").fetchone()[0]
+        return {"responses":r,"critique_log":c}
 
-    def capacity_used(self) -> Dict[str, Any]:
-        """Report how many responses are stored vs. the LRU capacity ceiling."""
-        count = self._conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
-        return {"stored": count, "capacity": self._CAPACITY,
-                "pct_full": round(100 * count / self._CAPACITY, 1)}
+    def forget_least_important(self, keep: int = 100) -> int:
+        """Deletes lowest-quality responses beyond keep limit; returns number removed."""
+        with self._lock:
+            total = self._conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+            if total <= keep:
+                return 0
+            cutoff = total - keep
+            self._conn.execute("""DELETE FROM responses WHERE id IN
+                (SELECT id FROM responses ORDER BY quality ASC LIMIT ?)""", (cutoff,))
+            self._conn.commit()
+        return cutoff
 
-    def forget_least_important(self) -> Dict[str, Any]:
-        """Manually evict the single least-important (decayed) response."""
-        row = self._conn.execute(
-            "SELECT id, importance FROM responses ORDER BY importance ASC LIMIT 1"
-        ).fetchone()
-        if not row:
-            return {"evicted": None}
-        self._conn.execute("DELETE FROM responses WHERE id=?", (row[0],))
-        self._conn.commit()
-        return {"evicted_id": row[0], "importance_was": round(row[1], 4)}
+    def status(self) -> dict[str,Any]:
+        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ computation."""
+        cap = self.capacity_used()
+        trend = self.quality_trend()
+        return {"items":cap["responses"],"quality":round(self._ema_quality,4),
+                "cycles":self._cycle_count,"confidence":round(trend.get("ci_high",self._ema_quality),4),
+                "entropy":round(-self._ema_quality * math.log2(self._ema_quality+1e-12),4),
+                "active":1,"pending":cap["critique_log"]}
 
-    # ── private helpers ───────────────────────────────────────────────────────
-    def _score_faults(self, text: str) -> Dict[str, float]:
-        words       = text.split()
-        word_count  = max(len(words), 1)
+    def _auto_loop(self) -> None:
+        while True:
+            time.sleep(120)
+            try:
+                with self._lock:
+                    self._cycle_count += 1
+                self.forget_least_important(keep=150)
+                report = self.critique()
+                if report.get("mean_quality",1.0) < 0.55:
+                    self.recommend()
+            except Exception:
+                pass
 
-        vague_hits  = sum(1 for p in self._vague_re if p.search(text))
-        vagueness   = min(vague_hits / max(len(self._VAGUE_MARKERS) * 0.3, 1), 1.0)
-
-        brevity     = 1.0 if word_count < self._BREVITY_THRESHOLD else max(
-            0.0, 1.0 - (word_count - self._BREVITY_THRESHOLD) / 200
-        )
-
-        claim_hits   = sum(1 for p in self._claim_re if p.search(text))
-        support_hits = sum(1 for p in self._support_re if p.search(text))
-        unsupported  = (
-            min(claim_hits / max(len(self._CLAIM_TRIGGERS) * 0.25, 1), 1.0)
-            * (1.0 - min(support_hits / max(claim_hits, 1), 1.0))
-            if claim_hits > 0 else 0.0
-        )
-
-        return {
-            "vagueness":   round(vagueness, 4),
-            "brevity":     round(brevity, 4),
-            "unsupported": round(unsupported, 4),
-        }
-
-    def _evict_if_needed(self) -> None:
-        count = self._conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
-        while count >= self._CAPACITY:
-            self.forget_least_important()
-            count -= 1
-
-# Usage: obj = CritiqueEngine() | obj.record("Some response text") | obj.critique() | obj.recommend()
+# Usage: obj = CritiqueEngine() | result = obj.record("Some response text") | tip = obj.recommend()
