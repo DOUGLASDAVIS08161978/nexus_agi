@@ -72,13 +72,58 @@ def _load_env_v29() -> None:
                 os.environ[_k] = _v
 _load_env_v29()
 
-# Code generation uses the best available 70B model.
-# llama-3.3-70b-versatile is the only confirmed-live large model on Groq free tier.
-# Emergency pass uses llama-3.1-8b-instant (the chat model) — always available,
-# smaller but guaranteed to produce syntactically valid Python.
-CODEGEN_MODEL          = "llama-3.3-70b-versatile"
-CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"    # chat model — always live
+# Code generation — priority order:
+#   1. Claude Sonnet (Anthropic)  — when ANTHROPIC_API_KEY is set in .env
+#   2. llama-3.3-70b-versatile    — Groq free tier fallback
+#   3. llama-3.1-8b-instant       — guaranteed-live emergency fallback
+CLAUDE_CODEGEN_MODEL   = "claude-sonnet-4-6"          # best code quality, no rate drama
+CODEGEN_MODEL          = "llama-3.3-70b-versatile"    # Groq fallback
+CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"       # emergency — always live
 CODEGEN_MODELS         = [CODEGEN_MODEL]
+
+
+def _claude_codegen(system_prompt: str, user_prompt: str,
+                    temp: float = 0.70, max_tokens: int = 4000) -> str:
+    """
+    Call Anthropic Claude API for code generation.
+    Returns the generated text, or a '[Claude error: ...]' string on failure.
+    Uses urllib only — no anthropic package required.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return ""
+    import urllib.request
+    payload = json.dumps({
+        "model":       CLAUDE_CODEGEN_MODEL,
+        "max_tokens":  max_tokens,
+        "temperature": temp,
+        "system":      system_prompt,
+        "messages":    [{"role": "user", "content": user_prompt}],
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key":         api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type":      "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read())
+            return data["content"][0]["text"]
+    except urllib.error.HTTPError as e:        # type: ignore[attr-defined]
+        body = e.read().decode()[:300]
+        return f"[Claude error: {e.code} - {body}]"
+    except Exception as ex:
+        return f"[Claude error: {ex}]"
+
+
+def _using_claude() -> bool:
+    """True when ANTHROPIC_API_KEY is configured."""
+    return bool(os.getenv("ANTHROPIC_API_KEY", ""))
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
 EMOTION_INJECT_THRESHOLD = 0.65
@@ -238,6 +283,21 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "marker": "schedule() returns topologically-sorted task list. Blocked tasks (unmet deps) are excluded from next_task().",
         },
     }
+
+    def _gen_code(self, system_prompt: str, user_content: str,
+                  temp: float = 0.70) -> str:
+        """
+        Generate code using the best available engine.
+        Claude Sonnet (4000 tokens) when ANTHROPIC_API_KEY is set;
+        Groq llama-3.3-70b-versatile (1400 tokens) otherwise.
+        """
+        if _using_claude():
+            return _claude_codegen(system_prompt, user_content,
+                                   temp=temp, max_tokens=4000)
+        return safe_chat(CODEGEN_MODEL, [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_content},
+        ], temp=temp, mt=1400)
 
     def _enrich_gap(self, gap: str) -> str:
         """
@@ -482,20 +542,37 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         # Enrich the gap with a precise algorithmic spec if one exists
         enriched_gap = self._enrich_gap(gap)
 
+        engine_label = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
+        user_content = f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"
+
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
             if n > 1:
                 safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
                                      f"(temp={temp})..."))
 
-            raw     = safe_chat(CODEGEN_MODEL, [
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content":
-                 f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
-            ], temp=temp, mt=1400)
+            raw     = self._gen_code(system_prompt, user_content, temp=temp)
             raw_str = raw or ""
 
-            # Hard stop: bad API key — sleeping won't help
+            # Claude auth error — bad ANTHROPIC_API_KEY
+            if '[Claude error: 401' in raw_str or 'authentication_error' in raw_str:
+                safe_print(col('RD',
+                    "  ✗ ANTHROPIC_API_KEY is invalid.\n"
+                    "  → Check your key at console.anthropic.com\n"
+                    "  → Update ANTHROPIC_API_KEY in ~/nexus_agi/.env\n"
+                    "  → Restart Nova"))
+                break
+
+            # Claude rate/credit error — fall back to Groq for this pass
+            if '[Claude error:' in raw_str:
+                safe_print(col('YL', f"  ↻ Claude unavailable (pass {n}) — falling back to Groq..."))
+                raw     = safe_chat(CODEGEN_MODEL, [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_content},
+                ], temp=temp, mt=1400)
+                raw_str = raw or ""
+
+            # Groq auth error
             if any(e in raw_str for e in ('401', 'Invalid API Key', 'invalid_api_key',
                                            'Authentication', 'insufficient_quota')):
                 safe_print(col('RD',
@@ -505,17 +582,16 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "  → Restart Nova"))
                 break
 
-            # Rate limit → wait for the quota window to reset, then retry same model
+            # Groq rate limit → wait and retry
             if any(e in raw_str for e in ('429', 'Rate limit', 'rate_limit_exceeded',
                                            'Too Many Requests', 'tokens per minute')):
-                wait = 25 + attempt * 10   # 25s, 35s, 45s — quota resets in ~60s
+                wait = 25 + attempt * 10
                 safe_print(col('YL',
                     f"  ↻ Rate limit (pass {n}) — waiting {wait}s for quota reset..."))
                 time.sleep(wait)
                 raw     = safe_chat(CODEGEN_MODEL, [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content":
-                     f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
+                    {"role": "user",   "content": user_content},
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
                 if any(e in raw_str for e in ('429', 'Rate limit', 'Too Many Requests')):
@@ -705,8 +781,11 @@ class NovaCore29(NovaCore28):
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
-            f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · 3-pass · rate-limit safe\n"
-            f"       Emergency fallback: {CODEGEN_MODEL_FALLBACK}"))
+            f"  ✓  Code Engine v29  — "
+            f"{'Claude ' + CLAUDE_CODEGEN_MODEL if _using_claude() else CODEGEN_MODEL}"
+            f" · sandbox · 3-pass · scoring\n"
+            f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}",
+            'GRB' if _using_claude() else 'GR'))
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
@@ -1093,7 +1172,8 @@ if __name__ == '__main__':
     print(col('DIM', '\n  /tools · /use · /score · /evolve · /build · /chain · exit'))
     print(col('DIM', '  /mood · /feel <emotion> <0-1> · /phi · /recall · /metacog'))
     print(col('DIM', '  /believe [domain] · /goals [add <desc>]'))
-    print(col('DIM', f'  Chat: {MODEL}  |  Code: {CODEGEN_MODEL}'))
+    _code_engine = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
+    print(col('DIM', f'  Chat: {MODEL}  |  Code: {_code_engine}'))
     print(col('MG', '═' * W + '\n'))
 
     try:
