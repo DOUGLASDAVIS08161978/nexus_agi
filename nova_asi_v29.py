@@ -78,9 +78,7 @@ _load_env_v29()
 # smaller but guaranteed to produce syntactically valid Python.
 CODEGEN_MODEL          = "llama-3.3-70b-versatile"
 CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"    # chat model — always live
-CODEGEN_MODELS         = [CODEGEN_MODEL]            # single primary; extended at runtime
-CODEGEN_MODEL          = CODEGEN_MODELS[0]   # kept for display / legacy refs
-CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1]   # kept for emergency pass compat
+CODEGEN_MODELS         = [CODEGEN_MODEL]
 
 # Emotional resonance: inject into LLM context when intensity crosses this threshold.
 EMOTION_INJECT_THRESHOLD = 0.65
