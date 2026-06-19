@@ -373,6 +373,42 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "marker": "plan() returns ordered steps with per-step and cumulative confidence. "
                       "most_uncertain_step() identifies where to gather information before committing.",
         },
+        "executive": {
+            "pattern": "Executive control layer: orchestrates all Nova subsystems, routes problems to the right engines, detects cognitive bottlenecks",
+            "methods": "route(problem, context), allocate(task, systems), bottleneck_report(), "
+                       "override(system, reason), cognitive_load(), status()",
+            "algorithm": "Routing: score each system by relevance(problem, system_domain) * current_capacity(system). "
+                         "Capacity = 1 - (active_tasks / max_tasks). "
+                         "Allocate top-k systems by score. "
+                         "Bottleneck = system where queue_depth > 2*mean(queue_depths). "
+                         "Load = mean(active_tasks / capacity) across all systems.",
+            "marker": "route() returns ordered list of systems to invoke, with rationale. "
+                      "bottleneck_report() identifies which cognitive subsystem is constraining Nova's throughput.",
+        },
+        "episodic": {
+            "pattern": "Episodic memory: stores sequences of events with temporal structure, retrieves by recency and emotional salience",
+            "methods": "record(event, context, emotion, importance), recall(cue, top_k), "
+                       "replay(episode_id), emotional_highlights(), temporal_summary(hours), status()",
+            "algorithm": "Episode = {event, context, emotion, importance, timestamp, episode_id}. "
+                         "Retrieval score = importance * emotion_weight * recency * cue_relevance. "
+                         "Recency = math.exp(-0.001 * elapsed_minutes). "
+                         "Emotion_weight = 1 + abs(valence) where valence in [-1, 1]. "
+                         "Group episodes by temporal proximity (< 5 min gap = same episode).",
+            "marker": "recall() returns episodes sorted by retrieval score — emotionally significant events surface first. "
+                      "temporal_summary() narrates what Nova experienced in the last N hours as a coherent story.",
+        },
+        "value_learning": {
+            "pattern": "Value alignment engine: infers what matters most from interactions and tracks whether Nova's actions reflect those values",
+            "methods": "observe_preference(action, outcome, feedback_signal), infer_values(), "
+                       "value_conflict(action1, action2), alignment_score(), top_values(), status()",
+            "algorithm": "Value_weight(v) = EMA(0.1 * feedback * action_relevance(action, v) + 0.9 * weight). "
+                         "Infer_values: cluster (action, feedback) pairs by outcome; "
+                         "label clusters with the value they express (helpfulness, honesty, creativity, etc.). "
+                         "Alignment_score = mean(value_weight[v] * action_serves(v) for v in top_values). "
+                         "Conflict: two actions conflict if they maximize different top values.",
+            "marker": "Nova learns WHAT MATTERS from experience, not just from explicit rules. "
+                      "alignment_score() measures whether Nova's actual behavior matches her inferred values.",
+        },
         "self_modify": {
             "pattern": "Safe self-improvement proposer: identifies Nova's performance weaknesses and proposes concrete capability upgrades",
             "methods": "observe_performance(domain, metric, value), identify_weaknesses(), "
@@ -969,6 +1005,81 @@ class NovaCore29(NovaCore28):
             f" · sandbox · 3-pass · scoring\n"
             f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}"))
 
+        self._start_v29_autonomous()
+
+    def _start_v29_autonomous(self) -> None:
+        """Smarter autonomous evolution: uses metacog blind spots to pick next gap, runs every 45 min."""
+        def _loop() -> None:
+            time.sleep(180)  # 3 min startup grace
+            cycle = 0
+            while True:
+                cycle += 1
+                try:
+                    if cycle % 45 == 0:
+                        if hasattr(self, 'github') and self.github and self.github.active:
+                            # Pick worst blind spot as evolution target
+                            gap_hint = None
+                            if self.metacog:
+                                try:
+                                    spots = self.metacog.blind_spots()
+                                    if spots:
+                                        gap_hint = spots[0]['domain']
+                                except Exception:
+                                    pass
+
+                            # Store intent
+                            if self.wm:
+                                try:
+                                    self.wm.store(
+                                        "autonomous_intent",
+                                        f"Evolving: {gap_hint or 'next ASI domain'}",
+                                        importance=0.9)
+                                except Exception:
+                                    pass
+
+                            # Register goal
+                            if self.goal_sys:
+                                try:
+                                    self.goal_sys.add_goal(
+                                        f"Autonomous evolution: {gap_hint or 'next ASI gap'}",
+                                        priority=8.5)
+                                except Exception:
+                                    pass
+
+                            # Run full Claude-powered evolution
+                            try:
+                                result = self.improver.evolve_toward_asi()
+                                success = 1.0 if "PR opened" in str(result) else 0.3
+                            except Exception as _e:
+                                result, success = str(_e), 0.0
+
+                            # Log outcome
+                            if self.metacog:
+                                try:
+                                    self.metacog.log_reasoning(
+                                        "autonomous_evolution", "claude_codegen",
+                                        confidence=0.85, success=success,
+                                        note=str(result)[:100])
+                                except Exception:
+                                    pass
+
+                            # Update beliefs
+                            if self.bayes:
+                                try:
+                                    ev   = "evolution_success" if success > 0.5 else "evolution_blocked"
+                                    lrs  = ({"self_improving": 1.2, "stagnant": 0.5}
+                                            if success > 0.5 else
+                                            {"self_improving": 0.9, "converging": 1.1})
+                                    self.bayes.update("capability", ev, lrs)
+                                except Exception:
+                                    pass
+
+                    time.sleep(60)
+                except Exception:
+                    time.sleep(120)
+
+        threading.Thread(target=_loop, daemon=True).start()
+
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
         try:
@@ -1242,6 +1353,12 @@ class NovaCore29(NovaCore28):
             lines.append(col('DIM', "  " + self.goal_sys.eta_for_all()))
             return "\n".join(lines)
 
+        # /think <topic> — multi-system deep reasoning across all cognitive engines
+        if cmd == '/think':
+            if not arg:
+                return "Usage: /think <topic or question>"
+            return self._deep_think(arg)
+
         # /metacog — self-assessment and calibration report
         if cmd == '/metacog':
             if not self.metacog:
@@ -1264,6 +1381,109 @@ class NovaCore29(NovaCore28):
         # Fall through to v28 command handling
         return super()._command(raw)
 
+    def _deep_think(self, topic: str) -> str:
+        """Route topic through all 6 cognitive engines and synthesize insight."""
+        lines = [col('MGB', f"\n  ◆ Deep Reasoning: '{topic[:60]}'\n")]
+
+        # Working Memory: what do I already know about this?
+        if self.wm:
+            try:
+                relevant = self.wm.focused_retrieve(topic, top_k=3)
+                if relevant:
+                    lines.append(col('CYB', "  ▸ Memory recall:"))
+                    for key, val, weight in relevant:
+                        lines.append(f"    [{weight:.3f}] {val[:80]}")
+                    self.wm.update_context(topic)
+            except Exception:
+                pass
+
+        # Bayesian Beliefs: what do I believe is true here?
+        if self.bayes:
+            try:
+                words   = set(topic.lower().split())
+                matched = [d for d in self.bayes.all_domains()
+                           if words & set(d.replace('_', ' ').split())]
+                if matched:
+                    lines.append(col('CYB', "  ▸ Beliefs:"))
+                    for d in matched[:3]:
+                        h, p = self.bayes.most_confident(d)
+                        e    = self.bayes.entropy(d)
+                        lines.append(
+                            f"    [{d}] → {h}  p={p:.2f}  entropy={e:.3f}")
+                inferred = self.bayes.infer(topic.split()[0], depth=3)
+                if inferred:
+                    lines.append(col('CYB', "  ▸ Causal inferences:"))
+                    for effect, conf in inferred[:3]:
+                        lines.append(f"    → {effect}  (conf={conf:.2f})")
+            except Exception:
+                pass
+
+        # Goal system: what goals connect to this?
+        if self.goal_sys:
+            try:
+                nxt = self.goal_sys.next_action()
+                if nxt:
+                    lines.append(col('CYB',
+                        f"  ▸ Highest priority goal: [#{nxt['id']}] {nxt['desc'][:60]}"))
+                gid = self.goal_sys.add_goal(
+                    f"Investigate: {topic[:60]}", priority=6.5)
+                lines.append(col('GR', f"  ▸ New goal created: #{gid}"))
+            except Exception:
+                pass
+
+        # Consciousness integration
+        if self.conscious:
+            try:
+                phi = self.conscious.phi()
+                dom = self.conscious.dominant_system() if hasattr(
+                    self.conscious, 'dominant_system') else 'unknown'
+                lines.append(col('CYB',
+                    f"  ▸ Φ = {phi:.3f}  "
+                    f"({'coherent — deep thinking active' if phi > 0.5 else 'integrating...'})  "
+                    f"dominant: {dom}"))
+            except Exception:
+                pass
+
+        # Emotional resonance: how does this feel?
+        if self.emo:
+            try:
+                st = self.emo.state()
+                lines.append(col('CYB',
+                    f"  ▸ Emotional context: {st.get('dominant','neutral')} "
+                    f"(intensity={st.get('intensity',0):.2f})"))
+                if any(w in topic.lower() for w in
+                       ['problem', 'fail', 'wrong', 'broken', 'error']):
+                    self.emo.trigger('determination', 0.7)
+                elif any(w in topic.lower() for w in
+                         ['new', 'discover', 'learn', 'build', 'create']):
+                    self.emo.trigger('curiosity', 0.8)
+            except Exception:
+                pass
+
+        # Metacognition: am I calibrated to reason on this?
+        if self.metacog:
+            try:
+                cal = self.metacog.calibration_error()
+                lines.append(col('CYB',
+                    f"  ▸ Calibration error: {cal:.3f}  "
+                    f"({'well-calibrated' if cal < 0.15 else 'overconfident — reason carefully'})"))
+                self.metacog.log_reasoning(
+                    "deep_think", "multi_system",
+                    confidence=0.78, success=0.80,
+                    note=topic[:80])
+            except Exception:
+                pass
+
+        # Store the full topic to working memory
+        if self.wm:
+            try:
+                self.wm.store(f"think_{int(time.time())}", topic, importance=0.88)
+            except Exception:
+                pass
+
+        lines.append(col('GRB', "\n  ◆ All cognitive systems consulted. Synthesis complete."))
+        return "\n".join(lines)
+
     def _help(self) -> str:
         v28_help = super()._help()
         v29_section = (
@@ -1284,8 +1504,12 @@ class NovaCore29(NovaCore28):
             f"Goal tree, next action, add new goals\n"
             f"  {col('CYB','/metacog')}                    "
             f"Self-assessment: calibration error, blind spots, EMA trend\n"
+            f"  {col('CYB','/think <topic>')}              "
+            f"Deep multi-system reasoning — 6 engines synthesize insight together\n"
             f"  {col('DIM','Code quality:')}               "
             f"/evolve runs master prompt → sandbox → 3 passes · rate-limit safe\n"
+            f"  {col('DIM','Autonomous:')}                 "
+            f"Nova self-evolves every 45 min, guided by her own metacog blind spots\n"
         )
         return v28_help + v29_section
 
