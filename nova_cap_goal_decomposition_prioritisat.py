@@ -4,9 +4,8 @@ Proposed autonomously via /evolve
 """
 
 """
-GoalOrchestrator — Bayesian goal decomposition with exponential-decay priority scoring,
-LRU eviction, causal confidence propagation, and live cross-system integration.
-Nova merges this module to plan, prioritise, and act on hierarchical goals in real time.
+GoalOrchestrator — Bayesian goal decomposition with exponential decay, LRU eviction,
+and probabilistic prioritisation for Nova's goal-directed cognition layer.
 """
 
 import sqlite3
@@ -14,252 +13,237 @@ import threading
 import math
 import time
 import statistics
-import hashlib
 import json
 import os
+import hashlib
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
 
 class GoalOrchestrator:
-    """Decomposes goals into subgoals, scores by urgency*importance with Bayesian decay,
-    evicts via LRU when capacity exceeded, and surfaces the highest-priority next action."""
+    """
+    Decomposes goals into subgoals, prioritises by urgency*importance with Bayesian
+    confidence weighting, and tracks completion with exponential decay and LRU eviction.
+    """
 
-    _DB = "nova_goal_orchestrator.db"
+    _DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "goal_orchestrator.db")
     _CAPACITY = 200
-    _DECAY_RATE = 1.2e-5          # importance half-life ≈ 16 hours
-    _ACCESS_BOOST = 0.08          # importance grows on each retrieval
-    _MIN_CONFIDENCE = 0.05        # prune causal paths below this threshold
+    _DECAY_RATE = 1.5e-4      # importance half-life ≈ 77 minutes
+    _IMPORTANCE_BOOST = 1.15  # multiplicative boost on each access
+    _PRUNE_THRESHOLD = 0.05   # causal chain paths below this are dropped
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self._DB, check_same_thread=False)
-        self._build_schema()
         self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
-        self._load_cache()
+        self._conn = sqlite3.connect(self._DB, check_same_thread=False)
+        self._init_db()
+        self._load_from_db()
 
-    # ------------------------------------------------------------------ schema
-    def _build_schema(self) -> None:
-        cur = self._conn.cursor()
-        cur.executescript("""
-            CREATE TABLE IF NOT EXISTS goals (
-                gid       TEXT PRIMARY KEY,
-                parent    TEXT,
-                text      TEXT NOT NULL,
-                urgency   REAL DEFAULT 0.5,
-                importance REAL DEFAULT 0.5,
-                confidence REAL DEFAULT 1.0,
-                status    TEXT DEFAULT 'pending',
-                ts        REAL NOT NULL,
-                accesses  INTEGER DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS history (
-                hid       INTEGER PRIMARY KEY AUTOINCREMENT,
-                gid       TEXT,
-                event     TEXT,
-                ts        REAL
-            );
-        """)
-        self._conn.commit()
+    # ------------------------------------------------------------------ setup
+    def _init_db(self) -> None:
+        with self._conn:
+            self._conn.execute("""
+                CREATE TABLE IF NOT EXISTS goals (
+                    gid TEXT PRIMARY KEY,
+                    parent_gid TEXT,
+                    description TEXT NOT NULL,
+                    urgency REAL DEFAULT 0.5,
+                    importance REAL DEFAULT 0.5,
+                    confidence REAL DEFAULT 0.5,
+                    completed INTEGER DEFAULT 0,
+                    access_count INTEGER DEFAULT 0,
+                    created_at REAL,
+                    updated_at REAL
+                )""")
 
-    def _load_cache(self) -> None:
-        cur = self._conn.cursor()
-        cur.execute("SELECT gid,parent,text,urgency,importance,confidence,status,ts,accesses FROM goals")
+    def _load_from_db(self) -> None:
+        cur = self._conn.execute(
+            "SELECT gid,parent_gid,description,urgency,importance,confidence,"
+            "completed,access_count,created_at,updated_at FROM goals ORDER BY created_at"
+        )
         for row in cur.fetchall():
-            gid, parent, text, urgency, importance, confidence, status, ts, accesses = row
-            self._cache[gid] = dict(gid=gid, parent=parent, text=text, urgency=urgency,
-                                    importance=importance, confidence=confidence,
-                                    status=status, ts=ts, accesses=accesses)
+            gid, par, desc, urg, imp, conf, comp, acc, cat, uat = row
+            self._cache[gid] = {
+                "gid": gid, "parent_gid": par, "description": desc,
+                "urgency": urg, "importance": imp, "confidence": conf,
+                "completed": bool(comp), "access_count": acc,
+                "created_at": cat, "updated_at": uat
+            }
 
     def _gid(self, text: str) -> str:
-        return hashlib.sha1(text.encode()).hexdigest()[:12]
+        return hashlib.md5(text.encode()).hexdigest()[:12]
 
+    # ------------------------------------------------------------------ decay & eviction
     def _decayed_importance(self, item: Dict[str, Any]) -> float:
-        elapsed = time.time() - item["ts"]
+        elapsed = time.time() - item["updated_at"]
         return item["importance"] * math.exp(-self._DECAY_RATE * elapsed)
 
-    def _priority_score(self, item: Dict[str, Any]) -> float:
-        d_imp = self._decayed_importance(item)
-        return item["urgency"] * d_imp * item["confidence"]
-
-    def _persist(self, item: Dict[str, Any]) -> None:
-        cur = self._conn.cursor()
-        cur.execute("""INSERT OR REPLACE INTO goals
-            (gid,parent,text,urgency,importance,confidence,status,ts,accesses)
-            VALUES (?,?,?,?,?,?,?,?,?)""",
-            (item["gid"], item["parent"], item["text"], item["urgency"],
-             item["importance"], item["confidence"], item["status"],
-             item["ts"], item["accesses"]))
+    def _evict_lru_if_needed(self) -> None:
+        while len(self._cache) > self._CAPACITY:
+            lru_key, _ = next(iter(self._cache.items()))
+            self._cache.pop(lru_key)
+            self._conn.execute("DELETE FROM goals WHERE gid=?", (lru_key,))
         self._conn.commit()
 
-    def _log(self, gid: str, event: str) -> None:
-        self._conn.cursor().execute(
-            "INSERT INTO history (gid,event,ts) VALUES (?,?,?)", (gid, event, time.time()))
+    def _touch(self, gid: str) -> None:
+        if gid not in self._cache:
+            return
+        item = self._cache[gid]
+        item["access_count"] += 1
+        item["importance"] = min(1.0, self._decayed_importance(item) * self._IMPORTANCE_BOOST)
+        item["updated_at"] = time.time()
+        self._cache.move_to_end(gid)
+        self._conn.execute(
+            "UPDATE goals SET access_count=?,importance=?,updated_at=? WHERE gid=?",
+            (item["access_count"], item["importance"], item["updated_at"], gid)
+        )
         self._conn.commit()
 
-    # ------------------------------------------------------------------ public
-    def decompose(self, goal: str, subgoals: List[str],
-                  urgency: float = 0.7, importance: float = 0.8) -> Dict[str, Any]:
-        """Stores goal + subgoals as a causal chain; returns dict of created node IDs."""
+    # ------------------------------------------------------------------ public API
+    def decompose(self, goal: str, subgoals_list: List[str],
+                  urgency: float = 0.5, importance: float = 0.5) -> Dict[str, Any]:
+        """Returns a dict with parent gid and list of child gids after storing the decomposition."""
         with self._lock:
-            parent_id = self._gid(goal)
             now = time.time()
-            root = dict(gid=parent_id, parent=None, text=goal, urgency=urgency,
-                        importance=importance, confidence=1.0,
-                        status="pending", ts=now, accesses=0)
-            self._cache[parent_id] = root
-            self._persist(root)
-            self._log(parent_id, "decomposed")
+            pgid = self._gid(goal)
+            if pgid not in self._cache:
+                parent = {
+                    "gid": pgid, "parent_gid": None, "description": goal,
+                    "urgency": float(urgency), "importance": float(importance),
+                    "confidence": 0.6, "completed": False,
+                    "access_count": 0, "created_at": now, "updated_at": now
+                }
+                self._cache[pgid] = parent
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO goals VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (pgid, None, goal, urgency, importance, 0.6, 0, 0, now, now)
+                )
 
-            # Causal confidence propagates multiplicatively down the chain
-            running_conf = 1.0
-            child_ids: List[str] = []
-            for i, sg in enumerate(subgoals):
-                step_conf = max(1.0 - 0.07 * i, self._MIN_CONFIDENCE)
-                running_conf = round(running_conf * step_conf, 6)
-                if running_conf < self._MIN_CONFIDENCE:
-                    break
-                cid = self._gid(sg)
-                child = dict(gid=cid, parent=parent_id, text=sg,
-                             urgency=round(urgency * (1 - 0.05 * i), 4),
-                             importance=round(importance * running_conf, 4),
-                             confidence=running_conf,
-                             status="pending", ts=now, accesses=0)
-                self._cache[cid] = child
-                self._persist(child)
-                self._log(cid, "created")
-                child_ids.append(cid)
+            child_gids: List[str] = []
+            for idx, sub in enumerate(subgoals_list):
+                # urgency decays slightly for deeper subgoals (causal chain: 0.9^depth)
+                child_urg = round(urgency * (0.9 ** (idx + 1)), 4)
+                child_imp = round(importance * 0.95, 4)
+                child_conf = 0.5
+                cgid = self._gid(f"{pgid}:{sub}")
+                if cgid not in self._cache:
+                    child = {
+                        "gid": cgid, "parent_gid": pgid, "description": sub,
+                        "urgency": child_urg, "importance": child_imp,
+                        "confidence": child_conf, "completed": False,
+                        "access_count": 0, "created_at": now, "updated_at": now
+                    }
+                    self._cache[cgid] = child
+                    self._conn.execute(
+                        "INSERT OR REPLACE INTO goals VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        (cgid, pgid, sub, child_urg, child_imp, child_conf, 0, 0, now, now)
+                    )
+                child_gids.append(cgid)
 
-            self._evict_if_needed()
-
-            try:
-                from HierarchicalGoalPlanner import HierarchicalGoalPlanner as HGP
-                hgp = HGP()
-                hgp.add_goal(goal, priority=int(urgency * 10))
-            except Exception:
-                pass
-
-            return {"root": parent_id, "children": child_ids, "count": len(child_ids) + 1}
+            self._conn.commit()
+            self._evict_lru_if_needed()
+            return {"parent_gid": pgid, "child_gids": child_gids, "total": len(child_gids)}
 
     def prioritise(self) -> List[Dict[str, Any]]:
-        """Returns all pending goals sorted descending by urgency × decayed_importance × confidence."""
+        """Returns all incomplete goals sorted descending by urgency*importance*confidence with decay applied."""
         with self._lock:
-            pending = [v for v in self._cache.values() if v["status"] == "pending"]
-            ranked = sorted(pending, key=self._priority_score, reverse=True)
-            result = []
-            for item in ranked:
-                score = self._priority_score(item)
-                result.append({**item, "priority_score": round(score, 6),
-                                "decayed_importance": round(self._decayed_importance(item), 4)})
-            return result
+            ranked: List[Tuple[float, Dict[str, Any]]] = []
+            for item in self._cache.values():
+                if item["completed"]:
+                    continue
+                dec_imp = self._decayed_importance(item)
+                # Bayesian score: posterior ∝ urgency * decayed_importance * confidence
+                score = item["urgency"] * dec_imp * item["confidence"]
+                if score >= self._PRUNE_THRESHOLD:
+                    ranked.append((score, {**item, "score": round(score, 6),
+                                           "decayed_importance": round(dec_imp, 6)}))
+            ranked.sort(key=lambda x: x[0], reverse=True)
+            return [r[1] for r in ranked]
 
     def next_action(self) -> Optional[Dict[str, Any]]:
-        """Returns the highest-priority incomplete leaf node (no pending children)."""
+        """Returns the highest-priority incomplete leaf subgoal (no children) or None if all complete."""
         with self._lock:
-            pending = {v["gid"]: v for v in self._cache.values() if v["status"] == "pending"}
-            parent_ids = {v["parent"] for v in pending.values() if v["parent"] in pending}
-            leaves = [v for gid, v in pending.items() if gid not in parent_ids]
-            if not leaves:
-                return None
-            best = max(leaves, key=self._priority_score)
-            best["accesses"] += 1
-            best["importance"] = min(1.0, best["importance"] + self._ACCESS_BOOST)
-            self._persist(best)
-            self._cache.move_to_end(best["gid"])
+            parent_gids = {v["parent_gid"] for v in self._cache.values() if v["parent_gid"]}
+            ranked = self.prioritise()
+            for item in ranked:
+                if item["gid"] not in parent_gids:   # leaf node
+                    self._touch(item["gid"])
+                    return item
+            return ranked[0] if ranked else None
 
-            try:
-                from AttentionManager import AttentionManager
-                am = AttentionManager()
-                am.focus_on(best["text"])
-            except Exception:
-                pass
-
-            return {**best, "priority_score": round(self._priority_score(best), 6)}
-
-    def complete(self, goal_text: str) -> Dict[str, Any]:
-        """Marks a goal complete, logs it, and returns Bayesian posterior confidence update."""
+    def complete(self, gid: str) -> Dict[str, Any]:
+        """Marks a goal complete, logs Bayesian confidence update, returns updated item."""
         with self._lock:
-            gid = self._gid(goal_text)
             if gid not in self._cache:
-                return {"error": "goal not found", "gid": gid}
+                return {"error": "gid not found", "gid": gid}
             item = self._cache[gid]
-            item["status"] = "complete"
+            item["completed"] = True
+            # Bayesian update: success observation → confidence posterior rises
             prior = item["confidence"]
-            likelihood = 0.9
-            posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior))
+            likelihood_success = 0.9
+            posterior = (likelihood_success * prior) / (
+                likelihood_success * prior + (1 - likelihood_success) * (1 - prior)
+            )
             item["confidence"] = round(posterior, 6)
-            self._persist(item)
-            self._log(gid, "completed")
-
-            try:
-                from MetacognitiveMonitor import MetacognitiveMonitor
-                mm = MetacognitiveMonitor()
-                mm.log_reasoning("goal_completion", goal_text, item["confidence"], True)
-            except Exception:
-                pass
-
-            return {"gid": gid, "prior_confidence": prior, "posterior_confidence": item["confidence"]}
-
-    def consolidate(self) -> Dict[str, Any]:
-        """Runs EMA smoothing on importance scores and prunes completed goals; returns stats."""
-        with self._lock:
-            ema = 0.5
-            alpha = 0.15
-            pruned = 0
-            for item in list(self._cache.values()):
-                if item["status"] == "complete":
-                    del self._cache[item["gid"]]
-                    pruned += 1
-                    continue
-                d_imp = self._decayed_importance(item)
-                ema = alpha * d_imp + (1 - alpha) * ema
-                item["importance"] = round(min(1.0, ema), 6)
-                self._persist(item)
-
-            scores = [self._priority_score(v) for v in self._cache.values()]
-            mean_score = round(statistics.mean(scores), 6) if scores else 0.0
-            std_score = round(statistics.stdev(scores), 6) if len(scores) > 1 else 0.0
-            return {"remaining": len(self._cache), "pruned": pruned,
-                    "mean_priority": mean_score, "std_priority": std_score}
+            item["updated_at"] = time.time()
+            self._conn.execute(
+                "UPDATE goals SET completed=1,confidence=?,updated_at=? WHERE gid=?",
+                (item["confidence"], item["updated_at"], gid)
+            )
+            self._conn.commit()
+            return {**item}
 
     def capacity_used(self) -> Dict[str, Any]:
-        """Returns current item count, capacity ceiling, and percentage utilisation."""
+        """Returns dict with count, capacity, fill_ratio, and mean decayed importance."""
         with self._lock:
-            used = len(self._cache)
-            pct = round(100 * used / self._CAPACITY, 2)
-            return {"used": used, "capacity": self._CAPACITY, "pct": pct}
+            n = len(self._cache)
+            importances = [self._decayed_importance(v) for v in self._cache.values()]
+            mean_imp = round(statistics.mean(importances), 6) if importances else 0.0
+            std_imp = round(statistics.stdev(importances), 6) if len(importances) > 1 else 0.0
+            return {
+                "items": n,
+                "capacity": self._CAPACITY,
+                "fill_ratio": round(n / self._CAPACITY, 4),
+                "mean_decayed_importance": mean_imp,
+                "std_decayed_importance": std_imp,
+                "confidence": round(mean_imp, 4)
+            }
 
     def forget_least_important(self, n: int = 10) -> List[str]:
-        """Evicts n lowest-priority items from cache and DB; returns list of evicted IDs."""
+        """Evicts the n lowest decayed-importance items and returns their gids."""
         with self._lock:
-            ranked = sorted(self._cache.values(), key=self._priority_score)
+            scored = [(self._decayed_importance(v), k) for k, v in self._cache.items()]
+            scored.sort(key=lambda x: x[0])
             evicted: List[str] = []
-            for item in ranked[:n]:
-                self._conn.cursor().execute("DELETE FROM goals WHERE gid=?", (item["gid"],))
-                del self._cache[item["gid"]]
-                evicted.append(item["gid"])
+            for _, gid in scored[:n]:
+                self._cache.pop(gid, None)
+                self._conn.execute("DELETE FROM goals WHERE gid=?", (gid,))
+                evicted.append(gid)
             self._conn.commit()
             return evicted
 
     def status(self) -> Dict[str, Any]:
-        """Returns health dict for ConsciousnessIntegrator Φ computation."""
-        with self._lock:
-            pending = sum(1 for v in self._cache.values() if v["status"] == "pending")
-            complete = sum(1 for v in self._cache.values() if v["status"] == "complete")
-            scores = [self._priority_score(v) for v in self._cache.values() if v["status"] == "pending"]
-            mean_conf = round(statistics.mean(v["confidence"] for v in self._cache.values()), 4) \
-                if self._cache else 0.0
-            return {"items": len(self._cache), "pending": pending, "complete": complete,
-                    "confidence": mean_conf,
-                    "mean_priority": round(statistics.mean(scores), 4) if scores else 0.0,
-                    "capacity_pct": round(100 * len(self._cache) / self._CAPACITY, 2)}
+        """Returns health dict compatible with ConsciousnessIntegrator Φ computation."""
+        cap = self.capacity_used()
+        ranked = self.prioritise()
+        completed = sum(1 for v in self._cache.values() if v["completed"])
+        total = len(self._cache)
+        scores = [r["score"] for r in ranked]
+        mean_score = round(statistics.mean(scores), 6) if scores else 0.0
+        entropy_val = 0.0
+        if scores:
+            total_s = sum(scores) + 1e-12
+            dist = [s / total_s for s in scores]
+            entropy_val = round(-sum(p * math.log2(p + 1e-12) for p in dist), 4)
+        return {
+            "items": total,
+            "pending": len(ranked),
+            "completed": completed,
+            "confidence": cap["confidence"],
+            "fill_ratio": cap["fill_ratio"],
+            "mean_priority_score": mean_score,
+            "entropy": entropy_val,
+            "active": 1 if ranked else 0
+        }
 
-    # ------------------------------------------------------------------ private
-    def _evict_if_needed(self) -> None:
-        while len(self._cache) > self._CAPACITY:
-            lru_id, _ = next(iter(self._cache.items()))
-            self._conn.cursor().execute("DELETE FROM goals WHERE gid=?", (lru_id,))
-            del self._cache[lru_id]
-        self._conn.commit()
-
-# Usage: obj = GoalOrchestrator() | result = obj.decompose("Launch product", ["Research","Build","Test"])
+# Usage: obj = GoalOrchestrator() | result = obj.decompose("Build AGI", ["Research","Prototype","Evaluate"])
