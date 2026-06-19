@@ -19,6 +19,7 @@ What is new in v29 — Five pillars of code quality:
 """
 
 import os, sys, re, ast, subprocess, tempfile, threading, random, io
+import time, math, statistics, json
 from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime
 from typing import Optional, Tuple, Dict, Any, List
