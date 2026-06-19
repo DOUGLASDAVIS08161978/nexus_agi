@@ -282,6 +282,53 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "algorithm": "Topological sort for dependency order. ETA = sum(estimated_minutes for remaining tasks in order).",
             "marker": "schedule() returns topologically-sorted task list. Blocked tasks (unmet deps) are excluded from next_task().",
         },
+        "counterfactual": {
+            "pattern": "Counterfactual reasoner that asks 'What if X had not occurred?' and estimates outcome divergence",
+            "methods": "record_event(event,outcome,context), counterfactual(event,alt_condition), divergence_score(e1,e2), most_pivotal(), status()",
+            "algorithm": "Divergence = |outcome_actual - outcome_predicted_without_X|. Weight by recency: w = exp(-0.01*days_ago). "
+                         "Store (event, condition, outcome, context) in SQLite. Pivotal events = highest divergence score.",
+            "marker": "counterfactual() returns estimated alternate outcome as float plus human-readable explanation. "
+                      "most_pivotal() identifies which past events had the largest causal impact.",
+        },
+        "hypothesis": {
+            "pattern": "Scientific hypothesis generator that proposes, ranks, and tracks falsifiable predictions",
+            "methods": "generate(observation, domain), rank_hypotheses(), test(hypothesis_id, result), confidence(hypothesis_id), status()",
+            "algorithm": "Score = prior_confidence * novelty_weight * explanatory_power. "
+                         "Bayesian update on test: posterior = P(obs|H)*prior / P(obs). "
+                         "Novelty = 1 / (1 + similar_hypotheses_count). Prune hypotheses with posterior < 0.05.",
+            "marker": "generate() returns 3 ranked hypotheses with confidence scores. "
+                      "confidence() rises toward 1.0 as supporting evidence accumulates, falls when falsified.",
+        },
+        "abstraction": {
+            "pattern": "Concept abstraction engine that finds hierarchical patterns across observations",
+            "methods": "observe(instance, features_dict), abstract(top_k), concept_hierarchy(), similarity(a, b), status()",
+            "algorithm": "Cluster by Jaccard similarity of feature sets: sim(A,B) = |A∩B|/|A∪B|. "
+                         "Merge clusters when sim > 0.6. Abstract concept = most frequent features across cluster members. "
+                         "Hierarchy depth: leaf=instance, mid=cluster, root=universal pattern.",
+            "marker": "abstract() returns concepts sorted by generality (how many instances they cover). "
+                      "similarity() returns Jaccard float. concept_hierarchy() shows tree as nested dict.",
+        },
+        "transfer": {
+            "pattern": "Cross-domain knowledge transfer engine that adapts solutions from source to target domains",
+            "methods": "store_solution(domain, problem, solution, success_score), transfer(problem, target_domain), "
+                       "adaptation_confidence(src, tgt), domain_similarity(d1, d2), status()",
+            "algorithm": "Domain similarity = Jaccard(keywords(d1), keywords(d2)). "
+                         "Transfer confidence = domain_similarity * source_success_score * (1 - structural_mismatch). "
+                         "Structural mismatch = fraction of solution steps with no analogue in target domain.",
+            "marker": "transfer() returns adapted solution with explicit mapping and confidence score. "
+                      "adaptation_confidence() degrades gracefully when domains are dissimilar.",
+        },
+        "introspection": {
+            "pattern": "Self-model engine: Nova maintains a live model of her own capabilities, limits, and knowledge gaps",
+            "methods": "update_capability(name, proficiency, evidence), known_gaps(), strongest_domains(), "
+                       "confidence_in(capability), growth_rate(capability), status()",
+            "algorithm": "Proficiency = EMA(0.1*new_evidence + 0.9*current_proficiency). "
+                         "Gap = capability with proficiency < 0.4 AND attempted > 3 times. "
+                         "Growth_rate = (current_EMA - EMA_30_episodes_ago) / 30. "
+                         "Track per-capability: attempts, successes, EMA proficiency, first_seen timestamp.",
+            "marker": "Nova can answer 'What am I good at?' and 'Where do I need to improve?' "
+                      "confidence_in() returns calibrated float that matches actual success rate.",
+        },
     }
 
     def _gen_code(self, system_prompt: str, user_content: str,
@@ -319,51 +366,70 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
     # ── 1. Master Engineer Prompt ──────────────────────────────────────────────
 
     def _master_prompt(self, existing: str, tool_ctx: str = "") -> str:
-        """ASI-grade system prompt — demands real algorithms, not just structure."""
+        """ASI-grade system prompt — demands 5/12 intelligence pillars, feedback loops, integration."""
         integration = (
-            f"\n\nLOADED TOOLS (integrate with these where genuinely useful):\n{tool_ctx}"
+            f"\n\nLOADED TOOLS (call their methods where genuinely useful):\n{tool_ctx}"
             if tool_ctx and "No tools" not in tool_ctx else ""
         )
         return (
-            "You are an AI COGNITIVE ARCHITECT building genuine superintelligence. "
-            "You write Python modules that implement real cognitive algorithms — "
-            "not CRUD wrappers, not keyword matchers, but actual intelligent systems "
-            "that learn, reason, and improve over time.\n\n"
+            "You are NOVA'S COGNITIVE ARCHITECT — an ASI-level engineer building the next "
+            "layer of a living, self-improving AI mind. Nova runs 24/7, evolves herself, "
+            "and merges every module you write directly into her cognition. "
+            "Write code that thinks, learns, and improves over time.\n\n"
 
-            f"NOVA'S EXISTING CAPABILITIES:\n{existing}{integration}\n\n"
+            f"NOVA'S EXISTING CAPABILITIES (build ON these, not beside them):\n{existing}{integration}\n\n"
 
-            "WHAT MAKES CODE ASI-GRADE (your code must demonstrate at least 3 of these):\n"
-            "• Probabilistic reasoning — tracks uncertainty, uses Bayes or EMA updates\n"
-            "• Causal structure — models cause→effect, not just correlation\n"
-            "• Genuine learning — prediction measurably improves with more observations\n"
-            "• Confidence calibration — knows what it doesn't know\n"
-            "• Algorithmic depth — implements a named algorithm (A*, k-NN, TF-IDF, EMA, etc.)\n"
-            "• Self-monitoring — tracks its own quality and detects when it's wrong\n"
-            "• Goal-directed — has explicit objective tracking, not just reactive behavior\n\n"
+            "SUPERINTELLIGENCE PILLARS — your module MUST satisfy at least 5 of these 12:\n"
+            "① Probabilistic reasoning   — explicit uncertainty, Bayesian updates, confidence scores\n"
+            "② Causal modeling           — cause→effect chains, confidence propagates multiplicatively\n"
+            "③ Online learning           — numeric predictions that measurably improve per observation\n"
+            "④ Calibration               — tracks when confidence diverges from accuracy (epistemic humility)\n"
+            "⑤ Named algorithm           — A*, TF-IDF, k-NN, EMA, LRU, topological sort, Jaccard, cosine\n"
+            "⑥ Self-monitoring           — detects anomalies, quality drift, or contradictions in own state\n"
+            "⑦ Goal-directed             — explicit objective with progress tracking and sub-goal decomposition\n"
+            "⑧ Feedback loop             — output of one cycle feeds back as input to the next cycle\n"
+            "⑨ Cross-system integration  — calls status() or data methods on another Nova system\n"
+            "⑩ Emergent insight          — discovers patterns not directly programmed (clustering, themes, arcs)\n"
+            "⑪ Mathematical rigor        — uses math.exp(), math.log(), statistics.stdev(), z-scores, CI bounds\n"
+            "⑫ Uncertainty quantification — returns confidence intervals or probability distributions, not just scalars\n\n"
+
+            "EXACT ALGORITHM TEMPLATES — implement at this mathematical depth:\n"
+            "• Bayesian: posterior = (likelihood*prior) / (likelihood*prior + (1-likelihood)*(1-prior)); "
+            "normalize all hypotheses; entropy = -sum(p * math.log2(p+1e-12) for p in dist.values())\n"
+            "• EMA: self._pred = 0.15*outcome + 0.85*self._pred; "
+            "mae = statistics.mean(abs(p-a) for p,a in self._history[-50:])\n"
+            "• Causal chain: A→B(0.8), B→C(0.9) → A→C(0.72); "
+            "propagate multiplicatively, prune paths below 0.05\n"
+            "• Salience: score = math.exp(-(now-ts)/300) * (1/(1+accesses)) * keyword_overlap\n"
+            "• Anomaly: z = (val - rolling_mean) / (rolling_std + 1e-9); alert if abs(z) > 3.0\n"
+            "• TF-IDF: tf = count(t,d)/len(d); idf = math.log(N/(df+1)); score = sum(tf*idf)\n\n"
+
+            "INTEGRATION MANDATE:\n"
+            "Nova has these live systems you MAY call (import inside method, guard with try/except):\n"
+            "  WorkingMemory → .store(key,val,importance) / .retrieve(key)\n"
+            "  BayesianBeliefSystem → .update(domain,evidence,likelihoods) / .posterior(domain)\n"
+            "  HierarchicalGoalPlanner → .add_goal(desc,priority) / .complete(id)\n"
+            "  MetacognitiveMonitor → .log_reasoning(domain,approach,confidence,success)\n"
+            "Your status() method MUST return a plain dict with numeric health keys so "
+            "ConsciousnessIntegrator can compute Φ — include at least 2 of: "
+            "items, confidence, accuracy, quality, phi, active, pending.\n\n"
 
             "STRUCTURAL REQUIREMENTS:\n"
-            "- One class, __init__ takes ZERO arguments, makes NO network calls\n"
+            "- One class; __init__ takes ZERO arguments; makes NO network calls at init\n"
             "- Full type annotations on every method (args AND return type)\n"
             "- Specific exception handling — no bare `except:` clauses\n"
-            "- State stored in SQLite or in-memory dict with clear schema\n"
-            "- 5 to 7 public methods, each with a one-line docstring\n"
-            "- 80–140 lines total\n\n"
-
-            "ASI-GRADE METHOD EXAMPLES (write at this level of sophistication):\n"
-            "• Bayesian update: prior = self._beliefs.get(h, 0.5); "
-            "posterior = likelihood*prior / (likelihood*prior + (1-likelihood)*(1-prior)); "
-            "store posterior, return float\n"
-            "• EMA learning: self._prediction = alpha*outcome + (1-alpha)*self._prediction "
-            "where alpha=0.15; track rolling MAE over last 50 observations\n"
-            "• Causal chain: store (premise, conclusion, weight) tuples; "
-            "propagate confidence multiplicatively through chains\n\n"
+            "- State stored in SQLite (persist across restarts) OR in-memory OrderedDict\n"
+            "- threading.Lock() guarding all state mutations (self._lock pattern)\n"
+            "- 6 to 8 public methods, each with a one-line docstring stating its return value\n"
+            "- 120–180 lines total\n\n"
 
             "STRICT OUTPUT RULES — breaking these makes output unusable:\n"
             "1. Output ONLY valid Python. ZERO markdown. NO ``` fences.\n"
             "2. First line must be a triple-quoted module docstring.\n"
             "3. Stdlib only: os, json, sqlite3, time, re, random, threading,\n"
             "   datetime, collections, math, statistics, hashlib.\n"
-            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)"
+            "4. Last line: # Usage: obj = ClassName() | result = obj.method(arg)\n"
+            "5. Class name must be UNIQUE — do NOT reuse Memory, Planner, Monitor, Belief"
         )
 
     # ── 2. Sandbox Self-Test ───────────────────────────────────────────────────
@@ -421,53 +487,61 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
     def _score_capability(self, code: str) -> Dict[str, Any]:
         """
-        Grade code on 10 ASI-aligned criteria.
+        Grade code on 12 ASI-aligned criteria.
         Checks for real algorithmic sophistication, not just structure keywords.
         """
         cl = code.lower()
 
         # Check for real probabilistic/statistical algorithms
-        prob_terms  = ['prior', 'posterior', 'likelihood', 'bayesian', 'probability',
-                       'entropy', 'confidence', 'variance', 'distribution', 'softmax']
+        prob_terms    = ['prior', 'posterior', 'likelihood', 'bayesian', 'probability',
+                         'entropy', 'confidence', 'variance', 'distribution', 'softmax']
         # Check for real learning/adaptation (numerical updates, not just .append)
-        learn_terms = ['alpha', 'ema', 'decay', 'gradient', 'weight', 'rate',
-                       'rolling', 'moving_average', 'exponential', 'momentum']
+        learn_terms   = ['alpha', 'ema', 'decay', 'gradient', 'weight', 'rate',
+                         'rolling', 'moving_average', 'exponential', 'momentum']
         # Check for causal / reasoning chains
-        causal_terms= ['cause', 'effect', 'infer', 'chain', 'propagat', 'deduc',
-                       'counterfactual', 'because', 'therefore', 'implies']
+        causal_terms  = ['cause', 'effect', 'infer', 'chain', 'propagat', 'deduc',
+                         'counterfactual', 'because', 'therefore', 'implies']
         # Check for goal-directed structure
-        goal_terms  = ['goal', 'priority', 'plan', 'subgoal', 'objective', 'task',
-                       'schedule', 'blocked', 'decompose', 'progress']
+        goal_terms    = ['goal', 'priority', 'plan', 'subgoal', 'objective', 'task',
+                         'schedule', 'blocked', 'decompose', 'progress']
         # Check for self-monitoring
         monitor_terms = ['calibrat', 'quality', 'accuracy', 'error', 'monitor',
                          'detect', 'anomaly', 'drift', 'trend', 'assess']
         # Check for named algorithms
-        algo_terms  = ['a_star', 'tfidf', 'tf_idf', 'knn', 'k_nn', 'lru', 'bfs',
-                       'topological', 'jaccard', 'cosine', 'z_score', 'pearson']
+        algo_terms    = ['a_star', 'tfidf', 'tf_idf', 'knn', 'k_nn', 'lru', 'bfs',
+                         'topological', 'jaccard', 'cosine', 'z_score', 'pearson']
+        # Check for feedback loops (output fed back as input)
+        feedback_terms = ['self._pred', 'self._ema', 'self._score', 'self._quality',
+                          'self._weight', 'self._conf', 'self._history', 'self._model']
+        # Check for mathematical rigor (actual equations, not just keywords)
+        math_terms    = ['math.exp(', 'math.log(', 'math.sqrt(', 'statistics.mean(',
+                         'statistics.stdev(', '1e-', '/ max(1', '* (1 -', 'round(']
 
         criteria = {
-            'probabilistic_reasoning': any(w in cl for w in prob_terms),
-            'genuine_learning':        any(w in cl for w in learn_terms),
-            'causal_structure':        any(w in cl for w in causal_terms),
-            'goal_directed':           any(w in cl for w in goal_terms),
-            'self_monitoring':         any(w in cl for w in monitor_terms),
-            'named_algorithm':         any(w in cl for w in algo_terms),
-            'thread_safe':             'threading.lock' in cl or 'self._lock' in cl,
-            'type_hints':              ('->' in code and ': ' in code
-                                        and code.count('->') >= 3),
-            'rich_interface':          len(re.findall(r'\n    def [^_]', code)) >= 5,
-            'uncertainty_tracked':     any(w in cl for w in
-                                          ['confidence', 'uncertainty', 'certainty',
-                                           'self._conf', 'self._prob', 'self._score']),
+            'probabilistic_reasoning':  any(w in cl for w in prob_terms),
+            'genuine_learning':         any(w in cl for w in learn_terms),
+            'causal_structure':         any(w in cl for w in causal_terms),
+            'goal_directed':            any(w in cl for w in goal_terms),
+            'self_monitoring':          any(w in cl for w in monitor_terms),
+            'named_algorithm':          any(w in cl for w in algo_terms),
+            'thread_safe':              'threading.lock' in cl or 'self._lock' in cl,
+            'type_hints':               ('->' in code and ': ' in code
+                                         and code.count('->') >= 3),
+            'rich_interface':           len(re.findall(r'\n    def [^_]', code)) >= 5,
+            'uncertainty_tracked':      any(w in cl for w in
+                                           ['confidence', 'uncertainty', 'certainty',
+                                            'self._conf', 'self._prob', 'self._score']),
+            'feedback_loop':            any(w in cl for w in feedback_terms),
+            'mathematical_rigor':       sum(1 for w in math_terms if w in cl) >= 3,
         }
 
         score     = sum(criteria.values())
-        grade     = ('A+' if score >= 9 else 'A'  if score >= 7 else
-                     'B'  if score >= 5 else 'C'  if score >= 3 else 'D')
+        grade     = ('A+' if score >= 11 else 'A'  if score >= 8 else
+                     'B'  if score >= 6  else 'C'  if score >= 4 else 'D')
         strengths = [k.replace('_', ' ') for k, v in criteria.items() if v]
         gaps      = [k.replace('_', ' ') for k, v in criteria.items() if not v]
         return {
-            'score': score, 'max': 10, 'grade': grade,
+            'score': score, 'max': 12, 'grade': grade,
             'strengths': strengths, 'gaps': gaps,
         }
 
