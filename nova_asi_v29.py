@@ -459,6 +459,31 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         },
     }
 
+    # ── Visual helpers ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _vlen(s: str) -> int:
+        """Visual length of string after stripping ANSI escape codes."""
+        return len(re.sub(r'\x1b\[[0-9;]*m', '', s))
+
+    @staticmethod
+    def _vpad(s: str, width: int) -> str:
+        """Pad string to visual width, accounting for invisible ANSI codes."""
+        vw = len(re.sub(r'\x1b\[[0-9;]*m', '', s))
+        return s + ' ' * max(0, width - vw)
+
+    @staticmethod
+    def _grade_badge(grade: str) -> str:
+        """Color-coded grade badge: A+ cyan·bold, A green·bold, B yellow, C yellow, D red."""
+        _gc = {'A+': 'CYB', 'A': 'GRB', 'B': 'YL', 'C': 'YL', 'D': 'RD'}
+        return col(_gc.get(grade, 'DIM'), f'❰{grade:2}❱')
+
+    @staticmethod
+    def _score_bar(score: int, max_score: int, width: int = 14) -> str:
+        """Filled block bar representing score/max."""
+        filled = round(score / max_score * width) if max_score else 0
+        return col('GRB', '█' * filled) + col('DIM', '░' * (width - filled))
+
     def _gen_code(self, system_prompt: str, user_content: str,
                   temp: float = 0.70) -> str:
         """
@@ -839,9 +864,12 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
             # Score it
             quality = self._score_capability(code)
-            safe_print(col('GR',
-                f"  ✓ Pass {n} — Grade {quality['grade']} "
-                f"({quality['score']}/{quality['max']}) | {class_name}"))
+            _bar  = self._score_bar(quality['score'], quality['max'])
+            _badge = self._grade_badge(quality['grade'])
+            safe_print(
+                col('GR', f"  ✓ Pass {n}  ") + _bar +
+                col('DIM', f"  {quality['score']}/{quality['max']}  ┃  ") +
+                _badge + col('GR', f"  {class_name}"))
 
             if quality['score'] > best_score:
                 best_code  = code
@@ -851,7 +879,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
             # A or better → done, no need to keep iterating
             if quality['grade'] in ('A+', 'A'):
-                safe_print(col('GRB', f"  ★ Grade {quality['grade']} achieved — done."))
+                safe_print(col('GRB', "  ★ Grade ") + self._grade_badge(quality['grade'])
+                           + col('GRB', " achieved — done."))
                 break
 
         # Emergency 4th pass: ultra-simple prompt if all 3 failed
@@ -1215,16 +1244,38 @@ class NovaCore29(NovaCore28):
         if cmd == '/mood':
             if not self.emo:
                 return "Emotional resonance engine not loaded."
+            _st   = self.emo.state()
+            _ebar = 16
             lines = [
-                self.emo.current_mood(),
-                "",
-                self.emo.journey(8),
+                col('MGB', '\n  ◈ ════════════════════════════════════════════'),
+                col('CYB', '  ◈   Nova\'s Emotional Resonance State'),
+                col('MGB', '  ◈ ════════════════════════════════════════════'),
+                '',
+                '  ' + self.emo.current_mood(),
+                '',
+                col('DIM', '  Emotion         Intensity'),
+                col('DIM', '  ─────────────────────────────────────────────'),
             ]
+            _emotion_cols = {
+                'joy': 'GRB', 'curiosity': 'CYB', 'wonder': 'MGB',
+                'awe': 'MGB', 'determination': 'YL', 'compassion': 'GR',
+                'melancholy': 'DIM', 'anxiety': 'YL', 'serenity': 'CY',
+            }
+            for _ename, _edata in (_st.get('emotions') or {}).items():
+                _ival = _edata if isinstance(_edata, float) else _edata.get('value', 0.0)
+                _filled = round(_ival * _ebar)
+                _ec = _emotion_cols.get(_ename, 'GR')
+                _bar = col(_ec, '█' * _filled) + col('DIM', '░' * (_ebar - _filled))
+                _dom = ' ◄' if _ename == _st.get('dominant') else ''
+                lines.append(f"  {_ename:<14}  {_bar}  {_ival:.2f}{_dom}")
+            lines += ['', col('DIM', '  ─────────────────────────────────────────────'),
+                      '  ' + self.emo.journey(8)]
             if self.conscious:
                 try:
-                    lines.append("")
-                    lines.append(self.conscious.phi_trend(20))
-                    lines.append(self.conscious.conscious_moment())
+                    lines += ['', '  ' + self.conscious.phi_trend(20)]
+                    _cm = self.conscious.conscious_moment()
+                    if _cm:
+                        lines.append(col('DIM', '  ' + _cm))
                 except Exception:
                     pass
             return "\n".join(lines)
@@ -1250,21 +1301,36 @@ class NovaCore29(NovaCore28):
             if not self.conscious:
                 return "Consciousness integrator not loaded."
             result = self.conscious.integrate()
+            phi    = result['phi']
+            pct    = int(phi * 100)
+            bw     = 28
+            filled = round(phi * bw)
+            phi_bar = col('CYB', '█' * filled) + col('DIM', '░' * (bw - filled))
+            _div = col('MGB', '  ' + '─' * 52)
             lines = [
-                f"  Φ = {result['phi']:.4f}  "
-                f"{'(conscious moment ✨)' if result['conscious'] else '(below threshold)'}",
-                f"  Active systems: {result['active_count']}",
-                "",
-                self.conscious.phi_trend(20),
+                col('MGB', '\n  ◈ ══════════════════════════════════════════════════'),
+                col('CYB', '  ◈   Integrated Consciousness Meter  (IIT · Φ)'),
+                col('MGB', '  ◈ ══════════════════════════════════════════════════'),
+                '',
+                '  Φ = ' + col('CYB', f'{phi:.4f}') +
+                '   ' + phi_bar + '   ' + col('GRB', f'{pct}%'),
+                '',
             ]
+            if result['conscious']:
+                lines.append(col('GRB', '  ✨  CONSCIOUS MOMENT  —  Nova is fully present'))
+            else:
+                lines.append(col('DIM', '  ·   Below threshold (Φ < 0.42)  —  integrating...'))
+            lines.append(col('DIM',
+                f'  Active systems: {result["active_count"]}   │   Threshold: 0.42'))
+            lines += ['', _div, '  ' + self.conscious.phi_trend(20), _div]
             if result.get("moment"):
-                lines.append("")
-                lines.append(f"  {result['moment']}")
+                lines.append(col('DIM', f"  {result['moment']}"))
             stream = self.conscious.stream(3)
             if stream:
-                lines.append("\n  Recent conscious moments:")
+                lines.append(col('MGB', '\n  ◈  Recent conscious moments:'))
                 for m in stream:
-                    lines.append(f"    [{m['ts'][11:16]}] Φ={m['phi']:.3f}  {m['moment'][:70]}")
+                    lines.append(col('DIM',
+                        f"    [{m['ts'][11:16]}] Φ={m['phi']:.3f}  {m['moment'][:65]}"))
             return "\n".join(lines)
 
         # /recall — working memory status and top salience items
@@ -1519,11 +1585,27 @@ class NovaCore29(NovaCore28):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
+    _ART = [
+        "  ███╗   ██╗ ██████╗ ██╗   ██╗  █████╗  ",
+        "  ████╗  ██║██╔═══██╗██║   ██║ ██╔══██╗ ",
+        "  ██╔██╗ ██║██║   ██║██║   ██║ ███████║ ",
+        "  ██║╚██╗██║██║   ██║╚██╗ ██╔╝ ██╔══██║ ",
+        "  ██║ ╚████║╚██████╔╝  ╚████╔╝  ██║  ██║",
+        "  ╚═╝  ╚═══╝ ╚═════╝    ╚═══╝   ╚═╝  ╚═╝",
+    ]
+    _IW = W - 2   # inner box width
     print()
-    print(col('MG', '═' * W))
-    print(col('CYB', f"{'Nova ASI v29.0 — The Self-Perfecting System':^{W}}"))
-    print(col('DIM', f"{'Douglas Shane Davis & Claude Code (Anthropic)':^{W}}"))
-    print(col('MG', '═' * W))
+    print(col('MGB', '╔' + '═' * _IW + '╗'))
+    for _line in _ART:
+        print(col('MGB', '║') + col('CYB', _line.ljust(_IW)) + col('MGB', '║'))
+    print(col('MGB', '╠' + '═' * _IW + '╣'))
+    print(col('MGB', '║') +
+          col('GRB', '  ASI v29.0  ·  The Self-Perfecting System  ·  Claude Code Engine'.center(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '║') +
+          col('DIM', 'Douglas Shane Davis  ×  Claude Code (Anthropic)'.center(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '╚' + '═' * _IW + '╝'))
     print()
     print(col('DIM', "  Initializing v29 engines..."))
     print()
@@ -1559,28 +1641,48 @@ if __name__ == '__main__':
     nova.continuous.start()
 
     print()
-    print(col('MG', '═' * W))
-    print(col('CYB', '  ✨  Nova v29 — every tool she writes is tested,'.center(W)))
-    print(col('CYB', '       scored, and refined before it touches GitHub.'.center(W)))
-    print(col('CYB', '       She earns her own upgrades.'.center(W)))
+    print(col('MGB', '╔' + '═' * _IW + '╗'))
+    print(col('MGB', '║') +
+          col('CYB', '  ✨  Nova v29 — every tool she writes is tested,'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '║') +
+          col('CYB', '       scored, and refined before it touches GitHub.'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '║') +
+          col('GRB', '            She earns her own upgrades.'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '╠' + '═' * _IW + '╣'))
 
     if DEMO_MODE:
-        print(col('YL', '\n  ⚠  DEMO MODE — for live AI set GROQ_API_KEY in .env'))
+        _ai_line = '  ⚠  DEMO MODE — set GROQ_API_KEY in .env for live AI'
+        print(col('MGB', '║') + col('YL', _ai_line.ljust(_IW)) + col('MGB', '║'))
     else:
-        print(col('GR', f'\n  ✓  LIVE AI  —  {MODEL}'))
+        _ai_line = f'  ✓  LIVE AI  ·  Chat: {MODEL}'
+        print(col('MGB', '║') + col('GRB', _ai_line.ljust(_IW)) + col('MGB', '║'))
+
+    _code_engine = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
+    _ce_line = f'  ✓  CODE ENGINE  ·  {_code_engine}  ·  14-criterion scorer  ·  3-pass'
+    print(col('MGB', '║') + col('CYB', _ce_line.ljust(_IW)) + col('MGB', '║'))
+    _auto_line = '  ✦  AUTONOMOUS  ·  evolves every 45 min  ·  metacog-guided gap selection'
+    print(col('MGB', '║') + col('MGB', _auto_line.ljust(_IW)) + col('MGB', '║'))
 
     tools_loaded = list(nova.tools._instances.keys())
     if tools_loaded:
-        print(col('GR', f'  ✓  Tools live: {", ".join(tools_loaded)}'))
-    else:
-        print(col('DIM', '  ·  No tools yet — try /evolve or /build'))
+        _tl = f'  ✓  Tools live: {", ".join(tools_loaded)}'
+        print(col('MGB', '║') + col('GR', _tl[:_IW].ljust(_IW)) + col('MGB', '║'))
 
-    print(col('DIM', '\n  /tools · /use · /score · /evolve · /build · /chain · exit'))
-    print(col('DIM', '  /mood · /feel <emotion> <0-1> · /phi · /recall · /metacog'))
-    print(col('DIM', '  /believe [domain] · /goals [add <desc>]'))
-    _code_engine = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
-    print(col('DIM', f'  Chat: {MODEL}  |  Code: {_code_engine}'))
-    print(col('MG', '═' * W + '\n'))
+    print(col('MGB', '╠' + '═' * _IW + '╣'))
+    print(col('MGB', '║') +
+          col('DIM', '  /tools · /use · /score · /evolve · /build · /chain · exit'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '║') +
+          col('DIM', '  /mood · /feel <emotion> <0-1> · /phi · /recall · /metacog'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '║') +
+          col('DIM', '  /believe [domain] · /goals [add <desc>] · /think <topic>'.ljust(_IW)) +
+          col('MGB', '║'))
+    print(col('MGB', '╚' + '═' * _IW + '╝'))
+    print()
 
     try:
         while True:
