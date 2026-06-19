@@ -56,45 +56,29 @@ VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
 
-# Separate models: fast 8B for conversation, powerful 70B for writing code.
-# CODEGEN_MODELS is populated at startup by _discover_codegen_models() which
-# queries Groq's live /models endpoint — no more hardcoded decommissioned names.
-CODEGEN_MODELS: list = []   # filled at startup
-CODEGEN_MODEL          = "llama-3.3-70b-versatile"   # safe default until discovery
-CODEGEN_MODEL_FALLBACK = "llama-3.3-70b-versatile"   # same until discovery runs
+def _load_env_v29() -> None:
+    """Load .env from ~/nexus_agi/.env into os.environ at import time."""
+    env_path = os.path.expanduser("~/nexus_agi/.env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if not _line or _line.startswith("#") or "=" not in _line:
+                continue
+            _k, _, _v = _line.partition("=")
+            _k = _k.strip(); _v = _v.strip().strip('"').strip("'")
+            if _k and _k not in os.environ:
+                os.environ[_k] = _v
+_load_env_v29()
 
-
-def _discover_codegen_models() -> list:
-    """
-    Query Groq's live model list and return available 70B-class code models.
-    Falls back to ['llama-3.3-70b-versatile'] if the API call fails.
-    Priority: largest/most capable models first.
-    """
-    preferred_order = [
-        "llama-3.3-70b-versatile",
-        "llama-3.3-70b-specdec",
-        "llama-3.1-70b-versatile",
-        "deepseek-r1-distill-llama-70b",
-        "qwen-qwq-32b",
-        "gemma2-9b-it",
-        "llama3-8b-8192",
-    ]
-    api_key = os.getenv("GROQ_API_KEY", "")
-    if not api_key:
-        return ["llama-3.3-70b-versatile"]
-    try:
-        import urllib.request, json as _json
-        req = urllib.request.Request(
-            "https://api.groq.com/openai/v1/models",
-            headers={"Authorization": f"Bearer {api_key}",
-                     "Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            data = _json.loads(resp.read())
-        live_ids = {m["id"] for m in data.get("data", [])}
-        found = [m for m in preferred_order if m in live_ids]
-        return found if found else ["llama-3.3-70b-versatile"]
-    except Exception:
-        return ["llama-3.3-70b-versatile"]
+# Code generation uses the best available 70B model.
+# llama-3.3-70b-versatile is the only confirmed-live large model on Groq free tier.
+# Emergency pass uses llama-3.1-8b-instant (the chat model) — always available,
+# smaller but guaranteed to produce syntactically valid Python.
+CODEGEN_MODEL          = "llama-3.3-70b-versatile"
+CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"    # chat model — always live
+CODEGEN_MODELS         = [CODEGEN_MODEL]            # single primary; extended at runtime
 CODEGEN_MODEL          = CODEGEN_MODELS[0]   # kept for display / legacy refs
 CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1]   # kept for emergency pass compat
 
@@ -502,19 +486,15 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
-            # Each pass gets its own model → its own Groq TPM quota.
-            # No inter-pass sleep needed since quotas are independent.
-            pass_model = CODEGEN_MODELS[attempt % len(CODEGEN_MODELS)]
             if n > 1:
                 safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
-                                     f"(temp={temp}, model={pass_model.split('-')[0]}...)"))
+                                     f"(temp={temp})..."))
 
-            raw = safe_chat(pass_model, [
+            raw     = safe_chat(CODEGEN_MODEL, [
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content":
                  f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
             ], temp=temp, mt=1400)
-
             raw_str = raw or ""
 
             # Hard stop: bad API key — sleeping won't help
@@ -527,35 +507,21 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "  → Restart Nova"))
                 break
 
-            # Decommissioned model → rotate to next in list, no wait needed
-            if any(e in raw_str for e in ('decommissioned', 'deprecated',
-                                           'does not exist', 'model_not_found')):
-                next_model = CODEGEN_MODELS[(attempt + 1) % len(CODEGEN_MODELS)]
-                safe_print(col('YL',
-                    f"  ↻ {pass_model} decommissioned — rotating to {next_model}..."))
-                raw = safe_chat(next_model, [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content":
-                     f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
-                ], temp=temp, mt=1400)
-                raw_str = raw or ""
-
-            # Rate limit → try next model's fresh quota (brief pause, not 30s)
+            # Rate limit → wait for the quota window to reset, then retry same model
             if any(e in raw_str for e in ('429', 'Rate limit', 'rate_limit_exceeded',
                                            'Too Many Requests', 'tokens per minute')):
-                next_model = CODEGEN_MODELS[(attempt + 1) % len(CODEGEN_MODELS)]
+                wait = 25 + attempt * 10   # 25s, 35s, 45s — quota resets in ~60s
                 safe_print(col('YL',
-                    f"  ↻ Rate limit on {pass_model} — switching to {next_model}..."))
-                time.sleep(5)   # brief pause, then fresh quota
-                raw = safe_chat(next_model, [
+                    f"  ↻ Rate limit (pass {n}) — waiting {wait}s for quota reset..."))
+                time.sleep(wait)
+                raw     = safe_chat(CODEGEN_MODEL, [
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content":
                      f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"}
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
-                if any(e in raw_str for e in ('429', 'Rate limit', 'decommissioned',
-                                               'Too Many Requests')):
-                    safe_print(col('YL', f"  ✗ Both models unavailable — skipping pass {n}"))
+                if any(e in raw_str for e in ('429', 'Rate limit', 'Too Many Requests')):
+                    safe_print(col('YL', f"  ✗ Still rate-limited — skipping pass {n}"))
                     continue
 
             code = self._clean(raw_str)
@@ -612,8 +578,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 "Each method must have a one-line docstring. "
                 "Use only Python stdlib. 40-60 lines total."
             )
-            # Rotate through all available models until one succeeds
-            for em_model in CODEGEN_MODELS:
+            # Try primary 70B first, then guaranteed-live small model
+            for em_model in (CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK):
                 raw  = safe_chat(em_model, [
                     {"role": "user", "content": emergency_prompt}
                 ], temp=0.1, mt=800)
@@ -665,13 +631,6 @@ class NovaCore29(NovaCore28):
         )
         self.tools.start_watching()
 
-        # ── Discover live Groq code models ───────────────────────────────────
-        global CODEGEN_MODELS, CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK
-        CODEGEN_MODELS = _discover_codegen_models()
-        CODEGEN_MODEL          = CODEGEN_MODELS[0]
-        CODEGEN_MODEL_FALLBACK = CODEGEN_MODELS[1] if len(CODEGEN_MODELS) > 1 else CODEGEN_MODELS[0]
-        # Also update the improver so it uses the same live list
-        self.improver._live_models = CODEGEN_MODELS
 
         # ── Emotional Resonance + Consciousness ──────────────────────────────
         self.emo: Any = None
@@ -748,8 +707,8 @@ class NovaCore29(NovaCore28):
                 f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
                 + ", ".join(initial_tools)))
         safe_print(col('GR',
-            f"  ✓  Code Engine v29  — {len(CODEGEN_MODELS)}-model rotation · sandbox · scoring · 3-pass refinement\n"
-            f"       Live models: {' → '.join(CODEGEN_MODELS)}"))
+            f"  ✓  Code Engine v29  — {CODEGEN_MODEL} · sandbox · 3-pass · rate-limit safe\n"
+            f"       Emergency fallback: {CODEGEN_MODEL_FALLBACK}"))
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
