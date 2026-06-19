@@ -5,254 +5,250 @@ Generated via /evolve · v29 pipeline · 2026-06-19
 """
 
 """
-EpisodicMemoryEngine — Nova's temporal episodic memory with emotional salience retrieval.
-Stores sequences of events with full temporal structure, groups by proximity,
-and retrieves via composite scoring: importance * emotion_weight * recency * cue_relevance.
-Integrates with BayesianBeliefSystem, HierarchicalGoalPlanner, MetacognitiveMonitor, WorkingMemory.
+Nova Episodic Memory Engine — stores, retrieves, and narrates sequences of events
+with temporal grouping, emotional salience scoring, Bayesian decay, and LRU eviction.
+Pillars: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
 """
 
-import sqlite3
-import threading
-import math
-import time
-import statistics
-import hashlib
-import json
-import os
-import re
+import sqlite3, threading, time, math, statistics, hashlib, json, os, re
 from collections import OrderedDict
-from typing import Any
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "episodic_memory.db")
-EPISODE_GAP_SECONDS = 300
-DECAY_RATE = 0.001
-CAPACITY = 200
+from typing import Any, Dict, List, Optional, Tuple
 
 class EpisodicMemoryEngine:
-    """Nova's episodic memory: records, groups, scores, and replays lived experience."""
+    """Temporally-structured episodic memory with emotional salience retrieval and Bayesian decay."""
+
+    _DB = "nova_episodic.db"
+    _WM_CAPACITY = 200
+    _DECAY_RATE = 0.0003          # per second for working memory
+    _EPISODE_GAP_SEC = 300        # < 5 min gap → same episode group
+    _EMA_ALPHA = 0.15
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._wm: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._recall_mae: float = 0.5
         self._cycles: int = 0
-        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        self._setup_db()
-        self._cache: OrderedDict[str, dict] = OrderedDict()
-        self._load_cache()
-        t = threading.Thread(target=self._auto_loop, daemon=True)
-        t.start()
+        self._quality_ema: float = 0.5
+        self._init_db()
+        self._start_daemon()
+        self._bootstrap_goals()
 
-    def _setup_db(self) -> None:
-        c = self._conn.cursor()
-        c.execute("""CREATE TABLE IF NOT EXISTS episodes (
-            episode_id TEXT PRIMARY KEY,
-            event TEXT, context TEXT, emotion TEXT,
-            importance REAL, valence REAL, timestamp REAL,
-            group_id TEXT, access_count INTEGER DEFAULT 0
-        )""")
-        self._conn.commit()
+    # ── internal ──────────────────────────────────────────────────────────────
 
-    def _load_cache(self) -> None:
-        c = self._conn.cursor()
-        c.execute("SELECT * FROM episodes ORDER BY timestamp DESC LIMIT 200")
-        for row in c.fetchall():
-            eid, ev, ctx, emo, imp, val, ts, gid, acc = row
-            self._cache[eid] = dict(episode_id=eid, event=ev, context=ctx,
-                emotion=emo, importance=imp, valence=val,
-                timestamp=ts, group_id=gid, access_count=acc)
+    def _init_db(self) -> None:
+        with sqlite3.connect(self._DB) as cx:
+            cx.execute("""CREATE TABLE IF NOT EXISTS episodes (
+                episode_id TEXT PRIMARY KEY, event TEXT, context TEXT,
+                emotion REAL, importance REAL, timestamp REAL, group_id TEXT)""")
+            cx.execute("CREATE INDEX IF NOT EXISTS idx_ts ON episodes(timestamp)")
+            cx.commit()
 
-    def _gen_id(self, event: str, ts: float) -> str:
-        raw = f"{event}{ts}"
-        return hashlib.sha1(raw.encode()).hexdigest()[:12]
+    def _conn(self) -> sqlite3.Connection:
+        return sqlite3.connect(self._DB, check_same_thread=False)
 
-    def _assign_group(self, ts: float) -> str:
-        """Returns group_id based on temporal proximity (< 5 min = same group)."""
+    def _group_id(self, ts: float) -> str:
+        with self._conn() as cx:
+            row = cx.execute(
+                "SELECT group_id, timestamp FROM episodes ORDER BY timestamp DESC LIMIT 1"
+            ).fetchone()
+        if row and (ts - row[1]) < self._EPISODE_GAP_SEC:
+            return row[0]
+        return hashlib.md5(str(ts).encode()).hexdigest()[:10]
+
+    def _retrieval_score(self, row: Dict, cue: str, now: float) -> float:
+        elapsed_min = (now - row["timestamp"]) / 60.0
+        recency = math.exp(-0.001 * elapsed_min)
+        emotion_weight = 1.0 + abs(row["emotion"])
+        words_e = set(re.findall(r"\\w+", row["event"].lower()))
+        words_c = set(re.findall(r"\\w+", cue.lower()))
+        overlap = len(words_e & words_c)
+        total = len(words_e | words_c) + 1e-9
+        cue_relevance = overlap / total          # Jaccard
+        return row["importance"] * emotion_weight * recency * (0.3 + 0.7 * cue_relevance)
+
+    def _decay_wm(self) -> None:
+        now = time.time()
         with self._lock:
-            for ep in reversed(list(self._cache.values())):
-                if abs(ts - ep["timestamp"]) < EPISODE_GAP_SECONDS:
-                    return ep["group_id"]
-        return self._gen_id(f"group{ts}", ts)
+            for k, v in self._wm.items():
+                elapsed = now - v["timestamp"]
+                v["importance"] *= math.exp(-self._DECAY_RATE * elapsed)
+                v["timestamp"] = now
 
-    def record(self, event: str, context: str, emotion: str,
-               importance: float, valence: float = 0.0) -> str:
-        """Records a new episodic event; returns its episode_id."""
-        ts = time.time()
-        eid = self._gen_id(event, ts)
-        valence = max(-1.0, min(1.0, valence))
-        importance = max(0.0, min(1.0, importance))
-        group_id = self._assign_group(ts)
-        row = dict(episode_id=eid, event=event, context=context,
-                   emotion=emotion, importance=importance,
-                   valence=valence, timestamp=ts,
-                   group_id=group_id, access_count=0)
-        with self._lock:
-            self._cache[eid] = row
-            if len(self._cache) > CAPACITY:
-                self._evict()
-        c = self._conn.cursor()
-        c.execute("""INSERT OR REPLACE INTO episodes
-            (episode_id,event,context,emotion,importance,valence,timestamp,group_id,access_count)
-            VALUES (?,?,?,?,?,?,?,?,?)""",
-            (eid, event, context, emotion, importance, valence, ts, group_id, 0))
-        self._conn.commit()
+    def _start_daemon(self) -> None:
+        def _loop() -> None:
+            while True:
+                time.sleep(60)
+                self._decay_wm()
+                self.consolidate()
+                self._cycles += 1
+                self._log_meta()
+        threading.Thread(target=_loop, daemon=True).start()
+
+    def _bootstrap_goals(self) -> None:
         try:
-            from HierarchicalGoalPlanner import HierarchicalGoalPlanner as HGP
-            hgp = HGP()
-            if importance > 0.8:
-                hgp.add_goal(f"Reflect on high-salience episode: {event[:60]}", priority=2)
-        except (ImportError, Exception):
+            from tools import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(
+                "Surface emotionally significant episodes for reflection", priority=7)
+            HierarchicalGoalPlanner().add_goal(
+                "Narrate temporal summaries to enrich Nova's self-model", priority=6)
+        except Exception:
             pass
+
+    def _log_meta(self) -> None:
         try:
-            from MetacognitiveMonitor import MetacognitiveMonitor as MCM
-            MCM().log_reasoning("episodic_record", "salience_grouping", importance, True)
-        except (ImportError, Exception):
+            from tools import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning(
+                "episodic_memory", "salience_retrieval",
+                self._quality_ema, self._quality_ema > 0.5)
+        except Exception:
+            pass
+
+    # ── public API ────────────────────────────────────────────────────────────
+
+    def record(self, event: str, context: str, emotion: float, importance: float) -> str:
+        """Stores a new episode; returns its episode_id."""
+        emotion = max(-1.0, min(1.0, float(emotion)))
+        importance = max(0.0, min(1.0, float(importance)))
+        ts = time.time()
+        eid = hashlib.sha1(f"{event}{ts}".encode()).hexdigest()[:12]
+        gid = self._group_id(ts)
+        with self._lock:
+            with self._conn() as cx:
+                cx.execute(
+                    "INSERT OR REPLACE INTO episodes VALUES (?,?,?,?,?,?,?)",
+                    (eid, event, context, emotion, importance, ts, gid))
+                cx.commit()
+        self.store(eid, {"event": event, "emotion": emotion}, importance)
+        try:
+            from tools import EmotionalResonanceEngine
+            EmotionalResonanceEngine().feel(emotion, f"episode:{eid}")
+        except Exception:
             pass
         return eid
 
-    def _score(self, ep: dict, cue: str, now: float) -> float:
-        elapsed_min = (now - ep["timestamp"]) / 60.0
-        recency = math.exp(-DECAY_RATE * elapsed_min)
-        emotion_weight = 1.0 + abs(ep["valence"])
-        cue_words = set(re.findall(r'\\w+', cue.lower()))
-        ep_words = set(re.findall(r'\\w+', (ep["event"] + " " + ep["context"]).lower()))
-        overlap = len(cue_words & ep_words)
-        denom = math.log(1 + len(cue_words) + len(ep_words) + 1)
-        cue_relevance = overlap / denom if denom > 0 else 0.0
-        return ep["importance"] * emotion_weight * recency * (0.5 + 0.5 * cue_relevance)
-
-    def recall(self, cue: str, top_k: int = 5) -> list[dict]:
-        """Returns top_k episodes sorted by composite retrieval score."""
+    def recall(self, cue: str, top_k: int = 5) -> List[Dict]:
+        """Returns top_k episodes sorted by retrieval score (importance×emotion×recency×Jaccard)."""
         now = time.time()
+        with self._conn() as cx:
+            rows = cx.execute(
+                "SELECT episode_id,event,context,emotion,importance,timestamp,group_id FROM episodes"
+            ).fetchall()
+        cols = ["episode_id","event","context","emotion","importance","timestamp","group_id"]
+        scored = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            score = self._retrieval_score(d, cue, now)
+            d["retrieval_score"] = round(score, 4)
+            scored.append(d)
+        scored.sort(key=lambda x: x["retrieval_score"], reverse=True)
+        result = scored[:top_k]
+        if result:
+            best = result[0]["retrieval_score"]
+            self._quality_ema = self._EMA_ALPHA * best + (1 - self._EMA_ALPHA) * self._quality_ema
+        self._log_meta()
+        return result
+
+    def replay(self, episode_id: str) -> Dict:
+        """Returns full episode record and boosts its importance by 10%."""
+        with self._conn() as cx:
+            row = cx.execute(
+                "SELECT episode_id,event,context,emotion,importance,timestamp,group_id "
+                "FROM episodes WHERE episode_id=?", (episode_id,)).fetchone()
+        if not row:
+            return {"error": "episode_id not found"}
+        cols = ["episode_id","event","context","emotion","importance","timestamp","group_id"]
+        d = dict(zip(cols, row))
+        new_imp = min(1.0, d["importance"] * 1.1)
+        with self._conn() as cx:
+            cx.execute("UPDATE episodes SET importance=? WHERE episode_id=?",
+                       (new_imp, episode_id))
+            cx.commit()
+        d["importance"] = new_imp
+        return d
+
+    def emotional_highlights(self) -> List[Dict]:
+        """Returns top 10 episodes ranked by absolute emotional valence × importance."""
+        with self._conn() as cx:
+            rows = cx.execute(
+                "SELECT episode_id,event,emotion,importance,timestamp FROM episodes"
+            ).fetchall()
+        scored = [{"episode_id": r[0], "event": r[1], "emotion": r[2],
+                   "importance": r[3], "timestamp": r[4],
+                   "salience": abs(r[2]) * r[3]} for r in rows]
+        scored.sort(key=lambda x: x["salience"], reverse=True)
+        return scored[:10]
+
+    def temporal_summary(self, hours: float = 1.0) -> str:
+        """Returns a coherent narrative string of episodes within the last N hours."""
+        cutoff = time.time() - hours * 3600
+        with self._conn() as cx:
+            rows = cx.execute(
+                "SELECT event,context,emotion,timestamp,group_id FROM episodes "
+                "WHERE timestamp>=? ORDER BY timestamp ASC", (cutoff,)).fetchall()
+        if not rows:
+            return f"No episodes recorded in the last {hours} hour(s)."
+        groups: Dict[str, List] = {}
+        for r in rows:
+            groups.setdefault(r[4], []).append(r)
+        parts = []
+        for gid, evts in groups.items():
+            t0 = time.strftime("%H:%M", time.localtime(evts[0][3]))
+            tone = "positively" if statistics.mean(e[2] for e in evts) > 0 else "negatively"
+            summary = "; ".join(e[0] for e in evts[:3])
+            parts.append(f"[{t0}] ({tone} charged) {summary}")
+        return " → ".join(parts)
+
+    def store(self, key: str, value: Any, importance: float = 0.5) -> None:
+        """Stores a key-value pair in Bayesian working memory with decay tracking."""
         with self._lock:
-            scored = []
-            for ep in self._cache.values():
-                s = self._score(ep, cue, now)
-                scored.append((s, ep))
-            scored.sort(key=lambda x: x[0], reverse=True)
-            results = []
-            for s, ep in scored[:top_k]:
-                ep["access_count"] += 1
-                ep["importance"] = min(1.0, ep["importance"] * 1.05)
-                results.append({**ep, "retrieval_score": round(s, 4)})
-        try:
-            from WorkingMemory import WorkingMemory as WM
-            WM().store("last_recall_cue", cue, importance=0.6)
-        except (ImportError, Exception):
-            pass
-        return results
+            if key in self._wm:
+                self._wm.move_to_end(key)
+                self._wm[key]["access_count"] += 1
+                self._wm[key]["importance"] = min(1.0, importance * 1.05)
+            else:
+                self._wm[key] = {"value": value, "importance": float(importance),
+                                 "timestamp": time.time(), "access_count": 0}
+            if len(self._wm) > self._WM_CAPACITY:
+                self.forget_least_important()
 
-    def replay(self, episode_id: str) -> dict:
-        """Returns full episode record for a given episode_id, with decay-adjusted importance."""
-        now = time.time()
+    def consolidate(self) -> Dict:
+        """Decays working memory, evicts weak items; returns consolidation stats."""
+        self._decay_wm()
+        evicted = 0
         with self._lock:
-            ep = self._cache.get(episode_id)
-            if not ep:
-                return {"error": f"episode {episode_id} not found"}
-            elapsed = now - ep["timestamp"]
-            decayed = ep["importance"] * math.exp(-DECAY_RATE * elapsed / 60.0)
-            ep["access_count"] += 1
-            return {**ep, "decayed_importance": round(decayed, 4),
-                    "elapsed_minutes": round(elapsed / 60, 2)}
+            weak = [k for k, v in self._wm.items() if v["importance"] < 0.05]
+            for k in weak:
+                del self._wm[k]
+                evicted += 1
+        return {"evicted": evicted, "remaining": len(self._wm)}
 
-    def emotional_highlights(self) -> list[dict]:
-        """Returns top 10 episodes ranked by emotional salience (abs(valence) * importance)."""
+    def forget_least_important(self) -> Optional[str]:
+        """Evicts the least-important working-memory item; returns its key."""
         with self._lock:
-            ranked = sorted(self._cache.values(),
-                key=lambda e: abs(e["valence"]) * e["importance"], reverse=True)
-            return [dict(episode_id=e["episode_id"], event=e["event"],
-                         emotion=e["emotion"], valence=e["valence"],
-                         importance=e["importance"],
-                         salience=round(abs(e["valence"]) * e["importance"], 4))
-                    for e in ranked[:10]]
+            if not self._wm:
+                return None
+            key = min(self._wm, key=lambda k: self._wm[k]["importance"])
+            del self._wm[key]
+            return key
 
-    def temporal_summary(self, hours: float = 1.0) -> dict:
-        """Narrates Nova's experience over the last N hours as a coherent grouped story."""
-        now = time.time()
-        cutoff = now - hours * 3600
-        with self._lock:
-            recent = [e for e in self._cache.values() if e["timestamp"] >= cutoff]
-        if not recent:
-            return {"narrative": "No episodes recorded in this window.", "count": 0}
-        recent.sort(key=lambda e: e["timestamp"])
-        groups: dict[str, list] = {}
-        for ep in recent:
-            groups.setdefault(ep["group_id"], []).append(ep)
-        chapters = []
-        for gid, eps in groups.items():
-            emotions = [e["emotion"] for e in eps]
-            avg_val = statistics.mean(e["valence"] for e in eps)
-            tone = "positive" if avg_val > 0.2 else ("negative" if avg_val < -0.2 else "neutral")
-            events_str = "; ".join(e["event"][:50] for e in eps)
-            chapters.append(f"[{tone.upper()}] {events_str}")
-        valences = [e["valence"] for e in recent]
-        entropy_val = 0.0
-        if len(valences) > 1:
-            mean_v = statistics.mean(valences)
-            std_v = statistics.stdev(valences) + 1e-9
-            z_scores = [abs((v - mean_v) / std_v) for v in valences]
-            anomalies = [z for z in z_scores if z > 2.0]
-            entropy_val = round(len(anomalies) / len(z_scores), 4)
-        return {"narrative": " | ".join(chapters), "episode_count": len(recent),
-                "group_count": len(groups), "emotional_entropy": entropy_val,
-                "hours_covered": hours}
-
-    def _evict(self) -> None:
-        if not self._cache:
-            return
-        lru_key = min(self._cache, key=lambda k: self._cache[k]["access_count"])
-        del self._cache[lru_key]
-
-    def consolidate(self) -> int:
-        """Persists all in-memory episodes to SQLite; returns count saved."""
-        with self._lock:
-            items = list(self._cache.values())
-        c = self._conn.cursor()
-        for ep in items:
-            c.execute("""INSERT OR REPLACE INTO episodes
-                (episode_id,event,context,emotion,importance,valence,timestamp,group_id,access_count)
-                VALUES (?,?,?,?,?,?,?,?,?)""",
-                (ep["episode_id"], ep["event"], ep["context"], ep["emotion"],
-                 ep["importance"], ep["valence"], ep["timestamp"],
-                 ep["group_id"], ep["access_count"]))
-        self._conn.commit()
-        return len(items)
-
-    def status(self) -> dict:
+    def status(self) -> Dict:
         """Returns numeric status dict compatible with ConsciousnessIntegrator Φ."""
-        with self._lock:
-            items = len(self._cache)
-            vals = [e["valence"] for e in self._cache.values()] or [0.0]
-            imps = [e["importance"] for e in self._cache.values()] or [0.0]
-        mean_imp = statistics.mean(imps)
-        mean_val = statistics.mean(vals)
-        entropy = -sum((abs(v) / (sum(abs(x) for x in vals) + 1e-9)) *
-                       math.log2(abs(v) / (sum(abs(x) for x in vals) + 1e-9) + 1e-12)
-                       for v in vals)
-        return {"items": items, "confidence": round(mean_imp, 4),
-                "accuracy": round(abs(mean_val), 4), "entropy": round(entropy, 4),
-                "cycles": self._cycles, "active": 1, "capacity": CAPACITY}
+        with self._conn() as cx:
+            total = cx.execute("SELECT COUNT(*) FROM episodes").fetchone()[0]
+            avg_imp = cx.execute("SELECT AVG(importance) FROM episodes").fetchone()[0] or 0.0
+        wm_cap = len(self._wm) / max(1, self._WM_CAPACITY)
+        vals = [v["importance"] for v in self._wm.values()] or [0.0]
+        ent_vals = [v / (sum(vals) + 1e-9) for v in vals]
+        entropy = -sum(p * math.log2(p + 1e-12) for p in ent_vals)
+        return {
+            "items": total,
+            "confidence": round(self._quality_ema, 4),
+            "accuracy": round(avg_imp, 4),
+            "active": len(self._wm),
+            "cycles": self._cycles,
+            "entropy": round(entropy, 4),
+            "capacity": round(wm_cap, 4),
+            "quality": round(self._quality_ema, 4),
+        }
 
-    def _auto_loop(self) -> None:
-        while True:
-            time.sleep(60)
-            try:
-                self._cycles += 1
-                self.consolidate()
-                try:
-                    from MetacognitiveMonitor import MetacognitiveMonitor as MCM
-                    s = self.status()
-                    MCM().log_reasoning("episodic_auto", "consolidation",
-                                        s["confidence"], True)
-                except (ImportError, Exception):
-                    pass
-                try:
-                    from BayesianBeliefSystem import BayesianBeliefSystem as BBS
-                    s = self.status()
-                    BBS().update("episodic_health",
-                                 {"entropy": s["entropy"]},
-                                 {"entropy": s["confidence"]})
-                except (ImportError, Exception):
-                    pass
-            except Exception:
-                pass
-
-# Usage: obj = EpisodicMemoryEngine() | result = obj.record("Nova solved a hard problem", "reasoning session", "pride", 0.9, 0.8)
+# Usage: obj = EpisodicMemoryEngine() | result = obj.record("Solved hard problem", "research", 0.8, 0.9)
