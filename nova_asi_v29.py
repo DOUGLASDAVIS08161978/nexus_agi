@@ -385,6 +385,42 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "marker": "propose_improvement() generates concrete, safe enhancement suggestions with expected impact. "
                       "safety_check() NEVER allows proposals that weaken ethical constraints or remove oversight.",
         },
+        "resource_optimizer": {
+            "pattern": "Resource allocation optimizer: models scarcity constraints and finds max-impact distributions",
+            "methods": "add_resource(name, quantity, unit), add_need(population, resource, amount_per_person), "
+                       "optimize(objective), allocation_plan(), impact_score(), status()",
+            "algorithm": "Greedy allocation: sort needs by (impact_per_unit * population_affected) descending. "
+                         "Allocate until resource exhausted. Impact_score = sum(people_served * need_weight). "
+                         "Shadow price = marginal impact of one more unit of scarcest resource. "
+                         "Track: unmet_need per population, coverage_fraction, bottleneck_resource.",
+            "marker": "optimize() returns allocation that maximizes people_helped under constraints. "
+                      "impact_score() gives total human benefit in comparable units. "
+                      "allocation_plan() shows exactly who gets what and how many remain unserved.",
+        },
+        "scientific_synthesizer": {
+            "pattern": "Scientific evidence synthesizer: aggregates findings, weights by confidence, detects consensus vs controversy",
+            "methods": "add_finding(claim, confidence, domain, source_quality), consensus(claim), "
+                       "controversy_score(claim), synthesize(topic), evidence_strength(claim), status()",
+            "algorithm": "Weighted consensus = sum(confidence * source_quality) / sum(source_quality). "
+                         "Controversy = std(confidences) / (mean(confidences) + 1e-9). "
+                         "Evidence_strength: n_findings * weighted_consensus * (1 - controversy_score). "
+                         "Synthesize: group findings by claim similarity (Jaccard > 0.5), return ranked consensus.",
+            "marker": "consensus() returns float 0-1 showing how strongly evidence points one way. "
+                      "controversy_score() > 0.4 flags genuinely contested claims requiring more research.",
+        },
+        "impact_forecaster": {
+            "pattern": "Social impact forecaster: projects second and third-order effects of interventions over time",
+            "methods": "add_intervention(name, direct_effect, affected_population), "
+                       "project(intervention, years), second_order_effects(intervention), "
+                       "compare_interventions(list), roi(intervention, cost), status()",
+            "algorithm": "Year-0 impact = direct_effect * affected_population. "
+                         "Year-n: impact *= (1 + growth_rate)^n * adoption_curve(n). "
+                         "Adoption_curve = 1 / (1 + math.exp(-0.5*(n-midpoint))). "
+                         "Second-order: each primary effect spawns child effects at 0.3-0.6 confidence. "
+                         "ROI = total_impact_value / cost — normalize by QALY or people_lifted_from_poverty.",
+            "marker": "project() returns year-by-year impact trajectory with confidence bounds. "
+                      "compare_interventions() ranks options by 10-year ROI so resources go where they help most.",
+        },
     }
 
     def _gen_code(self, system_prompt: str, user_content: str,
