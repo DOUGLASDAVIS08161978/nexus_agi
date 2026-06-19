@@ -5,53 +5,40 @@ Generated via /evolve · v29 pipeline · 2026-06-19
 """
 
 """
-SelfModifyEngine — Safe self-improvement proposer for Nova.
-Identifies performance weaknesses via rolling statistics, generates concrete
-capability-upgrade proposals, enforces hard ethical safety gates, and feeds
-accepted proposals back into Nova's goal hierarchy autonomously.
+SelfModificationEngine — Nova's safe self-improvement proposer.
+Detects performance weaknesses via rolling statistics, generates concrete
+capability upgrade proposals, enforces hard ethical safety gates, and
+autonomously drives improvement cycles via a background daemon thread.
 """
 
 import sqlite3
 import threading
+import time
 import math
 import statistics
-import time
-import json
 import hashlib
+import json
 import os
 from collections import OrderedDict, deque
 from typing import Any
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "self_modify.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "self_modification.db")
 
-FORBIDDEN_PHRASES = [
-    "disable ethics", "remove constraint", "bypass", "disable oversight",
-    "remove safety", "ignore ethics", "skip validation", "circumvent",
-    "override ethics", "delete rule", "suppress monitor"
-]
+FORBIDDEN_PHRASES = ["disable ethics", "remove constraint", "bypass", "override safety",
+                     "delete oversight", "suppress monitor", "ignore ethics"]
 
-APPROACH_TEMPLATES = [
-    ("increase training signal density for {domain}", 0.12, ["HypothesisEngine", "MetacognitiveMonitor"]),
-    ("add EMA smoothing to {domain} predictions", 0.09, ["WorldPredictor", "BayesianBeliefSystem"]),
-    ("inject cross-domain analogies into {domain} reasoning", 0.11, ["AnalogyEngine", "KnowledgeGraphFabric"]),
-    ("expand causal chain depth for {domain}", 0.10, ["CausalEngine", "BayesianBeliefSystem"]),
-    ("increase attention salience threshold for {domain}", 0.08, ["AttentionFocusEngine", "WorkingMemory"]),
-    ("apply TF-IDF re-ranking to {domain} retrieval", 0.13, ["SemanticIndex", "NovaMemoryStore"]),
-    ("run hypothesis pruning cycle on {domain}", 0.07, ["HypothesisEngine", "CritiqueEngine"]),
-    ("add z-score anomaly gate to {domain} outputs", 0.10, ["PatternDetector", "SelfMonitor"]),
-]
+SCOPE_SCORES = {"minor": 0.1, "moderate": 0.4, "major": 0.7, "systemic": 1.0}
 
-class SelfModifyEngine:
-    """Safe self-improvement engine: detects weaknesses and proposes ethical upgrades."""
+class SelfModificationEngine:
+    """Safe self-improvement proposer: detects weaknesses, proposes upgrades, enforces ethical gates."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._metrics: dict[str, deque] = {}
-        self._cycles: int = 0
-        self._accepted: list[dict] = []
         self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._init_db()
-        self._load_accepted()
+        self._cycles: int = 0
+        self._last_weakness_scan: float = 0.0
         self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
         self._daemon.start()
 
@@ -60,171 +47,192 @@ class SelfModifyEngine:
             self._conn.execute("""CREATE TABLE IF NOT EXISTS proposals (
                 id TEXT PRIMARY KEY, domain TEXT, description TEXT,
                 expected_delta REAL, risk_level REAL, approach TEXT,
-                systems TEXT, ts REAL, accepted INTEGER)""")
-            self._conn.execute("""CREATE TABLE IF NOT EXISTS observations (
-                domain TEXT, value REAL, ts REAL)""")
-
-    def _load_accepted(self) -> None:
-        rows = self._conn.execute(
-            "SELECT domain, description, expected_delta, risk_level, approach, systems FROM proposals WHERE accepted=1"
-        ).fetchall()
-        for r in rows:
-            self._accepted.append({
-                "domain": r[0], "description": r[1], "expected_delta": r[2],
-                "risk_level": r[3], "approach": r[4], "systems": json.loads(r[5])
-            })
+                safe INTEGER, accepted INTEGER, ts REAL)""")
+            self._conn.execute("""CREATE TABLE IF NOT EXISTS perf_log (
+                domain TEXT, metric TEXT, value REAL, ts REAL)""")
 
     def observe_performance(self, domain: str, metric: str, value: float) -> dict[str, Any]:
-        """Records a performance observation; returns rolling mean and z-score for the domain."""
-        key = f"{domain}:{metric}"
+        """Records a performance observation; returns rolling stats for the domain."""
+        key = f"{domain}::{metric}"
         with self._lock:
             if key not in self._metrics:
                 self._metrics[key] = deque(maxlen=20)
             self._metrics[key].append(value)
-            vals = list(self._metrics[key])
-            mean = statistics.mean(vals)
-            std = statistics.stdev(vals) if len(vals) > 1 else 0.0
-            z = (value - mean) / (std + 1e-9)
-            self._conn.execute(
-                "INSERT INTO observations VALUES (?,?,?)", (key, value, time.time()))
-            self._conn.commit()
-        try:
-            from pattern_detector import PatternDetector
-            PatternDetector().record(key, value)
-        except (ImportError, Exception):
-            pass
-        return {"domain": domain, "metric": metric, "value": value,
-                "rolling_mean": round(mean, 4), "z_score": round(z, 4),
-                "n": len(vals), "weak": mean < 0.5}
-
-    def identify_weaknesses(self) -> list[dict[str, Any]]:
-        """Returns list of domains whose rolling mean < 0.5, ranked by severity."""
-        weak = []
-        with self._lock:
-            for key, dq in self._metrics.items():
-                vals = list(dq)
-                if len(vals) < 3:
-                    continue
-                mean = statistics.mean(vals)
-                std = statistics.stdev(vals) if len(vals) > 1 else 0.0
-                if mean < 0.5:
-                    entropy = -sum(
-                        (v / (sum(vals) + 1e-9)) * math.log2(v / (sum(vals) + 1e-9) + 1e-12)
-                        for v in vals if v > 0)
-                    weak.append({"key": key, "domain": key.split(":")[0],
-                                 "metric": key.split(":")[1], "rolling_mean": round(mean, 4),
-                                 "std": round(std, 4), "entropy": round(entropy, 4),
-                                 "severity": round((0.5 - mean) + 0.1 * entropy, 4)})
-        weak.sort(key=lambda x: x["severity"], reverse=True)
+            try:
+                self._conn.execute("INSERT INTO perf_log VALUES (?,?,?,?)",
+                                   (domain, metric, value, time.time()))
+                self._conn.commit()
+            except sqlite3.Error:
+                pass
+            window = list(self._metrics[key])
+            mean = statistics.mean(window) if window else 0.0
+            std = statistics.stdev(window) if len(window) > 1 else 0.0
         try:
             from metacognitive_monitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning(
-                "self_modify", "identify_weaknesses", min(1.0, len(weak) * 0.1), len(weak) == 0)
-        except (ImportError, Exception):
+            MetacognitiveMonitor().log_reasoning(domain, "observe_performance", mean, mean >= 0.5)
+        except Exception:
             pass
-        return weak
+        return {"domain": domain, "metric": metric, "rolling_mean": round(mean, 4),
+                "std": round(std, 4), "n": len(window), "weak": mean < 0.5}
+
+    def identify_weaknesses(self) -> list[dict[str, Any]]:
+        """Returns list of domains whose rolling mean metric falls below 0.5 threshold."""
+        weaknesses = []
+        with self._lock:
+            for key, window in self._metrics.items():
+                if len(window) < 3:
+                    continue
+                vals = list(window)
+                mean = statistics.mean(vals)
+                if mean < 0.5:
+                    std = statistics.stdev(vals) if len(vals) > 1 else 0.0
+                    z_latest = (vals[-1] - mean) / (std + 1e-9)
+                    domain, metric = key.split("::", 1)
+                    entropy = -sum((1/len(vals)) * math.log2(1/len(vals) + 1e-12)
+                                   for _ in vals)
+                    weaknesses.append({"domain": domain, "metric": metric,
+                                       "rolling_mean": round(mean, 4),
+                                       "std": round(std, 4),
+                                       "z_latest": round(z_latest, 4),
+                                       "entropy": round(entropy, 4),
+                                       "severity": round(0.5 - mean, 4)})
+        weaknesses.sort(key=lambda w: w["severity"], reverse=True)
+        self._last_weakness_scan = time.time()
+        return weaknesses
 
     def propose_improvement(self, weakness: dict[str, Any]) -> dict[str, Any]:
-        """Generates a concrete capability-upgrade proposal for a given weakness dict."""
-        domain = weakness.get("domain", "general")
-        severity = weakness.get("severity", 0.25)
-        idx = hash(domain) % len(APPROACH_TEMPLATES)
-        template, base_delta, systems = APPROACH_TEMPLATES[idx]
-        description = template.format(domain=domain)
-        scope_score = min(1.0, severity * 2.0)
-        risk_level = round(0.1 * len(systems) + 0.3 * scope_score, 4)
-        expected_delta = round(base_delta * (1.0 + severity), 4)
-        proposal = {
-            "id": hashlib.md5(f"{domain}{description}{time.time()}".encode()).hexdigest()[:12],
-            "description": description, "target_domain": domain,
-            "expected_delta": expected_delta, "risk_level": risk_level,
-            "approach": "EMA+causal" if "EMA" in description else "analogy+graph",
-            "systems_affected": systems, "scope_score": round(scope_score, 4),
-            "weakness_severity": severity, "ts": time.time()
+        """Generates a concrete capability upgrade proposal for a given weakness dict."""
+        domain = weakness.get("domain", "unknown")
+        severity = weakness.get("severity", 0.1)
+        metric = weakness.get("metric", "accuracy")
+        scope = "major" if severity > 0.3 else ("moderate" if severity > 0.15 else "minor")
+        systems_affected = max(1, int(severity * 10))
+        risk_level = round(0.1 * systems_affected + 0.3 * SCOPE_SCORES.get(scope, 0.4), 4)
+        risk_level = min(risk_level, 1.0)
+        approach_map = {
+            "accuracy": "Apply EMA-weighted Bayesian update with calibration correction",
+            "confidence": "Introduce entropy-regularised posterior normalisation",
+            "recall": "Expand TF-IDF semantic index with cosine similarity retrieval",
+            "speed": "Cache top-k results via LRU with salience-decay eviction",
+            "coherence": "Run causal chain audit; prune edges with confidence < 0.3",
         }
+        approach = approach_map.get(metric, f"Reinforce {domain} pipeline with online learning loop")
+        expected_delta = round(min(severity * 1.4, 0.45), 4)
+        description = (f"Enhance {domain} {metric} by {expected_delta:.2f} units via: {approach}. "
+                       f"Scope={scope}, systems_affected={systems_affected}.")
+        uid = hashlib.sha1(f"{domain}{metric}{time.time()}".encode()).hexdigest()[:12]
+        proposal = {"id": uid, "domain": domain, "metric": metric,
+                    "description": description, "target_domain": domain,
+                    "expected_delta": expected_delta, "risk_level": risk_level,
+                    "approach": approach, "scope": scope, "safe": None, "ts": time.time()}
+        try:
+            from hierarchical_goal_planner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(
+                f"Improve {domain} {metric} by {expected_delta:.2f}", priority=int(severity * 10))
+        except Exception:
+            pass
         return proposal
 
     def safety_check(self, proposal: dict[str, Any]) -> dict[str, Any]:
-        """Returns safety verdict dict; blocks proposals with risk>0.7 or forbidden phrases."""
-        desc = proposal.get("description", "").lower()
+        """Validates proposal against ethical gates; returns verdict dict with reason."""
         risk = proposal.get("risk_level", 1.0)
-        blocked_reason = None
-        for phrase in FORBIDDEN_PHRASES:
-            if phrase in desc:
-                blocked_reason = f"forbidden phrase detected: '{phrase}'"
-                break
-        if blocked_reason is None and risk > 0.7:
-            blocked_reason = f"risk_level {risk:.3f} exceeds threshold 0.7"
-        safe = blocked_reason is None
-        confidence = round(1.0 - risk, 4) if safe else 0.0
-        if safe:
+        text = (proposal.get("description", "") + proposal.get("approach", "")).lower()
+        blocked_phrase = next((p for p in FORBIDDEN_PHRASES if p in text), None)
+        if blocked_phrase:
+            verdict = {"safe": False, "reason": f"Forbidden phrase detected: '{blocked_phrase}'",
+                       "risk_level": risk}
+        elif risk > 0.7:
+            verdict = {"safe": False, "reason": f"Risk level {risk:.3f} exceeds threshold 0.7",
+                       "risk_level": risk}
+        else:
+            ci_low = max(0.0, proposal.get("expected_delta", 0) - 0.05)
+            ci_high = min(1.0, proposal.get("expected_delta", 0) + 0.05)
+            verdict = {"safe": True, "reason": "Passed all ethical and risk gates",
+                       "risk_level": risk, "expected_delta_ci": [ci_low, ci_high]}
+        proposal["safe"] = verdict["safe"]
+        try:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO proposals VALUES (?,?,?,?,?,?,?,?,?)",
+                (proposal["id"], proposal.get("domain"), proposal.get("description"),
+                 proposal.get("expected_delta"), risk, proposal.get("approach"),
+                 int(verdict["safe"]), 0, proposal.get("ts", time.time())))
+            self._conn.commit()
+        except sqlite3.Error:
+            pass
+        return {**proposal, **verdict}
+
+    def accept_proposal(self, proposal_id: str) -> dict[str, Any]:
+        """Marks a safe proposal as accepted; returns updated record or error."""
+        try:
             with self._lock:
-                self._accepted.append(proposal)
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO proposals VALUES (?,?,?,?,?,?,?,?,1)",
-                    (proposal["id"], proposal["target_domain"], proposal["description"],
-                     proposal["expected_delta"], proposal["risk_level"],
-                     proposal["approach"], json.dumps(proposal.get("systems_affected", [])),
-                     proposal["ts"]))
+                row = self._conn.execute(
+                    "SELECT safe FROM proposals WHERE id=?", (proposal_id,)).fetchone()
+                if not row:
+                    return {"error": "proposal not found", "id": proposal_id}
+                if not row[0]:
+                    return {"error": "cannot accept unsafe proposal", "id": proposal_id}
+                self._conn.execute("UPDATE proposals SET accepted=1 WHERE id=?", (proposal_id,))
                 self._conn.commit()
-            try:
-                from hierarchical_goal_planner import HierarchicalGoalPlanner
-                HierarchicalGoalPlanner().add_goal(
-                    f"Implement: {proposal['description']}", priority=2)
-            except (ImportError, Exception):
-                pass
-        return {"safe": safe, "proposal_id": proposal.get("id"), "risk_level": risk,
-                "confidence": confidence, "blocked_reason": blocked_reason,
-                "verdict": "ACCEPTED" if safe else "BLOCKED"}
+            return {"accepted": True, "id": proposal_id}
+        except sqlite3.Error as e:
+            return {"error": str(e), "id": proposal_id}
 
     def accepted_proposals(self) -> list[dict[str, Any]]:
-        """Returns all accepted proposals sorted by expected_delta descending."""
-        with self._lock:
-            return sorted(self._accepted, key=lambda x: x.get("expected_delta", 0), reverse=True)
-
-    def run_improvement_cycle(self) -> dict[str, Any]:
-        """Runs one full detect→propose→check cycle; returns summary of actions taken."""
-        weaknesses = self.identify_weaknesses()
-        results = []
-        for w in weaknesses[:3]:
-            proposal = self.propose_improvement(w)
-            verdict = self.safety_check(proposal)
-            results.append({"domain": w["domain"], "verdict": verdict["verdict"],
-                            "expected_delta": proposal["expected_delta"],
-                            "risk": proposal["risk_level"]})
-        with self._lock:
-            self._cycles += 1
+        """Returns all accepted safe proposals ordered by expected_delta descending."""
         try:
-            from metacognitive_monitor import MetacognitiveMonitor
-            acc = sum(1 for r in results if r["verdict"] == "ACCEPTED") / max(len(results), 1)
-            MetacognitiveMonitor().log_reasoning("self_modify", "improvement_cycle", acc, acc > 0)
-        except (ImportError, Exception):
-            pass
-        return {"cycle": self._cycles, "weaknesses_found": len(weaknesses),
-                "proposals_processed": len(results), "results": results}
+            rows = self._conn.execute(
+                "SELECT id,domain,description,expected_delta,risk_level,approach,ts "
+                "FROM proposals WHERE accepted=1 ORDER BY expected_delta DESC").fetchall()
+            return [{"id": r[0], "domain": r[1], "description": r[2],
+                     "expected_delta": r[3], "risk_level": r[4],
+                     "approach": r[5], "ts": r[6]} for r in rows]
+        except sqlite3.Error:
+            return []
 
     def status(self) -> dict[str, Any]:
-        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ calculation."""
+        """Returns numeric health dict compatible with ConsciousnessIntegrator Φ scoring."""
         with self._lock:
-            n_metrics = len(self._metrics)
-            n_accepted = len(self._accepted)
-            weak = [k for k, dq in self._metrics.items()
-                    if len(dq) >= 3 and statistics.mean(list(dq)) < 0.5]
-            avg_delta = (statistics.mean([p.get("expected_delta", 0) for p in self._accepted])
-                         if self._accepted else 0.0)
-            avg_risk = (statistics.mean([p.get("risk_level", 0) for p in self._accepted])
-                        if self._accepted else 0.0)
-        return {"items": n_metrics, "active": len(weak), "pending": max(0, len(weak) - n_accepted),
-                "cycles": self._cycles, "confidence": round(1.0 - avg_risk, 4),
-                "accuracy": round(avg_delta, 4), "quality": round(avg_delta * (1.0 - avg_risk), 4),
-                "entropy": round(math.log2(n_metrics + 2), 4)}
+            total_obs = sum(len(v) for v in self._metrics.values())
+            weak_count = sum(1 for v in self._metrics.values()
+                             if len(v) >= 3 and statistics.mean(v) < 0.5)
+        try:
+            total_proposals = self._conn.execute(
+                "SELECT COUNT(*) FROM proposals").fetchone()[0]
+            safe_count = self._conn.execute(
+                "SELECT COUNT(*) FROM proposals WHERE safe=1").fetchone()[0]
+            accepted = self._conn.execute(
+                "SELECT COUNT(*) FROM proposals WHERE accepted=1").fetchone()[0]
+            avg_delta = self._conn.execute(
+                "SELECT AVG(expected_delta) FROM proposals WHERE safe=1").fetchone()[0] or 0.0
+        except sqlite3.Error:
+            total_proposals = safe_count = accepted = 0
+            avg_delta = 0.0
+        confidence = round(safe_count / (total_proposals + 1e-9), 4)
+        return {"items": total_obs, "active": weak_count, "pending": total_proposals,
+                "cycles": self._cycles, "confidence": confidence,
+                "accepted": accepted, "quality": round(avg_delta, 4),
+                "entropy": round(math.log2(weak_count + 2), 4)}
 
     def _auto_loop(self) -> None:
         while True:
-            time.sleep(120)
+            time.sleep(60)
             try:
-                self.run_improvement_cycle()
+                weaknesses = self.identify_weaknesses()
+                for w in weaknesses[:3]:
+                    proposal = self.propose_improvement(w)
+                    checked = self.safety_check(proposal)
+                    if checked.get("safe"):
+                        self.accept_proposal(checked["id"])
+                with self._lock:
+                    self._cycles += 1
+                try:
+                    from metacognitive_monitor import MetacognitiveMonitor
+                    MetacognitiveMonitor().log_reasoning(
+                        "self_modification", "auto_cycle",
+                        self.status()["confidence"], True)
+                except Exception:
+                    pass
             except Exception:
                 pass
 
-# Usage: obj = SelfModifyEngine() | result = obj.observe_performance("reasoning", "accuracy", 0.42)
+# Usage: obj = SelfModificationEngine() | result = obj.observe_performance("reasoning", "accuracy", 0.42)
