@@ -115,3 +115,4 @@ coverage.json
 # Hardhat
 cache/
 artifacts/
+.claude/

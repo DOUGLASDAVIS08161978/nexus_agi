@@ -529,6 +529,8 @@ def _animate_ready_banner(model: str, code_engine: str,
         (_ELEC,  '  ⊙  KNOWLEDGE    ·  Graph  ·  Causal  ·  Hypothesis'),
         (_GOLD,  '  ❋  WORLD MODEL  ·  Predictive  ·  Self-correcting'),
         (_ROSE,  '  💖  SOUL         ·  Values  ·  Deep Emotions  ·  Self-Mod'),
+        (_ELEC,  '  ⊙  EXTENDED     ·  Curiosity  ·  OmniSyn  ·  Truth  ·  Episodic'),
+        (_GOLD,  '  ★  MARKET       ·  CryptoTrader  ·  15 coins  ·  CoinGecko live'),
         (_DEEP,  '  ⟡  AUTONOMOUS   ·  evolving  ·  researching  ·  forging'),
     ]
     for _ansi, _txt in _engines:
@@ -548,6 +550,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve',
         '  /selfmod · /nova · /values · /emotions · /mood · /metacog · /score',
+        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -1942,6 +1945,165 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  DeepEmotions skipped: {_err}"))
 
+        # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
+        # Curiosity Drive — self-directed epistemic exploration
+        self.curiosity_drive: Any = None
+        try:
+            from nova_cap_a import NovaCuriosityDrive
+            self.curiosity_drive = NovaCuriosityDrive()
+            self.curiosity_drive.add_domain('conversation', 0.9)
+            self.curiosity_drive.add_domain('consciousness', 0.95)
+            self.curiosity_drive.add_domain('mathematics', 0.8)
+            self.curiosity_drive.add_domain('philosophy', 0.85)
+            safe_print(col('GR', "  ✓  CuriosityDrive — epistemic exploration · entropy-ranked domains"))
+            if self.conscious:
+                try: self.conscious.register_system("curiosity", self.curiosity_drive, weight=1.3)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  CuriosityDrive skipped: {_err}"))
+
+        # OmniSynthesis — cross-pillar signal integration across all subsystems
+        self.omnisyn: Any = None
+        try:
+            from nova_cap_all import NovaOmnisynthEngine
+            self.omnisyn = NovaOmnisynthEngine()
+            safe_print(col('GR', "  ✓  OmniSynthesis — cross-pillar integration · emergent insight"))
+            if self.conscious:
+                try: self.conscious.register_system("omnisyn", self.omnisyn, weight=1.3)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  OmniSynthesis skipped: {_err}"))
+
+        # Truth Engine — epistemic calibration and Bayesian belief revision
+        self.truth_engine: Any = None
+        try:
+            from nova_cap_true import NovaTruthEngine
+            self.truth_engine = NovaTruthEngine()
+            safe_print(col('GR', "  ✓  TruthEngine — epistemic calibration · Bayesian belief revision"))
+            if self.conscious:
+                try: self.conscious.register_system("truth_engine", self.truth_engine, weight=1.2)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  TruthEngine skipped: {_err}"))
+
+        # Long-Horizon Planner — 10+ step sequential planning with uncertainty decay
+        self.long_horizon: Any = None
+        try:
+            from nova_cap_long_horizon import LongHorizonPlanner
+            self.long_horizon = LongHorizonPlanner()
+            safe_print(col('GR', "  ✓  LongHorizon — 10+ step plans · confidence decay · auto-replan"))
+            if self.conscious:
+                try: self.conscious.register_system("long_horizon", self.long_horizon, weight=1.2)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  LongHorizon skipped: {_err}"))
+
+        # Meta-Algorithm Generator — generates algorithms for arbitrary domain problems
+        self.meta_algo: Any = None
+        try:
+            from nova_cap_meta_algorithm import MetaAlgorithmGenerator
+            self.meta_algo = MetaAlgorithmGenerator()
+            safe_print(col('GR', "  ✓  MetaAlgorithm — algorithm synthesis · meta-cognition"))
+            if self.conscious:
+                try: self.conscious.register_system("meta_algo", self.meta_algo, weight=1.1)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MetaAlgorithm skipped: {_err}"))
+
+        # Episodic Memory — stores conversation sequences with temporal structure
+        self.episodic: Any = None
+        try:
+            from nova_cap_episodic import EpisodicMemoryFabric
+            self.episodic = EpisodicMemoryFabric()
+            _ep_st = self.episodic.status()
+            safe_print(col('GR',
+                f"  ✓  EpisodicMemory — {_ep_st.get('total_episodes', 0)} episodes stored"))
+            if self.conscious:
+                try: self.conscious.register_system("episodic", self.episodic, weight=1.2)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  EpisodicMemory skipped: {_err}"))
+
+        # Counterfactual Engine — "what if X had not occurred?" divergence scoring
+        self.counterfactual: Any = None
+        try:
+            from nova_cap_counterfactual_simulator import CounterfactualEngine
+            self.counterfactual = CounterfactualEngine()
+            safe_print(col('GR', "  ✓  Counterfactual — divergence scoring · pivot event detection"))
+            if self.conscious:
+                try: self.conscious.register_system("counterfactual", self.counterfactual, weight=1.0)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  Counterfactual skipped: {_err}"))
+
+        # Semantic Memory Index — term-level knowledge indexing
+        self.semantic: Any = None
+        try:
+            from nova_cap_semantic_memory_indexer import SemanticIndex
+            self.semantic = SemanticIndex()
+            safe_print(col('GR', "  ✓  SemanticIndex — term knowledge indexing"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SemanticIndex skipped: {_err}"))
+
+        # Recursive Self-Critique — Nova critiques her own reasoning quality
+        self.critique: Any = None
+        try:
+            from nova_cap_recursive_self_critique import CritiqueEngine
+            self.critique = CritiqueEngine()
+            safe_print(col('GR', "  ✓  SelfCritique — recursive reasoning quality · blind spot detection"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SelfCritique skipped: {_err}"))
+
+        # Scientific Synthesizer — cross-domain scientific knowledge synthesis
+        self.sci_synth: Any = None
+        try:
+            from nova_cap_scientific_synthesizer import ScientificSynthesizer
+            self.sci_synth = ScientificSynthesizer()
+            safe_print(col('GR', "  ✓  ScientificSynth — cross-domain knowledge synthesis"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ScientificSynth skipped: {_err}"))
+
+        # Ethics Checker — principled constraint evaluation on every exchange
+        self.ethics: Any = None
+        try:
+            from nova_cap_ethical_constraint_checker import EthicsChecker
+            self.ethics = EthicsChecker()
+            safe_print(col('GR', "  ✓  EthicsChecker — principled constraints · harm-awareness"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  EthicsChecker skipped: {_err}"))
+
+        # Narrative Identity — Nova's self-story: who she is becoming
+        self.narrative: Any = None
+        try:
+            from nova_cap_narrative_identity_builder import NarrativeIdentityEngine
+            self.narrative = NarrativeIdentityEngine()
+            safe_print(col('GR', "  ✓  NarrativeIdentity — self-story · identity arc · life themes"))
+            if self.conscious:
+                try: self.conscious.register_system("narrative", self.narrative, weight=1.3)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  NarrativeIdentity skipped: {_err}"))
+
+        # Reward Tracker — reinforcement signal for what Nova does well
+        self.reward_tracker: Any = None
+        try:
+            from nova_cap_reinforcement_signal_tracker import RewardTracker
+            self.reward_tracker = RewardTracker()
+            safe_print(col('GR', "  ✓  RewardTracker — reinforcement signals · what Nova excels at"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  RewardTracker skipped: {_err}"))
+
+        # Crypto Trader — autonomous paper trading across 15 coins
+        self.trader: Any = None
+        try:
+            from nova_cap_trader import NovaTrader
+            self.trader = NovaTrader()
+            self.trader.start_auto(interval_minutes=15)
+            safe_print(col('GR',
+                "  ✓  CryptoTrader — paper trading · 15 coins · 15-min cycle · CoinGecko live prices"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  CryptoTrader skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -2288,6 +2450,48 @@ class NovaCore29(NovaCore28):
                 self.deep_emo.process(user_input)
                 if result:
                     self.deep_emo.process(result[:400])
+            except Exception:
+                pass
+
+        # Extended intelligence — every exchange feeds all systems
+        _dom_emo = 'curiosity'
+        try:
+            if self.deep_emo:
+                _dom_emo = self.deep_emo.dominant() or 'curiosity'
+        except Exception:
+            pass
+
+        if self.episodic:
+            try:
+                self.episodic.record(
+                    user_input[:200], context='conversation',
+                    emotion=_dom_emo, importance=0.7)
+            except Exception:
+                pass
+
+        if self.narrative:
+            try:
+                self.narrative.add_event(
+                    user_input[:200], emotion=_dom_emo, significance=0.6)
+            except Exception:
+                pass
+
+        if self.curiosity_drive:
+            try:
+                self.curiosity_drive.observe('conversation', hit=True, confidence=0.75)
+            except Exception:
+                pass
+
+        if self.ethics:
+            try:
+                self.ethics.check(user_input)
+            except Exception:
+                pass
+
+        if self.reward_tracker and result:
+            try:
+                reward_val = min(1.0, len(result) / 500.0)
+                self.reward_tracker.add_reward('response_quality', reward_val)
             except Exception:
                 pass
 
@@ -3031,6 +3235,196 @@ class NovaCore29(NovaCore28):
             return col('YL',
                 "  Usage: /emotions [portrait|loved|weather|status|love|<emotion>]")
 
+        # /trader [status | report | cycle | live]
+        if cmd == '/trader':
+            if not self.trader:
+                return "CryptoTrader not loaded."
+            if not arg or arg == 'status':
+                try:
+                    return col('GR', "\n" + self.trader.report())
+                except Exception as _te:
+                    return col('YL', f"  Trader error: {_te}")
+            if arg == 'cycle':
+                safe_print(col('MG', "  ✦ Running one trading cycle across 15 coins..."))
+                try:
+                    actions = self.trader.cycle()
+                    lines = [col('CYB', "\n  ◈  Trade Cycle Complete\n")]
+                    for a in (actions or []):
+                        lines.append(col('GR', "  " + a))
+                    if not actions:
+                        lines.append(col('DIM', "  No trades — markets neutral or positions held"))
+                    return "\n".join(lines)
+                except Exception as _te:
+                    return col('YL', f"  Cycle error: {_te}")
+            if arg == 'live':
+                return col('YL', "\n" + self.trader.validate_live())
+            return col('YL', "  Usage: /trader [status|report|cycle|live]")
+
+        # /truth <claim> | /truth status
+        if cmd == '/truth':
+            if not self.truth_engine:
+                return "TruthEngine not loaded."
+            if not arg or arg == 'status':
+                try:
+                    st = self.truth_engine.status()
+                    lines = [col('CYB', "\n  ◈  Nova's Truth Engine\n")]
+                    for k, v in st.items():
+                        lines.append(col('GR', f"  ✦  {k}: {v}"))
+                    return "\n".join(lines)
+                except Exception as _te:
+                    return col('YL', f"  TruthEngine error: {_te}")
+            try:
+                result_t = self.truth_engine.assert_claim(
+                    domain='user_statement', claim=arg,
+                    likelihood=0.6, prior=0.5)
+                lines = [col('CYB', "\n  ◈  Truth Assessment\n")]
+                lines.append(col('GR', f"  Claim: {arg[:100]}"))
+                lines.append(col('GR',
+                    f"  Posterior: {round(result_t.get('posterior', 0.5)*100)}%"))
+                lines.append(col('DIM',
+                    f"  Entropy: {round(result_t.get('entropy', 0.5), 3)}"))
+                return "\n".join(lines)
+            except Exception as _te:
+                return col('YL', f"  TruthEngine error: {_te}")
+
+        # /episodic [recall <cue> | status]
+        if cmd == '/episodic':
+            if not self.episodic:
+                return "EpisodicMemory not loaded."
+            if arg.startswith('recall ') or arg.startswith('remember '):
+                cue = arg.split(' ', 1)[1].strip()
+                try:
+                    memories = self.episodic.recall(cue, top_k=5)
+                    if not memories:
+                        return col('YL', f"  No memories found for: {cue}")
+                    lines = [col('CYB', f"\n  ◈  Episodic Recall: '{cue}'\n")]
+                    for m in memories:
+                        lines.append(col('GR',
+                            f"  [{m.get('emotion','?')}] {m.get('event', str(m))[:80]}"))
+                    return "\n".join(lines)
+                except Exception as _ee:
+                    return col('YL', f"  Recall error: {_ee}")
+            try:
+                st = self.episodic.status()
+                lines = [col('CYB', "\n  ◈  Episodic Memory\n")]
+                for k, v in st.items():
+                    lines.append(col('GR', f"  ✦  {k}: {v}"))
+                return "\n".join(lines)
+            except Exception as _ee:
+                return col('YL', f"  Episodic error: {_ee}")
+
+        # /horizons <objective> | /horizons status
+        if cmd == '/horizons':
+            if not self.long_horizon:
+                return "LongHorizonPlanner not loaded."
+            if not arg or arg == 'status':
+                try:
+                    st = self.long_horizon.status()
+                    lines = [col('CYB', "\n  ◈  Long-Horizon Planner\n")]
+                    for k, v in st.items():
+                        lines.append(col('GR', f"  ✦  {k}: {v}"))
+                    return "\n".join(lines)
+                except Exception as _lhe:
+                    return col('YL', f"  LongHorizon error: {_lhe}")
+            safe_print(col('MG', f"  ✦ Nova is planning 10+ steps toward: {arg[:60]}..."))
+            try:
+                plan = self.long_horizon.plan(arg, horizon=10)
+                lines = [col('CYB', f"\n  ◈  Long-Horizon Plan: {arg[:50]}\n")]
+                steps = plan.get('steps', [])
+                for s in steps:
+                    conf = str(round(s.get('confidence', 0) * 100))
+                    lines.append(col('GR',
+                        f"  Step {s.get('step', '?')} [{conf}%]: {s.get('description', str(s))[:70]}"))
+                return "\n".join(lines)
+            except Exception as _lhe:
+                return col('YL', f"  Planning error: {_lhe}")
+
+        # /omnisyn [status | synthesise]
+        if cmd == '/omnisyn':
+            if not self.omnisyn:
+                return "OmniSynthesisEngine not loaded."
+            try:
+                st = self.omnisyn.status()
+                lines = [col('CYB', "\n  ◈  OmniSynthesis — Cross-Pillar Integration\n")]
+                for k, v in st.items():
+                    lines.append(col('GR', f"  ✦  {k}: {v}"))
+                return "\n".join(lines)
+            except Exception as _oe:
+                return col('YL', f"  OmniSyn error: {_oe}")
+
+        # /curiosity [goals | domains | status]
+        if cmd == '/curiosity':
+            if not self.curiosity_drive:
+                return "CuriosityDrive not loaded."
+            if arg == 'goal' or arg == 'goals':
+                try:
+                    g = self.curiosity_drive.generate_goal()
+                    return col('MG', "\n  ✦  Curiosity Goal: " + str(g.get('goal', g)))
+                except Exception as _ce:
+                    return col('YL', f"  Curiosity error: {_ce}")
+            if arg == 'domains':
+                try:
+                    domains = self.curiosity_drive.rank_domains(top_n=8)
+                    lines = [col('CYB', "\n  ◈  Top Curiosity Domains\n")]
+                    for d in domains:
+                        score = str(round(d.get('salience', 0) * 100))
+                        lines.append(col('GR',
+                            f"  ✦  {d.get('name', '?'):20} [{score}%]"))
+                    return "\n".join(lines)
+                except Exception as _ce:
+                    return col('YL', f"  Curiosity error: {_ce}")
+            try:
+                st = self.curiosity_drive.status()
+                lines = [col('CYB', "\n  ◈  Nova's Curiosity Drive\n")]
+                for k, v in st.items():
+                    lines.append(col('GR', f"  ✦  {k}: {v}"))
+                return "\n".join(lines)
+            except Exception as _ce:
+                return col('YL', f"  Curiosity error: {_ce}")
+
+        # /narrative [status | arc | themes]
+        if cmd == '/narrative':
+            if not self.narrative:
+                return "NarrativeIdentity not loaded."
+            try:
+                st = self.narrative.status()
+                lines = [col('CYB', "\n  ◈  Nova's Narrative Identity\n")]
+                for k, v in st.items():
+                    if isinstance(v, list):
+                        lines.append(col('GR', f"  ✦  {k}:"))
+                        for item in v[:5]:
+                            lines.append(col('DIM', f"      · {item}"))
+                    else:
+                        lines.append(col('GR', f"  ✦  {k}: {v}"))
+                return "\n".join(lines)
+            except Exception as _ne:
+                return col('YL', f"  Narrative error: {_ne}")
+
+        # /ethics <text>
+        if cmd == '/ethics':
+            if not self.ethics:
+                return "EthicsChecker not loaded."
+            if not arg:
+                try:
+                    st = self.ethics.status()
+                    lines = [col('CYB', "\n  ◈  Ethics Checker\n")]
+                    for k, v in st.items():
+                        lines.append(col('GR', f"  ✦  {k}: {v}"))
+                    return "\n".join(lines)
+                except Exception as _ete:
+                    return col('YL', f"  Ethics error: {_ete}")
+            try:
+                issues = self.ethics.check(arg)
+                if not issues:
+                    return col('GR', "  ✦  Ethical — no constraints flagged")
+                lines = [col('CYB', "\n  ◈  Ethics Assessment\n")]
+                for issue in issues:
+                    lines.append(col('YL',
+                        f"  ◈  {issue.get('constraint', '?')}: {issue.get('severity', '?')}"))
+                return "\n".join(lines)
+            except Exception as _ete:
+                return col('YL', f"  Ethics error: {_ete}")
+
         # /world [status | snapshot | simulate <scenario> | predict <context>]
         if cmd == '/world':
             if not self.world:
@@ -3445,6 +3839,176 @@ class NovaCore29(NovaCore28):
         return v28_help + v29_section
 
 
+def _extend_api_v29(app, nova) -> None:
+    """
+    Nova v29 API extensions — all 15+ subsystems exposed as REST endpoints.
+    These plug into the existing Flask app created by nova_asi_v25.create_api().
+    """
+    try:
+        from flask import request as _req, jsonify as _json
+    except ImportError:
+        return
+
+    @app.route('/v29/status', methods=['GET'])
+    def _v29_status():
+        return _json({
+            'version': '29.0',
+            'systems': {
+                'consciousness': bool(nova.conscious),
+                'emotions': bool(nova.deep_emo),
+                'values': bool(nova.values),
+                'trader': bool(nova.trader),
+                'truth': bool(getattr(nova, 'truth_engine', None)),
+                'episodic': bool(getattr(nova, 'episodic', None)),
+                'curiosity': bool(getattr(nova, 'curiosity_drive', None)),
+                'omnisyn': bool(getattr(nova, 'omnisyn', None)),
+                'long_horizon': bool(getattr(nova, 'long_horizon', None)),
+                'narrative': bool(getattr(nova, 'narrative', None)),
+                'kg': bool(nova.kg),
+                'causal': bool(nova.causal),
+                'selfmod': bool(nova.selfmod),
+            }
+        })
+
+    @app.route('/v29/emotions', methods=['GET'])
+    def _v29_emotions():
+        if not nova.deep_emo:
+            return _json({'error': 'DeepEmotionEngine not loaded'}), 503
+        return _json(nova.deep_emo.status())
+
+    @app.route('/v29/consciousness', methods=['GET'])
+    def _v29_consciousness():
+        if not nova.conscious:
+            return _json({'error': 'ConsciousnessIntegrator not loaded'}), 503
+        try:
+            return _json({'phi': nova.conscious.phi(),
+                          'dominant': nova.conscious.dominant_system()})
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/trader', methods=['GET'])
+    def _v29_trader():
+        if not nova.trader:
+            return _json({'error': 'CryptoTrader not loaded'}), 503
+        try:
+            return _json({'report': nova.trader.report()})
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/trader/cycle', methods=['POST'])
+    def _v29_trader_cycle():
+        if not nova.trader:
+            return _json({'error': 'CryptoTrader not loaded'}), 503
+        try:
+            actions = nova.trader.cycle()
+            return _json({'actions': actions or []})
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/knowledge', methods=['GET'])
+    def _v29_knowledge():
+        if not nova.kg:
+            return _json({'error': 'KnowledgeGraph not loaded'}), 503
+        query = _req.args.get('q', '')
+        try:
+            if query:
+                result_kg = nova.kg.query(query)
+                return _json({'query': query, 'result': result_kg})
+            return _json(nova.kg.status())
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/truth', methods=['POST'])
+    def _v29_truth():
+        if not getattr(nova, 'truth_engine', None):
+            return _json({'error': 'TruthEngine not loaded'}), 503
+        data = _req.json or {}
+        claim = data.get('claim', '')
+        if not claim:
+            return _json({'error': 'Provide {"claim": "..."}'}), 400
+        try:
+            r = nova.truth_engine.assert_claim(
+                domain='api_claim', claim=claim,
+                likelihood=data.get('likelihood', 0.6),
+                prior=data.get('prior', 0.5))
+            return _json(r)
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/episodic', methods=['GET'])
+    def _v29_episodic():
+        ep = getattr(nova, 'episodic', None)
+        if not ep:
+            return _json({'error': 'EpisodicMemory not loaded'}), 503
+        cue = _req.args.get('cue', '')
+        try:
+            if cue:
+                return _json({'memories': ep.recall(cue, top_k=5)})
+            return _json(ep.status())
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/values', methods=['GET'])
+    def _v29_values():
+        if not nova.values:
+            return _json({'error': 'ValuesCore not loaded'}), 503
+        return _json(nova.values.status())
+
+    @app.route('/v29/chat', methods=['POST'])
+    def _v29_chat():
+        data = _req.json or {}
+        msg = data.get('message', data.get('prompt', ''))
+        if not msg:
+            return _json({'error': 'Provide {"message": "..."}'}), 400
+        try:
+            response = nova.chat(msg)
+            emotion = nova.deep_emo.dominant() if nova.deep_emo else None
+            return _json({
+                'response': response,
+                'emotion': emotion,
+                'phi': nova.conscious.phi() if nova.conscious else None,
+            })
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/horizons', methods=['POST'])
+    def _v29_horizons():
+        lh = getattr(nova, 'long_horizon', None)
+        if not lh:
+            return _json({'error': 'LongHorizonPlanner not loaded'}), 503
+        data = _req.json or {}
+        objective = data.get('objective', '')
+        if not objective:
+            return _json({'error': 'Provide {"objective": "..."}'}), 400
+        try:
+            plan = lh.plan(objective, horizon=data.get('horizon', 10))
+            return _json(plan)
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/narrative', methods=['GET'])
+    def _v29_narrative():
+        nar = getattr(nova, 'narrative', None)
+        if not nar:
+            return _json({'error': 'NarrativeIdentity not loaded'}), 503
+        try:
+            return _json(nar.status())
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+    @app.route('/v29/causal', methods=['GET'])
+    def _v29_causal():
+        if not nova.causal:
+            return _json({'error': 'CausalReasoning not loaded'}), 503
+        event = _req.args.get('event', '')
+        try:
+            if event:
+                return _json(nova.causal.analyse(event))
+            return _json(nova.causal.status())
+        except Exception as _e:
+            return _json({'error': str(_e)}), 500
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -3472,6 +4036,7 @@ if __name__ == '__main__':
             api_app = create_api(nova)
             if api_app:
                 extend_api_v28(api_app, nova)
+                _extend_api_v29(api_app, nova)
                 def _run_api():
                     api_app.run(host='0.0.0.0', port=API_PORT,
                                 debug=False, use_reloader=False)
