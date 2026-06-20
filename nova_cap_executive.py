@@ -5,9 +5,8 @@ Generated via /evolve · v29 pipeline · 2026-06-20
 """
 
 """
-Nova Executive Control Layer — orchestrates all cognitive subsystems, routes problems,
-detects bottlenecks, and autonomously schedules dependency-resolved tasks.
-Pillars: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
+Nova Executive Control Layer — orchestrates all subsystems, routes problems, detects cognitive bottlenecks,
+and autonomously schedules tasks with topological dependency resolution.
 """
 
 import sqlite3, threading, time, math, statistics, json, os, hashlib, collections
@@ -16,260 +15,270 @@ from typing import Any
 DB_PATH = os.path.join(os.path.dirname(__file__), "nova_executive.db")
 
 SYSTEM_DOMAINS = {
-    "BayesianBeliefSystem":    {"domain": ["probability","belief","uncertainty","evidence"], "max_tasks": 8},
-    "CausalReasoningEngine":   {"domain": ["cause","effect","causal","mechanism","why"],    "max_tasks": 6},
-    "HypothesisEngine":        {"domain": ["hypothesis","test","prediction","theory"],       "max_tasks": 6},
-    "MetaCognitionEngine":     {"domain": ["meta","reflect","blind","pattern","insight"],    "max_tasks": 4},
-    "AttentionFocusEngine":    {"domain": ["focus","attention","priority","distraction"],    "max_tasks": 5},
-    "EthicsChecker":           {"domain": ["ethics","safe","harm","value","principle"],      "max_tasks": 5},
-    "NovaImaginationFabric":   {"domain": ["imagine","creative","combine","dream","novel"],  "max_tasks": 4},
-    "InternetResearchEngine":  {"domain": ["research","arxiv","fetch","knowledge","learn"],  "max_tasks": 3},
-    "DeepEmotionEngine":       {"domain": ["emotion","feel","mood","sentiment","love"],      "max_tasks": 6},
-    "SelfModificationEngine":  {"domain": ["improve","modify","weakness","proposal","grow"], "max_tasks": 3},
-    "NovaTruthEngine":         {"domain": ["truth","claim","fact","verify","assert"],        "max_tasks": 5},
-    "TaskPlanner":             {"domain": ["task","plan","step","goal","schedule"],          "max_tasks": 8},
-    "ScientificSynthesizer":   {"domain": ["science","finding","evidence","consensus"],      "max_tasks": 4},
-    "LongHorizonPlanner":      {"domain": ["horizon","long","future","strategy","replan"],   "max_tasks": 4},
+    "BayesianBeliefSystem":   {"domain": "probability reasoning belief uncertainty", "max_tasks": 8},
+    "CausalReasoningEngine":  {"domain": "cause effect chain causal inference", "max_tasks": 6},
+    "HypothesisEngine":       {"domain": "hypothesis science discovery", "max_tasks": 6},
+    "MetaCognitionEngine":    {"domain": "reflection meta thinking patterns", "max_tasks": 4},
+    "EmotionalResonanceEngine": {"domain": "emotion feeling mood empathy", "max_tasks": 5},
+    "KnowledgeGraph":         {"domain": "knowledge fact entity relation", "max_tasks": 10},
+    "TaskPlanner":            {"domain": "plan task goal steps", "max_tasks": 8},
+    "InternetResearchEngine": {"domain": "research web search arxiv fetch", "max_tasks": 4},
+    "NovaImaginationFabric":  {"domain": "creative imagine dream combine", "max_tasks": 5},
+    "EthicsChecker":          {"domain": "ethics safety rule moral", "max_tasks": 6},
+    "WorldPredictor":         {"domain": "predict future world forecast", "max_tasks": 5},
+    "SelfModificationEngine": {"domain": "self improve modify weakness", "max_tasks": 3},
 }
 
 class NovaExecutiveControl:
-    """Orchestrates Nova subsystems: routes problems, allocates tasks, detects bottlenecks, schedules work."""
+    """Executive control layer: routes problems, allocates systems, schedules tasks, detects bottlenecks."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._active: dict[str, int] = {s: 0 for s in SYSTEM_DOMAINS}
-        self._overrides: dict[str, str] = {}
-        self._ema_load: float = 0.5
-        self._cycle_count: int = 0
         self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._init_db()
-        self._load_state()
-        t = threading.Thread(target=self._auto_loop, daemon=True)
-        t.start()
+        self._system_load: dict[str, int] = {s: 0 for s in SYSTEM_DOMAINS}
+        self._overrides: dict[str, str] = {}
+        self._cycles: int = 0
+        self._route_history: collections.deque = collections.deque(maxlen=200)
+        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
+        self._daemon.start()
 
     def _init_db(self) -> None:
-        with self._conn:
-            self._conn.execute("""CREATE TABLE IF NOT EXISTS exec_tasks (
-                id TEXT PRIMARY KEY, desc TEXT, est_min REAL, deps TEXT,
-                done INTEGER DEFAULT 0, created_at REAL)""")
-            self._conn.execute("""CREATE TABLE IF NOT EXISTS exec_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, domain TEXT,
-                decision TEXT, confidence REAL)""")
+        c = self._conn.cursor()
+        c.executescript("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY, desc TEXT, est_minutes REAL,
+                deps TEXT, done INTEGER DEFAULT 0, created REAL
+            );
+            CREATE TABLE IF NOT EXISTS route_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                problem TEXT, systems TEXT, rationale TEXT, ts REAL
+            );
+        """)
+        self._conn.commit()
 
-    def _load_state(self) -> None:
-        try:
-            rows = self._conn.execute("SELECT id, desc FROM exec_tasks WHERE done=0").fetchall()
-            self._task_count = len(rows)
-        except sqlite3.Error:
-            self._task_count = 0
-
-    def _relevance(self, problem: str, system: str) -> float:
-        words = set(problem.lower().split())
-        keywords = set(SYSTEM_DOMAINS[system]["domain"])
-        overlap = len(words & keywords)
-        idf_boost = math.log(len(SYSTEM_DOMAINS) / (overlap + 1) + 1)
-        return overlap / (idf_boost + 1e-9) if overlap else 0.0
-
-    def _capacity(self, system: str) -> float:
-        max_t = SYSTEM_DOMAINS[system]["max_tasks"]
-        active = self._active.get(system, 0)
-        return 1.0 - min(active / max_t, 1.0)
+    def _tfidf_relevance(self, problem: str, domain_str: str) -> float:
+        """Returns TF-IDF-style relevance score between problem text and domain keywords."""
+        p_tokens = problem.lower().split()
+        d_tokens = domain_str.lower().split()
+        if not p_tokens or not d_tokens:
+            return 0.0
+        overlap = sum(1 for t in p_tokens if t in d_tokens)
+        tf = overlap / (len(p_tokens) + 1e-9)
+        idf = math.log((len(SYSTEM_DOMAINS) + 1) / (overlap + 1))
+        return tf * idf
 
     def route(self, problem: str, context: str = "") -> list[dict]:
         """Returns ordered list of systems to invoke with relevance scores and rationale."""
         combined = (problem + " " + context).lower()
-        scores = {}
+        scores: list[tuple[float, str, str]] = []
         with self._lock:
-            for sys_name in SYSTEM_DOMAINS:
+            for sys_name, meta in SYSTEM_DOMAINS.items():
                 if sys_name in self._overrides:
                     continue
-                rel = self._relevance(combined, sys_name)
-                cap = self._capacity(sys_name)
-                score = rel * cap
-                if score > 0:
-                    scores[sys_name] = {"score": round(score, 4), "relevance": round(rel, 4),
-                                        "capacity": round(cap, 4),
-                                        "rationale": f"domain={SYSTEM_DOMAINS[sys_name]['domain'][:2]}"}
-        ranked = sorted(scores.items(), key=lambda x: x[1]["score"], reverse=True)[:5]
-        result = [{"system": k, **v} for k, v in ranked]
-        self._log("route", problem[:60], round(ranked[0][1]["score"], 3) if ranked else 0.0)
+                rel = self._tfidf_relevance(combined, meta["domain"])
+                active = self._system_load.get(sys_name, 0)
+                capacity = 1.0 - (active / (meta["max_tasks"] + 1e-9))
+                capacity = max(0.0, min(1.0, capacity))
+                score = rel * capacity
+                rationale = f"rel={rel:.3f} cap={capacity:.3f} load={active}/{meta['max_tasks']}"
+                scores.append((score, sys_name, rationale))
+        scores.sort(key=lambda x: x[0], reverse=True)
+        top_k = [{"system": s, "score": round(sc, 4), "rationale": r}
+                 for sc, s, r in scores[:5] if sc > 0.0]
+        if not top_k:
+            top_k = [{"system": scores[0][1], "score": round(scores[0][0], 4),
+                      "rationale": scores[0][2]}] if scores else []
+        with self._lock:
+            self._route_history.append({"problem": problem[:80], "routes": top_k, "ts": time.time()})
+            self._conn.execute(
+                "INSERT INTO route_log(problem,systems,rationale,ts) VALUES(?,?,?,?)",
+                (problem[:200], json.dumps([r["system"] for r in top_k]),
+                 json.dumps([r["rationale"] for r in top_k]), time.time())
+            )
+            self._conn.commit()
         try:
-            from HierarchicalGoalPlanner import HierarchicalGoalPlanner
-            HierarchicalGoalPlanner().add_goal(f"Execute routed plan for: {problem[:50]}", priority=7)
+            from metacognitive_monitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning("executive_route", "tfidf_capacity", top_k[0]["score"] if top_k else 0.0, True)
         except Exception:
             pass
-        return result
+        return top_k
 
     def allocate(self, task: str, systems: list[str]) -> dict:
-        """Allocates task across given systems; returns allocation map with confidence intervals."""
-        result = {}
+        """Increments load on named systems and returns allocation confirmation with confidence."""
+        allocated = []
         with self._lock:
             for s in systems:
-                if s not in SYSTEM_DOMAINS:
-                    continue
-                cap = self._capacity(s)
-                conf = cap * self._relevance(task, s)
-                ci_low = max(0.0, conf - 0.15)
-                ci_high = min(1.0, conf + 0.15)
-                self._active[s] = min(self._active[s] + 1, SYSTEM_DOMAINS[s]["max_tasks"])
-                result[s] = {"confidence": round(conf, 3), "ci": [round(ci_low, 3), round(ci_high, 3)],
-                             "active_after": self._active[s]}
-        self._log("allocate", task[:60], statistics.mean(v["confidence"] for v in result.values()) if result else 0.0)
-        return result
+                if s in SYSTEM_DOMAINS and s not in self._overrides:
+                    self._system_load[s] = self._system_load.get(s, 0) + 1
+                    allocated.append(s)
+        confidence = len(allocated) / (len(systems) + 1e-9)
+        try:
+            from hierarchical_goal_planner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(f"Executive allocated: {task[:60]}", priority=2)
+        except Exception:
+            pass
+        return {"task": task[:80], "allocated": allocated, "confidence": round(confidence, 3)}
 
     def bottleneck_report(self) -> dict:
-        """Identifies which subsystem is constraining Nova's throughput via z-score analysis."""
+        """Returns the system(s) constraining Nova's throughput with z-score anomaly detection."""
         with self._lock:
-            depths = {s: self._active[s] for s in SYSTEM_DOMAINS}
-        vals = list(depths.values())
-        mean_d = statistics.mean(vals)
-        std_d = statistics.stdev(vals) if len(vals) > 1 else 1e-9
-        bottlenecks = {}
-        for s, d in depths.items():
+            loads = {s: self._system_load.get(s, 0) for s in SYSTEM_DOMAINS}
+        depths = list(loads.values())
+        if not depths:
+            return {"bottlenecks": [], "mean_load": 0.0, "status": "idle"}
+        mean_d = statistics.mean(depths)
+        std_d = statistics.stdev(depths) if len(depths) > 1 else 1e-9
+        bottlenecks = []
+        for s, d in loads.items():
             z = (d - mean_d) / (std_d + 1e-9)
-            if d > 2 * mean_d or abs(z) > 2.0:
-                bottlenecks[s] = {"queue_depth": d, "z_score": round(z, 3),
-                                  "severity": "critical" if abs(z) > 3.0 else "moderate"}
-        return {"bottlenecks": bottlenecks, "mean_queue": round(mean_d, 3),
-                "most_constrained": max(depths, key=depths.get) if depths else None}
+            if d > 2 * mean_d or abs(z) > 2.5:
+                bottlenecks.append({"system": s, "queue_depth": d, "z_score": round(z, 3)})
+        bottlenecks.sort(key=lambda x: x["z_score"], reverse=True)
+        return {"bottlenecks": bottlenecks, "mean_load": round(mean_d, 3),
+                "std_load": round(std_d, 3), "threshold": round(2 * mean_d, 3)}
 
     def override(self, system: str, reason: str) -> dict:
-        """Disables a system from routing; returns confirmation with timestamp."""
+        """Disables a system from routing and returns confirmation."""
         with self._lock:
             self._overrides[system] = reason
-        self._log("override", f"{system}:{reason[:40]}", 1.0)
-        return {"overridden": system, "reason": reason, "ts": round(time.time(), 2)}
+        return {"overridden": system, "reason": reason, "active_overrides": len(self._overrides)}
 
     def cognitive_load(self) -> dict:
-        """Returns EMA-smoothed cognitive load across all systems with uncertainty bounds."""
+        """Returns mean cognitive load ratio and per-system breakdown with confidence interval."""
         with self._lock:
-            loads = []
-            for s, cfg in SYSTEM_DOMAINS.items():
-                active = self._active[s]
-                cap = cfg["max_tasks"]
-                loads.append(active / cap)
-            raw = statistics.mean(loads) if loads else 0.0
-            self._ema_load = 0.15 * raw + 0.85 * self._ema_load
-            std = statistics.stdev(loads) if len(loads) > 1 else 0.0
-        return {"ema_load": round(self._ema_load, 4), "raw_load": round(raw, 4),
-                "std": round(std, 4), "ci": [round(max(0, self._ema_load - std), 3),
-                                              round(min(1, self._ema_load + std), 3)],
-                "overloaded": self._ema_load > 0.75}
+            ratios = {s: self._system_load.get(s, 0) / SYSTEM_DOMAINS[s]["max_tasks"]
+                      for s in SYSTEM_DOMAINS}
+        vals = list(ratios.values())
+        mean_load = statistics.mean(vals) if vals else 0.0
+        std_load = statistics.stdev(vals) if len(vals) > 1 else 0.0
+        ci_low = max(0.0, mean_load - 1.96 * std_load / math.sqrt(len(vals) + 1))
+        ci_high = min(1.0, mean_load + 1.96 * std_load / math.sqrt(len(vals) + 1))
+        entropy = -sum(p * math.log2(p + 1e-12) for p in vals)
+        return {"mean_load": round(mean_load, 4), "ci_95": [round(ci_low, 4), round(ci_high, 4)],
+                "entropy": round(entropy, 4), "per_system": {s: round(v, 3) for s, v in ratios.items()}}
 
     def add_task(self, desc: str, estimated_minutes: float, deps: list[str] = None) -> str:
-        """Adds a scheduled task with dependencies; returns unique task_id."""
-        tid = hashlib.md5(f"{desc}{time.time()}".encode()).hexdigest()[:10]
-        dep_str = json.dumps(deps or [])
+        """Adds a schedulable task and returns its unique task_id."""
+        task_id = hashlib.md5(f"{desc}{time.time()}".encode()).hexdigest()[:10]
+        deps_json = json.dumps(deps or [])
         with self._lock:
-            with self._conn:
-                self._conn.execute("INSERT INTO exec_tasks VALUES (?,?,?,?,0,?)",
-                                   (tid, desc, estimated_minutes, dep_str, time.time()))
-        return tid
+            self._conn.execute(
+                "INSERT INTO tasks(id,desc,est_minutes,deps,done,created) VALUES(?,?,?,?,0,?)",
+                (task_id, desc[:200], estimated_minutes, deps_json, time.time())
+            )
+            self._conn.commit()
+        return task_id
 
     def schedule(self) -> list[dict]:
-        """Returns topologically-sorted task list with ETA; blocked tasks marked separately."""
-        rows = self._conn.execute(
-            "SELECT id, desc, est_min, deps FROM exec_tasks WHERE done=0 ORDER BY created_at").fetchall()
-        graph: dict[str, list] = {}
-        meta: dict[str, dict] = {}
-        for tid, desc, est, dep_str in rows:
-            deps = json.loads(dep_str)
-            graph[tid] = deps
-            meta[tid] = {"desc": desc, "est_min": est, "deps": deps}
+        """Returns topologically-sorted task list with ETA, excluding blocked tasks."""
+        c = self._conn.cursor()
+        c.execute("SELECT id,desc,est_minutes,deps FROM tasks WHERE done=0")
+        rows = c.fetchall()
+        tasks = {r[0]: {"id": r[0], "desc": r[1], "est": r[2], "deps": json.loads(r[3])} for r in rows}
+        done_ids = {r[0] for r in self._conn.execute("SELECT id FROM tasks WHERE done=1")}
         order, visited, temp = [], set(), set()
-        def visit(n: str) -> None:
-            if n in temp:
-                return
-            if n not in visited:
-                temp.add(n)
-                for dep in graph.get(n, []):
-                    if dep in graph:
-                        visit(dep)
-                temp.discard(n)
-                visited.add(n)
-                order.append(n)
-        for node in list(graph.keys()):
-            visit(node)
-        eta_acc = 0.0
-        result = []
-        all_done_ids = {r[0] for r in self._conn.execute("SELECT id FROM exec_tasks WHERE done=1").fetchall()}
+
+        def visit(tid: str) -> bool:
+            if tid in temp:
+                return False
+            if tid in visited:
+                return True
+            temp.add(tid)
+            for dep in tasks.get(tid, {}).get("deps", []):
+                if dep not in done_ids and dep in tasks:
+                    if not visit(dep):
+                        return False
+            temp.discard(tid)
+            visited.add(tid)
+            order.append(tid)
+            return True
+
+        for tid in list(tasks.keys()):
+            visit(tid)
+        result, cumulative = [], 0.0
         for tid in order:
-            deps = meta[tid]["deps"]
-            blocked = any(d not in all_done_ids and d in graph for d in deps)
-            eta_acc += meta[tid]["est_min"]
-            result.append({"id": tid, "desc": meta[tid]["desc"], "est_min": meta[tid]["est_min"],
-                           "blocked": blocked, "eta_minutes": round(eta_acc, 2)})
+            if tid in tasks:
+                t = tasks[tid]
+                blocked = any(d not in done_ids and d in tasks for d in t["deps"])
+                cumulative += t["est"]
+                result.append({"id": tid, "desc": t["desc"], "est_minutes": t["est"],
+                                "blocked": blocked, "cumulative_eta_min": round(cumulative, 2)})
         return result
 
     def next_task(self) -> dict:
-        """Returns next unblocked task in topological order; returns empty dict if none available."""
-        for task in self.schedule():
-            if not task["blocked"]:
-                return task
-        return {}
+        """Returns the next unblocked, incomplete task in topological order."""
+        scheduled = self.schedule()
+        for t in scheduled:
+            if not t["blocked"]:
+                return t
+        return {"id": None, "desc": "No unblocked tasks available", "blocked": True}
 
     def mark_done(self, task_id: str) -> dict:
-        """Marks task complete; returns updated ETA for remaining tasks."""
+        """Marks a task complete and returns updated ETA summary."""
         with self._lock:
-            with self._conn:
-                self._conn.execute("UPDATE exec_tasks SET done=1 WHERE id=?", (task_id,))
+            self._conn.execute("UPDATE tasks SET done=1 WHERE id=?", (task_id,))
+            self._conn.commit()
         remaining = self.eta_for_all()
-        try:
-            from MetacognitiveMonitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning("executive", "task_completion", 0.9, True)
-        except Exception:
-            pass
-        return {"completed": task_id, "remaining_eta_minutes": remaining}
+        return {"marked_done": task_id, "remaining_tasks": remaining["total_tasks"],
+                "total_eta_minutes": remaining["total_eta_minutes"]}
 
-    def eta_for_all(self) -> float:
+    def eta_for_all(self) -> dict:
         """Returns total ETA in minutes for all remaining unblocked tasks."""
-        tasks = self.schedule()
-        return round(sum(t["est_min"] for t in tasks if not t["blocked"]), 2)
+        scheduled = self.schedule()
+        unblocked = [t for t in scheduled if not t["blocked"]]
+        total_eta = sum(t["est_minutes"] for t in unblocked)
+        return {"total_tasks": len(scheduled), "unblocked_tasks": len(unblocked),
+                "total_eta_minutes": round(total_eta, 2),
+                "confidence": round(1.0 / (1.0 + 0.05 * len(unblocked)), 4)}
 
     def status(self) -> dict:
-        """Returns plain dict with numeric keys for ConsciousnessIntegrator Φ calculation."""
+        """Returns numeric-keyed status dict compatible with ConsciousnessIntegrator Φ."""
         load = self.cognitive_load()
-        pending = len(self.schedule())
-        rows = self._conn.execute("SELECT COUNT(*) FROM exec_log").fetchone()
-        cycles = rows[0] if rows else 0
-        return {"active": sum(self._active.values()), "confidence": round(1.0 - load["ema_load"], 3),
-                "pending": pending, "cycles": cycles, "entropy": round(load["std"], 4),
-                "quality": round(1.0 - load["raw_load"], 3), "overrides": len(self._overrides),
-                "items": len(SYSTEM_DOMAINS)}
-
-    def _log(self, domain: str, decision: str, confidence: float) -> None:
-        try:
-            with self._conn:
-                self._conn.execute("INSERT INTO exec_log (ts,domain,decision,confidence) VALUES (?,?,?,?)",
-                                   (time.time(), domain, decision, confidence))
-        except sqlite3.Error:
-            pass
+        bn = self.bottleneck_report()
+        c = self._conn.cursor()
+        c.execute("SELECT COUNT(*) FROM tasks WHERE done=0")
+        pending = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM tasks WHERE done=1")
+        done = c.fetchone()[0]
+        with self._lock:
+            cycles = self._cycles
+            overrides = len(self._overrides)
+        return {"active": sum(self._system_load.values()), "pending": pending,
+                "cycles": cycles, "confidence": round(1.0 - load["mean_load"], 4),
+                "entropy": load["entropy"], "quality": round(1.0 - load["mean_load"], 4),
+                "bottlenecks": len(bn["bottlenecks"]), "overrides": overrides,
+                "completed_tasks": done}
 
     def _auto_loop(self) -> None:
         while True:
-            time.sleep(45)
             try:
+                time.sleep(30)
                 with self._lock:
-                    for s in self._active:
-                        if self._active[s] > 0:
-                            self._active[s] = max(0, self._active[s] - 1)
-                self._cycle_count += 1
+                    for s in self._system_load:
+                        if self._system_load[s] > 0:
+                            self._system_load[s] = max(0, self._system_load[s] - 1)
+                    self._cycles += 1
                 bn = self.bottleneck_report()
                 if bn["bottlenecks"]:
                     try:
-                        from HierarchicalGoalPlanner import HierarchicalGoalPlanner
-                        HierarchicalGoalPlanner().add_goal(
-                            f"Resolve bottleneck in {list(bn['bottlenecks'].keys())[0]}", priority=9)
+                        from metacognitive_monitor import MetacognitiveMonitor
+                        MetacognitiveMonitor().log_reasoning(
+                            "executive_bottleneck",
+                            bn["bottlenecks"][0]["system"],
+                            1.0 - bn["mean_load"],
+                            len(bn["bottlenecks"]) == 0
+                        )
                     except Exception:
                         pass
                 try:
-                    from MetacognitiveMonitor import MetacognitiveMonitor
-                    MetacognitiveMonitor().log_reasoning(
-                        "executive_auto", "bottleneck_scan",
-                        round(1.0 - self._ema_load, 3), not bool(bn["bottlenecks"]))
+                    from hierarchical_goal_planner import HierarchicalGoalPlanner
+                    st = self.status()
+                    if st["pending"] > 5:
+                        HierarchicalGoalPlanner().add_goal("Reduce executive task queue backlog", priority=3)
                 except Exception:
                     pass
             except Exception:
                 pass
 
-# Usage: obj = NovaExecutiveControl() | result = obj.route("why does this hypothesis fail", "causal reasoning")
+# Usage:
