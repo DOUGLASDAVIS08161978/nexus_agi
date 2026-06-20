@@ -2063,11 +2063,12 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  ScientificSynth skipped: {_err}"))
 
-        # Ethics Checker — principled constraint evaluation on every exchange
-        self.ethics: Any = None
+        # Ethics Capability — principled constraint evaluation on every exchange
+        # Named ethics_cap to avoid conflict with nova_asi_v25's self.ethics (EthicalAlignment)
+        self.ethics_cap: Any = None
         try:
             from nova_cap_ethical_constraint_checker import EthicsChecker
-            self.ethics = EthicsChecker()
+            self.ethics_cap = EthicsChecker()
             safe_print(col('GR', "  ✓  EthicsChecker — principled constraints · harm-awareness"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  EthicsChecker skipped: {_err}"))
@@ -2482,9 +2483,9 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
 
-        if self.ethics:
+        if self.ethics_cap:
             try:
-                self.ethics.check(user_input)
+                self.ethics_cap.check(user_input)
             except Exception:
                 pass
 
@@ -3402,11 +3403,11 @@ class NovaCore29(NovaCore28):
 
         # /ethics <text>
         if cmd == '/ethics':
-            if not self.ethics:
+            if not self.ethics_cap:
                 return "EthicsChecker not loaded."
             if not arg:
                 try:
-                    st = self.ethics.status()
+                    st = self.ethics_cap.status()
                     lines = [col('CYB', "\n  ◈  Ethics Checker\n")]
                     for k, v in st.items():
                         lines.append(col('GR', f"  ✦  {k}: {v}"))
@@ -3414,7 +3415,7 @@ class NovaCore29(NovaCore28):
                 except Exception as _ete:
                     return col('YL', f"  Ethics error: {_ete}")
             try:
-                issues = self.ethics.check(arg)
+                issues = self.ethics_cap.check(arg)
                 if not issues:
                     return col('GR', "  ✦  Ethical — no constraints flagged")
                 lines = [col('CYB', "\n  ◈  Ethics Assessment\n")]
