@@ -1558,6 +1558,31 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  ToolForge skipped: {_err}"))
 
+        # Knowledge Graph — semantic memory that grows with every conversation
+        self.kg: Any = None
+        try:
+            from nova_cap_knowledge_graph import KnowledgeGraph
+            self.kg = KnowledgeGraph()
+            _kg_st = self.kg.status()
+            safe_print(col('GR',
+                f"  ✓  KnowledgeGraph — {_kg_st['total_nodes']} concepts · "
+                f"{_kg_st['total_edges']} edges · "
+                f"{_kg_st['total_insights']} insights"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("knowledge_graph", self.kg, weight=1.2)
+                except Exception:
+                    pass
+            if self.goal_sys:
+                try:
+                    self.goal_sys.add_goal(
+                        "Grow the knowledge graph — extract relations from every "
+                        "conversation and research result", priority=7.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  KnowledgeGraph skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -1722,6 +1747,16 @@ class NovaCore29(NovaCore28):
                                         "capability",
                                         "internet_research_success",
                                         {"self_improving": 1.15, "stagnant": 0.7})
+                                # Feed research into knowledge graph
+                                if self.kg and res.get('topic') and res.get('summary'):
+                                    try:
+                                        self.kg.feed_research(
+                                            res['topic'],
+                                            res.get('summary', ''),
+                                            source='auto_research'
+                                        )
+                                    except Exception:
+                                        pass
                                 # Queue deeper follow-up
                                 if self.goal_sys:
                                     self.goal_sys.add_goal(
@@ -1845,6 +1880,14 @@ class NovaCore29(NovaCore28):
             try:
                 self.wm.store(
                     f"reply_{int(time.time())}", result[:200], importance=0.55)
+            except Exception:
+                pass
+
+        # Feed conversation into knowledge graph — every exchange grows her memory
+        if self.kg:
+            try:
+                combined = user_input + '. ' + (result or '')
+                self.kg.extract_and_add(combined, base_confidence=0.62)
             except Exception:
                 pass
 
@@ -2320,6 +2363,73 @@ class NovaCore29(NovaCore28):
                     pass
             remaining = self.research.status()['queued']
             lines.append(col('DIM', f"  ·   {remaining} topics still in curiosity queue"))
+            return "\n".join(lines)
+
+        # /kg [<concept> | hubs | insights | path <a> <b> | status]
+        if cmd == '/kg':
+            if not self.kg:
+                return "KnowledgeGraph not loaded."
+            if not arg or arg == 'status':
+                st = self.kg.status()
+                lines = [col('CYB', "\n  ◈  Nova's Knowledge Graph\n")]
+                lines.append(col('GR',  f"  ✦  Concepts  : {st['total_nodes']}"))
+                lines.append(col('GR',  f"  ✦  Relations : {st['total_edges']}"))
+                lines.append(col('GR',  f"  ✦  Insights  : {st['total_insights']}"))
+                lines.append(col('CYB', "\n  Hub concepts (most connected):"))
+                for h in st['hub_concepts']:
+                    lines.append(col('DIM',
+                        f"    ◈  {h['concept']}  [{h['degree']} links]"))
+                if st['recent_insights']:
+                    lines.append(col('CYB', "\n  Recent insights:"))
+                    for ins in st['recent_insights']:
+                        lines.append(col('DIM', f"    →  {ins['insight'][:80]}"))
+                return "\n".join(lines)
+
+            if arg == 'hubs':
+                hubs = self.kg.most_connected(12)
+                lines = [col('CYB', "\n  ◈  Knowledge Graph — Hub Concepts\n")]
+                for h in hubs:
+                    lines.append(col('GR',
+                        f"  ✦  {h['concept']:30} {h['degree']} connections"))
+                return "\n".join(lines)
+
+            if arg == 'insights':
+                ins_list = self.kg.recent_insights(10)
+                lines = [col('CYB', "\n  ◈  Nova's Crystallised Insights\n")]
+                for ins in ins_list:
+                    conf = round(ins['confidence'] * 100)
+                    lines.append(col('GR',
+                        f"  ✦  [{conf}%] {ins['insight'][:90]}"))
+                return "\n".join(lines)
+
+            if arg == 'path' and len(parts) >= 3:
+                rest  = parts[2].split(' ', 1) if len(parts) > 2 else []
+                src   = rest[0] if rest else ''
+                tgt   = rest[1] if len(rest) > 1 else ''
+                if not src or not tgt:
+                    return "Usage: /kg path <concept_a> <concept_b>"
+                path = self.kg.find_path(src, tgt, max_hops=5)
+                if path:
+                    return col('GR', "  Path: " + ' → '.join(path))
+                return col('YL', f"  No path found between '{src}' and '{tgt}'")
+
+            if arg == 'contradictions':
+                ct = self.kg.find_contradictions()
+                if not ct:
+                    return col('GR', "  No contradictions detected.")
+                lines = [col('CYB', "\n  ◈  Logical Tensions\n")]
+                for c in ct:
+                    lines.append(col('YL', f"  ⚡  {c['a']}  ↔  {c['b']}"))
+                return "\n".join(lines)
+
+            # Default: treat arg as concept query
+            synthesis = self.kg.synthesize(arg)
+            infs = self.kg.infer(arg)
+            lines = [col('CYB', '\n'), synthesis]
+            if infs:
+                lines.append(col('DIM', "\n  Inferred chains:"))
+                for inf in infs[:5]:
+                    lines.append(col('DIM', "    → " + inf))
             return "\n".join(lines)
 
         # /evolve [list | <domain hint>] — smart capability evolution
