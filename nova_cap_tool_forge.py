@@ -267,18 +267,53 @@ class ToolForge:
             f"and able to run autonomously."
         )
 
-        raw = self._codegen(system, user, temp=0.72, max_tokens=3500)
-        if not raw or raw.startswith('['):
-            return {'success': False, 'error': f'Codegen failed: {str(raw)[:120]}'}
+        temperatures = [0.72, 0.45, 0.20]
+        last_error   = ''
+        code         = ''
 
-        code = self._extract_code(raw)
-        if not code:
-            return {'success': False, 'error': 'No valid Python extracted'}
+        for attempt, temp in enumerate(temperatures, 1):
+            if attempt == 1:
+                raw = self._codegen(system, user, temp=temp, max_tokens=3500)
+            else:
+                fix_user = (
+                    f"{user}\n\n"
+                    f"YOUR PREVIOUS ATTEMPT FAILED — syntax error:\n{last_error}\n\n"
+                    f"Rules for this retry:\n"
+                    f"• Fix every syntax error shown above\n"
+                    f"• Keep f-strings simple — avoid nested braces inside {{}}\n"
+                    f"• Use string concatenation instead of complex f-expressions\n"
+                    f"• Every opening brace/bracket/paren MUST have a matching close\n"
+                    f"• Make the code shorter and simpler — under 200 lines total\n"
+                    f"OUTPUT: raw Python only, no markdown."
+                )
+                raw = self._codegen(system, fix_user, temp=temp, max_tokens=3000)
 
-        try:
-            ast.parse(code)
-        except SyntaxError as e:
-            return {'success': False, 'error': f'Syntax error: {e}'}
+            if not raw or raw.startswith('['):
+                last_error = f'Codegen failed: {str(raw)[:120]}'
+                continue
+
+            code = self._extract_code(raw)
+            if not code:
+                last_error = 'No valid Python extracted'
+                continue
+
+            try:
+                ast.parse(code)
+                break   # valid — exit retry loop
+            except SyntaxError as e:
+                last_error = str(e)
+                # try truncation repair before next LLM retry
+                repaired = self._repair_syntax(code)
+                if repaired and repaired != code:
+                    try:
+                        ast.parse(repaired)
+                        code = repaired
+                        break
+                    except SyntaxError:
+                        pass
+        else:
+            return {'success': False,
+                    'error': f'Syntax error after {len(temperatures)} attempts: {last_error}'}
 
         header = (
             f'"""\nnova_cap_{slug}.py\n'
@@ -341,6 +376,24 @@ class ToolForge:
             None
         )
         return '\n'.join(lines[start:]).strip() if start is not None else raw.strip()
+
+    @staticmethod
+    def _repair_syntax(code: str) -> str:
+        """
+        Trim lines from the end until ast.parse() succeeds — catches truncation
+        at max_tokens where the LLM just ran out of room mid-expression.
+        Scans from the full length down to half, stepping by 3 lines at a time.
+        """
+        lines = code.splitlines()
+        floor = max(15, len(lines) // 2)
+        for end in range(len(lines) - 1, floor, -3):
+            candidate = '\n'.join(lines[:end])
+            try:
+                ast.parse(candidate)
+                return candidate
+            except SyntaxError:
+                pass
+        return code
 
     # ── Tool execution ─────────────────────────────────────────────────────────
 
