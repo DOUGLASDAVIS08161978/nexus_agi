@@ -546,7 +546,7 @@ def _animate_ready_banner(model: str, code_engine: str,
     _cmds = [
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve',
-        '  /nova · /values · /mood · /feel · /metacog · /score',
+        '  /selfmod · /nova · /values · /mood · /metacog · /score',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -1903,6 +1903,25 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  ValuesCore skipped: {_err}"))
 
+        # Self-Modification Engine — Nova reads, scores, and improves her own code
+        self.selfmod: Any = None
+        try:
+            from nova_cap_self_modification import SelfModificationEngine
+            self.selfmod = SelfModificationEngine(codegen=_claude_codegen)
+            _sm_st = self.selfmod.status()
+            safe_print(col('GR',
+                f"  ✓  SelfModification — {_sm_st['capabilities_known']} capabilities · "
+                f"{_sm_st['pending_proposals']} proposals · "
+                f"she reads and improves herself"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "self_modification", self.selfmod, weight=1.4)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SelfModification skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -2764,6 +2783,115 @@ class NovaCore29(NovaCore28):
                 lines.append(col('DIM',
                     f"  {direction}  [{conf}%] {u['statement'][:70]}"))
             return "\n".join(lines)
+
+        # /selfmod [status | inventory | analyse <file> | propose <file> | cycle | build <name> | test <file>]
+        if cmd == '/selfmod':
+            if not self.selfmod:
+                return "SelfModificationEngine not loaded."
+            if not arg or arg == 'status':
+                st = self.selfmod.status()
+                lines = [col('CYB', "\n  ◈  Nova's Self-Modification Engine\n")]
+                lines.append(col('GR', f"  ✦  Capabilities known   : {st['capabilities_known']}"))
+                lines.append(col('GR', f"  ✦  Improvement proposals: {st['pending_proposals']}"))
+                lines.append(col('GR', f"  ✦  Modification events  : {st['modification_events']}"))
+                if st['weakest_capability']:
+                    w = st['weakest_capability']
+                    lines.append(col('YL',
+                        f"  ·  Weakest right now: {w['name']} [{round(w['quality']*100)}%]"))
+                lines.append(col('CYB', "\n  Capability inventory:"))
+                for cap in st['inventory']:
+                    grade = self.selfmod._grade(cap['quality'])
+                    lines.append(col('DIM',
+                        f"    {grade}  {cap['name']:35} {round(cap['quality']*100)}%"))
+                return "\n".join(lines)
+
+            if arg == 'inventory':
+                inv = self.selfmod.inventory()
+                lines = [col('CYB', "\n  ◈  Full Capability Inventory\n")]
+                for cap in inv:
+                    grade = self.selfmod._grade(cap['quality'])
+                    lines.append(col('GR' if cap['quality'] > 0.7 else 'DIM',
+                        f"  {grade}  {cap['name']:38} {round(cap['quality']*100)}%"))
+                return "\n".join(lines)
+
+            if arg.startswith('analyse '):
+                fname = arg[8:].strip()
+                if not fname.endswith('.py'):
+                    fname += '.py'
+                analysis = self.selfmod.analyse_file(fname)
+                if 'error' in analysis:
+                    return col('YL', "  " + analysis['error'])
+                lines = [col('CYB',
+                    f"\n  ◈  Code Analysis: {fname}\n")]
+                lines.append(col('GR',
+                    f"  ✦  Grade: {analysis['grade']}  "
+                    f"Score: {round(analysis['overall']*100)}%  "
+                    f"Lines: {analysis['lines']}"))
+                lines.append(col('GR',
+                    f"  ✦  Strongest: {analysis['strongest']}"))
+                lines.append(col('YL',
+                    f"  ·  Weakest : {analysis['weakest']}"))
+                lines.append(col('DIM', "\n  Dimension scores:"))
+                for dim, score in analysis['scores'].items():
+                    bar = '█' * int(score * 10) + '░' * (10 - int(score * 10))
+                    lines.append(col('DIM',
+                        f"    {dim:15} {bar} {round(score*100)}%"))
+                return "\n".join(lines)
+
+            if arg.startswith('propose '):
+                fname = arg[8:].strip()
+                if not fname.endswith('.py'):
+                    fname += '.py'
+                safe_print(col('MG', "  ✦ Nova is reading herself and forming a proposal..."))
+                prop = self.selfmod.propose_improvement(fname)
+                if 'error' in prop:
+                    return col('YL', "  " + prop['error'])
+                lines = [col('CYB', "\n  ◈  Improvement Proposal\n")]
+                lines.append(col('GR', "  File: " + prop['file']))
+                lines.append(col('GR', "  Reasoning: " + prop['reasoning']))
+                lines.append(col('DIM', "\n  Proposal:"))
+                lines.append(col('NOVA' if False else 'CY',
+                    "  " + prop['proposal']))
+                return "\n".join(lines)
+
+            if arg == 'cycle':
+                safe_print(col('MG', "  ✦ Running autonomous self-improvement cycle..."))
+                result = self.selfmod.autonomous_cycle()
+                lines = [col('CYB', "\n  ◈  Self-Improvement Cycle Complete\n")]
+                lines.append(col('GR', f"  ✦  Scanned: {result.get('capabilities_scanned')} capabilities"))
+                lines.append(col('GR', f"  ✦  Target : {result.get('target_file')}"))
+                lines.append(col('GR', f"  ✦  Grade  : {result.get('grade')}"))
+                lines.append(col('YL', f"  ·  Weakest: {result.get('weakest_dimension')}"))
+                lines.append(col('DIM', f"\n  Proposal: {result.get('proposal')}"))
+                return "\n".join(lines)
+
+            if arg.startswith('test '):
+                fname = arg[5:].strip()
+                if not fname.endswith('.py'):
+                    fname += '.py'
+                result = self.selfmod.test_file(fname)
+                status = col('GR', '  ✦ PASSED') if result['passed'] else col('YL', '  ✗ FAILED')
+                lines = [col('CYB', f"\n  ◈  Test: {fname}"), status]
+                if result.get('stderr'):
+                    lines.append(col('DIM', "  " + result['stderr'][:200]))
+                return "\n".join(lines)
+
+            if arg.startswith('build '):
+                desc_part = arg[6:].strip()
+                if '|' in desc_part:
+                    name, desc = desc_part.split('|', 1)
+                else:
+                    name, desc = desc_part, desc_part
+                safe_print(col('MG', f"  ✦ Nova is writing {name.strip()} from scratch..."))
+                result = self.selfmod.generate_new_capability(
+                    name.strip(), desc.strip())
+                if result.get('success'):
+                    return col('GR',
+                        f"\n  ✦ Built: {result['file']} ({result['lines']} lines)")
+                return col('YL', "  Failed: " + result.get('error', '?'))
+
+            return col('YL', "  Usage: /selfmod [status|inventory|analyse <f>|"
+                       "propose <f>|cycle|test <f>|build <name>|<desc>]")
 
         # /nova — who Nova is, in her own words
         if cmd == '/nova':
