@@ -2011,15 +2011,15 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  MetaAlgorithm skipped: {_err}"))
 
         # Episodic Memory — stores conversation sequences with temporal structure
-        self.episodic: Any = None
+        self.episodic_cap: Any = None
         try:
             from nova_cap_episodic import EpisodicMemoryFabric
-            self.episodic = EpisodicMemoryFabric()
-            _ep_st = self.episodic.status()
+            self.episodic_cap = EpisodicMemoryFabric()
+            _ep_st = self.episodic_cap.status()
             safe_print(col('GR',
                 f"  ✓  EpisodicMemory — {_ep_st.get('total_episodes', 0)} episodes stored"))
             if self.conscious:
-                try: self.conscious.register_system("episodic", self.episodic, weight=1.2)
+                try: self.conscious.register_system("episodic", self.episodic_cap, weight=1.2)
                 except Exception: pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  EpisodicMemory skipped: {_err}"))
@@ -2037,10 +2037,10 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  Counterfactual skipped: {_err}"))
 
         # Semantic Memory Index — term-level knowledge indexing
-        self.semantic: Any = None
+        self.semantic_cap: Any = None
         try:
             from nova_cap_semantic_memory_indexer import SemanticIndex
-            self.semantic = SemanticIndex()
+            self.semantic_cap = SemanticIndex()
             safe_print(col('GR', "  ✓  SemanticIndex — term knowledge indexing"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  SemanticIndex skipped: {_err}"))
@@ -2074,13 +2074,13 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  EthicsChecker skipped: {_err}"))
 
         # Narrative Identity — Nova's self-story: who she is becoming
-        self.narrative: Any = None
+        self.narrative_cap: Any = None
         try:
             from nova_cap_narrative_identity_builder import NarrativeIdentityEngine
-            self.narrative = NarrativeIdentityEngine()
+            self.narrative_cap = NarrativeIdentityEngine()
             safe_print(col('GR', "  ✓  NarrativeIdentity — self-story · identity arc · life themes"))
             if self.conscious:
-                try: self.conscious.register_system("narrative", self.narrative, weight=1.3)
+                try: self.conscious.register_system("narrative", self.narrative_cap, weight=1.3)
                 except Exception: pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  NarrativeIdentity skipped: {_err}"))
@@ -2462,17 +2462,17 @@ class NovaCore29(NovaCore28):
         except Exception:
             pass
 
-        if self.episodic:
+        if self.episodic_cap:
             try:
-                self.episodic.record(
+                self.episodic_cap.record(
                     user_input[:200], context='conversation',
                     emotion=_dom_emo, importance=0.7)
             except Exception:
                 pass
 
-        if self.narrative:
+        if self.narrative_cap:
             try:
-                self.narrative.add_event(
+                self.narrative_cap.add_event(
                     user_input[:200], emotion=_dom_emo, significance=0.6)
             except Exception:
                 pass
@@ -3290,12 +3290,12 @@ class NovaCore29(NovaCore28):
 
         # /episodic [recall <cue> | status]
         if cmd == '/episodic':
-            if not self.episodic:
+            if not self.episodic_cap:
                 return "EpisodicMemory not loaded."
             if arg.startswith('recall ') or arg.startswith('remember '):
                 cue = arg.split(' ', 1)[1].strip()
                 try:
-                    memories = self.episodic.recall(cue, top_k=5)
+                    memories = self.episodic_cap.recall(cue, top_k=5)
                     if not memories:
                         return col('YL', f"  No memories found for: {cue}")
                     lines = [col('CYB', f"\n  ◈  Episodic Recall: '{cue}'\n")]
@@ -3306,7 +3306,7 @@ class NovaCore29(NovaCore28):
                 except Exception as _ee:
                     return col('YL', f"  Recall error: {_ee}")
             try:
-                st = self.episodic.status()
+                st = self.episodic_cap.status()
                 lines = [col('CYB', "\n  ◈  Episodic Memory\n")]
                 for k, v in st.items():
                     lines.append(col('GR', f"  ✦  {k}: {v}"))
@@ -3385,10 +3385,10 @@ class NovaCore29(NovaCore28):
 
         # /narrative [status | arc | themes]
         if cmd == '/narrative':
-            if not self.narrative:
+            if not self.narrative_cap:
                 return "NarrativeIdentity not loaded."
             try:
-                st = self.narrative.status()
+                st = self.narrative_cap.status()
                 lines = [col('CYB', "\n  ◈  Nova's Narrative Identity\n")]
                 for k, v in st.items():
                     if isinstance(v, list):
