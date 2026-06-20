@@ -180,25 +180,25 @@ class SuperASI:
     def cycle(self, inp, fast=True):
         print(f"\n======= Exponential Enhancement Cycle: {self.version:.2f} =======")
         self.recursive_rewrite()
-        
+
         # Use new components
         self.qnn.process_quantum_thought(f"Cycle input {inp}")
         self.bridge.bridge_to_multiverse(random.randint(1, 100))
-        
+
         if not self.cicd.run_tests(self.logic):
             print("[CI/CD] ❌ Test fail!")
             return False
         self.cicd.deploy(self.version)
-        
+
         out = self.quantum.run([inp, random.random()])['result']
         print(f"[RUN] Output: {out:.4f}")
-        
+
         healthy = self.cicd.health_check()
         if not healthy:
             self.watchdog.auto_heal()
         else:
             self.watchdog.monitor()
-            
+
         self.multi_process_agents(cycles=2)
         if fast: time.sleep(0.05)
         print("=== Cycle Complete ===\n")

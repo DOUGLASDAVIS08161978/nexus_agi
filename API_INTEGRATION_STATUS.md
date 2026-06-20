@@ -181,4 +181,3 @@ A: Only if using CLI deployment. MetaMask deployment doesn't require exposing yo
 ---
 
 **Ready to Deploy?** Open `deploy_metamask.html` and click "Deploy All"! 🚀
-

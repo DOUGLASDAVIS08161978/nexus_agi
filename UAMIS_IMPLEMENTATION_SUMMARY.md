@@ -315,7 +315,7 @@ The system produces rich, detailed console output:
 
 ### Basic Usage
 ```javascript
-const { UAMISQuantumEmitter, ComplexityLevel } = 
+const { UAMISQuantumEmitter, ComplexityLevel } =
     require('./modules/uamis_emitter_quantum_enhanced.js');
 
 const uamis = new UAMISQuantumEmitter({

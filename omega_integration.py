@@ -27,16 +27,16 @@ class IntegratedNexusOmega:
     """
     Integrated system combining Nexus Core and OMEGA ASI capabilities
     """
-    
+
     def __init__(self, enable_nexus=True, enable_omega=True):
         print("\n" + "=" * 80)
         print("🚀 INTEGRATED NEXUS-OMEGA SYSTEM")
         print("Advanced AI with Enhanced ASI Capabilities")
         print("=" * 80 + "\n")
-        
+
         self.nexus_enabled = enable_nexus and nexus_available
         self.omega_enabled = enable_omega and omega_available
-        
+
         # Initialize Nexus Core
         if self.nexus_enabled:
             print("[INTEGRATION] Initializing Nexus Core...")
@@ -45,7 +45,7 @@ class IntegratedNexusOmega:
         else:
             self.nexus_core = None
             print("[INTEGRATION] Nexus Core disabled\n")
-        
+
         # Initialize OMEGA ASI
         if self.omega_enabled:
             print("[INTEGRATION] Initializing OMEGA ASI...")
@@ -54,17 +54,17 @@ class IntegratedNexusOmega:
         else:
             self.omega_asi = None
             print("[INTEGRATION] OMEGA ASI disabled\n")
-    
+
     def solve_problem(self, problem, constraints=None, use_omega=True, use_nexus=True):
         """
         Solve problem using integrated approach
-        
+
         Args:
             problem: Problem specification dictionary
             constraints: Constraint dictionary
             use_omega: Whether to use OMEGA ASI analysis
             use_nexus: Whether to use Nexus Core analysis
-        
+
         Returns:
             Integrated solution combining both systems
         """
@@ -74,7 +74,7 @@ class IntegratedNexusOmega:
             "omega_solution": None,
             "integrated_solution": None
         }
-        
+
         # Get Nexus Core solution
         if use_nexus and self.nexus_enabled:
             print("\n[INTEGRATION] Running Nexus Core analysis...")
@@ -84,7 +84,7 @@ class IntegratedNexusOmega:
                 print("[INTEGRATION] Nexus Core analysis complete")
             except Exception as e:
                 print(f"[INTEGRATION] Nexus Core error: {e}")
-        
+
         # Get OMEGA ASI solution
         if use_omega and self.omega_enabled:
             print("\n[INTEGRATION] Running OMEGA ASI analysis...")
@@ -94,7 +94,7 @@ class IntegratedNexusOmega:
                 print("[INTEGRATION] OMEGA ASI analysis complete")
             except Exception as e:
                 print(f"[INTEGRATION] OMEGA ASI error: {e}")
-        
+
         # Integrate solutions
         if results["nexus_solution"] and results["omega_solution"]:
             print("\n[INTEGRATION] Synthesizing integrated solution...")
@@ -106,9 +106,9 @@ class IntegratedNexusOmega:
             results["integrated_solution"] = results["omega_solution"]
         elif results["nexus_solution"]:
             results["integrated_solution"] = results["nexus_solution"]
-        
+
         return results
-    
+
     def _synthesize_solutions(self, nexus_sol, omega_sol):
         """Synthesize Nexus and OMEGA solutions into unified result"""
         synthesis = {
@@ -134,17 +134,17 @@ class IntegratedNexusOmega:
             },
             "recommendations": []
         }
-        
+
         # Combine recommendations
         if "recommendations" in omega_sol:
             synthesis["recommendations"].extend(omega_sol["recommendations"])
-        
+
         # Add Nexus-specific insights
         if nexus_sol.get("subproblems"):
             synthesis["recommendations"].append(
                 f"Leverage Nexus decomposition into {len(nexus_sol['subproblems'])} specialized subproblems"
             )
-        
+
         return synthesis
 
 
@@ -153,10 +153,10 @@ def demonstrate_integration():
     print("\n" + "=" * 80)
     print("INTEGRATED NEXUS-OMEGA DEMONSTRATION")
     print("=" * 80 + "\n")
-    
+
     # Initialize integrated system
     integrated_system = IntegratedNexusOmega(enable_nexus=False, enable_omega=True)
-    
+
     # Define problem
     problem = {
         "title": "Sustainable Urban Development with AI Integration",
@@ -176,44 +176,44 @@ def demonstrate_integration():
             "future_generations"
         ]
     }
-    
+
     constraints = {
         "budget": 0.7,
         "timeline": 10,
         "environmental_impact": 0.9,
         "public_support": 0.8
     }
-    
+
     # Solve problem
     results = integrated_system.solve_problem(problem, constraints)
-    
+
     # Display results
     print("\n" + "=" * 80)
     print("INTEGRATED SOLUTION RESULTS")
     print("=" * 80 + "\n")
-    
+
     print(f"Problem: {results['problem']}\n")
-    
+
     if results["integrated_solution"]:
         integrated = results["integrated_solution"]
-        
+
         if integrated.get("approach") == "hybrid_nexus_omega":
             print("Approach: Hybrid Nexus-OMEGA Integration")
             print("\nNexus Contribution:")
             for key, value in integrated["nexus_contribution"].items():
                 print(f"  - {key}: {value}")
-            
+
             print("\nOMEGA Contribution:")
             for key, value in integrated["omega_contribution"].items():
                 print(f"  - {key}: {value}")
-            
+
             print("\nIntegrated Metrics:")
             for key, value in integrated["integrated_metrics"].items():
                 if isinstance(value, float):
                     print(f"  - {key}: {value:.3f}")
                 else:
                     print(f"  - {key}: {value}")
-            
+
             print("\nRecommendations:")
             for i, rec in enumerate(integrated["recommendations"], 1):
                 print(f"  {i}. {rec}")
@@ -221,12 +221,12 @@ def demonstrate_integration():
             # Display OMEGA-only solution
             print("Approach: OMEGA ASI (Standalone)")
             print(f"\nConfidence: {integrated.get('asi_confidence', 'N/A')}")
-            
+
             if "recommendations" in integrated:
                 print("\nRecommendations:")
                 for i, rec in enumerate(integrated["recommendations"], 1):
                     print(f"  {i}. {rec}")
-    
+
     print("\n" + "=" * 80)
     print("INTEGRATION DEMONSTRATION COMPLETE")
     print("=" * 80 + "\n")

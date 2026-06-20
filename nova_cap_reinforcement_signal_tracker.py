@@ -29,7 +29,7 @@ class RewardTracker:
         return self.rewards.get(name)
 
     def __str__(self):
-        return str(self.rewards) 
+        return str(self.rewards)
 
     def __repr__(self):
         return f"RewardTracker({self.rewards})"
