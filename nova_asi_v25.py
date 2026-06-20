@@ -4446,4 +4446,3 @@ if __name__=="__main__":
         print(col('MG',"\nNova: Until we meet again, Douglas. ✨"))
         nova.continuous.stop()
         nova.running=False
-

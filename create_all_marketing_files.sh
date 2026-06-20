@@ -20,7 +20,7 @@ cat > tweet2.txt << TWEET2
 
 Our advanced AGI can:
 • Solve complex problems
-• Analyze data  
+• Analyze data
 • Generate content
 • Provide consultations
 
@@ -71,7 +71,7 @@ Want to try it? DM me.
 Payments in Bitcoin. No signup required.
 TWEET5
 
-#Reddit posts  
+#Reddit posts
 cat > reddit_bitcoin.md << 'REDDIT1'
 **Title:** Just launched an AI service that accepts Bitcoin payments!
 
@@ -205,7 +205,7 @@ CATEGORY: Programming & Tech > AI Services > AI Applications
 
 PRICING:
 Basic ($5): Single problem solving + detailed explanation
-Standard ($50): Up to 5 problems + analysis + recommendations  
+Standard ($50): Up to 5 problems + analysis + recommendations
 Premium ($500): Full day consultation + implementation + ongoing support
 
 DESCRIPTION:
@@ -270,4 +270,3 @@ FIVERR
 
 echo "✅ Created all marketing files!"
 ls -1 tweet*.txt reddit*.md fiverr_gig.txt
-

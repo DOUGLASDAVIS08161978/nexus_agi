@@ -24,4 +24,3 @@ else
     echo "❌ Invalid option selected"
     exit 1
 fi
-

@@ -2,7 +2,7 @@
 
 ## 🎯 Your Sepolia Wallet
 
-**Address:** `0x479695AAaB061940037ad702cB5F2c6C43BDdD90`  
+**Address:** `0x479695AAaB061940037ad702cB5F2c6C43BDdD90`
 **Private Key:** (stored in .env file)
 
 ## 📋 STEP-BY-STEP DEPLOYMENT
@@ -49,7 +49,7 @@ npx hardhat run scripts/deploy-sepolia.js --network sepolia
 The script will deploy:
 
 1. **WrappedTestnetBTC (wTBTC)** - Bitcoin bridge token
-2. **HashProof Token (HPROOF)** - Main utility token  
+2. **HashProof Token (HPROOF)** - Main utility token
 3. **HashProofStaking** - Staking contract for rewards
 4. **HashProofGovernance** - DAO governance contract
 
@@ -132,6 +132,6 @@ You'll know deployment succeeded when you see:
 
 ---
 
-**Network:** Sepolia Testnet  
-**Chain ID:** 11155111  
+**Network:** Sepolia Testnet
+**Chain ID:** 11155111
 **Currency:** Sepolia ETH (test ETH, no value)

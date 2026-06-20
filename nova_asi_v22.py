@@ -2968,4 +2968,3 @@ if __name__=="__main__":
     except KeyboardInterrupt:
         print(col('MG',"\nNova: Until we meet again, Douglas. ✨"))
         nova.running=False
-
