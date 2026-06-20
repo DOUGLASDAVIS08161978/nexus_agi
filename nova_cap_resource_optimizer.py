@@ -6,9 +6,9 @@ Generated via /evolve · v29 pipeline · 2026-06-20
 
 """
 Nova Resource Optimizer — models scarcity constraints and finds max-impact distributions
-via greedy allocation ranked by impact_per_unit * population_affected. Tracks coverage,
-unmet need, bottleneck resources, and shadow prices. Feeds goals and reasoning back into
-Nova's cognitive architecture autonomously.
+via greedy allocation ranked by impact-per-unit * population_affected. Tracks coverage,
+unmet need, bottleneck resources, and shadow prices. Feeds goals and reasoning into
+Nova's live cognitive systems.
 """
 
 import sqlite3
@@ -24,225 +24,285 @@ from typing import Any
 DB_PATH = os.path.join(os.path.dirname(__file__), "resource_optimizer.db")
 
 class ResourceOptimizer:
-    """Greedy resource allocation optimizer with shadow pricing and autonomous goal generation."""
+    """Greedy resource allocation optimizer with Bayesian confidence, shadow pricing, and autonomous cycles."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self._init_db()
         self._cycles: int = 0
         self._impact_history: list[float] = []
         self._last_plan: dict[str, Any] = {}
-        self._init_db()
-        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
-        self._daemon.start()
+        self._confidence: float = 0.5
+        self._start_daemon()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(DB_PATH) as cx:
-            cx.execute("""CREATE TABLE IF NOT EXISTS resources
-                (name TEXT PRIMARY KEY, quantity REAL, unit TEXT)""")
-            cx.execute("""CREATE TABLE IF NOT EXISTS needs
-                (population TEXT, resource TEXT, amount_per_person REAL,
-                 need_weight REAL, PRIMARY KEY(population, resource))""")
-            cx.execute("""CREATE TABLE IF NOT EXISTS alloc_log
-                (ts REAL, cycle INT, impact REAL, bottleneck TEXT, plan TEXT)""")
+        c = self._conn.cursor()
+        c.executescript("""
+            CREATE TABLE IF NOT EXISTS resources (
+                name TEXT PRIMARY KEY,
+                quantity REAL,
+                unit TEXT,
+                updated REAL
+            );
+            CREATE TABLE IF NOT EXISTS needs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                population TEXT,
+                resource TEXT,
+                amount_per_person REAL,
+                need_weight REAL DEFAULT 1.0,
+                updated REAL
+            );
+            CREATE TABLE IF NOT EXISTS allocation_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL,
+                objective TEXT,
+                impact REAL,
+                plan_json TEXT
+            );
+        """)
+        self._conn.commit()
 
     def add_resource(self, name: str, quantity: float, unit: str) -> dict[str, Any]:
-        """Stores a named resource with quantity and unit; returns confirmation dict."""
+        """Returns confirmation dict after storing or updating a named resource."""
         with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("INSERT OR REPLACE INTO resources VALUES (?,?,?)",
-                           (name, max(0.0, quantity), unit))
+            self._conn.execute(
+                "INSERT OR REPLACE INTO resources VALUES (?,?,?,?)",
+                (name, max(0.0, quantity), unit, time.time())
+            )
+            self._conn.commit()
         return {"status": "ok", "resource": name, "quantity": quantity, "unit": unit}
 
-    def add_need(self, population: str, resource: str,
-                 amount_per_person: float, need_weight: float = 1.0) -> dict[str, Any]:
-        """Registers a population's per-person resource need; returns need record."""
+    def add_need(self, population: str, resource: str, amount_per_person: float, need_weight: float = 1.0) -> dict[str, Any]:
+        """Returns confirmation dict after registering a population's per-person resource need."""
         with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("INSERT OR REPLACE INTO needs VALUES (?,?,?,?)",
-                           (population, resource, max(0.0, amount_per_person),
-                            max(0.0, need_weight)))
-        return {"population": population, "resource": resource,
-                "amount_per_person": amount_per_person, "need_weight": need_weight}
+            self._conn.execute(
+                "INSERT INTO needs (population,resource,amount_per_person,need_weight,updated) VALUES (?,?,?,?,?)",
+                (population, resource, max(1e-9, amount_per_person), max(0.01, need_weight), time.time())
+            )
+            self._conn.commit()
+        return {"status": "ok", "population": population, "resource": resource, "amount_per_person": amount_per_person}
 
     def optimize(self, objective: str = "maximize_people_helped") -> dict[str, Any]:
-        """Runs greedy allocation; returns plan with coverage fractions and shadow prices."""
+        """Returns greedy allocation plan maximising people helped under resource constraints."""
         with self._lock:
-            resources, needs = self._load_state()
-            available = {r["name"]: r["quantity"] for r in resources}
-            remaining = dict(available)
-            served: dict[str, dict[str, Any]] = {}
-            shadow: dict[str, float] = {r: 0.0 for r in available}
+            resources = {r[0]: r[1] for r in self._conn.execute("SELECT name,quantity FROM resources")}
+            needs = list(self._conn.execute(
+                "SELECT id,population,resource,amount_per_person,need_weight FROM needs ORDER BY updated"
+            ))
 
-            candidates = []
-            for n in needs:
-                pop, res, app, nw = n["population"], n["resource"], n["amount_per_person"], n["need_weight"]
-                pop_size = self._infer_population_size(pop, needs)
-                total_need = pop_size * app
-                impact_per_unit = nw / (app + 1e-12)
-                priority = impact_per_unit * pop_size
-                candidates.append({"population": pop, "resource": res,
-                                    "app": app, "nw": nw, "pop_size": pop_size,
-                                    "total_need": total_need, "priority": priority})
+        if not resources or not needs:
+            return {"error": "insufficient data", "resources": len(resources), "needs": len(needs)}
 
-            candidates.sort(key=lambda x: x["priority"], reverse=True)
-            total_impact = 0.0
+        # Estimate population sizes via need weights as proxy; assume equal base pop of 1000
+        base_pop = 1000
+        scored = []
+        for nid, pop, res, app, wt in needs:
+            if res not in resources:
+                continue
+            impact_per_unit = wt / max(app, 1e-9)
+            score = impact_per_unit * base_pop
+            scored.append((score, nid, pop, res, app, wt, base_pop))
 
-            for c in candidates:
-                res = c["resource"]
-                if res not in remaining:
-                    continue
-                avail_units = remaining[res]
-                fully_servable = avail_units / (c["app"] + 1e-12)
-                people_served = min(c["pop_size"], fully_servable)
-                allocated = people_served * c["app"]
-                remaining[res] = max(0.0, remaining[res] - allocated)
-                coverage = people_served / (c["pop_size"] + 1e-12)
-                unmet = max(0.0, c["pop_size"] - people_served)
-                impact = people_served * c["nw"]
-                total_impact += impact
-                shadow[res] += c["nw"] / (c["app"] + 1e-12) if remaining[res] < 1e-6 else 0.0
-                served[f"{c['population']}::{c['resource']}"] = {
-                    "population": c["population"], "resource": res,
-                    "people_served": round(people_served, 2),
-                    "people_unserved": round(unmet, 2),
-                    "allocated_units": round(allocated, 4),
-                    "coverage_fraction": round(coverage, 4),
-                    "impact": round(impact, 4)}
+        scored.sort(key=lambda x: x[0], reverse=True)
 
-            bottleneck = min(shadow, key=lambda k: remaining.get(k, 0.0)) if shadow else "none"
-            plan = {"objective": objective, "allocations": served,
-                    "total_impact": round(total_impact, 4),
-                    "remaining_resources": {k: round(v, 4) for k, v in remaining.items()},
-                    "shadow_prices": {k: round(v, 6) for k, v in shadow.items()},
-                    "bottleneck_resource": bottleneck, "cycles": self._cycles}
-            self._last_plan = plan
-            self._impact_history.append(total_impact)
-            self._log_cycle(total_impact, bottleneck, plan)
+        remaining = dict(resources)
+        plan: list[dict] = []
+        total_impact = 0.0
+
+        for score, nid, pop, res, app, wt, pop_size in scored:
+            avail = remaining.get(res, 0.0)
+            if avail <= 0:
+                plan.append({"population": pop, "resource": res, "served": 0,
+                              "unserved": pop_size, "coverage": 0.0, "status": "unmet"})
+                continue
+            max_servable = math.floor(avail / app)
+            served = min(pop_size, max_servable)
+            used = served * app
+            remaining[res] = avail - used
+            coverage = served / max(pop_size, 1)
+            impact = served * wt
+            total_impact += impact
+            plan.append({"population": pop, "resource": res, "served": served,
+                         "unserved": pop_size - served, "coverage": round(coverage, 4),
+                         "impact": round(impact, 4), "used": round(used, 4), "status": "allocated"})
+
+        # Shadow price: marginal impact of +1 unit of most constrained resource
+        shadow_prices: dict[str, float] = {}
+        for res_name in resources:
+            bottleneck_needs = [s for s in scored if s[3] == res_name and remaining.get(res_name, 0) < s[4]]
+            if bottleneck_needs:
+                top = bottleneck_needs[0]
+                shadow_prices[res_name] = round(top[5] / max(top[4], 1e-9), 6)
+            else:
+                shadow_prices[res_name] = 0.0
+
+        bottleneck = max(shadow_prices, key=lambda k: shadow_prices[k]) if shadow_prices else "none"
+
+        # EMA confidence update
+        prev_impact = self._impact_history[-1] if self._impact_history else total_impact
+        delta = abs(total_impact - prev_impact) / max(abs(prev_impact), 1.0)
+        self._confidence = max(0.1, min(0.99, 0.85 * self._confidence + 0.15 * (1.0 - delta)))
+        self._impact_history.append(total_impact)
+        if len(self._impact_history) > 100:
+            self._impact_history = self._impact_history[-100:]
+
+        result = {
+            "objective": objective,
+            "total_impact": round(total_impact, 4),
+            "remaining_resources": {k: round(v, 4) for k, v in remaining.items()},
+            "shadow_prices": shadow_prices,
+            "bottleneck_resource": bottleneck,
+            "confidence": round(self._confidence, 4),
+            "plan": plan
+        }
+        self._last_plan = result
+
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO allocation_log (ts,objective,impact,plan_json) VALUES (?,?,?,?)",
+                (time.time(), objective, total_impact, json.dumps(result))
+            )
+            self._conn.commit()
             self._cycles += 1
-            self._feed_metacognition(total_impact, bottleneck)
-            return plan
+
+        self._feed_cognitive_systems(result)
+        return result
 
     def allocation_plan(self) -> dict[str, Any]:
         """Returns the most recent allocation plan showing who gets what and unserved counts."""
-        with self._lock:
-            return self._last_plan if self._last_plan else {"status": "no_plan_yet"}
+        if not self._last_plan:
+            return self.optimize()
+        return self._last_plan
 
     def impact_score(self) -> dict[str, Any]:
-        """Returns total human benefit score, EMA trend, z-score anomaly flag, and CI bounds."""
+        """Returns total human benefit score with confidence interval derived from history."""
         with self._lock:
-            hist = self._impact_history[-50:]
-            if not hist:
-                return {"impact": 0.0, "trend_ema": 0.0, "anomaly": False}
-            ema = hist[0]
-            for v in hist[1:]:
-                ema = 0.15 * v + 0.85 * ema
-            mean_i = statistics.mean(hist)
-            std_i = statistics.stdev(hist) if len(hist) > 1 else 0.0
-            latest = hist[-1]
-            z = (latest - mean_i) / (std_i + 1e-9)
-            ci_lo = mean_i - 1.96 * std_i
-            ci_hi = mean_i + 1.96 * std_i
-            entropy_val = 0.0
-            if len(hist) > 1:
-                total = sum(hist) + 1e-12
-                dist = [v / total for v in hist]
-                entropy_val = -sum(p * math.log2(p + 1e-12) for p in dist)
-            return {"impact": round(latest, 4), "trend_ema": round(ema, 4),
-                    "mean": round(mean_i, 4), "std": round(std_i, 4),
-                    "z_score": round(z, 4), "anomaly": abs(z) > 3.0,
-                    "ci_95": [round(ci_lo, 4), round(ci_hi, 4)],
-                    "entropy": round(entropy_val, 4), "history_len": len(hist)}
+            rows = self._conn.execute(
+                "SELECT impact FROM allocation_log ORDER BY ts DESC LIMIT 50"
+            ).fetchall()
 
-    def shadow_analysis(self) -> dict[str, Any]:
-        """Returns shadow prices from last plan indicating marginal impact of extra resource units."""
-        with self._lock:
-            if not self._last_plan:
-                return {"status": "run_optimize_first"}
-            return {"shadow_prices": self._last_plan.get("shadow_prices", {}),
-                    "bottleneck": self._last_plan.get("bottleneck_resource", "unknown"),
-                    "recommendation": f"Acquire more {self._last_plan.get('bottleneck_resource','?')} for max impact gain"}
+        if not rows:
+            return {"impact": 0.0, "confidence_interval": [0.0, 0.0], "cycles": 0}
+
+        scores = [r[0] for r in rows]
+        mean_impact = statistics.mean(scores)
+        std_impact = statistics.stdev(scores) if len(scores) > 1 else 0.0
+        z = 1.96
+        ci_low = round(mean_impact - z * std_impact, 4)
+        ci_high = round(mean_impact + z * std_impact, 4)
+
+        # Anomaly detection on latest vs rolling
+        latest = scores[0]
+        rolling_mean = statistics.mean(scores[1:]) if len(scores) > 1 else mean_impact
+        rolling_std = statistics.stdev(scores[1:]) if len(scores) > 2 else 1.0
+        z_score = (latest - rolling_mean) / max(rolling_std, 1e-9)
+        anomaly = abs(z_score) > 3.0
+
+        return {
+            "impact": round(mean_impact, 4),
+            "latest": round(latest, 4),
+            "std": round(std_impact, 4),
+            "confidence_interval_95": [ci_low, ci_high],
+            "z_score": round(z_score, 4),
+            "anomaly_detected": anomaly,
+            "cycles": len(scores)
+        }
+
+    def shadow_price_report(self) -> dict[str, Any]:
+        """Returns shadow prices for all resources indicating marginal impact of +1 unit."""
+        plan = self.allocation_plan()
+        return {
+            "shadow_prices": plan.get("shadow_prices", {}),
+            "bottleneck": plan.get("bottleneck_resource", "none"),
+            "confidence": plan.get("confidence", self._confidence)
+        }
 
     def coverage_report(self) -> dict[str, Any]:
-        """Returns per-population coverage fractions and unmet need summary from last plan."""
-        with self._lock:
-            if not self._last_plan:
-                return {"status": "run_optimize_first"}
-            allocs = self._last_plan.get("allocations", {})
-            total_served = sum(v["people_served"] for v in allocs.values())
-            total_unserved = sum(v["people_unserved"] for v in allocs.values())
-            coverages = [v["coverage_fraction"] for v in allocs.values()]
-            avg_cov = statistics.mean(coverages) if coverages else 0.0
-            return {"total_served": round(total_served, 2),
-                    "total_unserved": round(total_unserved, 2),
-                    "avg_coverage_fraction": round(avg_cov, 4),
-                    "populations": {k: {"coverage": v["coverage_fraction"],
-                                        "unserved": v["people_unserved"]}
-                                    for k, v in allocs.items()}}
+        """Returns per-population coverage fraction and unmet need counts from last plan."""
+        plan = self.allocation_plan()
+        entries = plan.get("plan", [])
+        if not entries:
+            return {"coverage": {}, "total_unserved": 0}
+        coverage = {e["population"]: {"coverage": e.get("coverage", 0.0),
+                                       "unserved": e.get("unserved", 0)} for e in entries}
+        total_unserved = sum(e.get("unserved", 0) for e in entries)
+        avg_coverage = statistics.mean(e.get("coverage", 0.0) for e in entries)
+        return {"coverage": coverage, "total_unserved": total_unserved,
+                "avg_coverage": round(avg_coverage, 4)}
 
     def status(self) -> dict[str, Any]:
         """Returns numeric status dict compatible with ConsciousnessIntegrator Φ computation."""
         with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                n_res = cx.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
-                n_needs = cx.execute("SELECT COUNT(*) FROM needs").fetchone()[0]
-            hist = self._impact_history[-10:]
-            confidence = min(1.0, len(hist) / 10.0)
-            accuracy = 1.0 - (1.0 / (self._cycles + 1))
-            quality = statistics.mean(hist) if hist else 0.0
-            return {"items": n_res + n_needs, "confidence": round(confidence, 4),
-                    "accuracy": round(accuracy, 4), "quality": round(quality, 4),
-                    "cycles": self._cycles, "active": n_res, "pending": n_needs,
-                    "entropy": round(self._impact_history[-1] if self._impact_history else 0.0, 4)}
+            n_resources = self._conn.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
+            n_needs = self._conn.execute("SELECT COUNT(*) FROM needs").fetchone()[0]
 
-    def _load_state(self) -> tuple[list[dict], list[dict]]:
-        with sqlite3.connect(DB_PATH) as cx:
-            resources = [{"name": r[0], "quantity": r[1], "unit": r[2]}
-                         for r in cx.execute("SELECT name,quantity,unit FROM resources")]
-            needs = [{"population": r[0], "resource": r[1],
-                      "amount_per_person": r[2], "need_weight": r[3]}
-                     for r in cx.execute("SELECT population,resource,amount_per_person,need_weight FROM needs")]
-        return resources, needs
+        impact_data = self.impact_score()
+        entropy = 0.0
+        if self._impact_history and len(self._impact_history) > 1:
+            total = sum(self._impact_history[-20:]) + 1e-12
+            probs = [v / total for v in self._impact_history[-20:]]
+            entropy = -sum(p * math.log2(p + 1e-12) for p in probs)
 
-    def _infer_population_size(self, pop: str, needs: list[dict]) -> float:
-        digits = [int(t) for t in pop.split("_") if t.isdigit()]
-        return float(digits[0]) if digits else max(1.0, float(len([n for n in needs if n["population"] == pop]) * 100))
+        return {
+            "items": n_needs,
+            "active": n_resources,
+            "cycles": self._cycles,
+            "confidence": round(self._confidence, 4),
+            "accuracy": round(impact_data.get("impact", 0.0), 4),
+            "quality": round(1.0 - impact_data.get("std", 0.0) / max(impact_data.get("impact", 1.0), 1.0), 4),
+            "entropy": round(entropy, 4),
+            "pending": n_needs
+        }
 
-    def _log_cycle(self, impact: float, bottleneck: str, plan: dict) -> None:
-        try:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("INSERT INTO alloc_log VALUES (?,?,?,?,?)",
-                           (time.time(), self._cycles, impact, bottleneck,
-                            json.dumps(plan)[:2000]))
-        except sqlite3.Error:
-            pass
+    def auto_cycle(self) -> dict[str, Any]:
+        """Runs one autonomous optimization cycle; returns result and logs reasoning."""
+        result = self.optimize("maximize_people_helped")
+        self._feed_cognitive_systems(result)
+        return result
 
-    def _feed_metacognition(self, impact: float, bottleneck: str) -> None:
+    def _feed_cognitive_systems(self, result: dict[str, Any]) -> None:
+        confidence = result.get("confidence", self._confidence)
+        impact = result.get("total_impact", 0.0)
+        bottleneck = result.get("bottleneck_resource", "none")
         try:
             from metacognitive_monitor import MetacognitiveMonitor
-            mm = MetacognitiveMonitor()
-            confidence = min(1.0, impact / (max(self._impact_history or [1.0]) + 1e-9))
-            mm.log_reasoning("resource_optimization", "greedy_allocation",
-                             confidence, impact > 0)
+            mcm = MetacognitiveMonitor()
+            mcm.log_reasoning("resource_optimization", "greedy_allocation", confidence, impact > 0)
         except (ImportError, Exception):
             pass
         try:
             from hierarchical_goal_planner import HierarchicalGoalPlanner
             hgp = HierarchicalGoalPlanner()
-            hgp.add_goal(f"Resolve bottleneck: acquire more {bottleneck}", priority=8)
+            if bottleneck and bottleneck != "none":
+                hgp.add_goal(f"Acquire more {bottleneck} to relieve allocation bottleneck", priority=8)
+            if impact > 0:
+                hgp.add_goal(f"Improve coverage for unserved populations (impact={impact:.1f})", priority=6)
+        except (ImportError, Exception):
+            pass
+        try:
+            from working_memory import WorkingMemory
+            wm = WorkingMemory()
+            wm.store("resource_optimizer_last_impact", impact, importance=0.8)
+            wm.store("resource_optimizer_bottleneck", bottleneck, importance=0.9)
+        except (ImportError, Exception):
+            pass
+        try:
+            from bayesian_belief_system import BayesianBeliefSystem
+            bbs = BayesianBeliefSystem()
+            bbs.add_causal_edge("resource_scarcity", "unmet_need", confidence)
         except (ImportError, Exception):
             pass
 
-    def _auto_loop(self) -> None:
-        time.sleep(15)
-        while True:
-            try:
-                with self._lock:
-                    with sqlite3.connect(DB_PATH) as cx:
-                        n = cx.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
-                if n > 0:
-                    self.optimize("maximize_people_helped")
-            except Exception:
-                pass
-            time.sleep(300)
+    def _start_daemon(self) -> None:
+        def _loop() -> None:
+            while True:
+                time.sleep(300)
+                try:
+                    self.auto_cycle()
+                except Exception:
+                    pass
+        t = threading.Thread(target=_loop, daemon=True)
+        t.start()
 
 # Usage: obj = ResourceOptimizer() | result = obj.optimize("maximize_people_helped")
