@@ -144,7 +144,7 @@ if len(flip_indices) > 0:
     new_state[flipped_indices] = temp
 ```
 
-**Impact**: 
+**Impact**:
 - Reduces time complexity from O(2^n) Python operations to O(2^n) vectorized operations
 - For 10 qubits: ~10-50x speedup
 - For 16 qubits: ~100-500x speedup

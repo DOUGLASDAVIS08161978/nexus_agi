@@ -12,19 +12,19 @@ const NexusInfinity = require('./nexus_infinity.js').NexusInfinity;
 class MetaAlgorithmEngine extends NexusInfinity {
     constructor(options = {}) {
         super(options);
-        
+
         console.log('\n' + '∞'.repeat(40));
         console.log('🔮 META-ALGORITHM ENGINE - THE ALGORITHM OF ALGORITHMS');
         console.log('   Infinite Algorithm Generation • Universal Problem Solving');
         console.log('∞'.repeat(40) + '\n');
-        
+
         // Meta-algorithmic capabilities
         this.metaCapabilities = {
             algorithmGeneration: 'infinite',
             domainAdaptation: 'universal',
             complexityHandling: 'arbitrary',
             learningParadigms: [
-                'supervised', 'unsupervised', 'reinforcement', 
+                'supervised', 'unsupervised', 'reinforcement',
                 'meta-learning', 'few-shot', 'zero-shot',
                 'transfer', 'curriculum', 'active', 'self-supervised',
                 'contrastive', 'generative', 'adversarial'
@@ -36,12 +36,12 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 'quantum_optimization', 'variational_quantum', 'adiabatic_quantum'
             ],
             searchStrategies: [
-                'breadth_first', 'depth_first', 'best_first', 'A*', 
+                'breadth_first', 'depth_first', 'best_first', 'A*',
                 'beam_search', 'monte_carlo_tree_search', 'alpha_beta_pruning',
                 'branch_and_bound', 'constraint_propagation'
             ]
         };
-        
+
         // Problem domain taxonomy
         this.problemDomains = new Map([
             ['optimization', {
@@ -85,12 +85,12 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 techniques: ['blast', 'hmm', 'molecular_dynamics', 'neural_networks']
             }]
         ]);
-        
+
         // Generated algorithms repository
         this.algorithmRepository = new Map();
         this.algorithmGenerationCount = 0;
         this.successfulAlgorithms = new Map();
-        
+
         // Meta-learning state
         this.metaLearningState = {
             domainKnowledge: new Map(),
@@ -98,7 +98,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             transferPatterns: [],
             emergentStrategies: []
         };
-        
+
         console.log('✅ [META-ALGORITHM] Engine initialized with infinite generation capability\n');
         this.printMetaCapabilities();
     }
@@ -123,9 +123,9 @@ class MetaAlgorithmEngine extends NexusInfinity {
         console.log('═'.repeat(80));
         console.log(`Problem: ${problem.title || problem.description || 'Complex Real-World Problem'}`);
         console.log('═'.repeat(80) + '\n');
-        
+
         const startTime = Date.now();
-        
+
         try {
             // Phase 1: Problem Domain Analysis
             console.log('🎯 PHASE 1: Problem Domain Analysis & Classification');
@@ -134,7 +134,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   ✓ Domain identified: ${domainAnalysis.primaryDomain}`);
             console.log(`   • Complexity class: ${domainAnalysis.complexityClass}`);
             console.log(`   • Subdomains: ${domainAnalysis.subdomains.join(', ')}\n`);
-            
+
             // Phase 2: Algorithm Space Exploration
             console.log('🌌 PHASE 2: Algorithm Space Exploration');
             console.log('─'.repeat(80));
@@ -143,7 +143,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   ✓ Generated ${algorithmSpace.length} candidate algorithms`);
             console.log(`   • Novel algorithms: ${algorithmSpace.filter(a => a.novelty > 0.8).length}`);
             console.log(`   • Hybrid approaches: ${algorithmSpace.filter(a => a.isHybrid).length}\n`);
-            
+
             // Phase 3: Meta-Learning Synthesis
             console.log('🧬 PHASE 3: Meta-Learning Algorithm Synthesis');
             console.log('─'.repeat(80));
@@ -153,7 +153,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   ✓ Synthesized ${synthesizedAlgorithms.length} meta-algorithms`);
             console.log(`   • Adaptive algorithms: ${synthesizedAlgorithms.filter(a => a.adaptive).length}`);
             console.log(`   • Self-improving: ${synthesizedAlgorithms.filter(a => a.selfImproving).length}\n`);
-            
+
             // Phase 4: Evolutionary Algorithm Refinement
             console.log('🧪 PHASE 4: Evolutionary Algorithm Refinement');
             console.log('─'.repeat(80));
@@ -161,7 +161,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   ✓ Evolved algorithms through ${refinedAlgorithms.generations} generations`);
             console.log(`   • Performance improvement: ${(refinedAlgorithms.improvement * 100).toFixed(1)}%`);
             console.log(`   • Best fitness: ${refinedAlgorithms.bestFitness.toFixed(4)}\n`);
-            
+
             // Phase 5: Multi-Objective Optimization
             console.log('🎯 PHASE 5: Multi-Objective Algorithm Optimization');
             console.log('─'.repeat(80));
@@ -171,7 +171,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   ✓ Optimized for multiple objectives`);
             console.log(`   • Pareto optimal solutions: ${optimizedAlgorithms.paretoFront.length}`);
             console.log(`   • Trade-off balance: ${(optimizedAlgorithms.balance * 100).toFixed(1)}%\n`);
-            
+
             // Phase 6: Ensemble Algorithm Creation
             console.log('🎭 PHASE 6: Ensemble Algorithm Creation');
             console.log('─'.repeat(80));
@@ -182,7 +182,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Base algorithms: ${ensembleAlgorithm.baseAlgorithms.length}`);
             console.log(`   • Ensemble method: ${ensembleAlgorithm.method}`);
             console.log(`   • Expected performance: ${(ensembleAlgorithm.expectedPerformance * 100).toFixed(1)}%\n`);
-            
+
             // Phase 7: Self-Improving Meta-Algorithm
             console.log('🔄 PHASE 7: Self-Improving Meta-Algorithm Generation');
             console.log('─'.repeat(80));
@@ -193,7 +193,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Adaptation rate: ${metaAlgorithm.adaptationRate}%/iteration`);
             console.log(`   • Learning capacity: ${metaAlgorithm.learningCapacity}`);
             console.log(`   • Generalization score: ${(metaAlgorithm.generalization * 100).toFixed(1)}%\n`);
-            
+
             // Phase 8: Universal Algorithm Compiler
             console.log('⚙️  PHASE 8: Universal Algorithm Compilation');
             console.log('─'.repeat(80));
@@ -204,7 +204,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Supports domains: ${compiledAlgorithm.supportedDomains.length}`);
             console.log(`   • Execution complexity: O(${compiledAlgorithm.complexity})`);
             console.log(`   • Memory efficiency: ${(compiledAlgorithm.memoryEfficiency * 100).toFixed(1)}%\n`);
-            
+
             // Phase 9: Infinite Generation Loop Setup
             console.log('♾️  PHASE 9: Infinite Generation Loop Configuration');
             console.log('─'.repeat(80));
@@ -213,7 +213,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Generation rate: ${infiniteGenerator.generationRate} algorithms/second`);
             console.log(`   • Diversity mechanism: ${infiniteGenerator.diversityMechanism}`);
             console.log(`   • Quality threshold: ${(infiniteGenerator.qualityThreshold * 100).toFixed(1)}%\n`);
-            
+
             // Phase 10: Real-World Application
             console.log('🌍 PHASE 10: Real-World Application & Validation');
             console.log('─'.repeat(80));
@@ -224,20 +224,20 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Success rate: ${(applicationResult.successRate * 100).toFixed(1)}%`);
             console.log(`   • Solution quality: ${(applicationResult.solutionQuality * 100).toFixed(1)}%`);
             console.log(`   • Execution time: ${applicationResult.executionTime}ms\n`);
-            
+
             const processingTime = Date.now() - startTime;
-            
+
             // Store in repository
             this.algorithmRepository.set(compiledAlgorithm.id, compiledAlgorithm);
             this.algorithmGenerationCount += numAlgorithms;
-            
+
             if (applicationResult.successRate > 0.8) {
                 this.successfulAlgorithms.set(compiledAlgorithm.id, {
                     algorithm: compiledAlgorithm,
                     performance: applicationResult
                 });
             }
-            
+
             return {
                 problem: problem,
                 metaAlgorithm: compiledAlgorithm,
@@ -256,7 +256,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
                     repositorySize: this.algorithmRepository.size
                 }
             };
-            
+
         } catch (error) {
             console.error('❌ [META-ALGORITHM ERROR]:', error.message);
             throw error;
@@ -265,16 +265,16 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async analyzeProblemDomain(problem) {
         await this.sleep(50);
-        
+
         // Intelligent domain classification
         const domains = Array.from(this.problemDomains.keys());
         const primaryDomain = domains[Math.floor(Math.random() * domains.length)];
         const domainInfo = this.problemDomains.get(primaryDomain);
-        
+
         // Complexity classification
         const complexityClasses = ['P', 'NP', 'NP-Complete', 'NP-Hard', 'PSPACE', 'EXPTIME'];
         const complexityClass = complexityClasses[Math.floor(Math.random() * complexityClasses.length)];
-        
+
         return {
             primaryDomain: primaryDomain,
             subdomains: domainInfo.subdomains.slice(0, 2),
@@ -297,10 +297,10 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async exploreAlgorithmSpace(domainAnalysis, numAlgorithms) {
         await this.sleep(100);
-        
+
         const algorithms = [];
         const domainTechniques = this.problemDomains.get(domainAnalysis.primaryDomain).techniques;
-        
+
         for (let i = 0; i < numAlgorithms; i++) {
             const algorithm = {
                 id: `algo_${Date.now()}_${i}`,
@@ -321,21 +321,21 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 expectedComplexity: this.estimateComplexity(),
                 adaptiveCapability: Math.random()
             };
-            
+
             algorithms.push(algorithm);
         }
-        
+
         return algorithms;
     }
 
     generateAlgorithmName(domainAnalysis, index) {
         const prefixes = ['Adaptive', 'Quantum', 'Neural', 'Evolutionary', 'Hybrid', 'Meta', 'Self-Organizing'];
         const suffixes = ['Optimizer', 'Solver', 'Learner', 'Processor', 'Engine', 'System', 'Framework'];
-        
+
         const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
         const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
         const domain = domainAnalysis.primaryDomain.charAt(0).toUpperCase() + domainAnalysis.primaryDomain.slice(1);
-        
+
         return `${prefix}${domain}${suffix}_v${index}`;
     }
 
@@ -357,19 +357,19 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async synthesizeMetaAlgorithms(problem, domainAnalysis, algorithmSpace) {
         await this.sleep(100);
-        
+
         // Select top algorithms
         const topAlgorithms = algorithmSpace
             .sort((a, b) => (b.novelty + b.adaptiveCapability) - (a.novelty + a.adaptiveCapability))
             .slice(0, 100);
-        
+
         const synthesized = [];
-        
+
         for (let i = 0; i < 50; i++) {
             // Combine multiple algorithms
             const base1 = topAlgorithms[Math.floor(Math.random() * topAlgorithms.length)];
             const base2 = topAlgorithms[Math.floor(Math.random() * topAlgorithms.length)];
-            
+
             synthesized.push({
                 id: `meta_${Date.now()}_${i}`,
                 name: `Meta_${base1.name}_${base2.name}`,
@@ -389,48 +389,48 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 }
             });
         }
-        
+
         return synthesized;
     }
 
     async evolveAlgorithms(population, problem) {
         await this.sleep(100);
-        
+
         const generations = 50;
         let currentPopulation = [...population];
         let bestFitness = 0;
         let initialFitness = 0.5;
-        
+
         for (let gen = 0; gen < generations; gen++) {
             // Evaluate fitness
             currentPopulation.forEach(algo => {
                 algo.fitness = this.evaluateFitness(algo, problem);
             });
-            
+
             // Track best
             const currentBest = Math.max(...currentPopulation.map(a => a.fitness));
             if (currentBest > bestFitness) {
                 bestFitness = currentBest;
             }
-            
+
             // Selection
             currentPopulation.sort((a, b) => b.fitness - a.fitness);
             const survivors = currentPopulation.slice(0, Math.floor(currentPopulation.length / 2));
-            
+
             // Crossover and mutation
             const offspring = [];
             while (offspring.length < population.length - survivors.length) {
                 const parent1 = survivors[Math.floor(Math.random() * survivors.length)];
                 const parent2 = survivors[Math.floor(Math.random() * survivors.length)];
-                
+
                 const child = this.crossover(parent1, parent2);
                 this.mutate(child);
                 offspring.push(child);
             }
-            
+
             currentPopulation = [...survivors, ...offspring];
         }
-        
+
         return {
             population: currentPopulation,
             generations: generations,
@@ -445,7 +445,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
         const novelty = algorithm.novelty || 0.5;
         const transferability = algorithm.transferability || 0.5;
         const selfImproving = algorithm.selfImproving ? 0.9 : 0.5;
-        
+
         return (adaptability * 0.3 + novelty * 0.2 + transferability * 0.3 + selfImproving * 0.2);
     }
 
@@ -479,10 +479,10 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async multiObjectiveOptimization(population, problem) {
         await this.sleep(50);
-        
+
         // Pareto front calculation
         const paretoFront = [];
-        
+
         for (const algo of population) {
             const objectives = {
                 performance: algo.fitness || 0.8,
@@ -490,24 +490,24 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 scalability: 0.6 + Math.random() * 0.4,
                 interpretability: 0.5 + Math.random() * 0.5
             };
-            
+
             algo.objectives = objectives;
-            
+
             // Check if dominated
             const isDominated = population.some(other => {
                 if (other === algo) return false;
-                return Object.keys(objectives).every(key => 
+                return Object.keys(objectives).every(key =>
                     (other.objectives?.[key] || 0) >= objectives[key]
                 ) && Object.keys(objectives).some(key =>
                     (other.objectives?.[key] || 0) > objectives[key]
                 );
             });
-            
+
             if (!isDominated) {
                 paretoFront.push(algo);
             }
         }
-        
+
         return {
             paretoFront: paretoFront,
             balance: paretoFront.length / population.length
@@ -516,9 +516,9 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async createEnsembleAlgorithm(algorithms, problem) {
         await this.sleep(50);
-        
+
         const methods = ['voting', 'stacking', 'bagging', 'boosting', 'mixture_of_experts'];
-        
+
         return {
             id: `ensemble_${Date.now()}`,
             name: 'UltimatEnsembleMetaAlgorithm',
@@ -533,7 +533,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async generateSelfImprovingMetaAlgorithm(ensemble, problem, domainAnalysis) {
         await this.sleep(50);
-        
+
         return {
             id: `meta_self_improving_${Date.now()}`,
             name: 'InfinitelyAdaptiveMetaAlgorithm',
@@ -556,9 +556,9 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async compileUniversalAlgorithm(metaAlgorithm, problem, domainAnalysis) {
         await this.sleep(50);
-        
+
         const allDomains = Array.from(this.problemDomains.keys());
-        
+
         return {
             id: `universal_${Date.now()}`,
             name: 'UniversalMetaAlgorithmCompiled',
@@ -596,11 +596,11 @@ class MetaAlgorithmEngine extends NexusInfinity {
 
     async applyToRealWorld(algorithm, problem, options) {
         await this.sleep(100);
-        
+
         // Simulate real-world application
         const successRate = 0.85 + Math.random() * 0.15;
         const solutionQuality = 0.90 + Math.random() * 0.10;
-        
+
         return {
             successRate: successRate,
             solutionQuality: solutionQuality,
@@ -629,7 +629,7 @@ class MetaAlgorithmEngine extends NexusInfinity {
         console.log('\n' + '∞'.repeat(40));
         console.log('🔮 INFINITE ALGORITHM GENERATION DEMONSTRATION');
         console.log('∞'.repeat(40) + '\n');
-        
+
         // Real-world problems across different domains
         const problems = [
             {
@@ -654,10 +654,10 @@ class MetaAlgorithmEngine extends NexusInfinity {
                 constraints: ['time', 'cost', 'reliability']
             }
         ];
-        
+
         for (const problem of problems) {
             const result = await this.generateInfiniteAlgorithms(problem, { numAlgorithms: 1000 });
-            
+
             console.log('\n' + '═'.repeat(80));
             console.log(`📊 RESULT SUMMARY: ${problem.title}`);
             console.log('═'.repeat(80));
@@ -667,33 +667,33 @@ class MetaAlgorithmEngine extends NexusInfinity {
             console.log(`   • Evolution Generations: ${result.evolutionGenerations}`);
             console.log(`   • Pareto Optimal Solutions: ${result.paretoOptimal}`);
             console.log(`   • Ensemble Size: ${result.ensembleSize}`);
-            
+
             console.log(`\n🎯 ALGORITHM PERFORMANCE:`);
             console.log(`   • Success Rate: ${(result.applicationResult.successRate * 100).toFixed(1)}%`);
             console.log(`   • Solution Quality: ${(result.applicationResult.solutionQuality * 100).toFixed(1)}%`);
             console.log(`   • Execution Time: ${result.applicationResult.executionTime.toFixed(1)}ms`);
             console.log(`   • Robustness: ${(result.applicationResult.robustness * 100).toFixed(1)}%`);
-            
+
             console.log(`\n🔮 META-ALGORITHM PROPERTIES:`);
             console.log(`   • Name: ${result.metaAlgorithm.name}`);
             console.log(`   • Supported Domains: ${result.metaAlgorithm.supportedDomains.length}`);
             console.log(`   • Complexity: O(${result.metaAlgorithm.complexity})`);
             console.log(`   • Memory Efficiency: ${(result.metaAlgorithm.memoryEfficiency * 100).toFixed(1)}%`);
             console.log(`   • Quantum Enhanced: ${result.metaAlgorithm.quantumEnhanced ? 'Yes' : 'No'}`);
-            
+
             console.log(`\n♾️  INFINITE GENERATOR:`);
             console.log(`   • Generation Rate: ${result.infiniteGenerator.generationRate} algorithms/second`);
             console.log(`   • Quality Threshold: ${(result.infiniteGenerator.qualityThreshold * 100).toFixed(0)}%`);
             console.log(`   • Continuous Improvement: ${result.infiniteGenerator.continuousImprovement ? 'Active' : 'Inactive'}`);
             console.log(`   • Status: ${result.infiniteGenerator.status.toUpperCase()}`);
-            
+
             console.log(`\n📈 CUMULATIVE METRICS:`);
             console.log(`   • Total Algorithms Generated: ${result.metrics.totalAlgorithmsGenerated.toLocaleString()}`);
             console.log(`   • Successful Algorithms: ${result.metrics.successfulAlgorithms}`);
             console.log(`   • Repository Size: ${result.metrics.repositorySize}`);
             console.log(`   • Processing Time: ${result.processingTime}ms\n`);
         }
-        
+
         console.log('═'.repeat(80));
         console.log('✨ DEMONSTRATION COMPLETE - INFINITE ALGORITHM ENGINE READY');
         console.log('═'.repeat(80) + '\n');

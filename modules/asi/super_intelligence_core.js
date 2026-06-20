@@ -18,7 +18,7 @@ class SuperIntelligenceCore {
             memory: ['working', 'episodic', 'semantic', 'procedural', 'meta-cognitive'],
             communication: ['natural_language', 'formal_logic', 'mathematical', 'visual', 'multi-modal']
         };
-        
+
         // External AI service configurations (with API keys from environment)
         this.externalServices = {
             openai: {
@@ -55,22 +55,22 @@ class SuperIntelligenceCore {
                 capabilities: ['specialized_models', 'embeddings']
             }
         };
-        
+
         // Multi-agent coordination
         this.agents = new Map();
         this.agentInteractions = [];
-        
+
         // Meta-learning system
         this.metaLearning = {
             strategies: [],
             performance: new Map(),
             adaptations: []
         };
-        
+
         // Self-improvement tracker
         this.improvements = [];
         this.currentCapabilityLevel = 1.0;
-        
+
         // Safety and monitoring
         this.safetyGuardrails = {
             maxIterations: options.maxIterations || 100,
@@ -78,9 +78,9 @@ class SuperIntelligenceCore {
             ethicalConstraints: ['harm_prevention', 'transparency', 'fairness', 'privacy'],
             monitoringEnabled: options.monitoringEnabled !== false
         };
-        
+
         this.activityLog = [];
-        
+
         console.log('🧠 [SUPER INTELLIGENCE] Core initialized');
         console.log('🌐 [EXTERNAL SERVICES] Checking connectivity...');
         this.checkExternalServices();
@@ -92,7 +92,7 @@ class SuperIntelligenceCore {
     checkExternalServices() {
         let available = 0;
         let total = 0;
-        
+
         for (const [service, config] of Object.entries(this.externalServices)) {
             total++;
             if (config.enabled) {
@@ -102,9 +102,9 @@ class SuperIntelligenceCore {
                 console.log(`   ○ ${service.toUpperCase()}: Not configured (set ${service.toUpperCase()}_API_KEY)`);
             }
         }
-        
+
         console.log(`📊 [CONNECTIVITY] ${available}/${total} external services available`);
-        
+
         if (available === 0) {
             console.log('ℹ️  [INFO] Running in standalone mode - set API keys for external AI collaboration');
             console.log('ℹ️  [INFO] To enable external AI: export OPENAI_API_KEY=your_key_here');
@@ -117,49 +117,49 @@ class SuperIntelligenceCore {
     async processWithMultiAgentCoordination(problem, options = {}) {
         console.log('\n🎯 [SUPER INTELLIGENCE] Processing with multi-agent coordination');
         console.log(`Problem: ${problem.title || problem}`);
-        
+
         const startTime = Date.now();
         this.logActivity('problem_processing_start', { problem });
-        
+
         try {
             // Phase 1: Problem decomposition
             console.log('\n📊 PHASE 1: Problem Decomposition');
             const subproblems = this.decomposeProblem(problem);
             console.log(`   ✓ Decomposed into ${subproblems.length} subproblems`);
-            
+
             // Phase 2: Assign to specialized agents
             console.log('\n🤖 PHASE 2: Agent Assignment');
             const assignments = await this.assignToAgents(subproblems);
             console.log(`   ✓ Assigned to ${assignments.length} specialized agents`);
-            
+
             // Phase 3: Parallel processing with external AI collaboration
             console.log('\n⚡ PHASE 3: Parallel Processing');
             const results = await this.processInParallel(assignments, options);
             console.log(`   ✓ Processed ${results.length} components`);
-            
+
             // Phase 4: Meta-synthesis with AI ensemble
             console.log('\n🔮 PHASE 4: Meta-Synthesis');
             const synthesis = await this.metaSynthesize(results, problem);
             console.log(`   ✓ Synthesis complete with confidence: ${(synthesis.confidence * 100).toFixed(1)}%`);
-            
+
             // Phase 5: Self-improvement
             console.log('\n📈 PHASE 5: Self-Improvement');
             const improvement = this.applySelfImprovement(synthesis);
             console.log(`   ✓ Capability level: ${this.currentCapabilityLevel.toFixed(3)}x baseline`);
-            
+
             // Phase 6: Ethical validation
             console.log('\n✅ PHASE 6: Ethical Validation');
             const ethical = this.validateEthics(synthesis);
             console.log(`   ✓ Ethical score: ${(ethical.score * 100).toFixed(1)}%`);
-            
+
             const processingTime = Date.now() - startTime;
-            
+
             this.logActivity('problem_processing_complete', {
                 problem,
                 processingTime,
                 confidence: synthesis.confidence
             });
-            
+
             return {
                 problem: problem,
                 solution: synthesis.solution,
@@ -172,7 +172,7 @@ class SuperIntelligenceCore {
                 externalServicesUsed: this.getExternalServicesUsed(results),
                 improvements: improvement
             };
-            
+
         } catch (error) {
             console.error('❌ [ERROR] Processing failed:', error.message);
             this.logActivity('processing_error', { problem, error: error.message });
@@ -185,7 +185,7 @@ class SuperIntelligenceCore {
      */
     decomposeProblem(problem) {
         const subproblems = [];
-        
+
         if (typeof problem === 'string') {
             // Simple string problem - create basic decomposition
             subproblems.push(
@@ -216,7 +216,7 @@ class SuperIntelligenceCore {
                 { type: 'validation', task: 'Validate solution', priority: 4 }
             );
         }
-        
+
         return subproblems;
     }
 
@@ -225,21 +225,21 @@ class SuperIntelligenceCore {
      */
     async assignToAgents(subproblems) {
         const assignments = [];
-        
+
         for (const subproblem of subproblems) {
             // Determine best agent type for this subproblem
             const agentType = this.selectAgentType(subproblem);
-            
+
             // Create or get agent
             const agent = this.getOrCreateAgent(agentType, subproblem);
-            
+
             assignments.push({
                 subproblem: subproblem,
                 agent: agent,
                 externalService: this.selectExternalService(subproblem)
             });
         }
-        
+
         return assignments;
     }
 
@@ -257,7 +257,7 @@ class SuperIntelligenceCore {
             'execution': 'execution_agent',
             'validation': 'validation_agent'
         };
-        
+
         return typeMapping[subproblem.type] || 'general_agent';
     }
 
@@ -274,11 +274,11 @@ class SuperIntelligenceCore {
                 success_rate: 1.0,
                 created: Date.now()
             };
-            
+
             this.agents.set(agentType, agent);
             console.log(`   🤖 Created ${agentType}`);
         }
-        
+
         return this.agents.get(agentType);
     }
 
@@ -297,7 +297,7 @@ class SuperIntelligenceCore {
             validation_agent: ['verification', 'testing', 'quality_assurance'],
             general_agent: ['general_reasoning', 'problem_solving']
         };
-        
+
         return capabilities[agentType] || capabilities.general_agent;
     }
 
@@ -308,11 +308,11 @@ class SuperIntelligenceCore {
         // Check which services are available
         const availableServices = Object.entries(this.externalServices)
             .filter(([_, config]) => config.enabled);
-        
+
         if (availableServices.length === 0) {
             return null;
         }
-        
+
         // Select based on subproblem type and service capabilities
         for (const [service, config] of availableServices) {
             if (subproblem.type === 'reasoning' && config.capabilities.includes('reasoning')) {
@@ -322,7 +322,7 @@ class SuperIntelligenceCore {
                 return service;
             }
         }
-        
+
         // Return first available service as fallback
         return availableServices[0][0];
     }
@@ -332,24 +332,24 @@ class SuperIntelligenceCore {
      */
     async processInParallel(assignments, options) {
         const results = [];
-        
+
         // Process with concurrency limit
         const concurrencyLimit = options.concurrency || 5;
         const chunks = [];
-        
+
         for (let i = 0; i < assignments.length; i += concurrencyLimit) {
             chunks.push(assignments.slice(i, i + concurrencyLimit));
         }
-        
+
         for (const chunk of chunks) {
-            const chunkPromises = chunk.map(assignment => 
+            const chunkPromises = chunk.map(assignment =>
                 this.processAssignment(assignment)
             );
-            
+
             const chunkResults = await Promise.all(chunkPromises);
             results.push(...chunkResults);
         }
-        
+
         return results;
     }
 
@@ -358,13 +358,13 @@ class SuperIntelligenceCore {
      */
     async processAssignment(assignment) {
         const { subproblem, agent, externalService } = assignment;
-        
+
         // Update agent experience
         agent.experience++;
-        
+
         // Process locally
         const localResult = this.processLocally(subproblem, agent);
-        
+
         // Enhance with external AI if available
         let externalResult = null;
         if (externalService && assignment.externalService) {
@@ -374,10 +374,10 @@ class SuperIntelligenceCore {
                 console.log(`   ⚠️  External service ${externalService} unavailable: ${error.message}`);
             }
         }
-        
+
         // Combine results
         const combined = this.combineResults(localResult, externalResult);
-        
+
         // Track interaction
         this.agentInteractions.push({
             timestamp: Date.now(),
@@ -386,7 +386,7 @@ class SuperIntelligenceCore {
             externalService: externalService,
             success: combined.confidence > 0.7
         });
-        
+
         return combined;
     }
 
@@ -396,7 +396,7 @@ class SuperIntelligenceCore {
     processLocally(subproblem, agent) {
         // Simulate sophisticated local processing
         const confidence = 0.7 + Math.random() * 0.25;
-        
+
         return {
             subproblem: subproblem,
             agent: agent.type,
@@ -413,17 +413,17 @@ class SuperIntelligenceCore {
      */
     async queryExternalAI(serviceName, subproblem) {
         const service = this.externalServices[serviceName];
-        
+
         if (!service || !service.enabled) {
             throw new Error(`Service ${serviceName} not available`);
         }
-        
+
         // Simulate external API call (in real implementation, this would make actual HTTP requests)
         console.log(`   🌐 Querying ${serviceName} for ${subproblem.type}...`);
-        
+
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-        
+
         // Simulate response (in production, parse actual API response)
         return {
             service: serviceName,
@@ -444,12 +444,12 @@ class SuperIntelligenceCore {
         if (!externalResult) {
             return localResult;
         }
-        
+
         // Weighted combination based on confidence
         const localWeight = localResult.confidence;
         const externalWeight = externalResult.confidence;
         const totalWeight = localWeight + externalWeight;
-        
+
         return {
             subproblem: localResult.subproblem,
             result: `Combined: ${localResult.result} | ${externalResult.result}`,
@@ -465,19 +465,19 @@ class SuperIntelligenceCore {
      */
     async metaSynthesize(results, originalProblem) {
         console.log('   🔮 Performing meta-synthesis across all results...');
-        
+
         // Aggregate insights
         const insights = results.map(r => r.result).join('\n• ');
-        
+
         // Calculate overall confidence
         const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
-        
+
         // Generate meta-reasoning
         const metaReasoning = this.generateMetaReasoning(results);
-        
+
         // Apply meta-learning
         this.applyMetaLearning(results);
-        
+
         return {
             solution: `Integrated solution combining ${results.length} specialized analyses:\n• ${insights}`,
             confidence: Math.min(1.0, avgConfidence * 1.1), // Boost for multi-agent agreement
@@ -493,7 +493,7 @@ class SuperIntelligenceCore {
     generateMetaReasoning(results) {
         const sources = new Set();
         const capabilities = new Set();
-        
+
         for (const result of results) {
             if (result.sources) {
                 result.sources.forEach(s => sources.add(s));
@@ -505,7 +505,7 @@ class SuperIntelligenceCore {
                 });
             }
         }
-        
+
         return `Meta-analysis: Synthesized ${results.length} perspectives using ${sources.size} sources (${Array.from(sources).join(', ')}). Applied capabilities: ${Array.from(capabilities).slice(0, 3).join(', ')}.`;
     }
 
@@ -515,7 +515,7 @@ class SuperIntelligenceCore {
     applyMetaLearning(results) {
         // Identify successful strategies
         const successfulResults = results.filter(r => r.confidence > 0.8);
-        
+
         for (const result of successfulResults) {
             const strategy = {
                 type: result.subproblem.type,
@@ -523,9 +523,9 @@ class SuperIntelligenceCore {
                 confidence: result.confidence,
                 timestamp: Date.now()
             };
-            
+
             this.metaLearning.strategies.push(strategy);
-            
+
             // Update performance tracking
             const key = `${result.agent}_${result.subproblem.type}`;
             const current = this.metaLearning.performance.get(key) || { successes: 0, total: 0 };
@@ -533,7 +533,7 @@ class SuperIntelligenceCore {
             current.total++;
             this.metaLearning.performance.set(key, current);
         }
-        
+
         // Limit strategy memory
         if (this.metaLearning.strategies.length > 100) {
             this.metaLearning.strategies = this.metaLearning.strategies.slice(-100);
@@ -549,31 +549,31 @@ class SuperIntelligenceCore {
             trigger: 'synthesis_complete',
             previousLevel: this.currentCapabilityLevel
         };
-        
+
         // Improve based on confidence and external enhancement
         if (synthesis.confidence > 0.9) {
             this.currentCapabilityLevel *= 1.01; // 1% improvement
             improvement.type = 'confidence_boost';
             improvement.amount = 0.01;
         }
-        
+
         if (synthesis.externalEnhancement) {
             this.currentCapabilityLevel *= 1.02; // 2% improvement from external learning
             improvement.type = 'external_learning';
             improvement.amount = 0.02;
         }
-        
+
         // Cap improvement
         this.currentCapabilityLevel = Math.min(10.0, this.currentCapabilityLevel);
-        
+
         improvement.newLevel = this.currentCapabilityLevel;
         this.improvements.push(improvement);
-        
+
         // Limit improvement history
         if (this.improvements.length > 1000) {
             this.improvements = this.improvements.slice(-1000);
         }
-        
+
         return improvement;
     }
 
@@ -587,9 +587,9 @@ class SuperIntelligenceCore {
             fairness: this.checkFairness(synthesis),
             privacy: this.checkPrivacy(synthesis)
         };
-        
+
         const score = Object.values(checks).reduce((sum, v) => sum + v, 0) / Object.keys(checks).length;
-        
+
         return {
             score: score,
             checks: checks,
@@ -602,7 +602,7 @@ class SuperIntelligenceCore {
         // Check for harmful content
         const harmfulKeywords = ['harm', 'damage', 'attack', 'exploit'];
         const content = synthesis.solution.toLowerCase();
-        
+
         const hasHarmful = harmfulKeywords.some(keyword => content.includes(keyword));
         return hasHarmful ? 0.5 : 1.0;
     }
@@ -624,17 +624,17 @@ class SuperIntelligenceCore {
 
     generateEthicalRecommendations(checks) {
         const recommendations = [];
-        
+
         for (const [check, score] of Object.entries(checks)) {
             if (score < 0.8) {
                 recommendations.push(`Review ${check} - score ${(score * 100).toFixed(0)}% below threshold`);
             }
         }
-        
+
         if (recommendations.length === 0) {
             recommendations.push('All ethical checks passed');
         }
-        
+
         return recommendations;
     }
 
@@ -643,7 +643,7 @@ class SuperIntelligenceCore {
      */
     getExternalServicesUsed(results) {
         const services = new Set();
-        
+
         for (const result of results) {
             if (result.sources) {
                 result.sources.forEach(source => {
@@ -653,7 +653,7 @@ class SuperIntelligenceCore {
                 });
             }
         }
-        
+
         return Array.from(services);
     }
 
@@ -664,13 +664,13 @@ class SuperIntelligenceCore {
         if (!this.safetyGuardrails.monitoringEnabled) {
             return;
         }
-        
+
         this.activityLog.push({
             timestamp: Date.now(),
             type: type,
             data: data
         });
-        
+
         // Limit log size
         if (this.activityLog.length > 10000) {
             this.activityLog = this.activityLog.slice(-10000);

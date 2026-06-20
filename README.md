@@ -1,4 +1,4 @@
-python main.py 
+python main.py
 npm run build ./ # Nexus AGI System v4.0
 
 A comprehensive Artificial General Intelligence system featuring quantum simulation, neural-symbolic integration, advanced reasoning capabilities, and the new **OMEGA ASI** module.
@@ -538,7 +538,7 @@ Modify the main block in `nexus_agi.py` to solve custom problems:
 ```python
 if __name__ == "__main__":
     core = MetaAlgorithm_NexusCore()
-    
+
     # Define your problem
     my_problem = {
         "title": "Your Problem Title",
@@ -549,14 +549,14 @@ if __name__ == "__main__":
         },
         "stakeholders": ["stakeholder1", "stakeholder2"]
     }
-    
+
     # Define constraints
     constraints = {
         "equity": 0.8,
         "implementation_cost": 0.5,
         "time_horizon": 20
     }
-    
+
     # Generate solution
     solution = core.solve_complex_problem(my_problem, constraints)
     print(solution)

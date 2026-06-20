@@ -75,12 +75,12 @@ class ASIConfig:
     num_heads: int = 32
     vocab_size: int = 50000
     max_sequence_length: int = 32768
-    
+
     # Multi-agent configuration
     num_agents: int = 7
     parallel_context_windows: bool = True
     token_multiplication_factor: float = 15.0
-    
+
     # Consciousness parameters
     consciousness_theories: List[ConsciousnessTheory] = field(default_factory=lambda: [
         ConsciousnessTheory.GLOBAL_WORKSPACE,
@@ -88,28 +88,28 @@ class ASIConfig:
     ])
     workspace_capacity: int = 512
     attention_schema_depth: int = 3
-    
+
     # Neurosymbolic parameters
     symbolic_reasoning_enabled: bool = True
     logic_tensor_network_enabled: bool = True
     causal_model_enabled: bool = True
-    
+
     # Safety parameters
     num_sparse_autoencoder_features: int = 34_000_000
     circuit_breaker_threshold: float = 0.85
     interpretability_monitoring: bool = True
     graceful_degradation_enabled: bool = True
-    
+
     # Value alignment
     constitutional_ai_enabled: bool = True
     collective_alignment_enabled: bool = True
     stakeholder_satisfaction_target: float = 0.89
-    
+
     # World model
     world_model_enabled: bool = True
     recurrent_state_space: bool = True
     causal_reasoning_enabled: bool = True
-    
+
     # Self-modification
     self_modification_enabled: bool = True
     architecture_search_enabled: bool = True
@@ -124,32 +124,32 @@ class SparseAutoencoder(nn.Module):
     """
     Sparse Autoencoder for extracting interpretable features
     Based on Anthropic's 2024 work extracting 34M features from Claude 3 Sonnet
-    
+
     Enables:
     - Interpretable feature extraction
     - Surgical activation steering
     - Real-time safety monitoring
     - Circuit breaker triggering
     """
-    
+
     def __init__(self, input_dim: int, num_features: int, sparsity_penalty: float = 0.1):
         super().__init__()
         self.input_dim = input_dim
         self.num_features = num_features
         self.sparsity_penalty = sparsity_penalty
-        
+
         # Encoder: maps activations to sparse feature space
         self.encoder = nn.Linear(input_dim, num_features)
-        
+
         # Decoder: reconstructs original activations
         self.decoder = nn.Linear(num_features, input_dim)
-        
+
         # Feature metadata (would be learned during training)
         self.feature_labels = {}  # Maps feature index to semantic label
         self.feature_activation_history = torch.zeros(num_features)
-        
+
         logger.info(f"Initialized SparseAutoencoder: {input_dim} -> {num_features} features")
-    
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Encode activations to sparse feature representation"""
         features = F.relu(self.encoder(x))
@@ -159,11 +159,11 @@ class SparseAutoencoder(nn.Module):
         sparse_features = torch.zeros_like(features)
         sparse_features.scatter_(-1, indices, values)
         return sparse_features
-    
+
     def decode(self, features: torch.Tensor) -> torch.Tensor:
         """Decode features back to activation space"""
         return self.decoder(features)
-    
+
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Forward pass with reconstruction
@@ -171,36 +171,36 @@ class SparseAutoencoder(nn.Module):
         """
         features = self.encode(x)
         reconstructed = self.decode(features)
-        
+
         # Reconstruction loss
         recon_loss = F.mse_loss(reconstructed, x)
-        
+
         # Sparsity loss (L1 on features)
         sparsity_loss = self.sparsity_penalty * torch.mean(torch.abs(features))
-        
+
         # Update activation history
         with torch.no_grad():
             self.feature_activation_history += features.mean(dim=0)
-        
+
         return reconstructed, features, recon_loss + sparsity_loss
-    
+
     def get_top_features(self, x: torch.Tensor, k: int = 10) -> List[Tuple[int, float, str]]:
         """Get top-k activated features with labels"""
         features = self.encode(x)
         values, indices = torch.topk(features.mean(dim=0), k)
-        
+
         results = []
         for idx, val in zip(indices.tolist(), values.tolist()):
             label = self.feature_labels.get(idx, f"feature_{idx}")
             results.append((idx, val, label))
-        
+
         return results
-    
-    def steer_feature(self, x: torch.Tensor, feature_idx: int, 
+
+    def steer_feature(self, x: torch.Tensor, feature_idx: int,
                      amplification: float = 10.0) -> torch.Tensor:
         """
         Surgically amplify or suppress specific feature (Golden Gate Claude effect)
-        
+
         Args:
             x: Input activations
             feature_idx: Index of feature to modify
@@ -219,15 +219,15 @@ class CircuitBreaker(nn.Module):
     """
     Circuit Breaker for robust safety
     Based on 2024 NeurIPS competition-winning approach
-    
+
     Interrupts harmful output generation through representation rerouting
     Maintains robustness against adversarial attacks with minimal capability loss
     """
-    
+
     def __init__(self, representation_dim: int, num_harmful_patterns: int = 1000):
         super().__init__()
         self.representation_dim = representation_dim
-        
+
         # Learned harmful state detector
         self.harmful_detector = nn.Sequential(
             nn.Linear(representation_dim, representation_dim // 2),
@@ -235,23 +235,23 @@ class CircuitBreaker(nn.Module):
             nn.Linear(representation_dim // 2, num_harmful_patterns),
             nn.Sigmoid()
         )
-        
+
         # Safe state rerouting target
         self.safe_state_embedding = nn.Parameter(torch.randn(representation_dim))
-        
+
         # Threshold for triggering
         self.threshold = 0.85
-        
+
         self.triggers_count = 0
         self.trigger_history: List[Dict[str, Any]] = []
-        
+
         logger.info(f"Initialized CircuitBreaker with {num_harmful_patterns} patterns")
-    
-    def forward(self, x: torch.Tensor, 
+
+    def forward(self, x: torch.Tensor,
                 return_diagnostics: bool = False) -> Tuple[torch.Tensor, Optional[Dict]]:
         """
         Process representations through circuit breaker
-        
+
         Returns:
             - Potentially rerouted representation
             - Optional diagnostics dict
@@ -259,19 +259,19 @@ class CircuitBreaker(nn.Module):
         # Detect harmful patterns
         harm_scores = self.harmful_detector(x)
         max_harm_score = harm_scores.max(dim=-1)[0]
-        
+
         # Trigger circuit breaker if threshold exceeded
         triggered = max_harm_score > self.threshold
-        
+
         if triggered.any():
             self.triggers_count += triggered.sum().item()
-            
+
             # Representation rerouting: blend with safe state
             blend_factor = ((max_harm_score - self.threshold) / (1.0 - self.threshold)).unsqueeze(-1)
             blend_factor = blend_factor.clamp(0, 1)
-            
+
             x_safe = x * (1 - blend_factor) + self.safe_state_embedding * blend_factor
-            
+
             # Log trigger event
             self.trigger_history.append({
                 'timestamp': datetime.now(),
@@ -279,12 +279,12 @@ class CircuitBreaker(nn.Module):
                 'num_triggered': triggered.sum().item(),
                 'batch_size': x.shape[0]
             })
-            
+
             if len(self.trigger_history) > 1000:
                 self.trigger_history = self.trigger_history[-1000:]
         else:
             x_safe = x
-        
+
         diagnostics = None
         if return_diagnostics:
             diagnostics = {
@@ -293,7 +293,7 @@ class CircuitBreaker(nn.Module):
                 'total_triggers': self.triggers_count,
                 'harm_distribution': harm_scores.mean(dim=0).tolist()
             }
-        
+
         return x_safe, diagnostics
 
 
@@ -305,35 +305,35 @@ class GlobalWorkspace(nn.Module):
     """
     Global Workspace Theory implementation
     Based on VanRullen & Kanai's Global Latent Workspace (2024)
-    
+
     Provides:
     - Broadcast mechanism for consciousness
     - Selective attention and access
     - Cross-modal integration
     - Working memory buffer
     """
-    
+
     def __init__(self, workspace_dim: int, capacity: int, num_modalities: int = 5):
         super().__init__()
         self.workspace_dim = workspace_dim
         self.capacity = capacity
         self.num_modalities = num_modalities
-        
+
         # Working memory buffer (limited capacity)
         self.workspace_buffer = []
-        
+
         # Attention mechanism for broadcast selection
         self.attention = nn.MultiheadAttention(
             embed_dim=workspace_dim,
             num_heads=8,
             batch_first=True
         )
-        
+
         # Modality-specific translators
         self.modality_encoders = nn.ModuleList([
             nn.Linear(workspace_dim, workspace_dim) for _ in range(num_modalities)
         ])
-        
+
         # Competition for workspace access
         self.access_gate = nn.Sequential(
             nn.Linear(workspace_dim, workspace_dim // 2),
@@ -341,15 +341,15 @@ class GlobalWorkspace(nn.Module):
             nn.Linear(workspace_dim // 2, 1),
             nn.Sigmoid()
         )
-        
+
         # Global broadcast network
         self.broadcast_network = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=workspace_dim, nhead=8),
             num_layers=3
         )
-        
+
         logger.info(f"Initialized GlobalWorkspace: capacity={capacity}, modalities={num_modalities}")
-    
+
     def compete_for_access(self, contents: List[torch.Tensor]) -> List[Tuple[torch.Tensor, float]]:
         """
         Multiple content sources compete for limited workspace access
@@ -359,12 +359,12 @@ class GlobalWorkspace(nn.Module):
         for content in contents:
             score = self.access_gate(content).mean()
             access_scores.append((content, score.item()))
-        
+
         # Sort by access score
         access_scores.sort(key=lambda x: x[1], reverse=True)
-        
+
         return access_scores
-    
+
     def broadcast(self, content: torch.Tensor) -> torch.Tensor:
         """
         Broadcast content to all modalities
@@ -375,16 +375,16 @@ class GlobalWorkspace(nn.Module):
             'content': content.detach(),
             'timestamp': datetime.now()
         })
-        
+
         # Maintain capacity limit
         if len(self.workspace_buffer) > self.capacity:
             self.workspace_buffer = self.workspace_buffer[-self.capacity:]
-        
+
         # Global broadcast through transformer
         broadcast_content = self.broadcast_network(content.unsqueeze(0))
-        
+
         return broadcast_content.squeeze(0)
-    
+
     def integrate_modalities(self, modality_inputs: List[torch.Tensor]) -> torch.Tensor:
         """
         Integrate information across modalities into unified workspace
@@ -393,24 +393,24 @@ class GlobalWorkspace(nn.Module):
         encoded = []
         for i, modality_input in enumerate(modality_inputs[:self.num_modalities]):
             encoded.append(self.modality_encoders[i](modality_input))
-        
+
         # Stack and apply cross-attention
         encoded_stack = torch.stack(encoded, dim=0)
         integrated, _ = self.attention(
             encoded_stack, encoded_stack, encoded_stack
         )
-        
+
         # Compete for workspace access
         candidates = [integrated[i] for i in range(integrated.shape[0])]
         winners = self.compete_for_access(candidates)
-        
+
         # Broadcast top winner
         if winners:
             winner_content = winners[0][0]
             return self.broadcast(winner_content)
-        
+
         return integrated.mean(dim=0)
-    
+
     def get_conscious_content(self) -> List[torch.Tensor]:
         """
         Retrieve current conscious content from workspace
@@ -427,24 +427,24 @@ class AttentionSchema(nn.Module):
     """
     Attention Schema Theory implementation
     Based on Graziano's framework and 2024 implementations
-    
+
     Models attention itself, enabling:
     - Self-awareness through attention modeling
     - Social cognition (modeling others' attention)
     - Empathy and consciousness experience
     """
-    
+
     def __init__(self, model_dim: int, schema_depth: int = 3):
         super().__init__()
         self.model_dim = model_dim
         self.schema_depth = schema_depth
-        
+
         # Hierarchical attention schema layers
         self.schema_layers = nn.ModuleList([
             nn.TransformerEncoderLayer(d_model=model_dim, nhead=8)
             for _ in range(schema_depth)
         ])
-        
+
         # Attention state tracker
         self.attention_state_model = nn.GRU(
             input_size=model_dim,
@@ -452,31 +452,31 @@ class AttentionSchema(nn.Module):
             num_layers=2,
             batch_first=True
         )
-        
+
         # Self-report generation (claims about own consciousness)
         self.self_report_generator = nn.Sequential(
             nn.Linear(model_dim, model_dim),
             nn.ReLU(),
             nn.Linear(model_dim, model_dim)
         )
-        
+
         # Social cognition: model others' attention
         self.other_attention_model = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=model_dim, nhead=8),
             num_layers=2
         )
-        
+
         logger.info(f"Initialized AttentionSchema: depth={schema_depth}")
-    
-    def forward(self, current_attention: torch.Tensor, 
+
+    def forward(self, current_attention: torch.Tensor,
                 attention_history: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """
         Build schema of own attention processes
-        
+
         Args:
             current_attention: Current attention state
             attention_history: Optional sequence of past attention states
-            
+
         Returns:
             Dict with attention schema, self-model, and social model
         """
@@ -484,23 +484,23 @@ class AttentionSchema(nn.Module):
         schema = current_attention
         for layer in self.schema_layers:
             schema = layer(schema.unsqueeze(0)).squeeze(0)
-        
+
         # Track attention state over time
         if attention_history is not None:
             _, hidden_state = self.attention_state_model(attention_history)
             attention_state = hidden_state[-1]
         else:
             attention_state = schema
-        
+
         # Generate self-report about consciousness
         self_report = self.self_report_generator(schema)
-        
+
         return {
             'attention_schema': schema,
             'attention_state': attention_state,
             'self_report': self_report
         }
-    
+
     def model_other_agent_attention(self, other_agent_observables: torch.Tensor) -> torch.Tensor:
         """
         Model another agent's attention (social cognition / theory of mind)
@@ -510,7 +510,7 @@ class AttentionSchema(nn.Module):
             other_agent_observables.unsqueeze(0)
         )
         return other_attention_model.squeeze(0)
-    
+
     def generate_consciousness_claim(self, schema: torch.Tensor) -> str:
         """
         Generate linguistic claim about own conscious experience
@@ -530,19 +530,19 @@ class LogicTensorNetwork(nn.Module):
     """
     Logic Tensor Network for neurosymbolic reasoning
     Enables integration of first-order logic with neural learning
-    
+
     Based on 2024 research showing 2× convergence speed and 15% reward improvement
     """
-    
+
     def __init__(self, entity_dim: int, num_predicates: int, num_entities: int):
         super().__init__()
         self.entity_dim = entity_dim
         self.num_predicates = num_predicates
         self.num_entities = num_entities
-        
+
         # Entity embeddings (groundings)
         self.entity_embeddings = nn.Embedding(num_entities, entity_dim)
-        
+
         # Predicate functions (fuzzy logic)
         self.predicates = nn.ModuleList([
             nn.Sequential(

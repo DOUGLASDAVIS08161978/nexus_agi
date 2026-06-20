@@ -124,7 +124,7 @@ When you run the deployment, you'll get:
 
 ### **EthereumBridgeToken Contract:**
 - **Initial Supply:** 1000 XCBT
-- **Minted to You:** 50 XCBT  
+- **Minted to You:** 50 XCBT
 - **Symbol:** XCBT
 - **Decimals:** 8
 - **Your Role:** Bridge Operator (full control)
@@ -254,7 +254,7 @@ await bridge.balanceOf('0x24f6b1ce11c57d40b542f91ac85fa9eb61f78771')
 
 ### **Guides Available:**
 1. `TESTNET_BRIDGE_DEPLOYMENT_GUIDE.md` - Complete technical guide
-2. `METAMASK_DEPLOYMENT_GUIDE.md` - MetaMask-specific guide  
+2. `METAMASK_DEPLOYMENT_GUIDE.md` - MetaMask-specific guide
 3. `QUICK_START_SUMMARY.md` - This file
 
 ### **View Documentation:**

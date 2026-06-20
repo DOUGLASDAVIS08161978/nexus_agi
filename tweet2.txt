@@ -2,7 +2,7 @@
 
 Our advanced AGI can:
 • Solve complex problems
-• Analyze data  
+• Analyze data
 • Generate content
 • Provide consultations
 

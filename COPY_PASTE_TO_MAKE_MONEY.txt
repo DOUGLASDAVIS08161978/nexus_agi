@@ -12,7 +12,7 @@ Your first Bitcoin payment could arrive within 24-72 hours!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Hour 1:   cat tweet1.txt → Copy → Post to Twitter
-Hour 3:   cat tweet2.txt → Copy → Post to Twitter  
+Hour 3:   cat tweet2.txt → Copy → Post to Twitter
 Hour 5:   cat tweet3.txt → Copy → Post to Twitter
 Hour 7:   cat tweet4.txt → Copy → Post to Twitter
 Hour 9:   cat tweet5.txt → Copy → Post to Twitter
@@ -65,7 +65,7 @@ Expected: 5-20 orders in first month ($25-$10,000 revenue)
 5. Go to Settings → API Keys → Create API Key
 6. Copy the API key
 7. Run: echo "COINBASE_COMMERCE_API_KEY=YOUR_KEY_HERE" >> .env
-8. Run: echo "PAYMENT_PROCESSOR=coinbase" >> .env  
+8. Run: echo "PAYMENT_PROCESSOR=coinbase" >> .env
 9. Run: ./complete_automation.sh
 
 Now all Bitcoin payments auto-go to your wallet!
@@ -104,7 +104,7 @@ Hour 12:    First inquiry/DM
 Hour 24:    First API test
 Day 2-3:    First Bitcoin payment! 🎉
 Week 1:     $500-$1,000 revenue
-Week 2:     $1,500-$3,000 revenue  
+Week 2:     $1,500-$3,000 revenue
 Month 1:    $10,000+ revenue
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
