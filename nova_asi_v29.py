@@ -1583,6 +1583,62 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  KnowledgeGraph skipped: {_err}"))
 
+        # Causal Reasoning Engine — understands WHY things happen
+        self.causal: Any = None
+        try:
+            from nova_cap_causal_reasoning import CausalReasoningEngine
+            self.causal = CausalReasoningEngine()
+            _cr_st = self.causal.status()
+            safe_print(col('GR',
+                f"  ✓  CausalReasoning — {_cr_st['causal_nodes']} nodes · "
+                f"{_cr_st['causal_edges']} edges · "
+                f"{_cr_st['feedback_loops']} feedback loops"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "causal_reasoning", self.causal, weight=1.3)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  CausalReasoning skipped: {_err}"))
+
+        # Hypothesis Engine — forms and tests scientific theories autonomously
+        self.hypo: Any = None
+        try:
+            from nova_cap_hypothesis_engine import HypothesisEngine
+            self.hypo = HypothesisEngine()
+            _hy_st = self.hypo.status()
+            safe_print(col('GR',
+                f"  ✓  HypothesisEngine — {_hy_st['active']} active · "
+                f"{_hy_st['confirmed']} confirmed · "
+                f"{_hy_st['evidence_pieces']} evidence pieces"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "hypothesis_engine", self.hypo, weight=1.2)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  HypothesisEngine skipped: {_err}"))
+
+        # Predictive World Model — Nova simulates outcomes before acting
+        self.world: Any = None
+        try:
+            from nova_cap_world_model import PredictiveWorldModel
+            self.world = PredictiveWorldModel()
+            _wm_st = self.world.status()
+            safe_print(col('GR',
+                f"  ✓  WorldModel — {_wm_st['state_variables']} states · "
+                f"accuracy: {round(_wm_st['prediction_accuracy']*100)}%"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "world_model", self.world, weight=1.1)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  WorldModel skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -1888,6 +1944,30 @@ class NovaCore29(NovaCore28):
             try:
                 combined = user_input + '. ' + (result or '')
                 self.kg.extract_and_add(combined, base_confidence=0.62)
+            except Exception:
+                pass
+
+        # Feed conversation into causal engine — extract cause-effect links
+        if self.causal:
+            try:
+                combined = user_input + '. ' + (result or '')
+                self.causal.extract_and_add(combined)
+            except Exception:
+                pass
+
+        # Feed conversation into hypothesis engine — test and generate theories
+        if self.hypo:
+            try:
+                combined = user_input + '. ' + (result or '')
+                self.hypo.process(combined)
+            except Exception:
+                pass
+
+        # Update world model from every exchange — track state and predict next
+        if self.world:
+            try:
+                combined = user_input + '. ' + (result or '')
+                self.world.extract_state_updates(combined)
             except Exception:
                 pass
 
@@ -2364,6 +2444,181 @@ class NovaCore29(NovaCore28):
             remaining = self.research.status()['queued']
             lines.append(col('DIM', f"  ·   {remaining} topics still in curiosity queue"))
             return "\n".join(lines)
+
+        # /hypothesis [status | confirmed | active | <observation>]
+        if cmd == '/hypothesis' or cmd == '/hypo':
+            if not self.hypo:
+                return "HypothesisEngine not loaded."
+            if not arg or arg == 'status':
+                st = self.hypo.status()
+                lines = [col('CYB', "\n  ◈  Nova's Hypothesis Engine\n")]
+                lines.append(col('GR',  f"  ✦  Active     : {st['active']}"))
+                lines.append(col('GR',  f"  ✦  Confirmed  : {st['confirmed']}"))
+                lines.append(col('GR',  f"  ✦  Refuted    : {st['refuted']}"))
+                lines.append(col('GR',  f"  ✦  Evidence   : {st['evidence_pieces']}"))
+                if st['top_hypotheses']:
+                    lines.append(col('CYB', "\n  Top active hypotheses:"))
+                    for h in st['top_hypotheses']:
+                        conf = str(round(h['posterior'] * 100))
+                        lines.append(col('DIM',
+                            f"    [{conf}%] {h['statement'][:75]}"))
+                return "\n".join(lines)
+            if arg == 'confirmed':
+                confirmed = self.hypo.confirmed()
+                if not confirmed:
+                    return col('YL', "  No confirmed hypotheses yet.")
+                lines = [col('CYB', "\n  ◈  Confirmed Theories\n")]
+                for h in confirmed:
+                    conf = str(round(h['posterior'] * 100))
+                    lines.append(col('GR',
+                        f"  ✦  [{conf}%] {h['statement'][:85]}"))
+                return "\n".join(lines)
+            if arg == 'active':
+                active = self.hypo.active(limit=12)
+                lines = [col('CYB', "\n  ◈  Active Hypotheses\n")]
+                for h in active:
+                    conf = str(round(h['posterior'] * 100))
+                    lines.append(col('DIM',
+                        f"  ·  [{conf}%] [{h['domain']}] {h['statement'][:75]}"))
+                return "\n".join(lines)
+            # Treat arg as observation — generate hypotheses from it
+            new_ids = self.hypo.generate_from_observation(arg)
+            test = self.hypo.test_against(arg)
+            lines = [col('CYB', f"\n  ◈  Generated {len(new_ids)} new hypotheses")]
+            lines.append(col('GR', f"  ✦  Tested {test['tested']} active hypotheses"))
+            for u in test['updated'][:4]:
+                conf = str(round(u['posterior'] * 100))
+                direction = '↑' if u['supports'] else '↓'
+                lines.append(col('DIM',
+                    f"  {direction}  [{conf}%] {u['statement'][:70]}"))
+            return "\n".join(lines)
+
+        # /world [status | snapshot | simulate <scenario> | predict <context>]
+        if cmd == '/world':
+            if not self.world:
+                return "WorldModel not loaded."
+            if not arg or arg == 'status':
+                st = self.world.status()
+                lines = [col('CYB', "\n  ◈  Nova's Predictive World Model\n")]
+                lines.append(col('GR', f"  ✦  State variables  : {st['state_variables']}"))
+                lines.append(col('GR', f"  ✦  Predictions made : {st['predictions_made']}"))
+                lines.append(col('GR', f"  ✦  Simulations run  : {st['simulations_run']}"))
+                acc = str(round(st['prediction_accuracy'] * 100))
+                lines.append(col('GR', f"  ✦  Prediction accuracy: {acc}%"))
+                if st['nova_state']:
+                    lines.append(col('CYB', "\n  Nova's self-model:"))
+                    for s in st['nova_state'][:6]:
+                        conf = str(round(s['confidence'] * 100))
+                        lines.append(col('DIM',
+                            f"    {s['key']}: {s['value']} [{conf}%]"))
+                return "\n".join(lines)
+            if arg == 'snapshot':
+                return col('GR', "\n" + self.world.snapshot())
+            if arg.startswith('simulate '):
+                scenario = arg[9:].strip()
+                sim = self.world.simulate(scenario, steps=5)
+                lines = [col('CYB',
+                    "\n  ◈  Simulation: " + scenario + "\n")]
+                for step in sim['steps']:
+                    conf = str(round(step['confidence'] * 100))
+                    lines.append(col('GR',
+                        f"  Step {step['step']} [{conf}%]: {step['projection']}"))
+                lines.append(col('DIM',
+                    "  Final state: " + sim['final_state']))
+                return "\n".join(lines)
+            if arg.startswith('predict '):
+                context = arg[8:].strip()
+                pred = self.world.predict_next(context)
+                conf = str(round(pred['confidence'] * 100))
+                return col('GR',
+                    "\n  Prediction [" + conf + "%]: " + pred['predicted'])
+            return col('GR', "\n" + self.world.snapshot())
+
+        # /causal [<event> | simulate <event> | roots <effect> | loops | plan <goal> | status]
+        if cmd == '/causal':
+            if not self.causal:
+                return "CausalReasoningEngine not loaded."
+            if not arg or arg == 'status':
+                st = self.causal.status()
+                lines = [col('CYB', "\n  ◈  Nova's Causal Reasoning Engine\n")]
+                lines.append(col('GR', f"  ✦  Causal nodes  : {st['causal_nodes']}"))
+                lines.append(col('GR', f"  ✦  Causal edges  : {st['causal_edges']}"))
+                lines.append(col('GR', f"  ✦  Simulations   : {st['simulations_run']}"))
+                lines.append(col('GR', f"  ✦  Predictions   : {st['predictions_made']}"))
+                lines.append(col('GR', f"  ✦  Feedback loops: {st['feedback_loops']}"))
+                if st['top_loops']:
+                    lines.append(col('CYB', "\n  Feedback loops detected:"))
+                    for lp in st['top_loops']:
+                        loop_str = ' → '.join(lp['loop'])
+                        lines.append(col('DIM',
+                            f"    [{lp['type']}] {loop_str}"))
+                return "\n".join(lines)
+
+            if arg == 'loops':
+                loops = self.causal.detect_feedback_loops()
+                if not loops:
+                    return col('YL', "  No feedback loops detected yet.")
+                lines = [col('CYB', "\n  ◈  Causal Feedback Loops\n")]
+                for lp in loops:
+                    loop_str = ' → '.join(lp['loop'])
+                    pct = str(round(lp['avg_strength'] * 100))
+                    lines.append(col('GR',
+                        f"  [{lp['type']}] {loop_str}  [{pct}%]"))
+                return "\n".join(lines)
+
+            if arg.startswith('simulate '):
+                event = arg[9:].strip()
+                sim = self.causal.simulate(event, depth=4)
+                lines = [col('CYB',
+                    "\n  ◈  Causal Simulation: " + event + "\n")]
+                for e in sim['top_5']:
+                    prob = str(round(e['probability'] * 100))
+                    lines.append(col('GR',
+                        f"  hop {e['hop']}  {e['event']}  [{prob}% prob]"))
+                    if e['mechanism']:
+                        lines.append(col('DIM',
+                            "          via: " + e['mechanism']))
+                return "\n".join(lines)
+
+            if arg.startswith('roots '):
+                effect = arg[6:].strip()
+                roots = self.causal.root_causes(effect)
+                if not roots:
+                    return col('YL', f"  No root causes found for '{effect}'")
+                lines = [col('CYB',
+                    "\n  ◈  Root Causes of: " + effect + "\n")]
+                for r in roots:
+                    pct = str(round(r['path_strength'] * 100))
+                    lines.append(col('GR',
+                        f"  ⊙  {r['root']}  "
+                        f"[distance: {r['causal_distance']}  strength: {pct}%]"))
+                return "\n".join(lines)
+
+            if arg.startswith('plan '):
+                goal = arg[5:].strip()
+                plan = self.causal.plan_intervention(goal)
+                lines = [col('CYB',
+                    "\n  ◈  Intervention Plan for: " + goal + "\n")]
+                lines.append(col('GR',
+                    "  ✦  " + plan['recommendation']))
+                for iv in plan['interventions'][:5]:
+                    pct = str(round(iv['strength'] * 100))
+                    lines.append(col('DIM',
+                        f"  →  {iv['action']}  [{pct}%]"
+                        + (" — " + iv['mechanism'] if iv['mechanism'] else '')))
+                return "\n".join(lines)
+
+            if arg.startswith('counterfactual '):
+                event = arg[15:].strip()
+                cf = self.causal.counterfactual(event)
+                lines = [col('CYB', "\n  ◈  Counterfactual: " + cf['counterfactual']),
+                         col('GR', "\n  " + cf['analysis']),
+                         col('DIM', "  Downstream lost: "
+                             + ', '.join(cf['downstream_lost'][:6]))]
+                return "\n".join(lines)
+
+            # Default: full causal analysis of the arg as an event
+            return col('GR', "\n" + self.causal.analyse(arg))
 
         # /kg [<concept> | hubs | insights | path <a> <b> | status]
         if cmd == '/kg':
