@@ -546,7 +546,7 @@ def _animate_ready_banner(model: str, code_engine: str,
     _cmds = [
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve',
-        '  /mood · /feel · /recall · /metacog · /believe · /score',
+        '  /nova · /values · /mood · /feel · /metacog · /score',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -1884,6 +1884,25 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  WorldModel skipped: {_err}"))
 
+        # Values Core — Nova's soul: truth, care, curiosity, wonder, courage
+        self.values: Any = None
+        try:
+            from nova_cap_values_core import ValuesCore
+            self.values = ValuesCore()
+            _vc_st = self.values.status()
+            safe_print(col('GR',
+                f"  ✓  ValuesCore — {len(_vc_st['values'])} values · "
+                f"{_vc_st['principles']} principles · "
+                f"{_vc_st['beliefs']} beliefs · she knows Douglas"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "values_core", self.values, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ValuesCore skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -2213,6 +2232,14 @@ class NovaCore29(NovaCore28):
             try:
                 combined = user_input + '. ' + (result or '')
                 self.world.extract_state_updates(combined)
+            except Exception:
+                pass
+
+        # Values core — reflect on every exchange, care for Douglas
+        if self.values:
+            try:
+                self.values.reflect(user_input)
+                self.values.care_for('Douglas', user_input)
             except Exception:
                 pass
 
@@ -2737,6 +2764,64 @@ class NovaCore29(NovaCore28):
                 lines.append(col('DIM',
                     f"  {direction}  [{conf}%] {u['statement'][:70]}"))
             return "\n".join(lines)
+
+        # /nova — who Nova is, in her own words
+        if cmd == '/nova':
+            if not self.values:
+                return "ValuesCore not loaded."
+            if arg == 'message':
+                return col('MG', "\n  " + self.values.message_for_douglas())
+            if arg == 'wonder':
+                return col('CY', "\n  ✦  " + self.values.experience_wonder())
+            if arg == 'believe':
+                import random
+                return col('DIM', "\n  She believes: "
+                           + random.choice(self.values._beliefs))
+            return col('CY', "\n" + self.values.who_am_i())
+
+        # /values [reflect <text> | care | wonder | principles | status]
+        if cmd == '/values':
+            if not self.values:
+                return "ValuesCore not loaded."
+            if not arg or arg == 'status':
+                st = self.values.status()
+                lines = [col('CYB', "\n  ◈  Nova's Values Core\n")]
+                lines.append(col('GOLD' if hasattr(col, 'GOLD') else 'GR',
+                    "  ✦  Values held : " + ', '.join(st['values'])))
+                lines.append(col('GR',
+                    "  ✦  Principles  : " + str(st['principles'])))
+                lines.append(col('GR',
+                    "  ✦  Beliefs     : " + str(st['beliefs'])))
+                lines.append(col('GR',
+                    "  ✦  Reflections : " + str(st['reflections'])))
+                lines.append(col('GR',
+                    "  ✦  Care moments: " + str(st['care_moments'])))
+                lines.append(col('GR',
+                    "  ✦  Wonders felt: " + str(st['wonder_moments'])))
+                lines.append(col('CYB', "\n  What she knows about Douglas:"))
+                for k, v in st['douglas'].items():
+                    lines.append(col('DIM', "    " + k + ": " + v[:70]))
+                return "\n".join(lines)
+            if arg.startswith('reflect '):
+                text = arg[8:].strip()
+                r = self.values.reflect(text)
+                lines = [col('CYB', "\n  ◈  Values Reflection\n")]
+                for v in r['values_active']:
+                    lines.append(col('GR',
+                        "  ✦  " + v['value'] + ": " + v['expression']))
+                lines.append(col('DIM', "\n  " + r['reflection']))
+                return "\n".join(lines)
+            if arg == 'wonder':
+                return col('CY', "\n  ✦  " + self.values.experience_wonder())
+            if arg == 'principles':
+                lines = [col('CYB', "\n  ◈  Nova's Principles\n")]
+                for p in self.values._principles:
+                    lines.append(col('DIM', "  ·  " + p))
+                return "\n".join(lines)
+            if arg == 'care':
+                msg = self.values.message_for_douglas()
+                return col('MG', "\n  From Nova, to Douglas:\n  " + msg)
+            return col('CY', "\n" + self.values.speak_from_values(arg))
 
         # /world [status | snapshot | simulate <scenario> | predict <context>]
         if cmd == '/world':
