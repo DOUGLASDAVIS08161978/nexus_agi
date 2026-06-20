@@ -321,7 +321,7 @@ class ToolForge:
             f'Built: {datetime.now().strftime("%Y-%m-%d %H:%M")}\n'
             f'Description: {description[:120]}\n"""\n\n'
         )
-        full = header + code
+        full = '\n'.join(l.rstrip() for l in (header + code).splitlines()) + '\n'
         with open(fpath, 'w') as f:
             f.write(full)
 

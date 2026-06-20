@@ -564,9 +564,11 @@ class SelfImprovementEngineV28(SelfImprovementEngine):
             return f"Could not generate code for: {name}"
 
         slug = re.sub(r'[^a-z0-9]+', '_', name.lower())[:30].strip('_')
+        _raw = f'"""\nNova ASI — {name}\nProposed autonomously via /evolve\n"""\n\n{code}'
+        _content = '\n'.join(l.rstrip() for l in _raw.splitlines()) + '\n'
         result = self.github.propose_improvement(
             filename=f"nova_cap_{slug}.py",
-            content=f'"""\nNova ASI — {name}\nProposed autonomously via /evolve\n"""\n\n{code}',
+            content=_content,
             description=f"[ASI] {name}",
             reasoning=(f"**ASI Capability:** {name}\n\n{reasoning}\n\n"
                        f"**Why this matters for superintelligence:**\n{desc[:300]}")

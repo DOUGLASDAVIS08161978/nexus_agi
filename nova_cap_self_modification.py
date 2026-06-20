@@ -380,8 +380,9 @@ class SelfModificationEngine:
             'Built: ' + datetime.now().strftime('%Y-%m-%d %H:%M') + '\n'
             'Description: ' + description[:120] + '\n"""\n\n'
         )
+        clean = '\n'.join(l.rstrip() for l in (header + code).splitlines()) + '\n'
         with open(fpath, 'w') as f:
-            f.write(header + code)
+            f.write(clean)
 
         self._scan_capabilities()
         self._log(fname, 'generated', name)
