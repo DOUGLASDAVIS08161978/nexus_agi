@@ -410,7 +410,8 @@ class ToolForge:
         cls = next(
             (getattr(module, a) for a in dir(module)
              if isinstance(getattr(module, a), type)
-             and not a.startswith('_')),
+             and not a.startswith('_')
+             and getattr(getattr(module, a), '__module__', '') == module.__name__),
             None
         )
         if not cls:
