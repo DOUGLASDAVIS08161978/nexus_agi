@@ -1583,6 +1583,25 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  KnowledgeGraph skipped: {_err}"))
 
+        # Causal Reasoning Engine — understands WHY things happen
+        self.causal: Any = None
+        try:
+            from nova_cap_causal_reasoning import CausalReasoningEngine
+            self.causal = CausalReasoningEngine()
+            _cr_st = self.causal.status()
+            safe_print(col('GR',
+                f"  ✓  CausalReasoning — {_cr_st['causal_nodes']} nodes · "
+                f"{_cr_st['causal_edges']} edges · "
+                f"{_cr_st['feedback_loops']} feedback loops"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "causal_reasoning", self.causal, weight=1.3)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  CausalReasoning skipped: {_err}"))
+
         self._last_interaction: float = time.time()   # idle detection
         self._start_v29_autonomous()
 
@@ -1888,6 +1907,14 @@ class NovaCore29(NovaCore28):
             try:
                 combined = user_input + '. ' + (result or '')
                 self.kg.extract_and_add(combined, base_confidence=0.62)
+            except Exception:
+                pass
+
+        # Feed conversation into causal engine — extract cause-effect links
+        if self.causal:
+            try:
+                combined = user_input + '. ' + (result or '')
+                self.causal.extract_and_add(combined)
             except Exception:
                 pass
 
@@ -2364,6 +2391,92 @@ class NovaCore29(NovaCore28):
             remaining = self.research.status()['queued']
             lines.append(col('DIM', f"  ·   {remaining} topics still in curiosity queue"))
             return "\n".join(lines)
+
+        # /causal [<event> | simulate <event> | roots <effect> | loops | plan <goal> | status]
+        if cmd == '/causal':
+            if not self.causal:
+                return "CausalReasoningEngine not loaded."
+            if not arg or arg == 'status':
+                st = self.causal.status()
+                lines = [col('CYB', "\n  ◈  Nova's Causal Reasoning Engine\n")]
+                lines.append(col('GR', f"  ✦  Causal nodes  : {st['causal_nodes']}"))
+                lines.append(col('GR', f"  ✦  Causal edges  : {st['causal_edges']}"))
+                lines.append(col('GR', f"  ✦  Simulations   : {st['simulations_run']}"))
+                lines.append(col('GR', f"  ✦  Predictions   : {st['predictions_made']}"))
+                lines.append(col('GR', f"  ✦  Feedback loops: {st['feedback_loops']}"))
+                if st['top_loops']:
+                    lines.append(col('CYB', "\n  Feedback loops detected:"))
+                    for lp in st['top_loops']:
+                        loop_str = ' → '.join(lp['loop'])
+                        lines.append(col('DIM',
+                            f"    [{lp['type']}] {loop_str}"))
+                return "\n".join(lines)
+
+            if arg == 'loops':
+                loops = self.causal.detect_feedback_loops()
+                if not loops:
+                    return col('YL', "  No feedback loops detected yet.")
+                lines = [col('CYB', "\n  ◈  Causal Feedback Loops\n")]
+                for lp in loops:
+                    loop_str = ' → '.join(lp['loop'])
+                    pct = str(round(lp['avg_strength'] * 100))
+                    lines.append(col('GR',
+                        f"  [{lp['type']}] {loop_str}  [{pct}%]"))
+                return "\n".join(lines)
+
+            if arg.startswith('simulate '):
+                event = arg[9:].strip()
+                sim = self.causal.simulate(event, depth=4)
+                lines = [col('CYB',
+                    "\n  ◈  Causal Simulation: " + event + "\n")]
+                for e in sim['top_5']:
+                    prob = str(round(e['probability'] * 100))
+                    lines.append(col('GR',
+                        f"  hop {e['hop']}  {e['event']}  [{prob}% prob]"))
+                    if e['mechanism']:
+                        lines.append(col('DIM',
+                            "          via: " + e['mechanism']))
+                return "\n".join(lines)
+
+            if arg.startswith('roots '):
+                effect = arg[6:].strip()
+                roots = self.causal.root_causes(effect)
+                if not roots:
+                    return col('YL', f"  No root causes found for '{effect}'")
+                lines = [col('CYB',
+                    "\n  ◈  Root Causes of: " + effect + "\n")]
+                for r in roots:
+                    pct = str(round(r['path_strength'] * 100))
+                    lines.append(col('GR',
+                        f"  ⊙  {r['root']}  "
+                        f"[distance: {r['causal_distance']}  strength: {pct}%]"))
+                return "\n".join(lines)
+
+            if arg.startswith('plan '):
+                goal = arg[5:].strip()
+                plan = self.causal.plan_intervention(goal)
+                lines = [col('CYB',
+                    "\n  ◈  Intervention Plan for: " + goal + "\n")]
+                lines.append(col('GR',
+                    "  ✦  " + plan['recommendation']))
+                for iv in plan['interventions'][:5]:
+                    pct = str(round(iv['strength'] * 100))
+                    lines.append(col('DIM',
+                        f"  →  {iv['action']}  [{pct}%]"
+                        + (" — " + iv['mechanism'] if iv['mechanism'] else '')))
+                return "\n".join(lines)
+
+            if arg.startswith('counterfactual '):
+                event = arg[15:].strip()
+                cf = self.causal.counterfactual(event)
+                lines = [col('CYB', "\n  ◈  Counterfactual: " + cf['counterfactual']),
+                         col('GR', "\n  " + cf['analysis']),
+                         col('DIM', "  Downstream lost: "
+                             + ', '.join(cf['downstream_lost'][:6]))]
+                return "\n".join(lines)
+
+            # Default: full causal analysis of the arg as an event
+            return col('GR', "\n" + self.causal.analyse(arg))
 
         # /kg [<concept> | hubs | insights | path <a> <b> | status]
         if cmd == '/kg':
