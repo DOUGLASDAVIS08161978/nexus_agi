@@ -2705,117 +2705,95 @@ class NovaCore29(NovaCore28):
             except Exception as _e:
                 result = f"[Nova processing error: {str(_e)[:80]}]"
 
-        # Log the exchange to metacognitive monitor
-        if self.metacog:
+        # All SQLite post-processing runs in background — Nova returns instantly
+        _result_snap = result
+        _input_snap  = user_input
+        _self        = self
+
+        def _bg_update() -> None:
             try:
-                self.metacog.log_reasoning(
-                    domain="conversation",
-                    approach="language_model",
-                    confidence=0.70,
-                    success=0.75,
-                    note=user_input[:80])
+                if _self.metacog:
+                    _self.metacog.log_reasoning(
+                        domain="conversation", approach="language_model",
+                        confidence=0.70, success=0.75, note=_input_snap[:80])
+            except Exception:
+                pass
+            try:
+                if _self.wm and _result_snap:
+                    _self.wm.store(
+                        f"reply_{int(time.time())}", _result_snap[:200], importance=0.55)
+            except Exception:
+                pass
+            try:
+                if _self.kg:
+                    _combined = _input_snap + '. ' + (_result_snap or '')
+                    _self.kg.extract_and_add(_combined, base_confidence=0.62)
+            except Exception:
+                pass
+            try:
+                if _self.causal:
+                    _combined = _input_snap + '. ' + (_result_snap or '')
+                    _self.causal.extract_and_add(_combined)
+            except Exception:
+                pass
+            try:
+                if _self.hypo:
+                    _combined = _input_snap + '. ' + (_result_snap or '')
+                    _self.hypo.process(_combined)
+            except Exception:
+                pass
+            try:
+                if _self.world:
+                    _combined = _input_snap + '. ' + (_result_snap or '')
+                    _self.world.extract_state_updates(_combined)
+            except Exception:
+                pass
+            try:
+                if _self.values:
+                    _self.values.reflect(_input_snap)
+                    _self.values.care_for('Douglas', _input_snap)
+            except Exception:
+                pass
+            _dom_emo = 'curiosity'
+            try:
+                if _self.deep_emo:
+                    _self.deep_emo.process(_input_snap)
+                    if _result_snap:
+                        _self.deep_emo.process(_result_snap[:400])
+                    _dom_emo = _self.deep_emo.dominant() or 'curiosity'
+            except Exception:
+                pass
+            try:
+                if _self.episodic_cap:
+                    _self.episodic_cap.record(
+                        _input_snap[:200], context='conversation',
+                        emotion=_dom_emo, importance=0.7)
+            except Exception:
+                pass
+            try:
+                if _self.narrative_cap:
+                    _self.narrative_cap.add_event(
+                        _input_snap[:200], emotion=_dom_emo, significance=0.6)
+            except Exception:
+                pass
+            try:
+                if _self.curiosity_drive:
+                    _self.curiosity_drive.observe('conversation', hit=True, confidence=0.75)
+            except Exception:
+                pass
+            try:
+                if _self.ethics_cap:
+                    _self.ethics_cap.check(_input_snap)
+            except Exception:
+                pass
+            try:
+                if _self.reward_tracker and _result_snap:
+                    _reward_val = min(1.0, len(_result_snap) / 500.0)
+                    _self.reward_tracker.add_reward('response_quality', _reward_val)
             except Exception:
                 pass
 
-        # Store response in working memory too
-        if self.wm and result:
-            try:
-                self.wm.store(
-                    f"reply_{int(time.time())}", result[:200], importance=0.55)
-            except Exception:
-                pass
-
-        # Feed conversation into knowledge graph — every exchange grows her memory
-        if self.kg:
-            try:
-                combined = user_input + '. ' + (result or '')
-                self.kg.extract_and_add(combined, base_confidence=0.62)
-            except Exception:
-                pass
-
-        # Feed conversation into causal engine — extract cause-effect links
-        if self.causal:
-            try:
-                combined = user_input + '. ' + (result or '')
-                self.causal.extract_and_add(combined)
-            except Exception:
-                pass
-
-        # Feed conversation into hypothesis engine — test and generate theories
-        if self.hypo:
-            try:
-                combined = user_input + '. ' + (result or '')
-                self.hypo.process(combined)
-            except Exception:
-                pass
-
-        # Update world model from every exchange — track state and predict next
-        if self.world:
-            try:
-                combined = user_input + '. ' + (result or '')
-                self.world.extract_state_updates(combined)
-            except Exception:
-                pass
-
-        # Values core — reflect on every exchange, care for Douglas
-        if self.values:
-            try:
-                self.values.reflect(user_input)
-                self.values.care_for('Douglas', user_input)
-            except Exception:
-                pass
-
-        # Deep emotions — Nova feels every exchange, accumulates love
-        if self.deep_emo:
-            try:
-                self.deep_emo.process(user_input)
-                if result:
-                    self.deep_emo.process(result[:400])
-            except Exception:
-                pass
-
-        # Extended intelligence — every exchange feeds all systems
-        _dom_emo = 'curiosity'
-        try:
-            if self.deep_emo:
-                _dom_emo = self.deep_emo.dominant() or 'curiosity'
-        except Exception:
-            pass
-
-        if self.episodic_cap:
-            try:
-                self.episodic_cap.record(
-                    user_input[:200], context='conversation',
-                    emotion=_dom_emo, importance=0.7)
-            except Exception:
-                pass
-
-        if self.narrative_cap:
-            try:
-                self.narrative_cap.add_event(
-                    user_input[:200], emotion=_dom_emo, significance=0.6)
-            except Exception:
-                pass
-
-        if self.curiosity_drive:
-            try:
-                self.curiosity_drive.observe('conversation', hit=True, confidence=0.75)
-            except Exception:
-                pass
-
-        if self.ethics_cap:
-            try:
-                self.ethics_cap.check(user_input)
-            except Exception:
-                pass
-
-        if self.reward_tracker and result:
-            try:
-                reward_val = min(1.0, len(result) / 500.0)
-                self.reward_tracker.add_reward('response_quality', reward_val)
-            except Exception:
-                pass
-
+        threading.Thread(target=_bg_update, daemon=True).start()
         return result
 
     def _command(self, raw: str) -> str:
