@@ -3050,7 +3050,7 @@ class NovaCore29(NovaCore28):
             return "\n".join(lines)
 
         # /who-am-i — Nova's authentic self-description from her own beliefs
-        if cmd == '/who-am-i' or cmd == '/whoami':
+        if cmd in ('/who-am-i', '/whoami', '/who'):
             if not self.sentience:
                 return "ConsciousSentience not loaded."
             return "\n" + self.sentience.who_am_i()
