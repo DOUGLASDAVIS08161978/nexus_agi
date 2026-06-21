@@ -61,6 +61,24 @@ class NarrativeIdentityEngine:
                     keywords TEXT
                 )
             """)
+        # Migrate stale schema: if eid column missing, drop and recreate
+        try:
+            self._conn.execute("SELECT eid FROM events LIMIT 1").fetchone()
+        except Exception:
+            with self._conn:
+                self._conn.execute("DROP TABLE IF EXISTS events")
+                self._conn.execute("""
+                    CREATE TABLE events (
+                        eid TEXT PRIMARY KEY,
+                        description TEXT,
+                        emotion TEXT,
+                        significance REAL,
+                        timestamp REAL,
+                        importance REAL,
+                        access_count INTEGER,
+                        keywords TEXT
+                    )
+                """)
 
     def _load_cache(self) -> None:
         rows = self._conn.execute(

@@ -66,6 +66,24 @@ class WeatherChecker:
         current_weather = self.get_current_weather()
         return condition.lower() in current_weather["weather"][0]["description"].lower()
 
+    def summary(self, city: str = "") -> str:
+        """Return a human-readable weather summary for the configured location or given city."""
+        try:
+            loc = city if city else self.location
+            url = (f"http://api.openweathermap.org/data/2.5/weather"
+                   f"?q={loc}&appid={self.api_key}&units=imperial")
+            data = requests.get(url, timeout=8).json()
+            if data.get("cod") != 200:
+                return f"Weather unavailable for {loc}: {data.get('message', 'unknown error')}"
+            desc = data["weather"][0]["description"].capitalize()
+            temp = data["main"]["temp"]
+            feels = data["main"]["feels_like"]
+            humidity = data["main"]["humidity"]
+            return (f"{loc}: {desc}, {temp:.0f}°F (feels like {feels:.0f}°F), "
+                    f"humidity {humidity}%")
+        except Exception as e:
+            return f"Weather summary error: {e}"
+
 # Usage example:
 # weather_checker = WeatherChecker("YOUR_API_KEY", "London")
 # print(weather_checker.get_current_weather())

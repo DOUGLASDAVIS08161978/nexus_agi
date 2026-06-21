@@ -6,280 +6,247 @@ Generated via /evolve · v29 pipeline · 2026-06-20
 
 """
 Nova Executive Control Layer — orchestrates all cognitive subsystems, routes problems,
-detects bottlenecks, and autonomously schedules dependency-resolved tasks.
+detects bottlenecks, and autonomously schedules dependency-resolved task plans.
 Pillars: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
 """
 
 import sqlite3, threading, time, math, statistics, json, hashlib, os
 from collections import OrderedDict
+from datetime import datetime
 from typing import Any
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "nova_executive.db")
 
 SYSTEM_DOMAINS = {
-    "CausalReasoningEngine":   ["cause","effect","why","reason","mechanism","chain"],
-    "HypothesisEngine":        ["hypothesis","test","predict","theory","experiment"],
-    "BayesianBeliefSystem":    ["probability","belief","prior","posterior","uncertain","confidence"],
-    "EmotionTracker":          ["emotion","feel","mood","sentiment","affect"],
-    "EthicsChecker":           ["ethics","safe","harm","moral","value","principle"],
-    "InternetResearchEngine":  ["research","search","find","arxiv","url","knowledge","fact"],
-    "MetaCognitionEngine":     ["meta","reflect","blind","pattern","insight","self"],
-    "TaskPlanner":             ["task","plan","step","goal","schedule","action"],
-    "KnowledgeGraph":          ["concept","relation","entity","graph","link","node"],
-    "NovaImaginationFabric":   ["imagine","creative","combine","dream","novel","invent"],
-    "DebateEngine":            ["argue","debate","pro","con","against","for","position"],
-    "WorldPredictor":          ["predict","future","outcome","forecast","next","trend"],
-    "ScientificSynthesizer":   ["science","finding","evidence","consensus","study","paper"],
-    "SelfModificationEngine":  ["improve","weakness","modify","proposal","upgrade","fix"],
+    "BayesianBeliefSystem":    ["probability","belief","uncertainty","inference","evidence"],
+    "CausalReasoningEngine":   ["cause","effect","causal","chain","mechanism"],
+    "HypothesisEngine":        ["hypothesis","test","theory","predict","experiment"],
+    "MetacognitiveMonitor":    ["quality","reasoning","blind spot","calibration","self"],
+    "EthicsChecker":           ["ethics","safe","harm","value","principle"],
+    "NovaImaginationFabric":   ["imagine","creative","novel","dream","combine"],
+    "EmotionalResonanceEngine":["emotion","feel","mood","empathy","affect"],
+    "InternetResearchEngine":  ["research","fact","arxiv","web","source"],
+    "KnowledgeGraph":          ["knowledge","concept","relation","graph","entity"],
+    "TaskPlanner":             ["plan","task","step","goal","schedule"],
+    "WorldPredictor":          ["predict","future","forecast","outcome","trend"],
+    "SelfModificationEngine":  ["improve","modify","weakness","proposal","upgrade"],
+    "NovaTruthEngine":         ["truth","claim","verify","contradiction","assert"],
+    "DebateEngine":            ["argue","debate","counter","position","logic"],
 }
-
-MAX_TASKS_PER_SYSTEM = 6
+MAX_TASKS_PER_SYSTEM = 5
 
 class NovaExecutiveControl:
-    """Orchestrates Nova subsystems: routes problems, allocates capacity, schedules tasks."""
+    """Orchestrates Nova subsystems: routes problems, detects bottlenecks, schedules tasks."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._db  = self._init_db()
-        self._system_load: dict[str,int] = {s: 0 for s in SYSTEM_DOMAINS}
-        self._overrides:   dict[str,str] = {}
-        self._cycles       = 0
-        self._routing_history: list[dict] = []
-        self._start_auto()
-        self._seed_goals()
+        self._db = DB_PATH
+        self._ema_load: float = 0.5
+        self._cycles: int = 0
+        self._overrides: list[dict] = []
+        self._system_queues: dict[str, int] = {s: 0 for s in SYSTEM_DOMAINS}
+        self._init_db()
+        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
+        self._daemon.start()
 
-    # ── DB ────────────────────────────────────────────────────────────────────
-    def _init_db(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        conn.execute("""CREATE TABLE IF NOT EXISTS exec_tasks(
-            id TEXT PRIMARY KEY, desc TEXT, est_min REAL, deps TEXT,
-            done INTEGER DEFAULT 0, created REAL)""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS routing_log(
-            id TEXT PRIMARY KEY, problem TEXT, systems TEXT,
-            scores TEXT, ts REAL)""")
-        conn.commit()
-        return conn
+    def _init_db(self) -> None:
+        with sqlite3.connect(self._db) as cx:
+            cx.execute("""CREATE TABLE IF NOT EXISTS tasks(
+                id TEXT PRIMARY KEY, desc TEXT, est_min REAL, deps TEXT,
+                done INTEGER DEFAULT 0, created REAL, done_at REAL)""")
+            cx.execute("""CREATE TABLE IF NOT EXISTS route_log(
+                id TEXT PRIMARY KEY, problem TEXT, systems TEXT,
+                scores TEXT, ts REAL)""")
+            cx.commit()
 
-    # ── Routing ───────────────────────────────────────────────────────────────
+    def _jaccard(self, words: list[str], domain: list[str]) -> float:
+        a, b = set(w.lower() for w in words), set(domain)
+        return len(a & b) / (len(a | b) + 1e-9)
+
+    def _capacity(self, system: str) -> float:
+        q = self._system_queues.get(system, 0)
+        return max(0.0, 1.0 - q / MAX_TASKS_PER_SYSTEM)
+
     def route(self, problem: str, context: str = "") -> list[dict]:
         """Returns ordered list of systems to invoke with relevance scores and rationale."""
-        tokens = set((problem + " " + context).lower().split())
-        scored: list[tuple[float,str]] = []
-        with self._lock:
-            for sys_name, keywords in SYSTEM_DOMAINS.items():
-                if sys_name in self._overrides:
-                    continue
-                overlap     = len(tokens & set(keywords))
-                tf_score    = overlap / (len(tokens) + 1e-9)
-                idf         = math.log(len(SYSTEM_DOMAINS) / (1 + (1 if overlap > 0 else 0)))
-                relevance   = tf_score * (idf + 1.0)
-                active      = self._system_load.get(sys_name, 0)
-                capacity    = 1.0 - (active / MAX_TASKS_PER_SYSTEM)
-                score       = relevance * max(capacity, 0.05)
-                scored.append((score, sys_name))
-        scored.sort(reverse=True)
+        words = (problem + " " + context).split()
+        scored = []
+        for sys_name, domain in SYSTEM_DOMAINS.items():
+            rel = self._jaccard(words, domain)
+            cap = self._capacity(sys_name)
+            score = rel * cap
+            if score > 0.01:
+                scored.append({"system": sys_name, "score": round(score, 4),
+                                "relevance": round(rel, 4), "capacity": round(cap, 4),
+                                "rationale": f"domain overlap={rel:.3f}, capacity={cap:.2f}"})
+        scored.sort(key=lambda x: x["score"], reverse=True)
         top_k = scored[:5]
-        result = [{"system": s, "score": round(sc, 4),
-                   "rationale": f"relevance×capacity={sc:.4f}",
-                   "confidence": round(min(sc * 2.5, 1.0), 3)}
-                  for sc, s in top_k if sc > 0.0]
-        rid = hashlib.md5(f"{problem}{time.time()}".encode()).hexdigest()[:10]
-        with self._lock:
-            self._db.execute("INSERT OR REPLACE INTO routing_log VALUES(?,?,?,?,?)",
-                (rid, problem[:200],
-                 json.dumps([r["system"] for r in result]),
-                 json.dumps([r["score"]  for r in result]),
-                 time.time()))
-            self._db.commit()
-            self._routing_history.append({"problem": problem[:80], "top": result[0]["system"] if result else "none"})
-            if len(self._routing_history) > 200:
-                self._routing_history.pop(0)
-        self._log_meta("route", f"routed '{problem[:40]}' → {result[0]['system'] if result else 'none'}", 0.82)
-        return result
+        rid = hashlib.md5((problem + str(time.time())).encode()).hexdigest()[:12]
+        with sqlite3.connect(self._db) as cx:
+            cx.execute("INSERT INTO route_log VALUES(?,?,?,?,?)",
+                       (rid, problem[:200], json.dumps([s["system"] for s in top_k]),
+                        json.dumps({s["system"]: s["score"] for s in top_k}), time.time()))
+        try:
+            from MetacognitiveMonitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning("executive_route", "jaccard+capacity",
+                                                  top_k[0]["score"] if top_k else 0.0, True)
+        except Exception:
+            pass
+        try:
+            from HierarchicalGoalPlanner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(f"Route resolved: {problem[:60]}", priority=2)
+        except Exception:
+            pass
+        return top_k
 
-    # ── Allocation ────────────────────────────────────────────────────────────
     def allocate(self, task: str, systems: list[str]) -> dict[str, Any]:
-        """Allocates a task to the highest-capacity systems; returns allocation map."""
-        allocation: dict[str,str] = {}
+        """Allocates a task to top systems by capacity score; returns allocation map."""
+        allocations = {}
         with self._lock:
-            for s in systems:
-                if s not in SYSTEM_DOMAINS:
-                    allocation[s] = "unknown_system"
-                    continue
-                if s in self._overrides:
-                    allocation[s] = f"overridden: {self._overrides[s]}"
-                    continue
-                load = self._system_load.get(s, 0)
-                if load < MAX_TASKS_PER_SYSTEM:
-                    self._system_load[s] = load + 1
-                    allocation[s] = "allocated"
+            for sys_name in systems:
+                cap = self._capacity(sys_name)
+                if cap > 0.1:
+                    self._system_queues[sys_name] = self._system_queues.get(sys_name, 0) + 1
+                    allocations[sys_name] = {"allocated": True, "capacity_after": round(self._capacity(sys_name), 3)}
                 else:
-                    allocation[s] = "at_capacity"
-        self._log_meta("allocate", f"task='{task[:40]}' systems={systems}", 0.78)
-        return {"task": task, "allocation": allocation, "timestamp": round(time.time(), 2)}
+                    allocations[sys_name] = {"allocated": False, "reason": "at_capacity"}
+        return {"task": task[:80], "allocations": allocations, "ts": datetime.utcnow().isoformat()}
 
-    # ── Bottleneck ────────────────────────────────────────────────────────────
     def bottleneck_report(self) -> dict[str, Any]:
-        """Identifies which subsystem is constraining Nova's throughput via z-score."""
+        """Identifies which cognitive subsystem is constraining Nova's throughput via z-score."""
         with self._lock:
-            loads = list(self._system_load.values())
-        if len(loads) < 2:
-            return {"bottleneck": None, "reason": "insufficient_data"}
-        mean_load = statistics.mean(loads)
-        std_load  = statistics.stdev(loads) + 1e-9
+            depths = list(self._system_queues.values())
+        if len(depths) < 2:
+            return {"bottlenecks": [], "mean_queue": 0.0, "note": "insufficient data"}
+        mu = statistics.mean(depths)
+        sd = statistics.stdev(depths) + 1e-9
         bottlenecks = []
-        for sys_name, load in self._system_load.items():
-            z = (load - mean_load) / std_load
-            if z > 2.0:
-                bottlenecks.append({"system": sys_name, "load": load,
-                                    "z_score": round(z, 3), "severity": "critical"})
-            elif load > 2 * mean_load:
-                bottlenecks.append({"system": sys_name, "load": load,
-                                    "z_score": round(z, 3), "severity": "warning"})
+        for sys_name, q in self._system_queues.items():
+            z = (q - mu) / sd
+            if q > 2 * mu and abs(z) > 2.0:
+                bottlenecks.append({"system": sys_name, "queue": q,
+                                    "z_score": round(z, 3), "severity": "HIGH" if z > 3 else "MEDIUM"})
         bottlenecks.sort(key=lambda x: x["z_score"], reverse=True)
-        return {"bottlenecks": bottlenecks, "mean_load": round(mean_load, 3),
-                "std_load": round(std_load, 3), "total_systems": len(self._system_load)}
+        return {"bottlenecks": bottlenecks, "mean_queue": round(mu, 3),
+                "std_queue": round(sd, 3), "systems_checked": len(self._system_queues)}
 
-    # ── Override ──────────────────────────────────────────────────────────────
-    def override(self, system: str, reason: str) -> dict[str, str]:
-        """Disables a system from routing; returns confirmation dict."""
+    def override(self, system: str, reason: str) -> dict[str, Any]:
+        """Forces a system queue to zero and logs the override; returns override record."""
         with self._lock:
-            self._overrides[system] = reason
-        self._log_meta("override", f"disabled {system}: {reason}", 0.95)
-        return {"system": system, "status": "overridden", "reason": reason}
+            prev = self._system_queues.get(system, 0)
+            self._system_queues[system] = 0
+            rec = {"system": system, "reason": reason, "prev_queue": prev, "ts": datetime.utcnow().isoformat()}
+            self._overrides.append(rec)
+        return rec
 
-    # ── Cognitive Load ────────────────────────────────────────────────────────
     def cognitive_load(self) -> dict[str, Any]:
-        """Returns mean cognitive load across all systems with confidence interval."""
+        """Returns EMA-smoothed cognitive load and per-system load fractions."""
         with self._lock:
-            loads = [v / MAX_TASKS_PER_SYSTEM for v in self._system_load.values()]
-        mean_l = statistics.mean(loads)
-        std_l  = statistics.stdev(loads) + 1e-9 if len(loads) > 1 else 0.0
-        ci_95  = 1.96 * std_l / math.sqrt(len(loads))
-        entropy = -sum(p * math.log2(p + 1e-12) for p in loads if p > 0)
-        return {"mean_load": round(mean_l, 4), "std": round(std_l, 4),
-                "ci_95_lower": round(max(mean_l - ci_95, 0), 4),
-                "ci_95_upper": round(min(mean_l + ci_95, 1), 4),
-                "entropy": round(entropy, 4), "overridden_count": len(self._overrides)}
+            loads = {s: round(q / MAX_TASKS_PER_SYSTEM, 4) for s, q in self._system_queues.items()}
+        vals = list(loads.values())
+        mean_load = statistics.mean(vals) if vals else 0.0
+        self._ema_load = 0.15 * mean_load + 0.85 * self._ema_load
+        sd = statistics.stdev(vals) if len(vals) > 1 else 0.0
+        ci_lo = max(0.0, self._ema_load - 1.96 * sd / math.sqrt(len(vals) + 1))
+        ci_hi = min(1.0, self._ema_load + 1.96 * sd / math.sqrt(len(vals) + 1))
+        return {"ema_load": round(self._ema_load, 4), "mean_load": round(mean_load, 4),
+                "ci_95": [round(ci_lo, 4), round(ci_hi, 4)], "per_system": loads}
 
-    # ── Task Scheduling ───────────────────────────────────────────────────────
-    def add_task(self, desc: str, estimated_minutes: float, deps: list[str] = []) -> str:
-        """Adds a task with ETA and dependencies; returns task_id."""
-        tid = hashlib.md5(f"{desc}{time.time()}".encode()).hexdigest()[:12]
-        with self._lock:
-            self._db.execute("INSERT OR REPLACE INTO exec_tasks VALUES(?,?,?,?,0,?)",
-                (tid, desc[:300], estimated_minutes, json.dumps(deps), time.time()))
-            self._db.commit()
+    def add_task(self, desc: str, estimated_minutes: float, deps: list[str] = None) -> str:
+        """Stores a new task with dependencies; returns task_id."""
+        tid = hashlib.md5((desc + str(time.time())).encode()).hexdigest()[:10]
+        with sqlite3.connect(self._db) as cx:
+            cx.execute("INSERT INTO tasks VALUES(?,?,?,?,0,?,NULL)",
+                       (tid, desc[:200], estimated_minutes, json.dumps(deps or []), time.time()))
         return tid
 
     def schedule(self) -> list[dict]:
-        """Returns topologically-sorted task list with cumulative ETA."""
-        with self._lock:
-            rows = self._db.execute(
-                "SELECT id,desc,est_min,deps FROM exec_tasks WHERE done=0 ORDER BY created").fetchall()
-        tasks = {r[0]: {"id":r[0],"desc":r[1],"est":r[2],"deps":json.loads(r[3])} for r in rows}
+        """Returns topologically-sorted pending tasks respecting dependency order."""
+        with sqlite3.connect(self._db) as cx:
+            rows = cx.execute("SELECT id,desc,est_min,deps FROM tasks WHERE done=0").fetchall()
+        tasks = {r[0]: {"id": r[0], "desc": r[1], "est_min": r[2], "deps": json.loads(r[3])} for r in rows}
+        done_ids = set()
+        with sqlite3.connect(self._db) as cx:
+            done_ids = {r[0] for r in cx.execute("SELECT id FROM tasks WHERE done=1").fetchall()}
         order, visited, temp = [], set(), set()
-        def visit(tid: str) -> None:
+        def visit(tid):
             if tid in temp:
                 return
             if tid in visited:
                 return
             temp.add(tid)
             for dep in tasks.get(tid, {}).get("deps", []):
-                if dep in tasks:
+                if dep not in done_ids:
                     visit(dep)
             temp.discard(tid)
             visited.add(tid)
             if tid in tasks:
-                order.append(tid)
-        for tid in tasks:
+                order.append(tasks[tid])
+        for tid in list(tasks.keys()):
             visit(tid)
-        cum, result = 0.0, []
-        for tid in order:
-            t = tasks[tid]
-            cum += t["est"]
-            result.append({**t, "cumulative_eta_min": round(cum, 2)})
-        return result
+        return order
 
-    def next_task(self) -> dict:
-        """Returns the next unblocked task (all deps done); empty dict if none."""
-        with self._lock:
-            done_ids = {r[0] for r in self._db.execute(
-                "SELECT id FROM exec_tasks WHERE done=1").fetchall()}
+    def next_task(self) -> dict[str, Any]:
+        """Returns next unblocked task (all deps done); skips blocked tasks."""
+        with sqlite3.connect(self._db) as cx:
+            done_ids = {r[0] for r in cx.execute("SELECT id FROM tasks WHERE done=1").fetchall()}
         for t in self.schedule():
             if all(d in done_ids for d in t["deps"]):
                 return t
-        return {}
+        return {"id": None, "desc": "No unblocked tasks available", "est_min": 0, "deps": []}
 
     def mark_done(self, task_id: str) -> bool:
-        """Marks a task complete; returns True on success."""
-        with self._lock:
-            self._db.execute("UPDATE exec_tasks SET done=1 WHERE id=?", (task_id,))
-            self._db.commit()
-        return True
+        """Marks a task complete; returns True if found and updated."""
+        with sqlite3.connect(self._db) as cx:
+            c = cx.execute("UPDATE tasks SET done=1, done_at=? WHERE id=? AND done=0",
+                           (time.time(), task_id))
+            cx.commit()
+            return c.rowcount > 0
 
     def eta_for_all(self) -> dict[str, Any]:
-        """Returns total ETA in minutes for all remaining tasks."""
-        sched = self.schedule()
-        total = sum(t["est"] for t in sched)
-        return {"remaining_tasks": len(sched), "total_eta_minutes": round(total, 2),
-                "tasks": [{k: v for k, v in t.items() if k != "deps"} for t in sched]}
+        """Returns total ETA minutes and per-task cumulative schedule."""
+        ordered = self.schedule()
+        cumulative, running = [], 0.0
+        for t in ordered:
+            running += t["est_min"]
+            cumulative.append({"id": t["id"], "desc": t["desc"][:60],
+                                "cumulative_eta_min": round(running, 2)})
+        return {"total_eta_minutes": round(running, 2), "task_count": len(ordered),
+                "schedule": cumulative}
 
-    # ── Status ────────────────────────────────────────────────────────────────
     def status(self) -> dict[str, Any]:
         """Returns numeric status dict compatible with ConsciousnessIntegrator Φ."""
         load = self.cognitive_load()
-        with self._lock:
-            pending = self._db.execute(
-                "SELECT COUNT(*) FROM exec_tasks WHERE done=0").fetchone()[0]
-            cycles  = self._cycles
-        return {"active": sum(self._system_load.values()),
-                "pending": pending, "cycles": cycles,
-                "confidence": round(1.0 - load["mean_load"], 4),
-                "entropy": load["entropy"],
-                "items": len(SYSTEM_DOMAINS),
-                "overrides": len(self._overrides)}
-
-    # ── Internals ─────────────────────────────────────────────────────────────
-    def _log_meta(self, domain: str, approach: str, conf: float) -> None:
-        try:
-            from metacognitive_monitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning(domain, approach, conf, True)
-        except Exception:
-            pass
-
-    def _seed_goals(self) -> None:
-        try:
-            from hierarchical_goal_planner import HierarchicalGoalPlanner
-            hgp = HierarchicalGoalPlanner()
-            hgp.add_goal("Executive: resolve all cognitive bottlenecks", priority=9)
-            hgp.add_goal("Executive: schedule and complete pending task queue", priority=7)
-        except Exception:
-            pass
+        bn = self.bottleneck_report()
+        with sqlite3.connect(self._db) as cx:
+            pending = cx.execute("SELECT COUNT(*) FROM tasks WHERE done=0").fetchone()[0]
+            done = cx.execute("SELECT COUNT(*) FROM tasks WHERE done=1").fetchone()[0]
+        return {"cycles": self._cycles, "active": len(self._overrides),
+                "confidence": round(1.0 - load["ema_load"], 4),
+                "pending": pending, "items": done,
+                "entropy": round(load["ema_load"] * math.log2(len(SYSTEM_DOMAINS) + 1), 4),
+                "bottlenecks": len(bn["bottlenecks"]), "quality": round(1.0 - load["mean_load"], 4)}
 
     def _auto_loop(self) -> None:
         while True:
+            time.sleep(30)
             try:
-                time.sleep(45)
                 with self._lock:
-                    self._cycles += 1
-                    for s in self._system_load:
-                        if self._system_load[s] > 0:
-                            self._system_load[s] = max(0, self._system_load[s] - 1)
+                    for s in self._system_queues:
+                        if self._system_queues[s] > 0:
+                            self._system_queues[s] = max(0, self._system_queues[s] - 1)
+                self._cycles += 1
                 bn = self.bottleneck_report()
-                if bn.get("bottlenecks"):
-                    self._log_meta("auto_cycle",
-                        f"bottleneck={bn['bottlenecks'][0]['system']}", 0.75)
+                if bn["bottlenecks"]:
+                    worst = bn["bottlenecks"][0]["system"]
+                    self.override(worst, reason="auto_cycle_relief")
                 try:
-                    from consciousness_integrator import ConsciousnessIntegrator
-                    ConsciousnessIntegrator().integrate("NovaExecutiveControl", self.status())
+                    from MetacognitiveMonitor import MetacognitiveMonitor
+                    MetacognitiveMonitor().log_reasoning("executive_auto", "ema_decay+bottleneck",
+                                                          1.0 - self._ema_load, True)
                 except Exception:
                     pass
             except Exception:
                 pass
 
-    def _start_auto(self) -> None:
-        t = threading.Thread(target=self._auto_loop, daemon=True)
-        t.start()
-
-# Usage: obj = NovaExecutiveControl() | result = obj.route("why does X cause Y?", "causal
+# Usage: obj = NovaExecutiveControl() | result = obj.route("analyze causal chain of market crash", "economics")
