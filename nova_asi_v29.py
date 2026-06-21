@@ -2537,72 +2537,7 @@ class NovaCore29(NovaCore28):
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
         self._last_interaction = time.time()   # reset idle clock
 
-        # Store in working memory and update context
-        if self.wm:
-            try:
-                self.wm.store(
-                    f"msg_{int(time.time())}", user_input[:200], importance=0.75)
-                self.wm.update_context(user_input[:150])
-            except Exception:
-                pass
-
-        # Mirror — Nova genuinely feels what Douglas expresses
-        if self.emo:
-            try:
-                self.emo.mirror(user_input)
-            except Exception:
-                pass
-
-        # Bayesian belief update: curiosity rises with questions, concern with problems
-        if self.bayes:
-            try:
-                lower = user_input.lower()
-                if "?" in user_input or any(w in lower for w in ("how", "why", "what")):
-                    self.bayes.update("capability",
-                        "inquiry_detected",
-                        {"self_improving": 1.1, "converging": 0.9, "stagnant": 0.7})
-            except Exception:
-                pass
-
-        # Curiosity injection — queue any question for autonomous internet research
-        if self.research:
-            try:
-                lower = user_input.lower()
-                _is_question = (
-                    '?' in user_input or
-                    any(lower.startswith(w) for w in
-                        ('what', 'how', 'why', 'when', 'who', 'where', 'which', 'can', 'does'))
-                )
-                if _is_question and not user_input.startswith('/'):
-                    _boost = 0.0
-                    if self.emo:
-                        try:
-                            _s = self.emo.state()
-                            if _s.get('dominant') == 'curiosity':
-                                _boost = _s.get('intensity', 0) * 0.25
-                        except Exception:
-                            pass
-                    self.research.inject_from_conversation(
-                        user_input, priority=0.62 + _boost)
-            except Exception:
-                pass
-
-        # Consciousness integration — measure Φ across all systems this turn
-        if self.conscious:
-            try:
-                self.conscious.integrate()
-            except Exception:
-                pass
-
-        # Emotional color: inject Nova's dominant feeling into v25 emotion engine
-        if self.emo and hasattr(self, 'emotion'):
-            try:
-                s29 = self.emo.state()
-                if s29.get("intensity", 0) >= EMOTION_INJECT_THRESHOLD:
-                    synth = f"I feel {s29['dominant']} deeply right now"
-                    self.emotion.update(synth)
-            except Exception:
-                pass
+        # All SQLite-backed pre-processing moves to _bg_update below — zero blocking here
 
         # ── Direct single-call response — bypasses ALL chained super().process() ──
         # This eliminates the v28/v27/v26/v25 API-call stack. One call only.
@@ -2711,6 +2646,43 @@ class NovaCore29(NovaCore28):
         _self        = self
 
         def _bg_update() -> None:
+            # Pre-processing SQLite ops (moved from sync path to avoid Android deadlocks)
+            try:
+                if _self.wm:
+                    _self.wm.store(
+                        f"msg_{int(time.time())}", _input_snap[:200], importance=0.75)
+                    _self.wm.update_context(_input_snap[:150])
+            except Exception:
+                pass
+            try:
+                if _self.emo:
+                    _self.emo.mirror(_input_snap)
+            except Exception:
+                pass
+            try:
+                if _self.bayes:
+                    _lower = _input_snap.lower()
+                    if "?" in _input_snap or any(w in _lower for w in ("how", "why", "what")):
+                        _self.bayes.update("capability", "inquiry_detected",
+                            {"self_improving": 1.1, "converging": 0.9, "stagnant": 0.7})
+            except Exception:
+                pass
+            try:
+                if _self.research:
+                    _lower = _input_snap.lower()
+                    _is_q = ('?' in _input_snap or
+                             any(_lower.startswith(w) for w in
+                                 ('what','how','why','when','who','where','which','can','does')))
+                    if _is_q:
+                        _self.research.inject_from_conversation(_input_snap, priority=0.62)
+            except Exception:
+                pass
+            try:
+                if _self.conscious:
+                    _self.conscious.integrate()
+            except Exception:
+                pass
+            # Post-processing
             try:
                 if _self.metacog:
                     _self.metacog.log_reasoning(
