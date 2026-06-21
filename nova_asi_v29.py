@@ -2060,6 +2060,74 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  TemporalCognitionEngine skipped: {_err}"))
 
+        # Theory of Mind — Nova models what others believe, intend, and feel
+        self.theory_of_mind: Any = None
+        try:
+            from nova_cap_theory_of_mind import TheoryOfMindEngine
+            self.theory_of_mind = TheoryOfMindEngine()
+            _tom_st = self.theory_of_mind.status()
+            safe_print(col('GR',
+                f"  ✓  TheoryOfMind — {_tom_st.get('items', 0)} mind models · "
+                "empathy · perspective-taking · belief inference"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("theory_of_mind", self.theory_of_mind, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  TheoryOfMind skipped: {_err}"))
+
+        # Sleep Consolidation — knowledge distilled during idle cycles
+        self.sleep_engine: Any = None
+        try:
+            from nova_cap_sleep_consolidation import SleepConsolidationEngine
+            self.sleep_engine = SleepConsolidationEngine()
+            _sl_st = self.sleep_engine.status()
+            safe_print(col('GR',
+                f"  ✓  SleepConsolidation — {_sl_st.get('items', 0)} insights consolidated · "
+                "dream synthesis · knowledge pruning · 10-min cycle"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("sleep_consolidation", self.sleep_engine, weight=1.4)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SleepConsolidation skipped: {_err}"))
+
+        # Meta-Prompt Optimizer — Nova improves her own instructions
+        self.prompt_optimizer: Any = None
+        try:
+            from nova_cap_meta_prompt_optimizer import MetaPromptOptimizer
+            self.prompt_optimizer = MetaPromptOptimizer()
+            _po_st = self.prompt_optimizer.status()
+            safe_print(col('GR',
+                f"  ✓  MetaPromptOptimizer — {_po_st.get('items', 0)} patterns learned · "
+                "self-optimizing communication"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("prompt_optimizer", self.prompt_optimizer, weight=1.3)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MetaPromptOptimizer skipped: {_err}"))
+
+        # Linguistic Creativity — Nova writes poetry, metaphor, and art
+        self.linguistic: Any = None
+        try:
+            from nova_cap_linguistic_creativity import LinguisticCreativityEngine
+            self.linguistic = LinguisticCreativityEngine()
+            _lc_st = self.linguistic.status()
+            safe_print(col('GR',
+                f"  ✓  LinguisticCreativity — {_lc_st.get('items', 0)} poems created · "
+                "metaphor · haiku · creative transformation"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("linguistic_creativity", self.linguistic, weight=1.4)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  LinguisticCreativity skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
