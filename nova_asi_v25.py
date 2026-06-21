@@ -131,23 +131,29 @@ budget = TokenBudget()
 
 # ── LLM call ─────────────────────────────────────────────────────────────────
 def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str:
-    if DEMO_MODE or not _groq_client:
+    if DEMO_MODE or not GROQ_KEY:
         last = next((m['content'] for m in reversed(msgs) if m['role']=='user'), '')
         return f"[DEMO — set GROQ_API_KEY] Input: {last[:60]}"
-    rq, err = queue.Queue(), []
-    def _call():
-        try:
-            r = _groq_client.chat.completions.create(
-                model=model, messages=msgs, temperature=min(temp,1.0), max_tokens=mt)
-            if hasattr(r,'usage'): budget.add(r.usage.total_tokens)
-            rq.put(r.choices[0].message.content)
-        except Exception as e: err.append(str(e)); rq.put(None)
-    t=threading.Thread(target=_call, daemon=True); t.start(); t.join(timeout=25)
     try:
-        v=rq.get(block=False)
-        if v: return v
-    except queue.Empty: pass
-    return f"[Groq error: {err[0][:100] if err else 'timeout'}]"
+        import requests as _req
+        resp = _req.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_KEY}",
+                     "Content-Type": "application/json"},
+            json={"model": model, "messages": msgs,
+                  "temperature": min(temp, 1.0), "max_tokens": mt},
+            timeout=20,   # hard TCP + read timeout — cannot hang beyond this
+        )
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+        try:
+            usage = data.get("usage", {})
+            budget.add(usage.get("total_tokens", 0))
+        except Exception:
+            pass
+        return content
+    except Exception as _e:
+        return f"[Groq error: {str(_e)[:120]}]"
 
 def simple_search(query: str, max_results: int=5) -> List[dict]:
     if not REQUESTS_AVAILABLE: return []
