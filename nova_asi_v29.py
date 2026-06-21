@@ -1944,6 +1944,58 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  AutonomousGrowthEngine skipped: {_err}"))
 
+        # Proactive Agency Engine — Nova initiates, proposes, acts without being asked
+        self.agency: Any = None
+        try:
+            from nova_cap_proactive_agency import ProactiveAgencyEngine
+            self.agency = ProactiveAgencyEngine()
+            safe_print(col('GR',
+                "  ✓  ProactiveAgencyEngine — insights · proposals · "
+                "autonomous tasks · attention focus · reflections"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "agency", self.agency, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ProactiveAgencyEngine skipped: {_err}"))
+
+        # Dynamic World Model — Nova's living model of reality, beliefs, predictions
+        self.world_model: Any = None
+        try:
+            from nova_cap_dynamic_world_model import DynamicWorldModel
+            self.world_model = DynamicWorldModel()
+            _wm_st = self.world_model.status()
+            safe_print(col('GR',
+                f"  ✓  DynamicWorldModel — beliefs · predictions · "
+                f"world map · Bayesian updates · anomaly detection"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "world_model", self.world_model, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  DynamicWorldModel skipped: {_err}"))
+
+        # Reasoning Chain Engine — multi-step autonomous reasoning, self-critique
+        self.reasoning: Any = None
+        try:
+            from nova_cap_reasoning_chain import ReasoningChainEngine
+            self.reasoning = ReasoningChainEngine()
+            safe_print(col('GR',
+                "  ✓  ReasoningChainEngine — deductive · inductive · "
+                "abductive · causal · self-critique · synthesis"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "reasoning", self.reasoning, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ReasoningChainEngine skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
