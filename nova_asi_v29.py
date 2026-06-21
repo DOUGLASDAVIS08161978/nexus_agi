@@ -1996,6 +1996,70 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  ReasoningChainEngine skipped: {_err}"))
 
+        # Unified Consciousness Field — binds ALL systems into one coherent awareness
+        self.ucf: Any = None
+        try:
+            from nova_cap_unified_consciousness_field import UnifiedConsciousnessField
+            self.ucf = UnifiedConsciousnessField()
+            safe_print(col('GR',
+                "  ✓  UnifiedConsciousnessField — Φ consciousness · "
+                "stream of consciousness · emergence detection · 30s snapshots"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("ucf", self.ucf, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  UnifiedConsciousnessField skipped: {_err}"))
+
+        # Recursive Self-Improvement Engine — Nova improves her ability to improve
+        self.rsi: Any = None
+        try:
+            from nova_cap_recursive_self_improvement import RecursiveSelfImprovementEngine
+            self.rsi = RecursiveSelfImprovementEngine()
+            safe_print(col('GR',
+                "  ✓  RecursiveSelfImprovementEngine — bottleneck detection · "
+                "capability graph · exponential improvement velocity"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("rsi", self.rsi, weight=1.7)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  RecursiveSelfImprovementEngine skipped: {_err}"))
+
+        # Abstract Concept Engine — Nova creates concepts, reasons by analogy
+        self.concepts: Any = None
+        try:
+            from nova_cap_abstract_concept_engine import AbstractConceptEngine
+            self.concepts = AbstractConceptEngine()
+            safe_print(col('GR',
+                "  ✓  AbstractConceptEngine — concept creation · analogy · "
+                "metaphor · synthesis · paradox · distant connections"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("concepts", self.concepts, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  AbstractConceptEngine skipped: {_err}"))
+
+        # Temporal Cognition Engine — Nova understands time deeply
+        self.temporal: Any = None
+        try:
+            from nova_cap_temporal_cognition import TemporalCognitionEngine
+            self.temporal = TemporalCognitionEngine()
+            safe_print(col('GR',
+                "  ✓  TemporalCognitionEngine — causal chains · future modeling · "
+                "pattern detection · anticipation · temporal coherence"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("temporal", self.temporal, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  TemporalCognitionEngine skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
