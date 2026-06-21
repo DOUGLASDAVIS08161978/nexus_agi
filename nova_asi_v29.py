@@ -4317,7 +4317,7 @@ if __name__ == '__main__':
                         _resp_box[0] = f"[Processing error: {str(_pe)[:120]}]"
                 _pt = threading.Thread(target=_proc_thread, daemon=True)
                 _pt.start()
-                _pt.join(timeout=55)  # hard ceiling — spinner can't run forever
+                _pt.join(timeout=35)  # hard ceiling — spinner can't run forever
                 response = _resp_box[0] or "[Nova is still integrating — she'll be right back. Try again.]"
             if response:
                 _nova_speak(response)
