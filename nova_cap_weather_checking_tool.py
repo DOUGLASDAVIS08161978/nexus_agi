@@ -16,7 +16,7 @@ import requests
 from datetime import datetime
 
 class WeatherChecker:
-    def __init__(self, api_key: str, location: str):
+    def __init__(self, api_key: str = "", location: str = ""):
         """
         Initialize the WeatherChecker.
 
