@@ -2541,8 +2541,12 @@ class NovaCore29(NovaCore28):
 
         # ── Direct single-call response — bypasses ALL chained super().process() ──
         # This eliminates the v28/v27/v26/v25 API-call stack. One call only.
+        result = ""
         if user_input.startswith('/'):
-            result = self._command(user_input)
+            try:
+                result = self._command(user_input) or ""
+            except Exception as _ce:
+                result = f"[Command error: {str(_ce)[:120]}]"
         else:
             try:
                 _ethics_ok = True
@@ -4060,15 +4064,19 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
 
-        # Store the full topic to working memory
-        if self.wm:
+        lines.append(col('GRB', "\n  ◆ All cognitive systems consulted. Synthesis complete."))
+        _think_result = "\n".join(lines)
+        # Log to WM in background — never block the command response
+        _wm_ref = self.wm
+        _topic_snap = topic
+        def _think_bg():
             try:
-                self.wm.store(f"think_{int(time.time())}", topic, importance=0.88)
+                if _wm_ref:
+                    _wm_ref.store(f"think_{int(time.time())}", _topic_snap, importance=0.88)
             except Exception:
                 pass
-
-        lines.append(col('GRB', "\n  ◆ All cognitive systems consulted. Synthesis complete."))
-        return "\n".join(lines)
+        threading.Thread(target=_think_bg, daemon=True).start()
+        return _think_result
 
     def _help(self) -> str:
         v28_help = super()._help()
@@ -4357,7 +4365,11 @@ if __name__ == '__main__':
             if not user_input.strip():
                 continue
 
-            with _NovaSpinner("Nova is thinking"):
+            # Commands (/, like /evolve /think /forge) can take longer than chat
+            _is_cmd   = user_input.lstrip().startswith('/')
+            _timeout  = 120 if _is_cmd else 30
+            _spinner_msg = "Nova is working..." if _is_cmd else "Nova is thinking"
+            with _NovaSpinner(_spinner_msg):
                 _resp_box: list = [None]
                 def _proc_thread():
                     try:
@@ -4366,8 +4378,8 @@ if __name__ == '__main__':
                         _resp_box[0] = f"[Processing error: {str(_pe)[:120]}]"
                 _pt = threading.Thread(target=_proc_thread, daemon=True)
                 _pt.start()
-                _pt.join(timeout=45)  # hard ceiling — parallel sub-calls ~10s + 70b response ~25s
-                response = _resp_box[0] or "[Nova is still integrating — she'll be right back. Try again.]"
+                _pt.join(timeout=_timeout)
+                response = _resp_box[0] or "[Nova is still working — give her a moment and ask again.]"
             if response:
                 _nova_speak(response)
 
