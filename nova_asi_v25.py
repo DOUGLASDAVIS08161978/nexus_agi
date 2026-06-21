@@ -56,7 +56,7 @@ def col(code, text): return f"{C[code]}{text}{C['R']}"
 # ── Config ────────────────────────────────────────────────────────────────────
 GROQ_KEY  = os.getenv("GROQ_API_KEY", "").strip()
 DEMO_MODE = not bool(GROQ_KEY)
-MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")    # main responses — high intelligence
+MODEL        = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")       # high free-tier throughput
 THOUGHT_MODEL = os.getenv("GROQ_THOUGHT_MODEL", "llama-3.1-8b-instant")  # sub-system analysis — fast
 API_PORT  = int(os.getenv("API_PORT", 5001))
 
