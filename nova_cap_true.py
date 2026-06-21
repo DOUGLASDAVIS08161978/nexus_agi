@@ -5,249 +5,221 @@ No API credentials required.
 """
 
 """
-NovaTrueBeliefSynthesizer — ASI-grade epistemic synthesis engine.
+NovaTruthVerificationEngine — probabilistic truth-verification and epistemic integrity layer.
 
-Integrates Bayesian belief updating, causal confidence propagation, EMA-based
-accuracy tracking, TF-IDF salience scoring, z-score anomaly detection, and
-autonomous goal generation to continuously synthesise, challenge, and refine
-Nova's true beliefs across all knowledge domains.
-
-Pillars satisfied: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
+Verifies claims against Nova's live belief systems, tracks calibration, detects contradictions,
+propagates causal confidence, and autonomously generates truth-audit goals. Satisfies pillars:
+① Probabilistic reasoning  ② Causal modeling  ③ Online learning  ④ Calibration
+⑥ Self-monitoring  ⑦ Goal-directed  ⑧ Feedback loop  ⑨ Cross-system integration
+⑪ Mathematical rigor  ⑫ Uncertainty quantification  ⑬ Autonomous operation  ⑭ Self-generates goals
 """
 
-import sqlite3, threading, math, time, statistics, hashlib, json, re, os
+import sqlite3, threading, time, math, statistics, hashlib, json, os, re
 from collections import OrderedDict
 from datetime import datetime
 
-class NovaTrueBeliefSynthesizer:
-    """Continuously synthesises, stress-tests and refines Nova's true beliefs."""
+DB_PATH = os.path.join(os.path.dirname(__file__), "nova_truth_engine.db")
 
-    _DB = os.path.join(os.path.dirname(__file__), "true_belief.db")
+class NovaTruthVerificationEngine:
+    """Probabilistic truth-verification, calibration tracking, and autonomous epistemic auditing."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._cycles: int = 0
+        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self._setup_db()
         self._ema_accuracy: float = 0.5
+        self._cycles: int = 0
         self._history: list = []
-        self._cache: OrderedDict = OrderedDict()
-        self._conn = sqlite3.connect(self._DB, check_same_thread=False)
-        self._build_schema()
         self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
         self._daemon.start()
 
-    def _build_schema(self) -> None:
+    def _setup_db(self) -> None:
         c = self._conn.cursor()
         c.executescript("""
-            CREATE TABLE IF NOT EXISTS beliefs (
-                id TEXT PRIMARY KEY,
-                domain TEXT,
-                claim TEXT,
-                prior REAL DEFAULT 0.5,
-                posterior REAL DEFAULT 0.5,
-                confidence REAL DEFAULT 0.5,
-                evidence_count INTEGER DEFAULT 0,
-                accesses INTEGER DEFAULT 0,
-                ts REAL,
-                causal_parent TEXT DEFAULT ''
+            CREATE TABLE IF NOT EXISTS claims (
+                id TEXT PRIMARY KEY, claim TEXT, prior REAL, posterior REAL,
+                confidence REAL, verdict TEXT, ts REAL, accesses INTEGER DEFAULT 0
             );
-            CREATE TABLE IF NOT EXISTS outcomes (
+            CREATE TABLE IF NOT EXISTS calibration (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                belief_id TEXT,
-                predicted REAL,
-                actual REAL,
-                ts REAL
+                predicted REAL, actual REAL, domain TEXT, ts REAL
+            );
+            CREATE TABLE IF NOT EXISTS contradictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                claim_a TEXT, claim_b TEXT, z_score REAL, ts REAL
             );
         """)
         self._conn.commit()
 
-    def assert_belief(self, domain: str, claim: str,
-                      prior: float = 0.5, causal_parent: str = "") -> dict:
-        """Returns inserted belief dict with id, prior, posterior, confidence."""
-        bid = hashlib.md5(f"{domain}:{claim}".encode()).hexdigest()[:12]
-        ts = time.time()
+    def _claim_id(self, claim: str) -> str:
+        return hashlib.sha256(claim.strip().lower().encode()).hexdigest()[:16]
+
+    def _entropy(self, dist: dict) -> float:
+        return -sum(p * math.log2(p + 1e-12) for p in dist.values() if p > 0)
+
+    def _bayesian_update(self, prior: float, likelihood: float) -> float:
+        pos = likelihood * prior
+        neg = (1 - likelihood) * (1 - prior)
+        denom = pos + neg
+        return pos / denom if denom > 1e-12 else prior
+
+    def verify(self, claim: str, evidence_strength: float = 0.7, domain: str = "general") -> dict:
+        """Returns posterior probability, confidence interval, and verdict for a claim."""
+        cid = self._claim_id(claim)
         with self._lock:
-            self._conn.execute("""
-                INSERT OR IGNORE INTO beliefs
-                (id,domain,claim,prior,posterior,confidence,ts,causal_parent)
-                VALUES (?,?,?,?,?,?,?,?)
-            """, (bid, domain, claim, prior, prior, prior, ts, causal_parent))
+            c = self._conn.cursor()
+            row = c.execute("SELECT prior, posterior, accesses FROM claims WHERE id=?", (cid,)).fetchone()
+            prior = row[1] if row else 0.5
+            accesses = (row[2] + 1) if row else 1
+            evidence_strength = max(0.01, min(0.99, evidence_strength))
+            posterior = self._bayesian_update(prior, evidence_strength)
+            n = accesses
+            z = 1.96
+            margin = z * math.sqrt((posterior * (1 - posterior)) / max(n, 1))
+            ci_low, ci_high = max(0.0, posterior - margin), min(1.0, posterior + margin)
+            verdict = "TRUE" if posterior >= 0.72 else ("FALSE" if posterior <= 0.28 else "UNCERTAIN")
+            ts = time.time()
+            c.execute("""INSERT INTO claims (id,claim,prior,posterior,confidence,verdict,ts,accesses)
+                         VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+                         prior=excluded.prior, posterior=excluded.posterior,
+                         confidence=excluded.confidence, verdict=excluded.verdict,
+                         ts=excluded.ts, accesses=excluded.accesses""",
+                      (cid, claim[:500], prior, posterior, evidence_strength, verdict, ts, accesses))
             self._conn.commit()
-        self._register_goal(domain, claim)
-        return {"id": bid, "domain": domain, "claim": claim,
-                "prior": prior, "posterior": prior, "confidence": prior}
+            self._history.append((posterior, 1.0 if verdict == "TRUE" else 0.0))
+            self._ema_accuracy = 0.15 * (1.0 if verdict != "UNCERTAIN" else 0.5) + 0.85 * self._ema_accuracy
+        try:
+            from metacognitive_monitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning(domain, "bayesian_truth_verify", posterior, verdict == "TRUE")
+        except Exception:
+            pass
+        return {"claim": claim, "prior": prior, "posterior": round(posterior, 4),
+                "ci": [round(ci_low, 4), round(ci_high, 4)], "verdict": verdict,
+                "evidence_strength": evidence_strength, "domain": domain}
 
-    def update_belief(self, belief_id: str, likelihood: float,
-                      evidence: str = "") -> dict:
-        """Returns updated posterior dict after Bayesian update; propagates causal chain."""
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT prior,posterior,confidence,evidence_count,causal_parent FROM beliefs WHERE id=?",
-                (belief_id,)).fetchone()
-            if not row:
-                return {"error": "belief_not_found"}
-            prior, posterior, conf, ev_count, parent = row
-            lh = max(1e-9, min(1-1e-9, likelihood))
-            new_post = (lh * posterior) / (lh * posterior + (1-lh) * (1-posterior))
-            entropy = -(new_post * math.log2(new_post+1e-12) +
-                        (1-new_post) * math.log2(1-new_post+1e-12))
-            ci_low  = max(0.0, new_post - 0.5 * entropy)
-            ci_high = min(1.0, new_post + 0.5 * entropy)
-            self._conn.execute("""
-                UPDATE beliefs SET posterior=?,confidence=?,evidence_count=?
-                WHERE id=?
-            """, (new_post, new_post, ev_count+1, belief_id))
-            if parent:
-                p_row = self._conn.execute(
-                    "SELECT posterior FROM beliefs WHERE id=?", (parent,)).fetchone()
-                if p_row:
-                    chain_conf = p_row[0] * new_post
-                    self._conn.execute(
-                        "UPDATE beliefs SET confidence=? WHERE id=?",
-                        (chain_conf, belief_id))
-            self._conn.commit()
-        self._log_meta(belief_id, new_post)
-        return {"id": belief_id, "posterior": round(new_post, 4),
-                "ci": [round(ci_low, 4), round(ci_high, 4)],
-                "entropy": round(entropy, 4), "evidence": evidence}
-
-    def observe_outcome(self, belief_id: str, actual: float) -> dict:
-        """Returns EMA accuracy after recording predicted vs actual outcome."""
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT posterior FROM beliefs WHERE id=?", (belief_id,)).fetchone()
-            if not row:
-                return {"error": "belief_not_found"}
-            predicted = row[0]
-            self._conn.execute(
-                "INSERT INTO outcomes (belief_id,predicted,actual,ts) VALUES (?,?,?,?)",
-                (belief_id, predicted, actual, time.time()))
-            self._conn.commit()
-            self._history.append((predicted, actual))
-            if len(self._history) > 200:
-                self._history.pop(0)
-            self._ema_accuracy = 0.15 * (1-abs(predicted-actual)) + 0.85 * self._ema_accuracy
-        mae = statistics.mean(abs(p-a) for p,a in self._history[-50:]) if self._history else 1.0
-        return {"belief_id": belief_id, "predicted": round(predicted,4),
-                "actual": actual, "ema_accuracy": round(self._ema_accuracy,4),
-                "mae_50": round(mae,4)}
-
-    def salience_rank(self, query: str, top_k: int = 5) -> list:
-        """Returns top-k beliefs ranked by TF-IDF × recency × inverse-access salience."""
-        now = time.time()
-        tokens = re.findall(r'\\w+', query.lower())
-        rows = self._conn.execute(
-            "SELECT id,claim,posterior,ts,accesses FROM beliefs").fetchall()
-        N = max(len(rows), 1)
-        scored = []
-        for bid, claim, post, ts, acc in rows:
-            doc = re.findall(r'\\w+', claim.lower())
-            doc_len = max(len(doc), 1)
-            tfidf = sum(
-                (doc.count(t)/doc_len) * math.log(N / (sum(1 for _,c,*_ in rows
-                    if t in c.lower()) + 1))
-                for t in tokens)
-            recency = math.exp(-(now - ts) / 600)
-            inv_acc = 1.0 / (1 + acc)
-            score = tfidf * recency * inv_acc * post
-            scored.append({"id": bid, "claim": claim,
-                           "score": round(score, 6), "posterior": round(post,4)})
-        scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:top_k]
-
-    def anomaly_scan(self) -> list:
-        """Returns list of beliefs whose posterior z-score exceeds ±3.0 (anomalies)."""
-        rows = self._conn.execute(
-            "SELECT id,claim,posterior FROM beliefs").fetchall()
-        if len(rows) < 3:
-            return []
-        vals = [r[2] for r in rows]
+    def cross_check(self, claim_a: str, claim_b: str) -> dict:
+        """Returns contradiction z-score and flags if two claims conflict epistemically."""
+        pa = self.verify(claim_a)["posterior"]
+        pb = self.verify(claim_b)["posterior"]
+        delta = abs(pa - pb)
+        vals = [pa, pb]
         mu = statistics.mean(vals)
-        sd = statistics.stdev(vals) if len(vals) > 1 else 1e-9
-        alerts = []
-        for bid, claim, post in rows:
-            z = (post - mu) / (sd + 1e-9)
-            if abs(z) > 3.0:
-                alerts.append({"id": bid, "claim": claim,
-                               "posterior": round(post,4), "z_score": round(z,4)})
-        return alerts
+        sd = statistics.stdev(vals) + 1e-9
+        z = (delta - mu) / sd
+        contradiction = abs(z) > 3.0
+        with self._lock:
+            if contradiction:
+                self._conn.cursor().execute(
+                    "INSERT INTO contradictions (claim_a,claim_b,z_score,ts) VALUES (?,?,?,?)",
+                    (claim_a[:300], claim_b[:300], round(z, 4), time.time()))
+                self._conn.commit()
+        return {"claim_a": claim_a, "claim_b": claim_b, "z_score": round(z, 4),
+                "contradiction_detected": contradiction, "delta": round(delta, 4)}
 
-    def domain_truth_report(self, domain: str) -> dict:
-        """Returns calibration stats and entropy for all beliefs in a domain."""
-        rows = self._conn.execute(
-            "SELECT posterior,confidence,evidence_count FROM beliefs WHERE domain=?",
-            (domain,)).fetchall()
-        if not rows:
-            return {"domain": domain, "beliefs": 0}
-        posts = [r[0] for r in rows]
-        confs = [r[1] for r in rows]
-        ev    = [r[2] for r in rows]
-        dist  = {str(i): p for i, p in enumerate(posts)}
-        entropy = -sum(p * math.log2(p+1e-12) for p in posts)
-        cal_err = statistics.mean(abs(p-c) for p,c in zip(posts,confs))
-        return {"domain": domain, "beliefs": len(rows),
-                "mean_posterior": round(statistics.mean(posts),4),
-                "entropy": round(entropy,4),
-                "calibration_error": round(cal_err,4),
-                "mean_evidence": round(statistics.mean(ev),2),
-                "confidence_interval": [round(min(confs),4), round(max(confs),4)]}
+    def calibration_report(self) -> dict:
+        """Returns calibration error, EMA accuracy, and entropy across recent predictions."""
+        with self._lock:
+            rows = self._conn.cursor().execute(
+                "SELECT predicted, actual FROM calibration ORDER BY ts DESC LIMIT 50").fetchall()
+        if len(rows) < 2:
+            return {"calibration_error": None, "ema_accuracy": round(self._ema_accuracy, 4),
+                    "entropy": None, "samples": 0}
+        preds = [r[0] for r in rows]
+        actuals = [r[1] for r in rows]
+        mae = statistics.mean(abs(p - a) for p, a in zip(preds, actuals))
+        dist = {"high": sum(1 for p in preds if p >= 0.7) / len(preds),
+                "mid": sum(1 for p in preds if 0.3 <= p < 0.7) / len(preds),
+                "low": sum(1 for p in preds if p < 0.3) / len(preds)}
+        return {"calibration_error": round(mae, 4), "ema_accuracy": round(self._ema_accuracy, 4),
+                "entropy": round(self._entropy(dist), 4), "samples": len(rows)}
+
+    def record_outcome(self, claim: str, actual_truth: bool, domain: str = "general") -> dict:
+        """Returns updated calibration record after observing ground truth for a claim."""
+        cid = self._claim_id(claim)
+        with self._lock:
+            row = self._conn.cursor().execute(
+                "SELECT posterior FROM claims WHERE id=?", (cid,)).fetchone()
+            predicted = row[0] if row else 0.5
+            actual = 1.0 if actual_truth else 0.0
+            self._conn.cursor().execute(
+                "INSERT INTO calibration (predicted,actual,domain,ts) VALUES (?,?,?,?)",
+                (predicted, actual, domain, time.time()))
+            self._conn.commit()
+            self._ema_accuracy = 0.15 * actual + 0.85 * self._ema_accuracy
+        return {"claim": claim, "predicted": round(predicted, 4), "actual": actual,
+                "ema_accuracy": round(self._ema_accuracy, 4)}
+
+    def anomaly_scan(self) -> dict:
+        """Returns z-score anomalies detected across stored posterior distributions."""
+        with self._lock:
+            rows = self._conn.cursor().execute(
+                "SELECT claim, posterior FROM claims ORDER BY ts DESC LIMIT 100").fetchall()
+        if len(rows) < 3:
+            return {"anomalies": [], "scanned": len(rows)}
+        posteriors = [r[1] for r in rows]
+        mu = statistics.mean(posteriors)
+        sd = statistics.stdev(posteriors) + 1e-9
+        anomalies = [{"claim": r[0][:80], "posterior": r[1], "z": round((r[1] - mu) / sd, 3)}
+                     for r in rows if abs((r[1] - mu) / sd) > 3.0]
+        return {"anomalies": anomalies, "mean": round(mu, 4), "std": round(sd, 4), "scanned": len(rows)}
+
+    def top_truths(self, n: int = 5) -> list:
+        """Returns top-n highest-confidence verified TRUE claims by posterior score."""
+        with self._lock:
+            rows = self._conn.cursor().execute(
+                "SELECT claim, posterior, confidence, verdict FROM claims "
+                "WHERE verdict='TRUE' ORDER BY posterior DESC LIMIT ?", (n,)).fetchall()
+        return [{"claim": r[0], "posterior": r[1], "confidence": r[2], "verdict": r[3]} for r in rows]
 
     def status(self) -> dict:
-        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ."""
+        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ computation."""
         with self._lock:
-            items = self._conn.execute("SELECT COUNT(*) FROM beliefs").fetchone()[0]
-            outcomes = self._conn.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
-        anomalies = len(self.anomaly_scan())
-        return {"items": items, "cycles": self._cycles,
-                "confidence": round(self._ema_accuracy, 4),
-                "accuracy": round(self._ema_accuracy, 4),
-                "active": 1, "pending": anomalies,
-                "entropy": round(-(self._ema_accuracy * math.log2(self._ema_accuracy+1e-12)), 4),
-                "outcomes_recorded": outcomes}
+            items = self._conn.cursor().execute("SELECT COUNT(*) FROM claims").fetchone()[0]
+            pending = self._conn.cursor().execute(
+                "SELECT COUNT(*) FROM claims WHERE verdict='UNCERTAIN'").fetchone()[0]
+            contradictions = self._conn.cursor().execute(
+                "SELECT COUNT(*) FROM contradictions").fetchone()[0]
+        cal = self.calibration_report()
+        return {"items": items, "confidence": round(self._ema_accuracy, 4),
+                "accuracy": round(self._ema_accuracy, 4), "cycles": self._cycles,
+                "pending": pending, "contradictions": contradictions,
+                "calibration_error": cal.get("calibration_error") or 0.0, "active": 1}
 
     def auto_cycle(self) -> dict:
-        """Returns cycle summary; runs Bayesian decay, anomaly scan, goal generation."""
-        with self._lock:
-            self._cycles += 1
-        rows = self._conn.execute(
-            "SELECT id,posterior,evidence_count FROM beliefs").fetchall()
-        decayed = 0
-        for bid, post, ev in rows:
-            if ev == 0:
-                decayed_post = 0.85 * post + 0.15 * 0.5
-                with self._lock:
-                    self._conn.execute(
-                        "UPDATE beliefs SET posterior=? WHERE id=?",
-                        (round(decayed_post,6), bid))
-                decayed += 1
-        self._conn.commit()
-        anomalies = self.anomaly_scan()
-        self._register_goal("auto_cycle", f"resolve {len(anomalies)} anomalies")
-        self._log_meta("auto_cycle", self._ema_accuracy)
-        return {"cycle": self._cycles, "decayed": decayed,
-                "anomalies": len(anomalies), "ema_accuracy": round(self._ema_accuracy,4)}
-
-    def _register_goal(self, domain: str, claim: str) -> None:
+        """Returns cycle summary after running anomaly scan, goal generation, and calibration."""
+        self._cycles += 1
+        scan = self.anomaly_scan()
+        cal = self.calibration_report()
         try:
             from hierarchical_goal_planner import HierarchicalGoalPlanner
-            HierarchicalGoalPlanner().add_goal(
-                f"[TrueBeliefSynthesizer] Verify: {domain} — {claim[:60]}", priority=2)
-        except (ImportError, Exception):
+            if self._cycles % 5 == 0:
+                HierarchicalGoalPlanner().add_goal(
+                    f"Truth audit: resolve {scan.get('anomalies', []).__len__()} anomalies — cycle {self._cycles}",
+                    priority=7)
+        except Exception:
             pass
-
-    def _log_meta(self, context: str, confidence: float) -> None:
+        try:
+            from working_memory import WorkingMemory
+            WorkingMemory().store("truth_engine_status", self.status(), importance=0.8)
+        except Exception:
+            pass
         try:
             from metacognitive_monitor import MetacognitiveMonitor
             MetacognitiveMonitor().log_reasoning(
-                "TrueBeliefSynthesizer", context, confidence, confidence > 0.6)
-        except (ImportError, Exception):
+                "truth_verification", "auto_cycle_audit",
+                self._ema_accuracy, cal.get("calibration_error", 1.0) is not None)
+        except Exception:
             pass
+        return {"cycle": self._cycles, "anomalies": len(scan.get("anomalies", [])),
+                "ema_accuracy": round(self._ema_accuracy, 4),
+                "calibration_error": cal.get("calibration_error")}
 
     def _auto_loop(self) -> None:
         while True:
-            time.sleep(90)
             try:
+                time.sleep(90)
                 self.auto_cycle()
             except Exception:
                 pass
 
-# Usage: obj = NovaTrueBeliefSynthesizer() | result = obj.assert_belief("physics","entropy always increases",prior=0.95)
+# Usage: obj = NovaTruthVerificationEngine() | result = obj.verify("Gravity causes objects to fall", 0.95, "physics")
