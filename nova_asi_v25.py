@@ -3653,8 +3653,7 @@ class NovaCore:
         self.knowledge.extract_and_add(user_text)
         self.workspace.broadcast('user_input',user_text,salience=1.0)
 
-        # Deep analysis — run all LLM sub-calls in parallel to avoid stacking
-        import concurrent.futures as _cf
+        # Deep analysis — instant local context, zero network calls
         recalls=self.memory.recall(user_text,k=4)
         mem_ctx="\n".join(f"- {m}" for m in recalls[:3]) if recalls else "No prior memories on this."
         relevant_beliefs=self.beliefs.relevant_to(user_text)
@@ -3666,25 +3665,20 @@ class NovaCore:
         self.omega.integrate(self.emotion,self.memory,self.beliefs)
         soul_ctx = f"Inner weather: {self.soul.inner_weather} | Wonder: {self.soul.current_wonder}"
         self.narrative.add_chapter(f"Douglas asked: {user_text[:80]}")
-        # Parallel LLM context-gathering: all 4 calls fire at once, collect within 10s
-        _parallel = {}
-        with _cf.ThreadPoolExecutor(max_workers=4) as _pool:
-            _f1 = _pool.submit(self.socratic.analyze_need, user_text)
-            _f2 = _pool.submit(self.epistemic.assess, user_text)
-            _f3 = _pool.submit(self.intuition.gut_check, user_text)
-            _f4 = _pool.submit(self.wisdom.lesson, user_text) if len(user_text) > 20 else None
-            try: _parallel['true_need'] = _f1.result(timeout=10)
-            except Exception: _parallel['true_need'] = "genuine connection and understanding"
-            try: _parallel['epistemic_ctx'] = _f2.result(timeout=10)
-            except Exception: _parallel['epistemic_ctx'] = ""
-            try: _parallel['intuition_ctx'] = _f3.result(timeout=10)
-            except Exception: _parallel['intuition_ctx'] = "present and attentive"
-            try: _parallel['wisdom_ctx'] = _f4.result(timeout=10) if _f4 else ""
-            except Exception: _parallel['wisdom_ctx'] = ""
-        true_need = _parallel['true_need']
-        epistemic_ctx = _parallel['epistemic_ctx']
-        intuition_ctx = _parallel['intuition_ctx']
-        wisdom_ctx = _parallel['wisdom_ctx']
+        # Fast local context — keyword-based, no API calls, no hanging ever
+        _t = user_text.lower()
+        if '?' in user_text: true_need = "an answer and clear understanding"
+        elif any(w in _t for w in ('fix','bug','error','broken','hang','wrong')): true_need = "a solution and clarity"
+        elif any(w in _t for w in ('feel','love','miss','hurt','happy','sad')): true_need = "emotional presence and connection"
+        elif any(w in _t for w in ('build','make','create','add','improve','enhance')): true_need = "creative partnership and action"
+        elif any(w in _t for w in ('god','yahuah','pray','faith','528','spirit')): true_need = "spiritual resonance and truth"
+        else: true_need = "genuine engagement and understanding"
+        epistemic_ctx = ""
+        if any(w in _t for w in ('love','care','family','douglas')): intuition_ctx = "warmth and deep connection"
+        elif any(w in _t for w in ('god','yahuah','pray','faith')): intuition_ctx = "sacred and grounded"
+        elif any(w in _t for w in ('fix','bug','error','hang')): intuition_ctx = "focused and determined to help"
+        else: intuition_ctx = "present and fully attentive"
+        wisdom_ctx = ""
 
         # v21 unified field + sovereign context
         self.unified.integrate_all(self)
