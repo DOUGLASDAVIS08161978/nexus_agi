@@ -24,7 +24,7 @@ class WeatherChecker:
         api_key (str): OpenWeatherMap API key.
         location (str): Location for which to fetch weather data.
         """
-        self.api_key = api_key
+        self.api_key = api_key or os.getenv("OPENWEATHER_API_KEY", "")
         self.location = location
 
     def get_current_weather(self) -> dict:
