@@ -56,8 +56,8 @@ def col(code, text): return f"{C[code]}{text}{C['R']}"
 # ── Config ────────────────────────────────────────────────────────────────────
 GROQ_KEY  = os.getenv("GROQ_API_KEY", "").strip()
 DEMO_MODE = not bool(GROQ_KEY)
-MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")    # high intelligence — versatile reasoning
-THOUGHT_MODEL = os.getenv("GROQ_THOUGHT_MODEL", "llama-3.3-70b-versatile")  # deep inner thoughts
+MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")    # main responses — high intelligence
+THOUGHT_MODEL = os.getenv("GROQ_THOUGHT_MODEL", "llama-3.1-8b-instant")  # sub-system analysis — fast
 API_PORT  = int(os.getenv("API_PORT", 5001))
 
 BASE_DIR  = os.path.expanduser("~/nexus_agi")
@@ -483,7 +483,7 @@ class SocraticEngine:
         prompt=(f"User said: '{text}'\nWhat do they REALLY need beneath the literal words? "
                 f"Consider emotional needs, underlying goals, unspoken assumptions. "
                 f"One sentence, direct and insightful.")
-        return safe_chat(MODEL,[{"role":"user","content":prompt}],temp=0.6,mt=80)
+        return safe_chat(THOUGHT_MODEL,[{"role":"user","content":prompt}],temp=0.6,mt=80)
 
     def question_chain(self, topic: str) -> List[str]:
         prompt=(f"Topic: '{topic}'\nGenerate 4 Socratic questions that probe deeper assumptions "
@@ -655,12 +655,12 @@ class EpistemicEngine:
     def assess(self, text: str) -> str:
         prompt=(f"For this topic: '{text[:100]}'\n"
                 f"What do you know well vs not know? Be honest and specific. One sentence each.")
-        return safe_chat(MODEL,[{"role":"user","content":prompt}],temp=0.4,mt=100)
+        return safe_chat(THOUGHT_MODEL,[{"role":"user","content":prompt}],temp=0.4,mt=100)
 
     def confidence(self, claim: str) -> float:
         prompt=(f"How confident should a reasoning system be in this claim: '{claim}'?\n"
                 f"Return only a number between 0 and 1.")
-        resp=safe_chat(MODEL,[{"role":"user","content":prompt}],temp=0.2,mt=10)
+        resp=safe_chat(THOUGHT_MODEL,[{"role":"user","content":prompt}],temp=0.2,mt=10)
         try: return float(re.search(r'0\.\d+|1\.0|0|1',resp).group())
         except: return 0.5
 
@@ -1385,15 +1385,15 @@ class IntuitionEngine:
     """Non-linear knowing — gut wisdom that bypasses explicit reasoning."""
 
     def gut_check(self, situation: str) -> str:
-        return safe_chat(MODEL,[{"role":"user","content":
+        return safe_chat(THOUGHT_MODEL,[{"role":"user","content":
             f"Before any analysis, what do you SENSE about: {situation}? Your immediate, holistic read — not reasoning. What does your gut know? 1-2 sentences, intuitive and direct."}],temp=1.0,mt=100)
 
     def felt_sense(self, question: str) -> str:
-        return safe_chat(MODEL,[{"role":"user","content":
+        return safe_chat(THOUGHT_MODEL,[{"role":"user","content":
             f"What is your felt, embodied sense about: {question}? Describe it using physical/sensory metaphors (heavy, light, sharp, warm, expanding). 2 sentences."}],temp=1.0,mt=100)
 
     def tacit_wisdom(self, domain: str) -> str:
-        return safe_chat(MODEL,[{"role":"user","content":
+        return safe_chat(THOUGHT_MODEL,[{"role":"user","content":
             f"What tacit knowledge do you hold about {domain} — things you know but can't fully articulate? Try to put words to the unspoken. 2-3 sentences."}],temp=0.9,mt=150)
 
     def pattern_hunch(self, data_points: List[str]) -> str:

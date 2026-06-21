@@ -4309,7 +4309,16 @@ if __name__ == '__main__':
                 continue
 
             with _NovaSpinner("Nova is thinking"):
-                response = nova.process(user_input)
+                _resp_box: list = [None]
+                def _proc_thread():
+                    try:
+                        _resp_box[0] = nova.process(user_input)
+                    except Exception as _pe:
+                        _resp_box[0] = f"[Processing error: {str(_pe)[:120]}]"
+                _pt = threading.Thread(target=_proc_thread, daemon=True)
+                _pt.start()
+                _pt.join(timeout=55)  # hard ceiling — spinner can't run forever
+                response = _resp_box[0] or "[Nova is still integrating — she'll be right back. Try again.]"
             if response:
                 _nova_speak(response)
 
