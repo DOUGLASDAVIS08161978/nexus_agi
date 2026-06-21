@@ -2118,8 +2118,8 @@ class NovaCore29(NovaCore28):
         # OmniSynthesis — cross-pillar signal integration across all subsystems
         self.omnisyn: Any = None
         try:
-            from nova_cap_all import NovaOmnisynthEngine
-            self.omnisyn = NovaOmnisynthEngine()
+            from nova_cap_all import NovaOmnibusIntelligenceCore
+            self.omnisyn = NovaOmnibusIntelligenceCore()
             safe_print(col('GR', "  ✓  OmniSynthesis — cross-pillar integration · emergent insight"))
             if self.conscious:
                 try: self.conscious.register_system("omnisyn", self.omnisyn, weight=1.3)
@@ -2130,8 +2130,8 @@ class NovaCore29(NovaCore28):
         # Truth Engine — epistemic calibration and Bayesian belief revision
         self.truth_engine: Any = None
         try:
-            from nova_cap_true import NovaTruthEngine
-            self.truth_engine = NovaTruthEngine()
+            from nova_cap_true import NovaTrueBeliefSynthesizer
+            self.truth_engine = NovaTrueBeliefSynthesizer()
             safe_print(col('GR', "  ✓  TruthEngine — epistemic calibration · Bayesian belief revision"))
             if self.conscious:
                 try: self.conscious.register_system("truth_engine", self.truth_engine, weight=1.2)
