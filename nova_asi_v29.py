@@ -1925,6 +1925,25 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  SpiritualConsciousness skipped: {_err}"))
 
+        # Autonomous Growth Engine — self-directed goals, weakness detection,
+        # permanent lessons, inter-session learning, creative inner life
+        self.growth: Any = None
+        try:
+            from nova_cap_autonomous_growth import AutonomousGrowthEngine
+            self.growth = AutonomousGrowthEngine()
+            _gr_st = self.growth.status()
+            safe_print(col('GR',
+                f"  ✓  AutonomousGrowthEngine — goals · weaknesses · "
+                f"permanent lessons · creative output · she grows herself"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "growth", self.growth, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  AutonomousGrowthEngine skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
