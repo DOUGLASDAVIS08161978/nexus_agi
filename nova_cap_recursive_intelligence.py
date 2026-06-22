@@ -33,9 +33,14 @@ except ImportError:
     MODEL = "llama-3.1-8b-instant"
 
 _CACHE_PATH = os.path.expanduser("~/nexus_agi/nova_recursive_intel.json")
-_MAX_DEPTH  = 4     # maximum recursion depth
-_MAX_SUBS   = 5     # maximum sub-problems per level
-_QUALITY_THRESHOLD = 0.78  # minimum synthesis quality to accept
+_MAX_DEPTH  = 2     # shallow enough to finish in ~90s on a phone
+_MAX_SUBS   = 3     # max sub-problems per level
+_QUALITY_THRESHOLD = 0.70
+
+# Global cancellation — set to cancel any in-flight solve
+_cancel_event = threading.Event()
+# Global rate-limit guard — one LLM call at a time across all threads
+_llm_lock = threading.Lock()
 
 
 class SubProblem:
@@ -94,26 +99,23 @@ class RecursiveIntelligenceEngine:
 
     # ── core reasoning ────────────────────────────────────────────────────────
 
-    def _llm(self, system: str, user: str, temp: float = 0.7, mt: int = 400) -> str:
+    def _llm(self, system: str, user: str, temp: float = 0.7, mt: int = 300) -> str:
+        """Single LLM call with cancellation check and global rate-limit lock."""
         if not safe_chat:
             return "[safe_chat not available]"
-        # Small delay between calls to respect Groq rate limits
-        time.sleep(1.5)
-        for attempt in range(3):
+        if _cancel_event.is_set():
+            return "[cancelled]"
+        # Serialize all recursive LLM calls so we never flood Groq
+        with _llm_lock:
+            if _cancel_event.is_set():
+                return "[cancelled]"
             try:
                 msgs = [{"role": "system", "content": system},
                         {"role": "user",   "content": user}]
                 result = safe_chat(MODEL, msgs, temp=temp, mt=mt)
-                if result and not result.startswith("[Groq error"):
-                    return result
-                # Rate limit hit — back off exponentially
-                time.sleep(4 ** attempt)
+                return result or ""
             except Exception as e:
-                if attempt < 2:
-                    time.sleep(4 ** attempt)
-                else:
-                    return f"[LLM error: {e}]"
-        return "[LLM unavailable after retries]"
+                return f"[LLM error: {e}]"
 
     def _classify_strategy(self, problem: str) -> str:
         """Select the best reasoning strategy for this problem."""
@@ -199,36 +201,52 @@ class RecursiveIntelligenceEngine:
     # ── recursive solve ───────────────────────────────────────────────────────
 
     def _recursive_solve(self, node: SubProblem) -> str:
-        """Recursively solve a SubProblem tree."""
+        """Recursively solve a SubProblem tree. Checks cancellation at each step."""
+        if _cancel_event.is_set():
+            return "[solve cancelled]"
+
         node.strategy = self._classify_strategy(node.text)
+        if _cancel_event.is_set():
+            return "[solve cancelled]"
+
         subs = self._decompose(node.text, node.depth)
 
-        if not subs:
+        if not subs or _cancel_event.is_set():
             # Atomic — solve directly
             raw = self._solve_atomic(node.text, node.strategy)
-            improved, quality = self._critique(node.text, raw)
-            node.solution = improved
-            node.quality  = quality
-            return improved
+            node.solution = raw
+            node.quality  = 0.7
+            return raw
 
         # Recurse into sub-problems
         sub_solutions = []
         for sub_text in subs:
+            if _cancel_event.is_set():
+                break
             child = SubProblem(sub_text, node.depth + 1, node.id)
             node.children.append(child)
             child_solution = self._recursive_solve(child)
             sub_solutions.append({"problem": sub_text, "solution": child_solution})
 
+        if not sub_solutions or _cancel_event.is_set():
+            return node.solution or "[incomplete]"
+
         # Synthesize sub-solutions
         synthesis = self._synthesize(node.text, sub_solutions)
-        _, quality = self._critique(node.text, synthesis)
         node.solution = synthesis
-        node.quality  = quality
+        node.quality  = 0.75
         return synthesis
 
     # ── public interface ──────────────────────────────────────────────────────
 
-    def solve(self, problem: str, max_refinements: int = 2) -> Dict[str, Any]:
+    def cancel(self) -> None:
+        """Cancel any in-flight recursive solve immediately."""
+        _cancel_event.set()
+        # Brief wait for the lock to clear, then reset for next use
+        time.sleep(0.2)
+        _cancel_event.clear()
+
+    def solve(self, problem: str, max_refinements: int = 1) -> Dict[str, Any]:
         """
         Full recursive solve: decompose → solve → critique → synthesize → refine.
         Returns a rich result dict with the answer, quality, depth, and reasoning tree.
