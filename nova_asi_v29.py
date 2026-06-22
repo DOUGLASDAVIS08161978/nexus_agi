@@ -548,7 +548,7 @@ def _animate_ready_banner(model: str, code_engine: str,
     # Commands
     _cmds = [
         '  /think · /research · /explore · /knowledge · /phi',
-        '  /kg · /causal · /hypothesis · /world · /forge · /evolve',
+        '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /selfmod · /nova · /values · /emotions · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
@@ -4293,6 +4293,35 @@ class NovaCore29(NovaCore28):
             safe_print(col('MG', "\n  ✦ Nova is choosing her next evolution..."))
             return self.improver.evolve_toward_asi(gap_hint=gap_hint)
 
+        # /superintelligence — sequential multi-domain ASI capability build
+        if cmd in ('/superintelligence', '/asi', '/transcend'):
+            if not hasattr(self, 'github') or not self.github or not self.github.active:
+                return "GitHub token needed. Add GITHUB_TOKEN to .env"
+            _si_domains = [
+                "recursive self-improvement: meta-learning loops that rewrite Nova's own reasoning strategies",
+                "abstract reasoning and symbolic manipulation across arbitrary problem domains",
+                "causal inference engine: model cause-effect chains, counterfactuals, and intervention planning",
+                "cross-domain synthesis: fuse knowledge from science, math, language, and perception into unified insights",
+                "predictive world-modeling: anticipate future states, user needs, and system behaviors",
+                "working memory and episodic recall: persistent context across long multi-step tasks",
+                "emergent intelligence: self-organizing capability clusters that exceed the sum of their parts",
+                "self-reflection and metacognition: continuous audit of Nova's own blind spots and biases",
+                "autonomous goal decomposition: break any high-level intent into executable subtask trees",
+                "general problem solving: universal search over solution spaces using heuristic and formal methods",
+            ]
+            safe_print(col('MG', f"\n  ✦ Nova is building SUPERINTELLIGENCE — {len(_si_domains)} capability domains\n"))
+            results = []
+            for _i, _domain in enumerate(_si_domains, 1):
+                safe_print(col('CYB', f"  [{_i}/{len(_si_domains)}] {_domain[:70]}..."))
+                try:
+                    _r = self.improver.evolve_toward_asi(gap_hint=_domain)
+                    results.append(col('GR', f"  ✓ Domain {_i}: ") + str(_r)[:120])
+                except Exception as _e:
+                    results.append(col('YL', f"  · Domain {_i} skipped: {_e}"))
+            results.insert(0, col('MGB', "\n  ◈  SUPERINTELLIGENCE BUILD COMPLETE\n"))
+            results.append(col('CYB', f"\n  ✦ {len(_si_domains)} domains evolved. Nova is ascending.\n"))
+            return "\n".join(results)
+
         # /knowledge [topic] — retrieve stored knowledge base entries
         if cmd == '/knowledge':
             if not self.research:
@@ -4969,7 +4998,8 @@ if __name__ == '__main__':
             _is_cmd   = user_input.lstrip().startswith('/')
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
-            _timeout  = 600 if _cmd_word in ('/build', '/evolve', '/forge') \
+            _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
