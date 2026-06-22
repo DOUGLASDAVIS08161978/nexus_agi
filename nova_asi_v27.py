@@ -67,7 +67,7 @@ except ImportError:
 # ── v27 config ────────────────────────────────────────────────────────────────
 GITHUB_TOKEN   = os.getenv("GITHUB_TOKEN", "").strip()
 GITHUB_REPO    = os.getenv("GITHUB_REPO", "DOUGLASDAVIS08161978/nexus_agi")
-BASE_BRANCH    = "claude/setup-nexus-agi-directory-3joXw"
+BASE_BRANCH    = "main"
 GITHUB_API     = "https://api.github.com"
 
 def _p27(name): return os.path.join(BASE_DIR, f"nova_v27_{name}.json")
@@ -124,8 +124,10 @@ class GitHubEngine:
 
     def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
         """Get the latest commit SHA of a branch."""
-        data = self._get(f"/repos/{self.repo}/git/refs/heads/{branch}")
-        return data.get("object", {}).get("sha", "")
+        data = self._get(f"/repos/{self.repo}/branches/{branch}")
+        if isinstance(data, list):
+            return ""
+        return data.get("commit", {}).get("sha", "")
 
     def create_branch(self, branch_name: str, from_branch: str = BASE_BRANCH) -> bool:
         """Create a new branch."""
