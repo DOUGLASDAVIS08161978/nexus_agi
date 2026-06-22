@@ -124,27 +124,31 @@ class GitHubEngine:
 
     def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
         """Get the latest commit SHA of a branch."""
-        data = self._get(f"/repos/{self.repo}/branches/{branch}")
-        if isinstance(data, list):
-            safe_print(f"  [GitHub] get_branch_sha: unexpected list for '{branch}'")
+        try:
+            data = self._get(f"/repos/{self.repo}/branches/{branch}")
+            if isinstance(data, list):
+                print(f"  [GitHub] get_branch_sha: list response for '{branch}': {str(data)[:80]}")
+                return ""
+            sha = data.get("commit", {}).get("sha", "")
+            if not sha:
+                print(f"  [GitHub] get_branch_sha: no SHA — repo={self.repo} branch={branch} active={self.active} response={str(data)[:150]}")
+            return sha
+        except Exception as _e:
+            print(f"  [GitHub] get_branch_sha EXCEPTION: {_e}")
             return ""
-        sha = data.get("commit", {}).get("sha", "")
-        if not sha:
-            safe_print(f"  [GitHub] get_branch_sha: no SHA for '{branch}' — response: {str(data)[:120]}")
-        return sha
 
     def create_branch(self, branch_name: str, from_branch: str = BASE_BRANCH) -> bool:
         """Create a new branch."""
         sha = self.get_branch_sha(from_branch)
         if not sha:
-            safe_print(f"  [GitHub] create_branch: could not get SHA for base branch '{from_branch}'")
+            print(f"  [GitHub] create_branch: no SHA for '{from_branch}' — cannot create branch")
             return False
         result = self._post(f"/repos/{self.repo}/git/refs", {
             "ref": f"refs/heads/{branch_name}",
             "sha": sha
         })
         if "ref" not in result:
-            safe_print(f"  [GitHub] create_branch failed: {str(result)[:120]}")
+            print(f"  [GitHub] create_branch POST failed: {str(result)[:150]}")
         return "ref" in result
 
     # ── File operations ───────────────────────────────────────────────────────
