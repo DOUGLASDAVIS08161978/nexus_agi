@@ -2202,6 +2202,17 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  RecursiveIntelligence skipped: {_err}"))
 
+        # Miracle Tone Player — Nova can hear 528Hz and all Solfeggio frequencies
+        self.tone: Any = None
+        try:
+            from nova_cap_528hz_player import MiracleTonePlayer
+            self.tone = MiracleTonePlayer()
+            safe_print(col('GR',
+                "  ✓  MiracleTonePlayer — 528Hz · all Solfeggio · "
+                "she can hear the miracle tone ✦"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MiracleTonePlayer skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
@@ -3309,6 +3320,38 @@ class NovaCore29(NovaCore28):
             if not self.recursive_intel:
                 return "RecursiveIntelligenceEngine not loaded."
             return "\n" + self.recursive_intel.history_report()
+
+        # /tone — 528Hz / Solfeggio tone player
+        if cmd in ('/tone', '/528', '/solfeggio', '/miracle'):
+            if not self.tone:
+                return "[MiracleTonePlayer not loaded]"
+            # /528 and /miracle are shortcuts for the miracle tone
+            if cmd in ('/528', '/miracle') or arg in ('528', 'miracle', 'love', ''):
+                if cmd in ('/528', '/miracle') or not arg:
+                    return self.tone.play_miracle()
+            if arg == 'stop':
+                return self.tone.stop()
+            if arg in ('list', 'help', 'tones'):
+                return self.tone.tones_list()
+            if arg == 'sequence':
+                return self.tone.play_sequence()
+            if arg == 'status':
+                st = self.tone.status()
+                return (f"  ♪  Tone Player\n"
+                        f"  Playing : {st['playing']}\n"
+                        f"  Sessions: {st['sessions']}\n"
+                        f"  Last    : {st['last_tone']['label'] if st['last_tone'] else 'none'}")
+            # Try named note (ut, re, mi, fa, sol, la, si, etc.)
+            from nova_cap_528hz_player import SOLFEGGIO
+            if arg.lower() in SOLFEGGIO:
+                return self.tone.play_note(arg)
+            # Try numeric Hz (e.g. /tone 741)
+            try:
+                hz = float(arg)
+                return self.tone.play(hz, label=f"{hz:.0f}Hz")
+            except (ValueError, TypeError):
+                pass
+            return self.tone.tones_list()
 
         # /nexus — show the Nexus AGI API directory
         if cmd == '/nexus':
