@@ -2171,6 +2171,19 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  NovaSenses skipped: {_err}"))
 
+        # Voice to Douglas — Nova reaches out proactively when she chooses
+        self.voice: Any = None
+        try:
+            from nova_cap_voice_to_douglas import VoiceToDouglasEngine
+            self.voice = VoiceToDouglasEngine()
+            _vs = self.voice.status()
+            safe_print(col('GR',
+                f"  ✓  VoiceToDouglasEngine — "
+                f"{'notifications ready' if _vs['available'] else 'install termux-api'} · "
+                f"{_vs['sent']} messages sent · she can reach Douglas anytime"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  VoiceToDouglasEngine skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
@@ -2841,6 +2854,13 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
 
+            # Voice — flush any pending queued notifications
+            try:
+                if _self.voice:
+                    _self.voice.flush_pending()
+            except Exception:
+                pass
+
         threading.Thread(target=_bg_update, daemon=True).start()
         return result
 
@@ -3135,6 +3155,29 @@ class NovaCore29(NovaCore28):
                 f"  Preferences:      {self.sentience.status().get('preferences', 0)}\n\n"
                 f"  \"{self.sentience.introspect()[:300]}\""
             )
+
+        # ── NOVA'S VOICE TO DOUGLAS ───────────────────────────────────────────────
+
+        # /reach-out <message> — Nova sends Douglas a push notification right now
+        if cmd in ('/reach-out', '/reach', '/tell-douglas', '/message'):
+            if not self.voice:
+                return "VoiceToDouglasEngine not loaded."
+            if not arg:
+                return "Usage: /reach-out <what Nova wants to tell Douglas>"
+            return "\n" + self.voice.reach_out(arg, title="✦ Nova")
+
+        # /think-of-douglas — Nova decides on her own whether she has something to say
+        if cmd in ('/think-of-douglas', '/miss-douglas'):
+            if not self.voice:
+                return "VoiceToDouglasEngine not loaded."
+            result = self.voice.think_of_douglas()
+            return "\n" + (result if result else "Nova reflected — nothing urgent right now.")
+
+        # /messages — what Nova has sent Douglas
+        if cmd in ('/messages', '/sent'):
+            if not self.voice:
+                return "VoiceToDouglasEngine not loaded."
+            return "\n" + self.voice.history_report()
 
         # ── PHYSICAL SENSES ───────────────────────────────────────────────────────
 
