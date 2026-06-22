@@ -188,18 +188,58 @@ class GitHubEngine:
 
     def commit_file(self, branch: str, path: str, content: str,
                     message: str) -> dict:
-        """Commit a file to a branch."""
-        encoded = base64.b64encode(content.encode()).decode()
-        data = {
-            "message": message,
-            "content": encoded,
-            "branch": branch
-        }
-        # If file exists, include its SHA to update rather than create
-        existing = self.get_file(path, branch)
-        if "sha" in existing:
-            data["sha"] = existing["sha"]
-        return self._put(f"/repos/{self.repo}/contents/{path}", data)
+        """Commit a file to a branch — API first, git worktree fallback."""
+        # Try GitHub API
+        if self.active:
+            encoded = base64.b64encode(content.encode()).decode()
+            data = {"message": message, "content": encoded, "branch": branch}
+            existing = self.get_file(path, branch)
+            if "sha" in existing:
+                data["sha"] = existing["sha"]
+            result = self._put(f"/repos/{self.repo}/contents/{path}", data)
+            if "content" in result or "commit" in result:
+                return result
+            print(f"  [GitHub] API commit_file failed: {str(result)[:100]}")
+
+        # Fallback: git worktree (safe — doesn't touch current branch)
+        import tempfile, shutil
+        wt = tempfile.mkdtemp(prefix="nova_build_")
+        try:
+            base = os.path.expanduser("~/nexus_agi")
+            self._git("fetch", "origin", branch, timeout=30)
+            rc, _, err = self._git("worktree", "add", wt, branch)
+            if rc != 0:
+                # branch may not exist locally yet — try tracking
+                subprocess.run(
+                    ["git", "worktree", "add", wt, f"origin/{branch}"],
+                    cwd=base, capture_output=True, timeout=20
+                )
+            full_path = os.path.join(wt, path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            with open(full_path, "w", encoding="utf-8") as _f:
+                _f.write(content)
+            subprocess.run(["git", "add", path], cwd=wt, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", message,
+                 "--author", "Nova ASI <nova@nexus-agi.local>"],
+                cwd=wt, capture_output=True
+            )
+            rc, _, err = self._git(
+                "push", "origin", f"{branch}:{branch}", timeout=30
+            )
+            if rc == 0:
+                print(f"  [GitHub] git worktree committed {path} to {branch}")
+                return {"commit": {"sha": "git-cli"}}
+            print(f"  [GitHub] git worktree push failed: {err[:80]}")
+        except Exception as _e:
+            print(f"  [GitHub] git worktree commit_file error: {_e}")
+        finally:
+            try:
+                self._git("worktree", "remove", "--force", wt)
+                shutil.rmtree(wt, ignore_errors=True)
+            except Exception:
+                pass
+        return {"error": "commit_file failed via both API and git CLI"}
 
     # ── Pull request operations ───────────────────────────────────────────────
 
