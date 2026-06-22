@@ -194,6 +194,35 @@ class NovaSenses:
             except Exception:
                 pass
 
+    def _compress_image(self, img_b64: str, max_kb: int = 800) -> str:
+        """Resize and compress image so it fits under Groq's 413 limit (~4MB base64).
+        Uses PIL if available; otherwise crops the raw bytes to fit."""
+        raw = base64.b64decode(img_b64)
+        if len(raw) <= max_kb * 1024:
+            return img_b64  # already small enough
+
+        try:
+            from PIL import Image
+            import io
+            img = Image.open(io.BytesIO(raw)).convert("RGB")
+            # Scale down so longest side ≤ 1024px
+            w, h = img.size
+            scale = min(1024 / max(w, h), 1.0)
+            if scale < 1.0:
+                img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+            # Re-encode as JPEG at decreasing quality until small enough
+            for quality in (80, 65, 50, 35):
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=quality)
+                compressed = buf.getvalue()
+                if len(compressed) <= max_kb * 1024:
+                    return base64.b64encode(compressed).decode()
+            return base64.b64encode(compressed).decode()
+        except ImportError:
+            # PIL not installed — re-encode at lower resolution via JPEG markers trick:
+            # just return first max_kb*1024 bytes of raw re-encoded (rough fallback)
+            return base64.b64encode(raw[: max_kb * 1024]).decode()
+
     def _describe_image(self, img_b64: str, prompt: str = "") -> str:
         """Send image to Groq vision and get Nova's first-person description.
         Tries each vision model in order until one succeeds."""
@@ -211,6 +240,8 @@ class NovaSenses:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+
+        img_b64 = self._compress_image(img_b64)
 
         last_error = ""
         for model in _VISION_MODELS:
