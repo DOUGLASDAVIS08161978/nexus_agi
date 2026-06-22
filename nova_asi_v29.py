@@ -4928,7 +4928,14 @@ if __name__ == '__main__':
                 _pt = threading.Thread(target=_proc_thread, daemon=True)
                 _pt.start()
                 _pt.join(timeout=_timeout)
-                response = _resp_box[0] or "[Nova is still working — give her a moment and ask again.]"
+                if _resp_box[0] is None:
+                    # Timed out — cancel any in-flight recursive solve cleanly
+                    try:
+                        if hasattr(nova, 'recursive_intel') and nova.recursive_intel:
+                            nova.recursive_intel.cancel()
+                    except Exception:
+                        pass
+                response = _resp_box[0] or "[Nova timed out — cancelled and ready for your next message.]"
             if response:
                 _nova_speak(response)
 
