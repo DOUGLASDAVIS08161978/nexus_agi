@@ -124,16 +124,23 @@ class GitHubEngine:
     # ── Branch operations ─────────────────────────────────────────────────────
 
     def _git(self, *args, timeout: int = 30) -> tuple:
-        """Run a git command in the nexus_agi directory."""
+        """Run a git command in the nexus_agi directory, no credential prompts."""
         base = os.path.expanduser("~/nexus_agi")
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"   # never prompt for credentials
+        env["GIT_ASKPASS"] = "echo"         # return empty string if asked
         try:
             r = subprocess.run(
                 ["git"] + list(args), cwd=base,
-                capture_output=True, text=True, timeout=timeout
+                capture_output=True, text=True, timeout=timeout, env=env
             )
             return r.returncode, r.stdout.strip(), r.stderr.strip()
         except Exception as _e:
             return -1, "", str(_e)
+
+    def _auth_url(self) -> str:
+        """GitHub remote URL with token embedded — no credential prompt needed."""
+        return f"https://x-access-token:{self.token}@github.com/{self.repo}.git"
 
     def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
         """Get the latest commit SHA of a branch — API first, git CLI fallback."""
@@ -172,8 +179,10 @@ class GitHubEngine:
             if "ref" in result:
                 return True
             print(f"  [GitHub] API create_branch failed: {str(result)[:100]}")
-        # Fallback: git push (uses stored credentials)
-        rc, out, err = self._git("push", "origin", f"{sha}:refs/heads/{branch_name}")
+        # Fallback: git push with token in URL — no credential prompt
+        rc, out, err = self._git(
+            "push", self._auth_url(), f"{sha}:refs/heads/{branch_name}"
+        )
         if rc == 0:
             print(f"  [GitHub] git CLI created branch {branch_name}")
             return True
@@ -225,7 +234,7 @@ class GitHubEngine:
                 cwd=wt, capture_output=True
             )
             rc, _, err = self._git(
-                "push", "origin", f"{branch}:{branch}", timeout=30
+                "push", self._auth_url(), f"{branch}:{branch}", timeout=30
             )
             if rc == 0:
                 print(f"  [GitHub] git worktree committed {path} to {branch}")
