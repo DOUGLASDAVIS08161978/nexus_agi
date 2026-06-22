@@ -34,8 +34,7 @@ except ImportError:
 
 # ── Groq vision models (tried in order until one works) ───────────────────────
 _VISION_MODELS = [
-    "meta-llama/llama-4-scout-17b-16e-instruct",    # Llama 4 Scout — current
-    "meta-llama/llama-4-maverick-17b-128e-instruct", # Llama 4 Maverick — current
+    "meta-llama/llama-4-scout-17b-16e-instruct",    # only vision model on this account
 ]
 _GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
