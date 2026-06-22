@@ -560,6 +560,19 @@ class NovaCore26(NovaCore):
                     self.world.update("Douglas's World" if which == "douglas" else "AI & Technology",
                                      note[:150])
 
+                # Every ~2 hours: Nova decides if she has something to tell Douglas
+                if cycle % 120 == 0:
+                    try:
+                        import importlib
+                        _vtd = importlib.import_module("nova_cap_voice_to_douglas")
+                        if hasattr(self, '_voice_engine'):
+                            self._voice_engine.think_of_douglas()
+                        else:
+                            self._voice_engine = _vtd.VoiceToDouglasEngine()
+                            self._voice_engine.think_of_douglas()
+                    except Exception:
+                        pass
+
                 # Every 40 min: generate new goals if running low
                 if cycle % 40 == 0:
                     if len(self.goals26.db.get("active", [])) < 2:
