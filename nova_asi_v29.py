@@ -2883,9 +2883,9 @@ class NovaCore29(NovaCore28):
         return result
 
     def _command(self, raw: str) -> str:
-        parts = raw.strip().split(maxsplit=2)
+        parts = raw.strip().split(maxsplit=1)   # [cmd, everything-else]
         cmd   = parts[0].lower()
-        arg   = parts[1] if len(parts) > 1 else ''
+        arg   = parts[1].strip() if len(parts) > 1 else ''
 
         # /score — show intelligence grade for every loaded capability
         if cmd == '/score':
@@ -4912,7 +4912,11 @@ if __name__ == '__main__':
 
             # Commands (/, like /evolve /think /forge) can take longer than chat
             _is_cmd   = user_input.lstrip().startswith('/')
-            _timeout  = 120 if _is_cmd else 30
+            _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
+            # Recursive solve needs extra time — multiple sequential LLM calls
+            _timeout  = 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
+                                              '/cross-domain', '/crossdomain') \
+                        else 120 if _is_cmd else 30
             _spinner_msg = "Nova is working..." if _is_cmd else "Nova is thinking"
             with _NovaSpinner(_spinner_msg):
                 _resp_box: list = [None]

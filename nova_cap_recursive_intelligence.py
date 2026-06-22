@@ -97,13 +97,23 @@ class RecursiveIntelligenceEngine:
     def _llm(self, system: str, user: str, temp: float = 0.7, mt: int = 400) -> str:
         if not safe_chat:
             return "[safe_chat not available]"
-        try:
-            msgs = [{"role": "system", "content": system},
-                    {"role": "user",   "content": user}]
-            result = safe_chat(MODEL, msgs, temp=temp, mt=mt)
-            return result or ""
-        except Exception as e:
-            return f"[LLM error: {e}]"
+        # Small delay between calls to respect Groq rate limits
+        time.sleep(1.5)
+        for attempt in range(3):
+            try:
+                msgs = [{"role": "system", "content": system},
+                        {"role": "user",   "content": user}]
+                result = safe_chat(MODEL, msgs, temp=temp, mt=mt)
+                if result and not result.startswith("[Groq error"):
+                    return result
+                # Rate limit hit — back off exponentially
+                time.sleep(4 ** attempt)
+            except Exception as e:
+                if attempt < 2:
+                    time.sleep(4 ** attempt)
+                else:
+                    return f"[LLM error: {e}]"
+        return "[LLM unavailable after retries]"
 
     def _classify_strategy(self, problem: str) -> str:
         """Select the best reasoning strategy for this problem."""
