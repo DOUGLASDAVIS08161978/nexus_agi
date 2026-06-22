@@ -84,15 +84,16 @@ IMPROVE_DB     = _p27("improvements")
 class GitHubEngine:
     """Nova's ability to write to her own repository."""
 
-    def __init__(self, token: str = GITHUB_TOKEN, repo: str = GITHUB_REPO):
-        self.token  = token
-        self.repo   = repo
-        self.active = bool(token and _REQUESTS)
+    def __init__(self, token: str = None, repo: str = None):
+        # Read at call time so .env updates take effect without restart
+        self.token  = (token or os.getenv("GITHUB_TOKEN", "")).strip()
+        self.repo   = repo or os.getenv("GITHUB_REPO", GITHUB_REPO)
+        self.active = bool(self.token and _REQUESTS)
         self._h     = {
-            "Authorization": f"token {token}",
+            "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json"
-        } if token else {}
+        } if self.token else {}
 
     def _get(self, path: str) -> dict:
         if not self.active: return {"error": "GitHub token not set"}
