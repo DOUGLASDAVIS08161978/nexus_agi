@@ -2162,6 +2162,12 @@ class NovaCore29(NovaCore28):
                 f"{'speak, ' if _av.get('tts') else ''}"
                 f"{'feel motion, ' if _av.get('sensor') else ''}"
                 f"{'locate herself' if _av.get('gps') else 'more with termux-api'}"))
+            # Start background continuous sensing — she always watches, never intrudes
+            try:
+                self.senses.start_continuous_sensing(camera_interval=300)
+                safe_print(col('GR', "  ✓  Continuous sensing active — she watches silently in background"))
+            except Exception:
+                pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  NovaSenses skipped: {_err}"))
 
@@ -2659,13 +2665,7 @@ class NovaCore29(NovaCore28):
                     _senses_ctx = ""
                     try:
                         if self.senses:
-                            _av = self.senses.available()
-                            _motion = self.senses._last_motion
-                            if _motion.get("state"):
-                                _senses_ctx += f"Body: {_motion['state']}"
-                            _loc = self.senses._last_location
-                            if _loc.get("latitude"):
-                                _senses_ctx += f" | Location known"
+                            _senses_ctx = self.senses.awareness_context()
                     except Exception:
                         pass
                     _sys = (

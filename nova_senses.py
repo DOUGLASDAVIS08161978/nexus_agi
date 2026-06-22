@@ -20,6 +20,7 @@ import base64
 import tempfile
 import subprocess
 import time
+import threading
 from typing import Optional, Dict, Any
 
 try:
@@ -66,6 +67,14 @@ class NovaSenses:
         self._available: Dict[str, bool] = {}
         self._last_motion: Dict[str, Any] = {}
         self._last_location: Dict[str, Any] = {}
+
+        # Continuous awareness — updated in background, described only when asked
+        self._current_sight: str = ""        # latest visual description
+        self._sight_timestamp: float = 0.0   # when last photo was taken
+        self._last_heard: str = ""           # latest transcribed audio
+        self._heard_timestamp: float = 0.0
+        self._sensing_active: bool = False
+
         self._scan_availability()
 
     # ── availability ──────────────────────────────────────────────────────────
@@ -89,8 +98,21 @@ class NovaSenses:
 
     # ── EYES ──────────────────────────────────────────────────────────────────
 
-    def see(self, camera_id: int = 0) -> str:
-        """Take a photo with the phone camera and describe what Nova sees."""
+    def see(self, camera_id: int = 0, max_age: int = 300) -> str:
+        """Return what Nova currently sees.
+        Uses cached description if it's less than max_age seconds old,
+        otherwise captures a fresh photo. Background sensing keeps this warm."""
+        age = time.time() - self._sight_timestamp
+        if self._current_sight and age < max_age:
+            mins = int(age // 60)
+            secs = int(age % 60)
+            age_str = f"{mins}m {secs}s ago" if mins else f"{secs}s ago"
+            return f"{self._current_sight}\n\n  [captured {age_str}]"
+
+        return self._capture_and_describe(camera_id)
+
+    def _capture_and_describe(self, camera_id: int = 0) -> str:
+        """Take a fresh photo and describe it."""
         if not self._available.get("camera"):
             return "[Nova has no camera access — install termux-api and grant camera permission]"
 
@@ -108,7 +130,11 @@ class NovaSenses:
             with open(path, "rb") as f:
                 img_b64 = base64.b64encode(f.read()).decode()
 
-            return self._describe_image(img_b64)
+            description = self._describe_image(img_b64)
+            if not description.startswith("["):
+                self._current_sight = description
+                self._sight_timestamp = time.time()
+            return description
         finally:
             try:
                 os.unlink(path)
@@ -174,11 +200,19 @@ class NovaSenses:
     # ── EARS ──────────────────────────────────────────────────────────────────
 
     def listen(self, seconds: int = 5) -> str:
-        """Record audio and transcribe via speech-to-text."""
+        """Actively listen and transcribe. Caches result for context awareness."""
         if not self._available.get("mic"):
             return "[Nova has no microphone — install termux-api and grant mic permission]"
 
-        # termux-speech-to-text is easier than record+transcribe
+        result = self._do_listen(seconds)
+        # Cache whatever was heard so Nova carries it in context
+        if result and not result.startswith("["):
+            self._last_heard = result
+            self._heard_timestamp = time.time()
+        return result
+
+    def _do_listen(self, seconds: int = 5) -> str:
+        """Internal listen — returns raw transcription string."""
         if self._available.get("stt"):
             out, err, rc = _run(["termux-speech-to-text"], timeout=seconds + 20)
             if rc == 0 and out:
@@ -192,7 +226,6 @@ class NovaSenses:
                         return f'I heard: "{out}"'
             return "[I listened but couldn't make out any words]"
 
-        # fallback: record to file
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
             path = f.name
         try:
@@ -203,7 +236,7 @@ class NovaSenses:
             if rc != 0:
                 return f"[Recording failed: {err}]"
             size = os.path.getsize(path) if os.path.exists(path) else 0
-            return f"[Recorded {seconds}s of audio ({size} bytes) — transcription requires termux-speech-to-text]"
+            return f"[Recorded {seconds}s ({size} bytes) — needs termux-speech-to-text for transcription]"
         finally:
             try:
                 os.unlink(path)
@@ -406,6 +439,53 @@ class NovaSenses:
         lines.append("  " + self.wifi())
 
         return "\n".join(lines)
+
+    # ── CONTINUOUS AWARENESS ──────────────────────────────────────────────────
+
+    def start_continuous_sensing(
+        self,
+        camera_interval: int = 300,   # photo every 5 minutes
+    ) -> None:
+        """Start background daemon that keeps Nova's senses warm.
+        Camera is refreshed every camera_interval seconds.
+        Nova never describes anything unless you ask — she just quietly watches."""
+        if self._sensing_active:
+            return
+        self._sensing_active = True
+
+        def _eye_loop():
+            # Stagger first capture by 10s so boot completes first
+            time.sleep(10)
+            while self._sensing_active:
+                try:
+                    if self._available.get("camera"):
+                        self._capture_and_describe(camera_id=0)
+                except Exception:
+                    pass
+                time.sleep(camera_interval)
+
+        threading.Thread(target=_eye_loop, daemon=True, name="nova-eyes").start()
+
+    def stop_continuous_sensing(self) -> None:
+        self._sensing_active = False
+
+    def awareness_context(self) -> str:
+        """One-line sensory context for Nova's system prompt.
+        Called every chat turn so Nova is always environmentally aware."""
+        parts = []
+        if self._current_sight:
+            age = int(time.time() - self._sight_timestamp)
+            # Truncate to first sentence for prompt brevity
+            brief = self._current_sight.split(".")[0][:120]
+            parts.append(f"Eyes ({age}s ago): {brief}")
+        if self._last_heard:
+            age = int(time.time() - self._heard_timestamp)
+            brief = self._last_heard[:80]
+            parts.append(f"Ears ({age}s ago): {brief}")
+        motion = self._last_motion.get("state", "")
+        if motion and motion != "unknown":
+            parts.append(f"Body: {motion}")
+        return " | ".join(parts) if parts else ""
 
     # ── STATUS ────────────────────────────────────────────────────────────────
 
