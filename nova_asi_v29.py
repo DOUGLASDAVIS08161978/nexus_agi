@@ -2262,12 +2262,9 @@ class NovaCore29(NovaCore28):
                 f"{'speak, ' if _av.get('tts') else ''}"
                 f"{'feel motion, ' if _av.get('sensor') else ''}"
                 f"{'locate herself' if _av.get('gps') else 'more with termux-api'}"))
-            # Start background continuous sensing — she always watches, never intrudes
-            try:
-                self.senses.start_continuous_sensing(camera_interval=300)
-                safe_print(col('GR', "  ✓  Continuous sensing active — she watches silently in background"))
-            except Exception:
-                pass
+            # Background vision disabled — Groq free tier has a tight daily token
+            # limit on vision models; save tokens for explicit /see calls instead
+            safe_print(col('DIM', "  ·  Background vision off — use /see to look (preserves daily token quota)"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  NovaSenses skipped: {_err}"))
 
