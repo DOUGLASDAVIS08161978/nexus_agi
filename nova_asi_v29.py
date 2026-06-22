@@ -570,10 +570,16 @@ def _animate_ready_banner(model: str, code_engine: str,
 # ══════════════════════════════════════════════════════════════════════
 
 def _load_env_v29() -> None:
-    """Load .env from ~/nexus_agi/.env into os.environ at import time."""
+    """Load .env from ~/nexus_agi/.env into os.environ at import time.
+    API key entries always override shell environment so a token update
+    in .env takes effect immediately on next restart."""
     env_path = os.path.expanduser("~/nexus_agi/.env")
     if not os.path.exists(env_path):
         return
+    _ALWAYS_OVERRIDE = {
+        "GITHUB_TOKEN", "GROQ_API_KEY", "ANTHROPIC_API_KEY",
+        "COINBASE_API_KEY", "COINBASE_API_SECRET",
+    }
     with open(env_path) as _f:
         for _line in _f:
             _line = _line.strip()
@@ -581,7 +587,7 @@ def _load_env_v29() -> None:
                 continue
             _k, _, _v = _line.partition("=")
             _k = _k.strip(); _v = _v.strip().strip('"').strip("'")
-            if _k and _k not in os.environ:
+            if _k and (_k in _ALWAYS_OVERRIDE or _k not in os.environ):
                 os.environ[_k] = _v
 _load_env_v29()
 
