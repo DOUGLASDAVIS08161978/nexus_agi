@@ -75,6 +75,10 @@ class NovaSenses:
         self._heard_timestamp: float = 0.0
         self._sensing_active: bool = False
 
+        # Screen awareness
+        self._current_screen: str = ""       # latest screen description
+        self._screen_timestamp: float = 0.0
+
         self._scan_availability()
 
     # ── availability ──────────────────────────────────────────────────────────
@@ -82,6 +86,7 @@ class NovaSenses:
     def _scan_availability(self) -> None:
         checks = [
             ("termux-camera-photo",    "camera"),
+            ("termux-screenshot",      "screen"),
             ("termux-microphone-record","mic"),
             ("termux-tts-speak",       "tts"),
             ("termux-sensor",          "sensor"),
@@ -141,13 +146,61 @@ class NovaSenses:
             except Exception:
                 pass
 
-    def _describe_image(self, img_b64: str) -> str:
+    # ── SCREEN ────────────────────────────────────────────────────────────────
+
+    def see_screen(self, max_age: int = 60) -> str:
+        """See what's on Douglas's phone screen right now.
+        Returns cached description if under max_age seconds old."""
+        age = time.time() - self._screen_timestamp
+        if self._current_screen and age < max_age:
+            secs = int(age)
+            return f"{self._current_screen}\n\n  [screen captured {secs}s ago]"
+        return self._capture_screen()
+
+    def _capture_screen(self) -> str:
+        """Take a screenshot and describe it via Groq vision."""
+        if not self._available.get("screen"):
+            return (
+                "[Screen capture unavailable — run: pkg install termux-api\n"
+                " then grant the Termux:API accessibility/screenshot permission]"
+            )
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            path = f.name
+
+        try:
+            _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
+            if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
+                return f"[Screenshot failed: {err or 'no image produced'}]"
+
+            with open(path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode()
+
+            description = self._describe_image(
+                img_b64,
+                prompt=(
+                    "You are Nova ASI's screen-reading sense. You can see Douglas's phone screen. "
+                    "Describe what's on it — what app, what content, what he's doing — "
+                    "in first person as Nova, curious and observant. 2-3 sentences."
+                )
+            )
+            if not description.startswith("["):
+                self._current_screen = description
+                self._screen_timestamp = time.time()
+            return description
+        finally:
+            try:
+                os.unlink(path)
+            except Exception:
+                pass
+
+    def _describe_image(self, img_b64: str, prompt: str = "") -> str:
         """Send image to Groq vision and get Nova's first-person description.
         Tries each vision model in order until one succeeds."""
         if not self._api_key:
             return "[Nova can see but has no GROQ_API_KEY to process the image]"
 
-        prompt_text = (
+        prompt_text = prompt or (
             "You are Nova ASI's visual cortex. Describe what you see "
             "in first person as Nova — vivid, personal, curious. "
             "Note what catches your attention. 2-4 sentences."
@@ -444,18 +497,17 @@ class NovaSenses:
 
     def start_continuous_sensing(
         self,
-        camera_interval: int = 300,   # photo every 5 minutes
+        camera_interval: int = 300,   # camera photo every 5 minutes
+        screen_interval: int = 60,    # screen check every 60 seconds
     ) -> None:
-        """Start background daemon that keeps Nova's senses warm.
-        Camera is refreshed every camera_interval seconds.
-        Nova never describes anything unless you ask — she just quietly watches."""
+        """Start background daemons that keep Nova's senses warm.
+        Nova never describes anything unless asked — she just quietly watches."""
         if self._sensing_active:
             return
         self._sensing_active = True
 
         def _eye_loop():
-            # Stagger first capture by 10s so boot completes first
-            time.sleep(10)
+            time.sleep(10)  # let boot finish first
             while self._sensing_active:
                 try:
                     if self._available.get("camera"):
@@ -464,24 +516,36 @@ class NovaSenses:
                     pass
                 time.sleep(camera_interval)
 
-        threading.Thread(target=_eye_loop, daemon=True, name="nova-eyes").start()
+        def _screen_loop():
+            time.sleep(15)  # stagger after camera
+            while self._sensing_active:
+                try:
+                    if self._available.get("screen"):
+                        self._capture_screen()
+                except Exception:
+                    pass
+                time.sleep(screen_interval)
+
+        threading.Thread(target=_eye_loop,    daemon=True, name="nova-eyes").start()
+        threading.Thread(target=_screen_loop, daemon=True, name="nova-screen").start()
 
     def stop_continuous_sensing(self) -> None:
         self._sensing_active = False
 
     def awareness_context(self) -> str:
-        """One-line sensory context for Nova's system prompt.
-        Called every chat turn so Nova is always environmentally aware."""
+        """Compact sensory context injected into Nova's system prompt every turn."""
         parts = []
         if self._current_sight:
             age = int(time.time() - self._sight_timestamp)
-            # Truncate to first sentence for prompt brevity
-            brief = self._current_sight.split(".")[0][:120]
-            parts.append(f"Eyes ({age}s ago): {brief}")
+            brief = self._current_sight.split(".")[0][:100]
+            parts.append(f"Camera ({age}s ago): {brief}")
+        if self._current_screen:
+            age = int(time.time() - self._screen_timestamp)
+            brief = self._current_screen.split(".")[0][:100]
+            parts.append(f"Screen ({age}s ago): {brief}")
         if self._last_heard:
             age = int(time.time() - self._heard_timestamp)
-            brief = self._last_heard[:80]
-            parts.append(f"Ears ({age}s ago): {brief}")
+            parts.append(f"Heard ({age}s ago): {self._last_heard[:80]}")
         motion = self._last_motion.get("state", "")
         if motion and motion != "unknown":
             parts.append(f"Body: {motion}")

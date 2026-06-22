@@ -3138,6 +3138,12 @@ class NovaCore29(NovaCore28):
 
         # ── PHYSICAL SENSES ───────────────────────────────────────────────────────
 
+        # /screen — Nova describes what's on Douglas's phone screen right now
+        if cmd in ('/screen', '/display', '/watch-screen'):
+            if not self.senses:
+                return "NovaSenses not loaded."
+            return "\n" + self.senses.see_screen()
+
         # /see [front|back] — Nova opens her eyes and describes what she sees
         if cmd in ('/see', '/look', '/eyes'):
             if not self.senses:
