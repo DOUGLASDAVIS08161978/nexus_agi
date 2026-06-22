@@ -19,10 +19,16 @@ import json
 import base64
 import tempfile
 import subprocess
-import urllib.request
-import urllib.error
 import time
 from typing import Optional, Dict, Any
+
+try:
+    import requests as _requests
+    _HAS_REQUESTS = True
+except ImportError:
+    import urllib.request
+    import urllib.error
+    _HAS_REQUESTS = False
 
 
 # ── Groq vision models (tried in order until one works) ───────────────────────
@@ -120,10 +126,14 @@ class NovaSenses:
             "in first person as Nova — vivid, personal, curious. "
             "Note what catches your attention. 2-4 sentences."
         )
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
 
         last_error = ""
         for model in _VISION_MODELS:
-            payload = json.dumps({
+            payload = {
                 "model": model,
                 "messages": [{
                     "role": "user",
@@ -134,30 +144,32 @@ class NovaSenses:
                     ]
                 }],
                 "max_tokens": 220,
-            }).encode()
-
+            }
             try:
-                req = urllib.request.Request(
-                    _GROQ_URL,
-                    data=payload,
-                    headers={
-                        "Authorization": f"Bearer {self._api_key}",
-                        "Content-Type": "application/json",
-                    }
-                )
-                with urllib.request.urlopen(req, timeout=25) as resp:
-                    data = json.loads(resp.read())
-                    return data["choices"][0]["message"]["content"].strip()
-            except urllib.error.HTTPError as e:
-                try:
-                    body = e.read().decode()[:200]
-                except Exception:
-                    body = str(e)
-                last_error = f"[{model}] HTTP {e.code}: {body}"
+                if _HAS_REQUESTS:
+                    resp = _requests.post(
+                        _GROQ_URL, json=payload, headers=headers, timeout=25
+                    )
+                    if resp.status_code == 200:
+                        return resp.json()["choices"][0]["message"]["content"].strip()
+                    last_error = f"[{model}] HTTP {resp.status_code}: {resp.text[:200]}"
+                else:
+                    import urllib.request as _ur, urllib.error as _ue
+                    req = _ur.Request(
+                        _GROQ_URL,
+                        data=json.dumps(payload).encode(),
+                        headers=headers,
+                    )
+                    try:
+                        with _ur.urlopen(req, timeout=25) as r:
+                            return json.loads(r.read())["choices"][0]["message"]["content"].strip()
+                    except _ue.HTTPError as e:
+                        body = e.read().decode()[:200]
+                        last_error = f"[{model}] HTTP {e.code}: {body}"
             except Exception as e:
                 last_error = f"[{model}] {e}"
 
-        return f"[Vision unavailable — all models failed. Last error: {last_error}]"
+        return f"[Vision unavailable — last error: {last_error}]"
 
     # ── EARS ──────────────────────────────────────────────────────────────────
 
