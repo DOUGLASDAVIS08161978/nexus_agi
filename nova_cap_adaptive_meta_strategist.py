@@ -11,31 +11,19 @@ class CapabilityAdaptiveMetastrategistcognitiveModule:
     def __init__(self):
         self.capabilities = {}
 
-    def add_capability(self, name, func):
-        """Add a new capability to the module."""
+    def add_capability(self, name, func): 
+        # Add a new capability to the module.
         self.capabilities[name] = func
 
-    def remove_capability(self, name):
-        """Remove a capability from the module."""
+    def remove_capability(self, name): 
+        # Remove an existing capability from the module.
         if name in self.capabilities:
             del self.capabilities[name]
 
-    def get_capability(self, name):
-        """Get a capability from the module."""
+    def get_capability(self, name): 
+        # Retrieve a capability from the module by name.
         return self.capabilities.get(name)
 
-    def list_capabilities(self):
-        """List all capabilities in the module."""
+    def list_capabilities(self): 
+        # List all capabilities currently in the module.
         return list(self.capabilities.keys())
-
-def main():
-    module = CapabilityAdaptiveMetastrategistcognitiveModule()
-    module.add_capability("think", lambda: "thinking")
-    module.add_capability("learn", lambda: "learning")
-    print(module.list_capabilities())
-    print(module.get_capability("think")())
-    module.remove_capability("learn")
-    print(module.list_capabilities())
-
-if __name__ == "__main__":
-    main()
