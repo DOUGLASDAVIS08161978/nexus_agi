@@ -1387,6 +1387,12 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     safe_print(col('YL', f"  ✗ Still rate-limited — skipping pass {n}"))
                     continue
 
+            # Groq error string returned instead of code — skip this pass
+            if raw_str.startswith('[Groq error') or raw_str.startswith('[LLM error'):
+                safe_print(col('YL', f"  ✗ Groq error (pass {n}) — skipping: {raw_str[:60]}"))
+                time.sleep(5)
+                continue
+
             code = self._clean(raw_str)
 
             # Syntax gate
