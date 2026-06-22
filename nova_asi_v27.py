@@ -140,7 +140,50 @@ class GitHubEngine:
 
     def _auth_url(self) -> str:
         """GitHub remote URL with token embedded — no credential prompt needed."""
+        # Standard PAT format: token as password, x-access-token as user
         return f"https://x-access-token:{self.token}@github.com/{self.repo}.git"
+
+    def _git_push_auth(self, refspec: str, timeout: int = 30) -> tuple:
+        """Push refspec to GitHub trying two auth methods."""
+        tok = self.token
+        repo = self.repo
+        print(f"  [GitHub] token len={len(tok)} prefix={tok[:7] if len(tok)>7 else '?'}")
+        # Method 1: x-access-token (classic PATs + fine-grained)
+        url1 = f"https://x-access-token:{tok}@github.com/{repo}.git"
+        rc, out, err = self._git("push", url1, refspec, timeout=timeout)
+        if rc == 0:
+            return rc, out, err
+        print(f"  [GitHub] push method1 failed: {err[:80]}")
+        # Method 2: token as username, empty password (also widely supported)
+        url2 = f"https://{tok}:@github.com/{repo}.git"
+        rc, out, err = self._git("push", url2, refspec, timeout=timeout)
+        if rc == 0:
+            return rc, out, err
+        print(f"  [GitHub] push method2 failed: {err[:80]}")
+        # Method 3: git -c http.extraheader with Bearer token
+        owner = repo.split("/")[0] if "/" in repo else ""
+        base = os.path.expanduser("~/nexus_agi")
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        env["GIT_ASKPASS"] = "echo"
+        try:
+            import base64 as _b64
+            creds = _b64.b64encode(f"x-access-token:{tok}".encode()).decode()
+            r = subprocess.run(
+                ["git",
+                 "-c", f"http.https://github.com/.extraheader=Authorization: Basic {creds}",
+                 "-c", "credential.helper=",
+                 "push", f"https://github.com/{repo}.git", refspec],
+                cwd=base, capture_output=True, text=True,
+                timeout=timeout, env=env
+            )
+            if r.returncode == 0:
+                print(f"  [GitHub] push method3 (Basic auth header) succeeded")
+                return r.returncode, r.stdout.strip(), r.stderr.strip()
+            print(f"  [GitHub] push method3 failed: {r.stderr.strip()[:80]}")
+            return r.returncode, r.stdout.strip(), r.stderr.strip()
+        except Exception as _e:
+            return -1, "", str(_e)
 
     def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
         """Get the latest commit SHA of a branch — API first, git CLI fallback."""
@@ -179,14 +222,12 @@ class GitHubEngine:
             if "ref" in result:
                 return True
             print(f"  [GitHub] API create_branch failed: {str(result)[:100]}")
-        # Fallback: git push with token in URL — no credential prompt
-        rc, out, err = self._git(
-            "push", self._auth_url(), f"{sha}:refs/heads/{branch_name}"
-        )
+        # Fallback: git push with token auth (tries 3 methods)
+        rc, out, err = self._git_push_auth(f"{sha}:refs/heads/{branch_name}")
         if rc == 0:
             print(f"  [GitHub] git CLI created branch {branch_name}")
             return True
-        print(f"  [GitHub] git CLI create_branch failed: {err[:100]}")
+        print(f"  [GitHub] all push methods failed")
         return False
 
     # ── File operations ───────────────────────────────────────────────────────
@@ -233,9 +274,7 @@ class GitHubEngine:
                  "--author", "Nova ASI <nova@nexus-agi.local>"],
                 cwd=wt, capture_output=True
             )
-            rc, _, err = self._git(
-                "push", self._auth_url(), f"{branch}:{branch}", timeout=30
-            )
+            rc, _, err = self._git_push_auth(f"{branch}:{branch}", timeout=30)
             if rc == 0:
                 print(f"  [GitHub] git worktree committed {path} to {branch}")
                 return {"commit": {"sha": "git-cli"}}
