@@ -588,16 +588,7 @@ def _load_env_v29() -> None:
                 continue
             _k, _, _v = _line.partition("=")
             _k = _k.strip(); _v = _v.strip().strip('"').strip("'")
-            # Skip corrupted values — truncated pastes leave a trailing '>'
-            if _v.endswith('>'):
-                continue
-            # For ALWAYS_OVERRIDE keys: only replace if .env value is longer
-            # than what's already in the environment (command-line wins if better)
-            if _k in _ALWAYS_OVERRIDE:
-                existing = os.environ.get(_k, "")
-                if len(_v) > len(existing):
-                    os.environ[_k] = _v
-            elif _k not in os.environ:
+            if _k and (_k in _ALWAYS_OVERRIDE or _k not in os.environ):
                 os.environ[_k] = _v
 _load_env_v29()
 
