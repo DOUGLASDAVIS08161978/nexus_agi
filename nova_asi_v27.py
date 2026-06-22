@@ -21,7 +21,7 @@ This is the responsible path to a self-improving superintelligence.
 ═══════════════════════════════════════════════════════════════════════
 """
 
-import os, sys, json, re, time, random, uuid, threading, base64
+import os, sys, json, re, time, random, uuid, threading, base64, subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -123,34 +123,62 @@ class GitHubEngine:
 
     # ── Branch operations ─────────────────────────────────────────────────────
 
-    def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
-        """Get the latest commit SHA of a branch."""
+    def _git(self, *args, timeout: int = 30) -> tuple:
+        """Run a git command in the nexus_agi directory."""
+        base = os.path.expanduser("~/nexus_agi")
         try:
-            data = self._get(f"/repos/{self.repo}/branches/{branch}")
-            if isinstance(data, list):
-                print(f"  [GitHub] get_branch_sha: list response for '{branch}': {str(data)[:80]}")
-                return ""
-            sha = data.get("commit", {}).get("sha", "")
-            if not sha:
-                print(f"  [GitHub] get_branch_sha: no SHA — repo={self.repo} branch={branch} active={self.active} response={str(data)[:150]}")
-            return sha
+            r = subprocess.run(
+                ["git"] + list(args), cwd=base,
+                capture_output=True, text=True, timeout=timeout
+            )
+            return r.returncode, r.stdout.strip(), r.stderr.strip()
         except Exception as _e:
-            print(f"  [GitHub] get_branch_sha EXCEPTION: {_e}")
-            return ""
+            return -1, "", str(_e)
+
+    def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
+        """Get the latest commit SHA of a branch — API first, git CLI fallback."""
+        # Try GitHub API
+        if self.active:
+            try:
+                data = self._get(f"/repos/{self.repo}/branches/{branch}")
+                if not isinstance(data, list):
+                    sha = data.get("commit", {}).get("sha", "")
+                    if sha:
+                        return sha
+                print(f"  [GitHub] API get_branch_sha failed: {str(data)[:100]}")
+            except Exception as _e:
+                print(f"  [GitHub] API get_branch_sha error: {_e}")
+        # Fallback: git ls-remote (uses stored git credentials — always works)
+        rc, out, err = self._git("ls-remote", "origin", f"refs/heads/{branch}")
+        if rc == 0 and out:
+            sha = out.split()[0]
+            print(f"  [GitHub] git CLI got SHA for {branch}: {sha[:8]}...")
+            return sha
+        print(f"  [GitHub] get_branch_sha: both API and git CLI failed. err={err[:80]}")
+        return ""
 
     def create_branch(self, branch_name: str, from_branch: str = BASE_BRANCH) -> bool:
-        """Create a new branch."""
+        """Create a new branch — API first, git push fallback."""
         sha = self.get_branch_sha(from_branch)
         if not sha:
-            print(f"  [GitHub] create_branch: no SHA for '{from_branch}' — cannot create branch")
+            print(f"  [GitHub] create_branch: no SHA for '{from_branch}'")
             return False
-        result = self._post(f"/repos/{self.repo}/git/refs", {
-            "ref": f"refs/heads/{branch_name}",
-            "sha": sha
-        })
-        if "ref" not in result:
-            print(f"  [GitHub] create_branch POST failed: {str(result)[:150]}")
-        return "ref" in result
+        # Try GitHub API
+        if self.active:
+            result = self._post(f"/repos/{self.repo}/git/refs", {
+                "ref": f"refs/heads/{branch_name}",
+                "sha": sha
+            })
+            if "ref" in result:
+                return True
+            print(f"  [GitHub] API create_branch failed: {str(result)[:100]}")
+        # Fallback: git push (uses stored credentials)
+        rc, out, err = self._git("push", "origin", f"{sha}:refs/heads/{branch_name}")
+        if rc == 0:
+            print(f"  [GitHub] git CLI created branch {branch_name}")
+            return True
+        print(f"  [GitHub] git CLI create_branch failed: {err[:100]}")
+        return False
 
     # ── File operations ───────────────────────────────────────────────────────
 
