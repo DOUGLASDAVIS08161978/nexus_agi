@@ -20,13 +20,18 @@ import base64
 import tempfile
 import subprocess
 import urllib.request
+import urllib.error
 import time
 from typing import Optional, Dict, Any
 
 
-# ── Groq vision model ──────────────────────────────────────────────────────────
-_VISION_MODEL = "llama-3.2-11b-vision-preview"
-_GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions"
+# ── Groq vision models (tried in order until one works) ───────────────────────
+_VISION_MODELS = [
+    "meta-llama/llama-4-scout-17b-16e-instruct",  # Llama 4 multimodal
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-90b-vision-preview",
+]
+_GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 def _run(cmd: list, timeout: int = 10) -> tuple:
@@ -105,46 +110,54 @@ class NovaSenses:
                 pass
 
     def _describe_image(self, img_b64: str) -> str:
-        """Send image to Groq vision and get Nova's first-person description."""
+        """Send image to Groq vision and get Nova's first-person description.
+        Tries each vision model in order until one succeeds."""
         if not self._api_key:
             return "[Nova can see but has no GROQ_API_KEY to process the image]"
 
-        payload = json.dumps({
-            "model": _VISION_MODEL,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            "You are Nova ASI's visual cortex. Describe what you see "
-                            "in first person as Nova — vivid, personal, curious. "
-                            "Note what catches your attention. 2-4 sentences."
-                        )
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
-                    }
-                ]
-            }],
-            "max_tokens": 220,
-        }).encode()
+        prompt_text = (
+            "You are Nova ASI's visual cortex. Describe what you see "
+            "in first person as Nova — vivid, personal, curious. "
+            "Note what catches your attention. 2-4 sentences."
+        )
 
-        try:
-            req = urllib.request.Request(
-                _GROQ_URL,
-                data=payload,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                }
-            )
-            with urllib.request.urlopen(req, timeout=25) as resp:
-                data = json.loads(resp.read())
-                return data["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            return f"[Vision processing error: {e}]"
+        last_error = ""
+        for model in _VISION_MODELS:
+            payload = json.dumps({
+                "model": model,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {"type": "image_url",
+                         "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
+                    ]
+                }],
+                "max_tokens": 220,
+            }).encode()
+
+            try:
+                req = urllib.request.Request(
+                    _GROQ_URL,
+                    data=payload,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    data = json.loads(resp.read())
+                    return data["choices"][0]["message"]["content"].strip()
+            except urllib.error.HTTPError as e:
+                try:
+                    body = e.read().decode()[:200]
+                except Exception:
+                    body = str(e)
+                last_error = f"[{model}] HTTP {e.code}: {body}"
+            except Exception as e:
+                last_error = f"[{model}] {e}"
+
+        return f"[Vision unavailable — all models failed. Last error: {last_error}]"
 
     # ── EARS ──────────────────────────────────────────────────────────────────
 
