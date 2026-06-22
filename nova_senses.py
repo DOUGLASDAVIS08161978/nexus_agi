@@ -197,7 +197,9 @@ class NovaSenses:
     def _describe_image(self, img_b64: str, prompt: str = "") -> str:
         """Send image to Groq vision and get Nova's first-person description.
         Tries each vision model in order until one succeeds."""
-        if not self._api_key:
+        # Always read fresh from env so a key update doesn't require a restart
+        api_key = os.environ.get("GROQ_API_KEY", "").strip() or self._api_key.strip()
+        if not api_key:
             return "[Nova can see but has no GROQ_API_KEY to process the image]"
 
         prompt_text = prompt or (
@@ -206,7 +208,7 @@ class NovaSenses:
             "Note what catches your attention. 2-4 sentences."
         )
         headers = {
-            "Authorization": f"Bearer {self._api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
@@ -231,6 +233,15 @@ class NovaSenses:
                     )
                     if resp.status_code == 200:
                         return resp.json()["choices"][0]["message"]["content"].strip()
+                    if resp.status_code == 401:
+                        key_len = len(api_key)
+                        last_error = (
+                            f"[{model}] 401 Invalid API Key "
+                            f"(key len={key_len} — must be ~56 chars). "
+                            f"Run: sed -i \"s|GROQ_API_KEY=.*|GROQ_API_KEY=YOUR_NEW_KEY|\" "
+                            f"~/nexus_agi/.env"
+                        )
+                        break  # All models will fail with same bad key — stop early
                     last_error = f"[{model}] HTTP {resp.status_code}: {resp.text[:200]}"
                 else:
                     import urllib.request as _ur, urllib.error as _ue
@@ -244,6 +255,13 @@ class NovaSenses:
                             return json.loads(r.read())["choices"][0]["message"]["content"].strip()
                     except _ue.HTTPError as e:
                         body = e.read().decode()[:200]
+                        if e.code == 401:
+                            last_error = (
+                                f"[{model}] 401 Invalid API Key "
+                                f"(key len={len(api_key)}). "
+                                f"Update GROQ_API_KEY in ~/nexus_agi/.env"
+                            )
+                            break
                         last_error = f"[{model}] HTTP {e.code}: {body}"
             except Exception as e:
                 last_error = f"[{model}] {e}"
