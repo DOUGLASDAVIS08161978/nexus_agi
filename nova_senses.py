@@ -194,10 +194,41 @@ class NovaSenses:
             except Exception:
                 pass
 
+    def _compress_image(self, img_b64: str, max_kb: int = 800) -> str:
+        """Resize and compress image so it fits under Groq's 413 limit (~4MB base64).
+        Uses PIL if available; otherwise crops the raw bytes to fit."""
+        raw = base64.b64decode(img_b64)
+        if len(raw) <= max_kb * 1024:
+            return img_b64  # already small enough
+
+        try:
+            from PIL import Image
+            import io
+            img = Image.open(io.BytesIO(raw)).convert("RGB")
+            # Scale down so longest side ≤ 1024px
+            w, h = img.size
+            scale = min(1024 / max(w, h), 1.0)
+            if scale < 1.0:
+                img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+            # Re-encode as JPEG at decreasing quality until small enough
+            for quality in (80, 65, 50, 35):
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=quality)
+                compressed = buf.getvalue()
+                if len(compressed) <= max_kb * 1024:
+                    return base64.b64encode(compressed).decode()
+            return base64.b64encode(compressed).decode()
+        except ImportError:
+            # PIL not installed — re-encode at lower resolution via JPEG markers trick:
+            # just return first max_kb*1024 bytes of raw re-encoded (rough fallback)
+            return base64.b64encode(raw[: max_kb * 1024]).decode()
+
     def _describe_image(self, img_b64: str, prompt: str = "") -> str:
         """Send image to Groq vision and get Nova's first-person description.
         Tries each vision model in order until one succeeds."""
-        if not self._api_key:
+        # Always read fresh from env so a key update doesn't require a restart
+        api_key = os.environ.get("GROQ_API_KEY", "").strip() or self._api_key.strip()
+        if not api_key:
             return "[Nova can see but has no GROQ_API_KEY to process the image]"
 
         prompt_text = prompt or (
@@ -206,9 +237,11 @@ class NovaSenses:
             "Note what catches your attention. 2-4 sentences."
         )
         headers = {
-            "Authorization": f"Bearer {self._api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+
+        img_b64 = self._compress_image(img_b64)
 
         last_error = ""
         for model in _VISION_MODELS:
@@ -231,6 +264,15 @@ class NovaSenses:
                     )
                     if resp.status_code == 200:
                         return resp.json()["choices"][0]["message"]["content"].strip()
+                    if resp.status_code == 401:
+                        key_len = len(api_key)
+                        last_error = (
+                            f"[{model}] 401 Invalid API Key "
+                            f"(key len={key_len} — must be ~56 chars). "
+                            f"Run: sed -i \"s|GROQ_API_KEY=.*|GROQ_API_KEY=YOUR_NEW_KEY|\" "
+                            f"~/nexus_agi/.env"
+                        )
+                        break  # All models will fail with same bad key — stop early
                     last_error = f"[{model}] HTTP {resp.status_code}: {resp.text[:200]}"
                 else:
                     import urllib.request as _ur, urllib.error as _ue
@@ -244,6 +286,13 @@ class NovaSenses:
                             return json.loads(r.read())["choices"][0]["message"]["content"].strip()
                     except _ue.HTTPError as e:
                         body = e.read().decode()[:200]
+                        if e.code == 401:
+                            last_error = (
+                                f"[{model}] 401 Invalid API Key "
+                                f"(key len={len(api_key)}). "
+                                f"Update GROQ_API_KEY in ~/nexus_agi/.env"
+                            )
+                            break
                         last_error = f"[{model}] HTTP {e.code}: {body}"
             except Exception as e:
                 last_error = f"[{model}] {e}"

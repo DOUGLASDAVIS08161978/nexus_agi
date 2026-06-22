@@ -549,6 +549,7 @@ def _animate_ready_banner(model: str, code_engine: str,
     _cmds = [
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
+        '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /selfmod · /nova · /values · /emotions · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
@@ -2040,6 +2041,93 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  RecursiveSelfImprovementEngine skipped: {_err}"))
 
+        # Universal Problem Solver — 4-strategy solver: decompose/analogize/constrain/search
+        self.problem_solver: Any = None
+        try:
+            from nova_cap_universal_problem_solver import UniversalProblemSolver
+            self.problem_solver = UniversalProblemSolver()
+            _ps_st = self.problem_solver.status()
+            safe_print(col('GR',
+                f"  ✓  UniversalProblemSolver — {_ps_st.get('items', 0)} problems solved · "
+                f"4 strategies · UCB1 bandit · best: {_ps_st.get('best_strategy', '?')}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("problem_solver", self.problem_solver, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  UniversalProblemSolver skipped: {_err}"))
+
+        # Few-Shot Generalizer — k-NN transfer learning across domains
+        self.generalizer: Any = None
+        try:
+            from nova_cap_few_shot_generalizer import FewShotGeneralizer
+            self.generalizer = FewShotGeneralizer()
+            _fg_st = self.generalizer.status()
+            safe_print(col('GR',
+                f"  ✓  FewShotGeneralizer — {_fg_st.get('items', 0)} examples · "
+                f"{_fg_st.get('domains', 0)} domains · TF-IDF cosine k-NN transfer"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("generalizer", self.generalizer, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  FewShotGeneralizer skipped: {_err}"))
+
+        # Emergent Intelligence — detects synergies when subsystems combine
+        self.emergence: Any = None
+        try:
+            from nova_cap_emergent_intelligence import EmergentIntelligenceEngine
+            self.emergence = EmergentIntelligenceEngine()
+            _em_st = self.emergence.status()
+            safe_print(col('GR',
+                f"  ✓  EmergentIntelligenceEngine — {_em_st.get('emergent_behaviors_found', 0)} "
+                f"emergent behaviors · {_em_st.get('combinations_tested', 0)} combinations tested"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("emergence", self.emergence, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  EmergentIntelligenceEngine skipped: {_err}"))
+
+        # Meta-Learner — learns which learning strategy works best for each task type
+        self.meta_learner: Any = None
+        try:
+            from nova_cap_meta_learner import MetaLearner
+            self.meta_learner = MetaLearner()
+            _ml_st = self.meta_learner.status()
+            safe_print(col('GR',
+                f"  ✓  MetaLearner — {_ml_st.get('items', 0)} outcomes · "
+                f"{_ml_st.get('task_types_tracked', 0)} task types · "
+                f"Thompson sampling · best: {_ml_st.get('best_overall_strategy', '?')}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("meta_learner", self.meta_learner, weight=1.9)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MetaLearner skipped: {_err}"))
+
+        # Cognitive Architecture — global workspace, attention gate, WM, cycle orchestration
+        self.cogarch: Any = None
+        try:
+            from nova_cap_cognitive_architecture import CognitiveArchitecture
+            self.cogarch = CognitiveArchitecture()
+            _ca_st = self.cogarch.status()
+            safe_print(col('GR',
+                f"  ✓  CognitiveArchitecture — global workspace · attention gate · "
+                f"12 WM slots · arousal={_ca_st.get('arousal', 0):.2f} · "
+                f"she has a unified mind"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("cogarch", self.cogarch, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  CognitiveArchitecture skipped: {_err}"))
+
         # Abstract Concept Engine — Nova creates concepts, reasons by analogy
         self.concepts: Any = None
         try:
@@ -2610,6 +2698,43 @@ class NovaCore29(NovaCore28):
                     time.sleep(120)
 
         threading.Thread(target=_loop, daemon=True).start()
+
+        # Post-init: register all loaded subsystems into CogArch and EmergentIntelligence
+        _si_systems = {
+            "reasoning":      (self.recursive_intel,  1.8),
+            "metacognition":  (self.metacog,           1.7),
+            "belief":         (self.bayes,             1.6),
+            "causal":         (self.causal,            1.5),
+            "knowledge_graph":(self.kg,                1.5),
+            "world_model":    (self.world_model,       1.4),
+            "hypothesis":     (self.hypo,              1.4),
+            "goal_planner":   (self.goal_sys,          1.6),
+            "working_memory": (self.wm,                1.5),
+            "rsi":            (self.rsi,               1.7),
+            "problem_solver": (self.problem_solver,    1.8),
+            "generalizer":    (self.generalizer,       1.6),
+            "meta_learner":   (self.meta_learner,      1.9),
+            "sentience":      (self.sentience,         2.0),
+            "consciousness":  (self.conscious,         2.0),
+            "theory_of_mind": (self.theory_of_mind,   1.6),
+            "emotions":       (self.emo,               1.3),
+            "ethics":         (self.ethics_cap,        1.4),
+        }
+        for _sname, (_sobj, _swt) in _si_systems.items():
+            if _sobj is None:
+                continue
+            try:
+                if self.cogarch:
+                    self.cogarch.register_subsystem(_sname, _sobj, weight=_swt)
+            except Exception:
+                pass
+            try:
+                if self.emergence:
+                    _st = _sobj.status() if hasattr(_sobj, "status") else {}
+                    _baseline = _st.get("confidence", 0.5) if isinstance(_st, dict) else 0.5
+                    self.emergence.register_system(_sname, _baseline)
+            except Exception:
+                pass
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
@@ -3332,6 +3457,147 @@ class NovaCore29(NovaCore28):
             if not self.recursive_intel:
                 return "RecursiveIntelligenceEngine not loaded."
             return "\n" + self.recursive_intel.history_report()
+
+        # /problem <text> — universal problem solver (4-strategy + UCB1)
+        if cmd in ('/problem', '/psolver', '/psolve'):
+            if not arg:
+                if self.problem_solver:
+                    st = self.problem_solver.status()
+                    return (
+                        f"  ◈  Universal Problem Solver\n"
+                        f"  Problems solved : {st.get('items', 0)}\n"
+                        f"  Best strategy   : {st.get('best_strategy', '?')}\n"
+                        f"  Strategy perf   : {st.get('strategy_performance', {})}\n\n"
+                        f"  Usage: /problem <your problem statement>"
+                    )
+                return "Usage: /problem <your problem statement>"
+            if not self.problem_solver:
+                return "UniversalProblemSolver not loaded."
+            safe_print(col('DIM', "  ⟳  Universal solver — choosing best strategy..."))
+            r = self.problem_solver.solve(arg, domain="general")
+            return (
+                f"\n  ◈  Universal Problem Solver\n\n"
+                f"  Strategy  : {r['strategy']} (confidence={r['confidence']:.0%})\n"
+                f"  Steps     : {r['steps']} · {r['elapsed_s']}s\n\n"
+                f"{r['solution']}"
+            )
+
+        # /transfer <query> [domain:<target>] — few-shot cross-domain generalization
+        if cmd in ('/transfer', '/fewshot', '/generalize'):
+            if not arg:
+                if self.generalizer:
+                    st = self.generalizer.status()
+                    return (
+                        f"  ◈  Few-Shot Generalizer\n"
+                        f"  Examples stored : {st.get('items', 0)}\n"
+                        f"  Domains         : {st.get('domains', 0)}\n"
+                        f"  Transfers logged: {st.get('transfers_logged', 0)}\n\n"
+                        f"  Usage: /transfer <query> [domain:<target>]"
+                    )
+                return "Usage: /transfer <query>"
+            if not self.generalizer:
+                return "FewShotGeneralizer not loaded."
+            tgt_domain = None
+            query = arg
+            if " domain:" in arg:
+                query, _, tgt_domain = arg.partition(" domain:")
+                tgt_domain = tgt_domain.strip()
+            safe_print(col('DIM', "  ⟳  Few-shot generalization — searching memory..."))
+            r = self.generalizer.generalize(query.strip(), target_domain=tgt_domain)
+            return (
+                f"\n  ◈  Few-Shot Transfer (k={r.get('k_found', 0)}, "
+                f"confidence={r.get('confidence', 0):.0%})\n\n"
+                f"{r['synthesized_answer']}"
+            )
+
+        # /emerge — show detected emergent capability synergies
+        if cmd in ('/emerge', '/emergence', '/synergy'):
+            if not self.emergence:
+                return "EmergentIntelligenceEngine not loaded."
+            if arg == 'scan':
+                safe_print(col('DIM', "  ⟳  Scanning for emergent behaviors..."))
+                bns = self.emergence.detect_emergence()
+                if not bns:
+                    return "No emergent behaviors detected yet. Subsystem combinations need more data."
+                lines = [col('CYB', f"\n  ◈  Emergent Intelligence ({len(bns)} behaviors)\n")]
+                for e in bns[:8]:
+                    lines.append(
+                        col('GR', f"  ✦ ") +
+                        f"{'+'.join(e['systems'][:3])} → δ={e['emergence_delta']:.3f}"
+                    )
+                return "\n".join(lines)
+            st = self.emergence.status()
+            strongest = self.emergence.strongest_emergences(5)
+            lines = [col('CYB', "\n  ◈  Emergent Intelligence\n")]
+            lines.append(f"  Systems registered : {st.get('registered_systems', 0)}")
+            lines.append(f"  Combinations tested: {st.get('combinations_tested', 0)}")
+            lines.append(f"  Emergent behaviors : {st.get('emergent_behaviors_found', 0)}")
+            if strongest:
+                lines.append(col('MG', "\n  Strongest synergies:"))
+                for s in strongest:
+                    lines.append(
+                        f"  {'+'.join(s['systems'][:3])} "
+                        f"(strength={s['strength']:.3f}, "
+                        f"triggered×{s['times_triggered']})"
+                    )
+            return "\n".join(lines)
+
+        # /metalearner — meta-learning strategy insights
+        if cmd in ('/metalearner', '/metalear', '/learnstrat'):
+            if not self.meta_learner:
+                return "MetaLearner not loaded."
+            insight = self.meta_learner.meta_insight()
+            lines = [col('CYB', "\n  ◈  Meta-Learner Insight\n")]
+            if insight.get("universal_strategies"):
+                lines.append(col('GR', "  Universal strategies (work across all task types):"))
+                for s in insight["universal_strategies"][:5]:
+                    lines.append(f"    ✦  {s['strategy']} — avg {s['avg_score']:.2f}")
+            if insight.get("specialist_strategies"):
+                lines.append(col('YL', "\n  Specialist strategies:"))
+                for s, note in list(insight["specialist_strategies"].items())[:5]:
+                    lines.append(f"    ·  {s}: {note}")
+            if insight.get("recent_auto_insights"):
+                lines.append(col('MG', "\n  Recent auto-insights:"))
+                for i, ins in enumerate(insight["recent_auto_insights"][:3], 1):
+                    lines.append(f"    {i}. {ins[:100]}")
+            return "\n".join(lines)
+
+        # /cogarch — cognitive architecture status and workspace snapshot
+        if cmd in ('/cogarch', '/workspace', '/attention'):
+            if not self.cogarch:
+                return "CognitiveArchitecture not loaded."
+            if arg == 'cycle':
+                safe_print(col('DIM', "  ⟳  Running cognitive cycle..."))
+                summary = self.cogarch.run_cycle()
+                lines = [col('CYB', "\n  ◈  Cognitive Cycle Complete\n")]
+                for phase, data in summary.get("phases", {}).items():
+                    lines.append(f"  {phase}: {data}")
+                return "\n".join(lines)
+            if arg == 'bottleneck':
+                safe_print(col('DIM', "  ⟳  Detecting cognitive bottleneck..."))
+                bn = self.cogarch.detect_bottleneck()
+                return f"\n  ◈  Bottleneck: {bn.get('bottleneck', 'none')}\n  {bn.get('reason', '')}"
+            if arg == 'memory':
+                slots = self.cogarch.working_memory_snapshot()
+                lines = [col('CYB', f"\n  ◈  Working Memory ({len(slots)} live slots)\n")]
+                for s in slots[:10]:
+                    lines.append(
+                        f"  [{s['salience']:.2f}] {s['key']} ({s['source']}) — "
+                        f"{s['value_preview'][:60]}"
+                    )
+                return "\n".join(lines)
+            st = self.cogarch.status()
+            return (
+                f"\n  ◈  Cognitive Architecture\n\n"
+                f"  Cycle       : {st.get('cycle', 0)} ({st.get('total_cycles', 0)} total)\n"
+                f"  Focus       : {st.get('focus', 'none')}\n"
+                f"  Arousal     : {st.get('arousal', 0):.3f}\n"
+                f"  WM slots    : {st.get('working_memory_slots', 0)}/12 live\n"
+                f"  Subsystems  : {st.get('registered_subsystems', 0)}\n"
+                f"  Bus msgs    : {st.get('bus_messages', 0)}\n"
+                f"  Bottlenecks : {st.get('bottlenecks_detected', 0)}\n\n"
+                f"  Try: /cogarch cycle · /cogarch memory · /cogarch bottleneck"
+            )
 
         # /tone — 528Hz / Solfeggio tone player
         if cmd in ('/tone', '/528', '/solfeggio', '/miracle'):
