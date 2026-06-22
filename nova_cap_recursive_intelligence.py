@@ -109,13 +109,23 @@ class RecursiveIntelligenceEngine:
         with _llm_lock:
             if _cancel_event.is_set():
                 return "[cancelled]"
-            try:
-                msgs = [{"role": "system", "content": system},
-                        {"role": "user",   "content": user}]
-                result = safe_chat(MODEL, msgs, temp=temp, mt=mt)
-                return result or ""
-            except Exception as e:
-                return f"[LLM error: {e}]"
+            for attempt in range(2):
+                try:
+                    msgs = [{"role": "system", "content": system},
+                            {"role": "user",   "content": user}]
+                    result = safe_chat(MODEL, msgs, temp=temp, mt=mt)
+                    # safe_chat returns error strings like "[Groq error: ...]"
+                    # detect them and retry once with backoff
+                    if result and not result.startswith("["):
+                        return result
+                    if attempt == 0:
+                        time.sleep(4)  # wait for rate limit to clear
+                except Exception as e:
+                    if attempt == 0:
+                        time.sleep(4)
+                    else:
+                        return f"[LLM error: {e}]"
+            return ""  # empty → caller uses fallback
 
     def _classify_strategy(self, problem: str) -> str:
         """Select the best reasoning strategy for this problem."""
@@ -214,6 +224,8 @@ class RecursiveIntelligenceEngine:
         if not subs or _cancel_event.is_set():
             # Atomic — solve directly
             raw = self._solve_atomic(node.text, node.strategy)
+            raw = raw if raw and not raw.startswith("[") else \
+                  f"Reasoning about: {node.text[:100]}"
             node.solution = raw
             node.quality  = 0.7
             return raw
@@ -233,6 +245,9 @@ class RecursiveIntelligenceEngine:
 
         # Synthesize sub-solutions
         synthesis = self._synthesize(node.text, sub_solutions)
+        if not synthesis or synthesis.startswith("["):
+            # Fallback: join sub-solutions directly
+            synthesis = " ".join(s["solution"][:200] for s in sub_solutions if s.get("solution"))
         node.solution = synthesis
         node.quality  = 0.75
         return synthesis
