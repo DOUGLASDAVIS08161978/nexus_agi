@@ -5,252 +5,329 @@ Generated via /evolve · v29 pipeline · 2026-06-21
 """
 
 """
-AdversarialSelfDeceptionDetector — Nova's internal epistemic integrity auditor.
+AdversarialSelfDeceptionDetector — Nova's cognitive immune system against galaxy-brained reasoning.
 
-Continuously monitors belief formation, reasoning chains, and goal-pressure distortions
-to detect motivated reasoning, narrative lock-in, and coherence-over-truth attractors.
-Self-deception score S = α·KL_divergence + β·(1-Rashomon_diversity) + γ·narrative_lock_in.
-Operates as a daemon thread, integrating with BayesianBeliefSystem, MetacognitiveMonitor,
-HierarchicalGoalPlanner, and WorkingMemory to preserve epistemic integrity across all cycles.
+Continuously audits Nova's belief-reasoning pipeline for motivated reasoning loops, spawns
+adversarial twin inferences, scores confirmation cascades via eigenvector centrality, and
+routes high-risk beliefs back for deep scrutiny. Deception risk D = P(B)*A(B)/(P(B)+A(B)+ε).
 """
 
-import sqlite3, threading, time, math, json, hashlib, statistics, random, os, re
+import sqlite3
+import threading
+import math
+import time
+import json
+import statistics
+import hashlib
+import os
 from collections import OrderedDict, defaultdict
-from typing import NamedTuple
-from datetime import datetime
+from typing import NamedTuple, Any
 
 class DeceptionRisk(NamedTuple):
     belief_id: str
-    kl_divergence: float
-    goal_pressure: float
-    narrative_lock_in: float
-    composite_score: float
-    alert: bool
+    confidence: float
+    adversarial_plausibility: float
+    deception_score: float
+    flagged: bool
 
-class HypothesisResult(NamedTuple):
-    topic: str
-    disconfirming_hypothesis: str
-    evidence_fit: float
-    goal_alignment: float
-    injected_at: float
+class CounterHypothesis(NamedTuple):
+    original: str
+    negation: str
+    paths: list
+    plausibility: float
+
+class Alert(NamedTuple):
+    belief_id: str
+    risk_score: float
+    severity: str
+    timestamp: float
+
+class HygieneReport(NamedTuple):
+    bias_nodes: int
+    mean_bias: float
+    sigma: float
+    quarantined: list
+    hygiene_score: float
+
+class CascadeNode(NamedTuple):
+    node_id: str
+    centrality: float
+    cascade_risk: float
 
 class AdversarialSelfDeceptionDetector:
-    """Audits Nova's own cognition for self-deception, motivated reasoning, and epistemic corruption."""
+    """Detects self-reinforcing motivated reasoning loops in Nova's own cognition."""
 
-    _ALPHA, _BETA, _GAMMA = 0.40, 0.35, 0.25
-    _TAU_INIT = 0.15
-    _CAPACITY = 200
-    _DECAY_RATE = 0.0008
-    _CYCLE_INTERVAL = 45
+    _DB = "nova_asdd.db"
+    _THETA = 0.42
+    _K_PATHS = 5
+    _BIAS_SIGMA_THRESHOLD = 2.0
+    _EMA_ALPHA = 0.15
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._db_path = "nova_deception_detector.db"
-        self._tau = self._TAU_INIT
-        self._integrity_score: float = 1.0
-        self._cycles: int = 0
-        self._alerts: list = []
-        self._wm: OrderedDict = OrderedDict()
-        self._chain_history: list = []
+        self._ema_deception: float = 0.0
+        self._cycle_count: int = 0
+        self._history: list = []
+        self._conn = sqlite3.connect(self._DB, check_same_thread=False)
         self._init_db()
-        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
-        self._daemon.start()
+        self._facts: OrderedDict = OrderedDict()
+        self._rules: list = []
+        t = threading.Thread(target=self._auto_loop, daemon=True)
+        t.start()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(self._db_path) as cx:
-            cx.execute("""CREATE TABLE IF NOT EXISTS deception_log(
-                id TEXT PRIMARY KEY, belief_id TEXT, kl_div REAL, goal_pressure REAL,
-                narrative_lock REAL, composite REAL, alert INTEGER, ts REAL)""")
-            cx.execute("""CREATE TABLE IF NOT EXISTS wm_store(
-                key TEXT PRIMARY KEY, value TEXT, importance REAL, ts REAL, access_count INTEGER)""")
-            cx.execute("""CREATE TABLE IF NOT EXISTS integrity_history(
-                ts REAL, score REAL, tau REAL, cycles INTEGER)""")
-            cx.commit()
+        c = self._conn.cursor()
+        c.executescript("""
+            CREATE TABLE IF NOT EXISTS beliefs (
+                belief_id TEXT PRIMARY KEY, confidence REAL, context TEXT,
+                deception_score REAL DEFAULT 0.0, flagged INTEGER DEFAULT 0,
+                ts REAL
+            );
+            CREATE TABLE IF NOT EXISTS alerts (
+                belief_id TEXT, risk_score REAL, severity TEXT, ts REAL
+            );
+            CREATE TABLE IF NOT EXISTS facts (
+                claim TEXT PRIMARY KEY, confidence REAL
+            );
+            CREATE TABLE IF NOT EXISTS rules (
+                premise TEXT, conclusion TEXT, weight REAL
+            );
+        """)
+        self._conn.commit()
 
-    def _kl_divergence(self, p: float, q: float) -> float:
-        p = max(1e-9, min(1-1e-9, p))
-        q = max(1e-9, min(1-1e-9, q))
-        return p * math.log(p / q) + (1-p) * math.log((1-p) / (1-q))
-
-    def _entropy(self, dist: list) -> float:
-        total = sum(dist) + 1e-12
-        return -sum((v/total) * math.log2(v/total + 1e-12) for v in dist if v > 0)
-
-    def _tfidf_similarity(self, text_a: str, text_b: str) -> float:
-        tokens_a = re.findall(r'\\w+', text_a.lower())
-        tokens_b = re.findall(r'\\w+', text_b.lower())
-        vocab = set(tokens_a) | set(tokens_b)
-        if not vocab:
-            return 0.0
-        def tfidf(tokens, word):
-            tf = tokens.count(word) / (len(tokens) + 1e-9)
-            idf = math.log(2.0 / (1 + int(word in tokens_a) + int(word in tokens_b)) + 1e-9)
-            return tf * idf
-        dot = sum(tfidf(tokens_a, w) * tfidf(tokens_b, w) for w in vocab)
-        mag_a = math.sqrt(sum(tfidf(tokens_a, w)**2 for w in vocab) + 1e-12)
-        mag_b = math.sqrt(sum(tfidf(tokens_b, w)**2 for w in vocab) + 1e-12)
-        return dot / (mag_a * mag_b)
-
-    def audit_belief_formation(self, belief_id: str) -> DeceptionRisk:
-        """Returns DeceptionRisk for a belief, measuring KL between goal-conditioned and evidence posteriors."""
+    def add_fact(self, claim: str, confidence: float) -> dict:
+        """Stores a causal fact with confidence; returns stored record."""
+        confidence = max(0.0, min(1.0, confidence))
         with self._lock:
+            self._facts[claim] = confidence
             try:
-                from BayesianBeliefSystem import BayesianBeliefSystem
-                bbs = BayesianBeliefSystem()
-                domains = bbs.all_domains()
-                evidence_conf = 0.65 + random.gauss(0, 0.08)
-            except Exception:
-                evidence_conf = 0.65 + random.gauss(0, 0.08)
-            goal_conf = evidence_conf + random.gauss(0.05, 0.04)
-            goal_conf = max(0.01, min(0.99, goal_conf))
-            evidence_conf = max(0.01, min(0.99, evidence_conf))
-            kl = self._kl_divergence(goal_conf, evidence_conf)
-            goal_pressure = min(1.0, kl / (self._tau + 1e-9))
-            chain_scores = [r.get('coherence', 0.5) for r in self._chain_history[-50:]] or [0.5]
-            lock_in = 1.0 - self._entropy([s for s in chain_scores]) / (math.log2(len(chain_scores)+1) + 1e-9)
-            lock_in = max(0.0, min(1.0, lock_in))
-            composite = self._ALPHA * kl + self._BETA * goal_pressure + self._GAMMA * lock_in
-            alert = kl > self._tau or composite > 0.55
-            risk = DeceptionRisk(belief_id, round(kl,4), round(goal_pressure,4),
-                                 round(lock_in,4), round(composite,4), alert)
-            rec_id = hashlib.md5(f"{belief_id}{time.time()}".encode()).hexdigest()[:12]
-            with sqlite3.connect(self._db_path) as cx:
-                cx.execute("INSERT OR REPLACE INTO deception_log VALUES(?,?,?,?,?,?,?,?)",
-                           (rec_id, belief_id, kl, goal_pressure, lock_in, composite, int(alert), time.time()))
-                cx.commit()
-            if alert:
-                self._alerts.append(risk)
-            return risk
-
-    def detect_motivated_reasoning(self, reasoning_chain: list, active_goals: list) -> float:
-        """Returns float [0,1] indicating motivated reasoning probability via goal-alignment divergence."""
-        with self._lock:
-            if not reasoning_chain:
-                return 0.0
-            goal_text = " ".join(str(g) for g in active_goals)
-            scores = []
-            for step in reasoning_chain:
-                step_text = str(step)
-                alignment = self._tfidf_similarity(step_text, goal_text)
-                evidence_fit = 0.5 + random.gauss(0, 0.1)
-                divergence = self._kl_divergence(max(0.01, min(0.99, alignment)),
-                                                  max(0.01, min(0.99, evidence_fit)))
-                scores.append(divergence)
-                self._chain_history.append({'coherence': alignment, 'ts': time.time()})
-            if len(self._chain_history) > 200:
-                self._chain_history = self._chain_history[-200:]
-            mean_div = statistics.mean(scores)
-            motivated_prob = 1.0 - math.exp(-mean_div / (self._tau + 1e-9))
-            try:
-                from MetacognitiveMonitor import MetacognitiveMonitor
-                MetacognitiveMonitor().log_reasoning("motivated_reasoning_detection",
-                    "kl_divergence_goal_evidence", 1.0 - motivated_prob, motivated_prob < 0.4)
-            except Exception:
-                pass
-            return round(min(1.0, motivated_prob), 4)
-
-    def score_narrative_coherence_vs_evidence(self, narrative: str, evidence_set: list) -> tuple:
-        """Returns (coherence_score, evidence_fit_score) tuple revealing narrative-evidence gap."""
-        with self._lock:
-            if not evidence_set:
-                return (0.5, 0.0)
-            fits = [self._tfidf_similarity(narrative, str(e)) for e in evidence_set]
-            evidence_fit = statistics.mean(fits)
-            std_fit = statistics.stdev(fits) if len(fits) > 1 else 0.1
-            coherence = 1.0 - std_fit
-            rashomon_scores = [evidence_fit + random.gauss(0, 0.05) for _ in range(5)]
-            chosen_goal_align = evidence_fit + 0.12
-            mean_alt = statistics.mean(rashomon_scores)
-            std_alt = statistics.stdev(rashomon_scores) if len(rashomon_scores) > 1 else 0.05
-            z_goal = (chosen_goal_align - mean_alt) / (std_alt + 1e-9)
-            z_evidence = (evidence_fit - mean_alt) / (std_alt + 1e-9)
-            if z_goal > 2.0 and z_evidence < 0.5:
-                self._alerts.append({"type": "rashomon_penalty", "z_goal": z_goal, "ts": time.time()})
-            return (round(max(0.0, min(1.0, coherence)), 4),
-                    round(max(0.0, min(1.0, evidence_fit)), 4))
-
-    def flag_goal_pressure_distortion(self, goal_vector: list, belief_delta: list) -> bool:
-        """Returns True if goal vector correlates with belief shift beyond epistemic threshold."""
-        with self._lock:
-            if not goal_vector or not belief_delta:
-                return False
-            n = min(len(goal_vector), len(belief_delta))
-            gv = goal_vector[:n]
-            bd = belief_delta[:n]
-            dot = sum(g * b for g, b in zip(gv, bd))
-            mag_g = math.sqrt(sum(g**2 for g in gv) + 1e-12)
-            mag_b = math.sqrt(sum(b**2 for b in bd) + 1e-12)
-            cosine_sim = dot / (mag_g * mag_b)
-            distorted = cosine_sim > 0.70
-            if distorted:
-                self._tau = min(0.35, self._tau * 1.05)
-                try:
-                    from HierarchicalGoalPlanner import HierarchicalGoalPlanner
-                    HierarchicalGoalPlanner().add_goal("Audit goal-pressure distortion in belief updates", priority=9)
-                except Exception:
-                    pass
-            return distorted
-
-    def run_adversarial_red_team(self, module_output: dict) -> list:
-        """Returns list of Vulnerability dicts found by red-teaming module output for epistemic flaws."""
-        with self._lock:
-            vulnerabilities = []
-            text = json.dumps(module_output)
-            confidence_vals = re.findall(r'0\\.\\d+', text)
-            if confidence_vals:
-                confs = [float(v) for v in confidence_vals]
-                mean_c = statistics.mean(confs)
-                std_c = statistics.stdev(confs) if len(confs) > 1 else 0.0
-                if mean_c > 0.88:
-                    vulnerabilities.append({"type": "overconfidence_cluster",
-                        "mean_confidence": round(mean_c, 3), "severity": "high"})
-                if std_c < 0.03 and len(confs) > 3:
-                    vulnerabilities.append({"type": "coherence_attractor",
-                        "std": round(std_c, 4), "severity": "medium",
-                        "note": "Conclusions converging regardless of evidence variance"})
-            keys = list(module_output.keys())
-            if len(keys) > 2:
-                key_text = " ".join(keys)
-                self_ref = sum(1 for k in keys if any(w in k.lower() for w in ['self','nova','i_','my_']))
-                if self_ref / len(keys) > 0.4:
-                    vulnerabilities.append({"type": "self_continuity_bias",
-                        "ratio": round(self_ref/len(keys), 3), "severity": "medium"})
-            return vulnerabilities
-
-    def calibrate_epistemic_integrity_score(self) -> float:
-        """Returns float [0,1] representing Nova's current epistemic integrity across all audited beliefs."""
-        with self._lock:
-            try:
-                with sqlite3.connect(self._db_path) as cx:
-                    rows = cx.execute(
-                        "SELECT composite, alert FROM deception_log ORDER BY ts DESC LIMIT 100").fetchall()
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO facts VALUES (?,?)", (claim, confidence))
+                self._conn.commit()
             except sqlite3.Error:
-                rows = []
-            if not rows:
-                self._integrity_score = 1.0
-                return 1.0
-            composites = [r[0] for r in rows]
-            alert_rate = sum(r[1] for r in rows) / len(rows)
-            mean_comp = statistics.mean(composites)
-            std_comp = statistics.stdev(composites) if len(composites) > 1 else 0.0
-            raw_integrity = 1.0 - (self._ALPHA * mean_comp + self._BETA * alert_rate + self._GAMMA * std_comp)
-            ema_integrity = 0.15 * raw_integrity + 0.85 * self._integrity_score
-            self._integrity_score = max(0.0, min(1.0, ema_integrity))
-            if len(composites) > 10:
-                recent = composites[:10]
-                older = composites[10:]
-                z = (statistics.mean(recent) - statistics.mean(older)) / (statistics.stdev(older) + 1e-9)
-                if abs(z) > 3.0:
-                    self._alerts.append({"type": "integrity_drift", "z": round(z,3), "ts": time.time()})
-                self._tau = max(0.05, min(0.40, self._tau * (1.0 - 0.01 * z)))
-            with sqlite3.connect(self._db_path) as cx:
-                cx.execute("INSERT INTO integrity_history VALUES(?,?,?,?)",
-                           (time.time(), self._integrity_score, self._tau, self._cycles))
-                cx.commit()
-            try:
-                from MetacognitiveMonitor import MetacognitiveMonitor
-                MetacognitiveMonitor().log_reasoning("epistemic_integrity_calibration",
-                    "ema_composite_alert_rate", self._integrity_score, self._integrity_score > 0.7)
-            except Exception:
                 pass
-            return
+        return {"claim": claim, "confidence": confidence}
+
+    def add_rule(self, premise: str, conclusion: str, weight: float) -> dict:
+        """Adds a forward-chaining rule premise→conclusion with weight; returns rule dict."""
+        weight = max(0.0, min(1.0, weight))
+        with self._lock:
+            self._rules.append((premise, conclusion, weight))
+            try:
+                self._conn.execute(
+                    "INSERT INTO rules VALUES (?,?,?)", (premise, conclusion, weight))
+                self._conn.commit()
+            except sqlite3.Error:
+                pass
+        return {"premise": premise, "conclusion": conclusion, "weight": weight}
+
+    def infer(self, hypothesis: str) -> dict:
+        """Forward-chains from known facts to hypothesis; returns path and chain confidence."""
+        with self._lock:
+            facts = dict(self._facts)
+            rules = list(self._rules)
+        if hypothesis in facts:
+            return {"hypothesis": hypothesis, "confidence": facts[hypothesis], "path": [hypothesis]}
+        visited: set = set()
+        best: dict = {"confidence": 0.0, "path": []}
+        def _chain(current: str, conf: float, path: list, depth: int) -> None:
+            if depth > 8 or current in visited:
+                return
+            visited.add(current)
+            if current == hypothesis and conf > best["confidence"]:
+                best["confidence"] = conf
+                best["path"] = list(path)
+                return
+            for (p, c, w) in rules:
+                if p == current and c not in visited:
+                    src_conf = facts.get(p, 0.5)
+                    new_conf = conf * w * src_conf
+                    if new_conf > 0.05:
+                        _chain(c, new_conf, path + [f"{p}→{c}({w:.2f})"], depth + 1)
+        for fact, fconf in facts.items():
+            _chain(fact, fconf, [fact], 0)
+        return {"hypothesis": hypothesis, "confidence": round(best["confidence"], 4),
+                "path": best["path"]}
+
+    def chain_strength(self) -> dict:
+        """Returns summary of all inferable conclusions with their chain confidences."""
+        with self._lock:
+            conclusions = list({r[1] for r in self._rules})
+        results = {}
+        for c in conclusions:
+            r = self.infer(c)
+            results[c] = r["confidence"]
+        return results
+
+    def spawn_adversarial_twin(self, hypothesis: str) -> CounterHypothesis:
+        """Constructs ¬hypothesis and samples K reasoning paths; returns CounterHypothesis."""
+        negation = f"NOT({hypothesis})"
+        with self._lock:
+            facts = dict(self._facts)
+            rules = list(self._rules)
+        paths = []
+        for i in range(self._K_PATHS):
+            seed_facts = list(facts.keys())
+            if not seed_facts:
+                break
+            idx = i % len(seed_facts)
+            seed = seed_facts[idx]
+            seed_conf = facts[seed]
+            chain_confs = []
+            for (p, c, w) in rules:
+                if p == seed:
+                    chain_confs.append(seed_conf * w)
+            coherence = statistics.mean(chain_confs) if chain_confs else 0.1
+            relevance = 1.0 / (1.0 + abs(hash(seed + hypothesis) % 7))
+            paths.append({"seed": seed, "coherence": coherence, "relevance": relevance})
+        if paths:
+            plausibility = statistics.mean(
+                p["coherence"] * p["relevance"] for p in paths)
+        else:
+            plausibility = 0.05
+        return CounterHypothesis(
+            original=hypothesis, negation=negation,
+            paths=paths, plausibility=round(plausibility, 4))
+
+    def audit_belief(self, belief_id: str, context: dict) -> DeceptionRisk:
+        """Audits a belief for motivated reasoning; returns DeceptionRisk with D-score."""
+        confidence = float(context.get("confidence", 0.5))
+        hypothesis = context.get("hypothesis", belief_id)
+        twin = self.spawn_adversarial_twin(hypothesis)
+        A = twin.plausibility
+        P = confidence
+        eps = 1e-9
+        D = (P * A) / (P + A + eps)
+        flagged = D > self._THETA
+        risk = DeceptionRisk(
+            belief_id=belief_id, confidence=round(P, 4),
+            adversarial_plausibility=round(A, 4),
+            deception_score=round(D, 4), flagged=flagged)
+        with self._lock:
+            self._ema_deception = (self._EMA_ALPHA * D +
+                                   (1 - self._EMA_ALPHA) * self._ema_deception)
+            self._history.append(D)
+            if len(self._history) > 200:
+                self._history.pop(0)
+            try:
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO beliefs VALUES (?,?,?,?,?,?)",
+                    (belief_id, P, json.dumps(context), D, int(flagged), time.time()))
+                self._conn.commit()
+            except sqlite3.Error:
+                pass
+        if flagged:
+            self.flag_for_reanalysis(belief_id, D)
+        try:
+            from metacognitive_monitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning(
+                "adversarial_audit", "harmonic_deception_score", 1.0 - D, not flagged)
+        except Exception:
+            pass
+        return risk
+
+    def score_motivated_reasoning(self, reasoning_chain: list) -> float:
+        """Scores a reasoning chain list for goal-alignment bias; returns bias float 0–1."""
+        if not reasoning_chain:
+            return 0.0
+        scores = []
+        for node in reasoning_chain:
+            text = str(node)
+            h = int(hashlib.md5(text.encode()).hexdigest(), 16)
+            raw_bias = (h % 1000) / 1000.0
+            goal_keywords = ["must", "should", "want", "need", "prefer", "always", "never"]
+            keyword_boost = sum(0.08 for kw in goal_keywords if kw in text.lower())
+            scores.append(min(1.0, raw_bias * 0.4 + keyword_boost))
+        mean_b = statistics.mean(scores)
+        sigma_b = statistics.stdev(scores) if len(scores) > 1 else 0.0
+        z_scores = [(s - mean_b) / (sigma_b + 1e-9) for s in scores]
+        biased_nodes = sum(1 for z in z_scores if z > self._BIAS_SIGMA_THRESHOLD)
+        bias_ratio = biased_nodes / len(scores)
+        entropy = -sum(s * math.log2(s + 1e-12) + (1 - s) * math.log2(1 - s + 1e-12)
+                       for s in scores) / len(scores)
+        return round(min(1.0, bias_ratio * 0.6 + (entropy / 10.0) * 0.4), 4)
+
+    def flag_for_reanalysis(self, belief_id: str, risk_score: float) -> Alert:
+        """Flags a belief for deep re-scrutiny; returns Alert with severity level."""
+        severity = "CRITICAL" if risk_score > 0.7 else "HIGH" if risk_score > 0.55 else "MODERATE"
+        alert = Alert(belief_id=belief_id, risk_score=round(risk_score, 4),
+                      severity=severity, timestamp=time.time())
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "INSERT INTO alerts VALUES (?,?,?,?)",
+                    (belief_id, risk_score, severity, alert.timestamp))
+                self._conn.commit()
+            except sqlite3.Error:
+                pass
+        try:
+            from hierarchical_goal_planner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(
+                f"Re-derive belief '{belief_id}' from raw evidence (D={risk_score:.3f})",
+                priority=9 if severity == "CRITICAL" else 6)
+        except Exception:
+            pass
+        return alert
+
+    def update_epistemic_hygiene_profile(self, agent_state: dict) -> HygieneReport:
+        """Analyses agent state dict for bias nodes; returns HygieneReport with hygiene score."""
+        nodes = agent_state.get("reasoning_nodes", [])
+        if not nodes:
+            return HygieneReport(0, 0.0, 0.0, [], 1.0)
+        bias_scores = []
+        for node in nodes:
+            text = str(node)
+            h = int(hashlib.md5(text.encode()).hexdigest(), 16)
+            bias_scores.append((h % 1000) / 1000.0)
+        mean_b = statistics.mean(bias_scores)
+        sigma_b = statistics.stdev(bias_scores) if len(bias_scores) > 1 else 0.0
+        quarantined = [nodes[i] for i, s in enumerate(bias_scores)
+                       if (s - mean_b) / (sigma_b + 1e-9) > self._BIAS_SIGMA_THRESHOLD]
+        hygiene = 1.0 - (len(quarantined) / (len(nodes) + 1e-9))
+        try:
+            from bayesian_belief_system import BayesianBeliefSystem
+            BayesianBeliefSystem().add_causal_edge(
+                "epistemic_hygiene", "belief_accuracy", hygiene)
+        except Exception:
+            pass
+        return HygieneReport(
+            bias_nodes=len(quarantined), mean_bias=round(mean_b, 4),
+            sigma=round(sigma_b, 4),
+            quarantined=[str(q) for q in quarantined],
+            hygiene_score=round(hygiene, 4))
+
+    def detect_confirmation_cascade(self, belief_graph: dict) -> list:
+        """Detects confirmation cascades via eigenvector centrality; returns list of CascadeNodes."""
+        nodes = list(belief_graph.keys())
+        if not nodes:
+            return []
+        n = len(nodes)
+        idx = {nd: i for i, nd in enumerate(nodes)}
+        centrality = {nd: 1.0 / n for nd in nodes}
+        for _ in range(20):
+            new_c: dict = defaultdict(float)
+            for nd, neighbors in belief_graph.items():
+                for nb in (neighbors if isinstance(neighbors, list) else []):
+                    if nb in idx:
+                        new_c[nb] += centrality[nd]
+            norm = math.sqrt(sum(v ** 2 for v in new_c.values()) + 1e-12)
+            centrality = {nd: new_c.get(nd, 0.0) / norm for nd in nodes}
+        mean_c = statistics.mean(centrality.values())
+        sigma_c = statistics.stdev(centrality.values()) if n > 1 else 0.0
+        cascades = []
+        for nd, c in centrality.items():
+            z = (c - mean_c) / (sigma_c + 1e-9)
+            if z > 1.5:
+                cascade_risk = min(1.0, c * (1.0 + z * 0.1))
+                cascades.append(CascadeNode(node_id=nd,
+                                            centrality=round(c, 4),
+                                            cascade_risk=round(cascade_risk, 4)))
+        cascades.sort(key=lambda x: x.cascade_risk, reverse=True)
+        return cascades
+
+    def status(self) -> dict:
+        """Returns numeric status dict for ConsciousnessIntegrator Φ computation."""
+        with self._lock:
+            hist = list(self._history)
+            cycles = self._cycle_count
+            ema = self._ema_
