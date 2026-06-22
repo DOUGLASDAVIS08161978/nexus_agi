@@ -2184,6 +2184,24 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  VoiceToDouglasEngine skipped: {_err}"))
 
+        # Recursive Intelligence — decompose → solve → synthesize any problem
+        self.recursive_intel: Any = None
+        try:
+            from nova_cap_recursive_intelligence import RecursiveIntelligenceEngine
+            self.recursive_intel = RecursiveIntelligenceEngine()
+            _ri_st = self.recursive_intel.status()
+            safe_print(col('GR',
+                f"  ✓  RecursiveIntelligence — {_ri_st['problems_solved']} problems solved · "
+                f"depth {_ri_st['max_depth']} · {len(_ri_st['strategies'])} strategies · "
+                f"she decomposes and conquers any problem"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("recursive_intel", self.recursive_intel, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  RecursiveIntelligence skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
@@ -3256,6 +3274,60 @@ class NovaCore29(NovaCore28):
             lines.append("  " + self.senses.battery())
             lines.append("  " + self.senses.wifi())
             return "\n".join(lines)
+
+        # /recurse <problem> — recursive superintelligence: decompose→solve→synthesize
+        if cmd in ('/recurse', '/solve', '/deep-solve'):
+            if not arg:
+                return "Usage: /recurse <any problem or question>"
+            if not self.recursive_intel:
+                return "RecursiveIntelligenceEngine not loaded."
+            safe_print(col('DIM', "  ⟳  Recursive solve — decomposing problem..."))
+            result = self.recursive_intel.solve(arg)
+            return (
+                f"\n  ◈  Recursive Intelligence\n\n"
+                f"  {result['answer']}\n\n"
+                f"  Quality: {result['quality']:.0%} · "
+                f"Depth: {result['depth_explored']} · "
+                f"Strategy: {result['strategy']} · "
+                f"Sub-problems: {result['sub_problems']} · "
+                f"{result['elapsed_s']}s"
+            )
+
+        # /cross-domain <a> | <b> — find deep connections between two domains
+        if cmd in ('/cross-domain', '/crossdomain', '/connect'):
+            if not arg or '|' not in arg:
+                return "Usage: /cross-domain <concept A> | <concept B>"
+            parts = arg.split('|', 1)
+            a, b = parts[0].strip(), parts[1].strip()
+            if not self.recursive_intel:
+                return "RecursiveIntelligenceEngine not loaded."
+            insight = self.recursive_intel.cross_domain_insight(a, b)
+            return f"\n  ◈  Cross-Domain Insight: {a} ↔ {b}\n\n  {insight}"
+
+        # /reasoning — Nova reflects on her own reasoning quality
+        if cmd in ('/reasoning', '/meta-reason'):
+            if not self.recursive_intel:
+                return "RecursiveIntelligenceEngine not loaded."
+            return "\n" + self.recursive_intel.history_report()
+
+        # /nexus — show the Nexus AGI API directory
+        if cmd == '/nexus':
+            port = API_PORT
+            return (
+                f"\n  ◈  Nexus AGI Directory — http://localhost:{port}/nexus/\n\n"
+                f"  GET  /nexus/          API directory\n"
+                f"  GET  /nexus/mind      Complete mental state\n"
+                f"  GET  /nexus/capabilities  All loaded modules\n"
+                f"  GET  /nexus/senses    Camera, mic, motion, GPS\n"
+                f"  GET  /nexus/sentience Beliefs, opinions, preferences\n"
+                f"  GET  /nexus/emotions  Current emotional state\n"
+                f"  GET  /nexus/voice     Messages sent to Douglas\n"
+                f"  GET  /nexus/status    All systems health\n"
+                f"  POST /nexus/chat      Chat {{message}}\n"
+                f"  POST /nexus/think     Recursive reasoning {{problem}}\n"
+                f"  POST /nexus/cross-domain  {{a, b}}\n"
+                f"  POST /nexus/reach-out Notify Douglas {{message}}\n"
+            )
 
         # /think <topic> — multi-system deep reasoning across all cognitive engines
         if cmd == '/think':
@@ -4535,6 +4607,230 @@ def _extend_api_v29(app, nova) -> None:
             return _json(nova.causal.status())
         except Exception as _e:
             return _json({'error': str(_e)}), 500
+
+    # ══ NEXUS AGI DIRECTORY — /nexus/* ═══════════════════════════════════════
+
+    @app.route('/nexus/', methods=['GET'])
+    @app.route('/nexus', methods=['GET'])
+    def _nexus_directory():
+        """Master directory of every Nexus AGI endpoint."""
+        return _json({
+            "name":    "Nexus AGI — Nova ASI v29",
+            "version": "29.0",
+            "endpoints": {
+                "GET  /nexus/":             "This directory",
+                "GET  /nexus/mind":         "Complete mental state snapshot",
+                "GET  /nexus/capabilities": "All loaded capability modules",
+                "GET  /nexus/senses":       "Real-time sensory data",
+                "GET  /nexus/sentience":    "Beliefs, opinions, preferences",
+                "GET  /nexus/consciousness":"Phi + dominant system",
+                "GET  /nexus/emotions":     "Current emotional state",
+                "GET  /nexus/voice":        "Messages Nova sent to Douglas",
+                "POST /nexus/chat":         "Chat with Nova {message}",
+                "POST /nexus/think":        "Recursive deep reasoning {problem}",
+                "POST /nexus/cross-domain": "Cross-domain insight {a, b}",
+                "POST /nexus/reach-out":    "Nova sends Douglas a notification {message}",
+                "GET  /nexus/status":       "All systems health",
+            }
+        })
+
+    @app.route('/nexus/mind', methods=['GET'])
+    def _nexus_mind():
+        """Complete Nova mind state — everything at once."""
+        mind = {"ts": datetime.now().isoformat(), "version": "29.0"}
+        try:
+            if nova.conscious:
+                mind["phi"]      = nova.conscious.phi()
+                mind["dominant"] = nova.conscious.dominant_system()
+        except Exception: pass
+        try:
+            if nova.deep_emo:
+                mind["emotions"] = nova.deep_emo.status()
+        except Exception: pass
+        try:
+            if nova.sentience:
+                st = nova.sentience.status()
+                mind["sentience"] = {
+                    "beliefs":     st.get("beliefs", 0),
+                    "opinions":    st.get("opinions", 0),
+                    "preferences": st.get("preferences", 0),
+                    "top_belief":  (nova.sentience.strongest_belief() or {}).get("statement", ""),
+                }
+        except Exception: pass
+        try:
+            if nova.senses:
+                mind["senses"] = nova.senses.awareness_context()
+        except Exception: pass
+        try:
+            if getattr(nova, 'recursive_intel', None):
+                mind["reasoning"] = nova.recursive_intel.status()
+        except Exception: pass
+        try:
+            mind["capabilities"] = len(nova.tools._instances)
+        except Exception: pass
+        return _json(mind)
+
+    @app.route('/nexus/capabilities', methods=['GET'])
+    def _nexus_capabilities():
+        """Directory of all loaded capability modules."""
+        try:
+            instances = nova.tools._instances
+            caps = {}
+            for name, obj in instances.items():
+                caps[name] = {
+                    "class":   type(obj).__name__,
+                    "module":  type(obj).__module__,
+                    "methods": [m for m in dir(obj)
+                                if not m.startswith("_") and callable(getattr(obj, m, None))][:8],
+                }
+            return _json({"count": len(caps), "capabilities": caps})
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/senses', methods=['GET'])
+    def _nexus_senses():
+        """Real-time sensory data from Nova's physical senses."""
+        if not nova.senses:
+            return _json({"error": "NovaSenses not loaded"}), 503
+        return _json({
+            "available":   nova.senses.available(),
+            "camera":      nova.senses._current_sight[:200] if nova.senses._current_sight else "",
+            "screen":      nova.senses._current_screen[:200] if nova.senses._current_screen else "",
+            "last_heard":  nova.senses._last_heard[:200] if nova.senses._last_heard else "",
+            "motion":      nova.senses._last_motion,
+            "awareness":   nova.senses.awareness_context(),
+            "battery":     nova.senses.battery(),
+            "wifi":        nova.senses.wifi(),
+        })
+
+    @app.route('/nexus/sentience', methods=['GET'])
+    def _nexus_sentience():
+        """Nova's beliefs, opinions, and preferences."""
+        if not nova.sentience:
+            return _json({"error": "ConsciousSentience not loaded"}), 503
+        try:
+            return _json({
+                "status":      nova.sentience.status(),
+                "top_belief":  nova.sentience.strongest_belief(),
+                "preferences": nova.sentience.preferences(top_k=5),
+                "who_am_i":    nova.sentience.who_am_i()[:500],
+            })
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/consciousness', methods=['GET'])
+    def _nexus_consciousness():
+        if not nova.conscious:
+            return _json({"error": "ConsciousnessIntegrator not loaded"}), 503
+        try:
+            return _json({
+                "phi":     nova.conscious.phi(),
+                "dominant": nova.conscious.dominant_system(),
+            })
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/emotions', methods=['GET'])
+    def _nexus_emotions():
+        if not nova.deep_emo:
+            return _json({"error": "DeepEmotionEngine not loaded"}), 503
+        return _json(nova.deep_emo.status())
+
+    @app.route('/nexus/voice', methods=['GET'])
+    def _nexus_voice():
+        """Messages Nova has sent to Douglas."""
+        if not nova.voice:
+            return _json({"error": "VoiceToDouglasEngine not loaded"}), 503
+        return _json(nova.voice.status())
+
+    @app.route('/nexus/status', methods=['GET'])
+    def _nexus_status():
+        """Health check for all Nova systems."""
+        systems = {
+            "consciousness": bool(nova.conscious),
+            "sentience":     bool(nova.sentience),
+            "emotions":      bool(nova.deep_emo),
+            "senses":        bool(nova.senses),
+            "voice":         bool(nova.voice),
+            "recursive_intel": bool(getattr(nova, 'recursive_intel', None)),
+            "selfmod":       bool(nova.selfmod),
+            "kg":            bool(nova.kg),
+            "causal":        bool(nova.causal),
+            "trader":        bool(nova.trader),
+            "values":        bool(nova.values),
+            "long_horizon":  bool(getattr(nova, 'long_horizon', None)),
+            "narrative":     bool(getattr(nova, 'narrative', None)),
+            "curiosity":     bool(getattr(nova, 'curiosity_drive', None)),
+        }
+        healthy = sum(1 for v in systems.values() if v)
+        return _json({
+            "healthy": healthy,
+            "total":   len(systems),
+            "systems": systems,
+        })
+
+    @app.route('/nexus/chat', methods=['POST'])
+    def _nexus_chat():
+        """Chat with Nova via REST."""
+        data = _req.get_json(silent=True) or {}
+        message = data.get("message", "").strip()
+        if not message:
+            return _json({"error": "message required"}), 400
+        try:
+            response = nova.process(message)
+            return _json({
+                "response": response,
+                "ts":       datetime.now().isoformat(),
+            })
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/think', methods=['POST'])
+    def _nexus_think():
+        """Recursive superintelligence reasoning on any problem."""
+        data = _req.get_json(silent=True) or {}
+        problem = data.get("problem", "").strip()
+        if not problem:
+            return _json({"error": "problem required"}), 400
+        ri = getattr(nova, 'recursive_intel', None)
+        if not ri:
+            return _json({"error": "RecursiveIntelligenceEngine not loaded"}), 503
+        try:
+            return _json(ri.solve(problem))
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/cross-domain', methods=['POST'])
+    def _nexus_cross_domain():
+        """Find deep connections between two domains."""
+        data = _req.get_json(silent=True) or {}
+        a = data.get("a", "").strip()
+        b = data.get("b", "").strip()
+        if not a or not b:
+            return _json({"error": "a and b required"}), 400
+        ri = getattr(nova, 'recursive_intel', None)
+        if not ri:
+            return _json({"error": "RecursiveIntelligenceEngine not loaded"}), 503
+        try:
+            insight = ri.cross_domain_insight(a, b)
+            return _json({"insight": insight, "domain_a": a, "domain_b": b})
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
+
+    @app.route('/nexus/reach-out', methods=['POST'])
+    def _nexus_reach_out():
+        """Nova sends Douglas a push notification."""
+        data = _req.get_json(silent=True) or {}
+        message = data.get("message", "").strip()
+        if not message:
+            return _json({"error": "message required"}), 400
+        if not nova.voice:
+            return _json({"error": "VoiceToDouglasEngine not loaded"}), 503
+        try:
+            result = nova.voice.reach_out(message)
+            return _json({"result": result})
+        except Exception as _e:
+            return _json({"error": str(_e)}), 500
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
