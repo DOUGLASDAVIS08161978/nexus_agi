@@ -4963,8 +4963,9 @@ if __name__ == '__main__':
             _is_cmd   = user_input.lstrip().startswith('/')
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
-            _timeout  = 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
-                                              '/cross-domain', '/crossdomain') \
+            _timeout  = 600 if _cmd_word in ('/build', '/evolve', '/forge') \
+                        else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
+                                              '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
             _spinner_msg = "Nova is working..." if _is_cmd else "Nova is thinking"
             with _NovaSpinner(_spinner_msg):
