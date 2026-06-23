@@ -21,6 +21,7 @@ import tempfile
 import subprocess
 import time
 import threading
+import shutil
 from typing import Optional, Dict, Any
 
 try:
@@ -53,8 +54,14 @@ def _run(cmd: list, timeout: int = 10) -> tuple:
 
 
 def _has(cmd: str) -> bool:
-    _, _, rc = _run(["which", cmd], timeout=3)
-    return rc == 0
+    """Check if a Termux command is available.
+    shutil.which is more reliable than subprocess 'which' on Android
+    because PATH may not be fully populated at process start."""
+    if shutil.which(cmd) is not None:
+        return True
+    # Termux installs binaries here even when PATH isn't fully set
+    termux_bin = "/data/data/com.termux/files/usr/bin"
+    return os.path.isfile(os.path.join(termux_bin, cmd))
 
 
 class NovaSenses:
@@ -117,7 +124,7 @@ class NovaSenses:
     def _capture_and_describe(self, camera_id: int = 0) -> str:
         """Take a fresh photo and describe it."""
         if not self._available.get("camera"):
-            return "[Nova has no camera access — install termux-api and grant camera permission]"
+            self._available["camera"] = _has("termux-camera-photo")
 
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
             path = f.name
@@ -127,6 +134,10 @@ class NovaSenses:
                 ["termux-camera-photo", "-c", str(camera_id), path],
                 timeout=20
             )
+            if rc == 127:
+                self._available["camera"] = False
+                return "[Nova has no camera access — install termux-api and grant camera permission]"
+            self._available["camera"] = True
             if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
                 return f"[Camera capture failed: {err or 'no image produced'}]"
 
@@ -157,17 +168,23 @@ class NovaSenses:
 
     def _capture_screen(self) -> str:
         """Take a screenshot and describe it via Groq vision."""
+        # Re-scan at call time — PATH may not be set at boot even if pkg is installed
         if not self._available.get("screen"):
-            return (
-                "[Screen capture unavailable — run: pkg install termux-api\n"
-                " then grant the Termux:API accessibility/screenshot permission]"
-            )
+            self._available["screen"] = _has("termux-screenshot")
 
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             path = f.name
 
         try:
             _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
+            if rc == 127:
+                # Binary genuinely not found — update flag and show install message
+                self._available["screen"] = False
+                return (
+                    "[Screen capture unavailable — run: pkg install termux-api\n"
+                    " then grant the Termux:API accessibility/screenshot permission]"
+                )
+            self._available["screen"] = True
             if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
                 return f"[Screenshot failed: {err or 'no image produced'}]"
 

@@ -1197,8 +1197,11 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             return False, None, str(e)
         finally:
             if tmp:
-                try: os.unlink(tmp)
-                except: pass
+                try:
+                    if os.path.exists(tmp):
+                        os.unlink(tmp)
+                except OSError:
+                    pass
 
     # ── 3. ASI Intelligence Scorer ────────────────────────────────────────────
 
@@ -1701,9 +1704,9 @@ class NovaCore29(NovaCore28):
         self.hunter = APIHunter()
         initial_tools = self.tools.scan()
 
-        # Skip NovaCore28.__init__ tool setup, call NovaCore27's parent
-        from nova_asi_v27 import NovaCore27
-        NovaCore27.__init__(self)
+        # Proper MRO chain: v29 → v28 → v27 → v26 → v25
+        # v28 guards against overwriting self.tools/hunter if already set
+        super().__init__()
 
         self.improver = SelfImprovementEngineV29(
             self.github, self.tools, self.hunter

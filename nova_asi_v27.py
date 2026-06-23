@@ -84,6 +84,8 @@ IMPROVE_DB     = _p27("improvements")
 class GitHubEngine:
     """Nova's ability to write to her own repository."""
 
+    _LOG_PATH = os.path.join(BASE_DIR, "nova_github.log")
+
     def __init__(self, token: str = None, repo: str = None):
         # Read at call time so .env updates take effect without restart
         self.token  = (token or os.getenv("GITHUB_TOKEN", "")).strip()
@@ -94,6 +96,17 @@ class GitHubEngine:
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json"
         } if self.token else {}
+
+    def _log(self, level: str, msg: str) -> None:
+        """Write a timestamped log entry to stdout and nova_github.log."""
+        ts = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        line = f"{ts} [{level}] {msg}"
+        print(f"  [GitHub] {msg}")
+        try:
+            with open(self._LOG_PATH, "a", encoding="utf-8") as _f:
+                _f.write(line + "\n")
+        except OSError:
+            pass
 
     def _get(self, path: str) -> dict:
         if not self.active: return {"error": "GitHub token not set"}
@@ -147,21 +160,22 @@ class GitHubEngine:
         """Push refspec to GitHub trying two auth methods."""
         tok = self.token
         repo = self.repo
-        print(f"  [GitHub] token len={len(tok)} prefix={tok[:7] if len(tok)>7 else '?'}")
+        self._log("INFO", f"push token len={len(tok)} prefix={tok[:7] if len(tok)>7 else '?'}")
         # Method 1: x-access-token (classic PATs + fine-grained)
         url1 = f"https://x-access-token:{tok}@github.com/{repo}.git"
         rc, out, err = self._git("push", url1, refspec, timeout=timeout)
         if rc == 0:
+            self._log("INFO", f"push method1 succeeded for {refspec}")
             return rc, out, err
-        print(f"  [GitHub] push method1 failed: {err[:80]}")
+        self._log("WARN", f"push method1 failed: {err[:80]}")
         # Method 2: token as username, empty password (also widely supported)
         url2 = f"https://{tok}:@github.com/{repo}.git"
         rc, out, err = self._git("push", url2, refspec, timeout=timeout)
         if rc == 0:
+            self._log("INFO", f"push method2 succeeded for {refspec}")
             return rc, out, err
-        print(f"  [GitHub] push method2 failed: {err[:80]}")
+        self._log("WARN", f"push method2 failed: {err[:80]}")
         # Method 3: git -c http.extraheader with Bearer token
-        owner = repo.split("/")[0] if "/" in repo else ""
         base = os.path.expanduser("~/nexus_agi")
         env = os.environ.copy()
         env["GIT_TERMINAL_PROMPT"] = "0"
@@ -178,11 +192,12 @@ class GitHubEngine:
                 timeout=timeout, env=env
             )
             if r.returncode == 0:
-                print(f"  [GitHub] push method3 (Basic auth header) succeeded")
+                self._log("INFO", f"push method3 (Basic auth header) succeeded")
                 return r.returncode, r.stdout.strip(), r.stderr.strip()
-            print(f"  [GitHub] push method3 failed: {r.stderr.strip()[:80]}")
+            self._log("ERROR", f"push method3 failed: {r.stderr.strip()[:80]}")
             return r.returncode, r.stdout.strip(), r.stderr.strip()
         except Exception as _e:
+            self._log("ERROR", f"push all methods failed: {_e}")
             return -1, "", str(_e)
 
     def get_branch_sha(self, branch: str = BASE_BRANCH) -> str:
@@ -202,16 +217,16 @@ class GitHubEngine:
         rc, out, err = self._git("ls-remote", "origin", f"refs/heads/{branch}")
         if rc == 0 and out:
             sha = out.split()[0]
-            print(f"  [GitHub] git CLI got SHA for {branch}: {sha[:8]}...")
+            self._log("INFO", f"git CLI got SHA for {branch}: {sha[:8]}...")
             return sha
-        print(f"  [GitHub] get_branch_sha: both API and git CLI failed. err={err[:80]}")
+        self._log("ERROR", f"get_branch_sha failed. err={err[:80]}")
         return ""
 
     def create_branch(self, branch_name: str, from_branch: str = BASE_BRANCH) -> bool:
         """Create a new branch — API first, git push fallback."""
         sha = self.get_branch_sha(from_branch)
         if not sha:
-            print(f"  [GitHub] create_branch: no SHA for '{from_branch}'")
+            self._log("ERROR", f"create_branch: no SHA for '{from_branch}'")
             return False
         # Try GitHub API
         if self.active:
@@ -221,13 +236,13 @@ class GitHubEngine:
             })
             if "ref" in result:
                 return True
-            print(f"  [GitHub] API create_branch failed: {str(result)[:100]}")
+            self._log("WARN", f"API create_branch failed: {str(result)[:100]}")
         # Fallback: git push with token auth (tries 3 methods)
         rc, out, err = self._git_push_auth(f"{sha}:refs/heads/{branch_name}")
         if rc == 0:
-            print(f"  [GitHub] git CLI created branch {branch_name}")
+            self._log("INFO", f"git CLI created branch {branch_name}")
             return True
-        print(f"  [GitHub] all push methods failed")
+        self._log("ERROR", f"create_branch all methods failed for {branch_name}")
         return False
 
     # ── File operations ───────────────────────────────────────────────────────
@@ -248,8 +263,9 @@ class GitHubEngine:
                 data["sha"] = existing["sha"]
             result = self._put(f"/repos/{self.repo}/contents/{path}", data)
             if "content" in result or "commit" in result:
+                self._log("INFO", f"API committed {path} → {branch}")
                 return result
-            print(f"  [GitHub] API commit_file failed: {str(result)[:100]}")
+            self._log("WARN", f"API commit_file failed: {str(result)[:100]}")
 
         # Fallback: git worktree (safe — doesn't touch current branch)
         import tempfile, shutil
@@ -268,26 +284,35 @@ class GitHubEngine:
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "w", encoding="utf-8") as _f:
                 _f.write(content)
-            subprocess.run(["git", "add", path], cwd=wt, capture_output=True)
-            subprocess.run(
+            subprocess.run(["git", "add", path], cwd=wt,
+                           capture_output=True, timeout=20)
+            commit_result = subprocess.run(
                 ["git", "commit", "-m", message,
                  "--author", "Nova ASI <nova@nexus-agi.local>"],
-                cwd=wt, capture_output=True
+                cwd=wt, capture_output=True, timeout=30
             )
+            if commit_result.returncode != 0:
+                err_msg = commit_result.stderr.decode(errors="replace")[:120]
+                self._log("ERROR", f"git commit failed: {err_msg}")
+                return {"error": f"git commit failed: {err_msg}",
+                        "commit": None, "content": None}
             rc, _, err = self._git_push_auth(f"{branch}:{branch}", timeout=30)
             if rc == 0:
-                print(f"  [GitHub] git worktree committed {path} to {branch}")
-                return {"commit": {"sha": "git-cli"}}
-            print(f"  [GitHub] git worktree push failed: {err[:80]}")
+                self._log("INFO", f"worktree committed {path} → {branch}")
+                return {"commit": {"sha": "git-cli"}, "content": {"name": path}}
+            self._log("ERROR", f"worktree push failed: {err[:80]}")
+        except subprocess.TimeoutExpired as _e:
+            self._log("ERROR", f"worktree timed out: {_e}")
         except Exception as _e:
-            print(f"  [GitHub] git worktree commit_file error: {_e}")
+            self._log("ERROR", f"worktree commit_file error: {_e}")
         finally:
             try:
                 self._git("worktree", "remove", "--force", wt)
                 shutil.rmtree(wt, ignore_errors=True)
             except Exception:
                 pass
-        return {"error": "commit_file failed via both API and git CLI"}
+        return {"error": "commit_file failed via both API and git CLI",
+                "commit": None, "content": None}
 
     # ── Pull request operations ───────────────────────────────────────────────
 
