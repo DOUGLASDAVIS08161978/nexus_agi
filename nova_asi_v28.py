@@ -401,6 +401,9 @@ class ToolLoader:
 
     def start_watching(self):
         """Start background thread that rescans every TOOL_SCAN_INTERVAL s."""
+        if getattr(self, '_watching', False):
+            return
+        self._watching = True
         def _watch():
             while True:
                 try:
@@ -599,8 +602,11 @@ class NovaCore28(NovaCore27):
 
     def __init__(self):
         # Boot tool loader + API hunter before super().__init__
-        self.tools   = ToolLoader()
-        self.hunter  = APIHunter()
+        # Guards let subclasses (e.g. v29's SilentToolLoader) pre-set these
+        if not hasattr(self, 'tools') or self.tools is None:
+            self.tools  = ToolLoader()
+        if not hasattr(self, 'hunter') or self.hunter is None:
+            self.hunter = APIHunter()
         initial_tools = self.tools.scan()
 
         super().__init__()
