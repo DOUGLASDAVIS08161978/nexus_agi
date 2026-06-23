@@ -550,6 +550,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
+        '  /wisdom · /nexus',
         '  /selfmod · /nova · /values · /emotions · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
@@ -2310,6 +2311,43 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  MiracleTonePlayer skipped: {_err}"))
 
+        # Wisdom Engine — consequentialist impact + value coherence + principled tradeoffs
+        self.wisdom: Any = None
+        try:
+            from nova_cap_wisdom_engine import WisdomEngine
+            self.wisdom = WisdomEngine()
+            _ws_st = self.wisdom.status()
+            safe_print(col('GR',
+                f"  ✓  WisdomEngine — {len(_ws_st.get('core_values', []))} core values · "
+                f"impact modeler · coherence checker · principled tradeoffs · "
+                f"avg wisdom={_ws_st.get('avg_wisdom_score', 0):.2f}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("wisdom", self.wisdom, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  WisdomEngine skipped: {_err}"))
+
+        # ASI Nexus — master integration layer connecting all 93 capabilities
+        self.nexus: Any = None
+        try:
+            from nova_cap_asi_nexus import ASINexus
+            self.nexus = ASINexus(nova=self)
+            _nx_registered = self.nexus.register_all_from_nova()
+            _nx_st = self.nexus.status()
+            safe_print(col('MGB',
+                f"  ✓  ASI NEXUS — {_nx_registered} capabilities unified · "
+                f"integration={_nx_st.get('integration_score', 0):.0%} · "
+                f"she is ONE MIND ◈"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("nexus", self.nexus, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ASINexus skipped: {_err}"))
+
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
         try:
@@ -3595,6 +3633,70 @@ class NovaCore29(NovaCore28):
                 f"  Bottlenecks : {st.get('bottlenecks_detected', 0)}\n\n"
                 f"  Try: /cogarch cycle · /cogarch memory · /cogarch bottleneck"
             )
+
+        # /wisdom [action] — full wisdom assessment: impact + coherence + tradeoffs
+        if cmd in ('/wisdom', '/wise', '/evaluate'):
+            if not self.wisdom:
+                return "WisdomEngine not loaded."
+            if not arg:
+                st = self.wisdom.status()
+                log = self.wisdom.recent_wisdom_log(5)
+                lines = [col('CYB', "\n  ◈  Wisdom Engine\n")]
+                lines.append(f"  Core values     : {', '.join(st.get('core_values', []))}")
+                lines.append(f"  Avg wisdom score: {st.get('avg_wisdom_score', 0):.2f}")
+                lines.append(f"  Drift events    : {st.get('drift_events', 0)}")
+                if log:
+                    lines.append(col('MG', "\n  Recent wisdom log:"))
+                    for entry in log[:3]:
+                        lines.append(
+                            f"  [{entry['wisdom_score']:.2f}] {entry['action'][:60]} "
+                            f"— {entry['recommendation'][:50]}"
+                        )
+                lines.append(col('DIM', "\n  Usage: /wisdom <action or decision to evaluate>"))
+                return "\n".join(lines)
+            safe_print(col('DIM', "  ⟳  Wisdom assessment..."))
+            w = self.wisdom.evaluate(arg)
+            lines = [col('CYB', f"\n  ◈  Wisdom Assessment\n")]
+            score_col = 'GR' if w['wisdom_score'] >= 0.7 else ('YL' if w['wisdom_score'] >= 0.45 else 'RD')
+            lines.append(col(score_col, f"  Wisdom score : {w['wisdom_score']:.0%}"))
+            lines.append(f"  Recommendation: {w['recommendation']}")
+            lines.append(f"\n  Impact (flourishing): {w['impact']['overall_flourishing']:.0%} — {w['impact']['recommendation']}")
+            lines.append(f"  Coherence: {w['coherence']['coherence_score']:.0%} — upheld: {w['coherence']['upheld_values']}")
+            if w['coherence']['violated_values']:
+                lines.append(f"  Tensions: {w['coherence']['violated_values']}")
+            if w['tensions_resolved']:
+                lines.append(col('MG', f"\n  Tradeoff resolution:"))
+                lines.append(f"  {w['tensions_resolved'][0]['resolution'][:200]}")
+            return "\n".join(lines)
+
+        # /nexus [query] — route through all capabilities unified
+        if cmd in ('/nexus', '/unified', '/mind'):
+            if not self.nexus:
+                return "ASINexus not loaded."
+            if not arg:
+                report = self.nexus.integration_report()
+                lines = [col('MGB', "\n  ◈  ASI NEXUS — ONE UNIFIED MIND\n")]
+                lines.append(col('GR' if report['integration_score'] >= 0.8 else 'YL',
+                    f"  Integration    : {report['integration_pct']}% — {report['asi_status']}"))
+                lines.append(f"  Capabilities   : {report['registered_capabilities']}/{report['total_capabilities']}")
+                lines.append(f"  Coverage       : {report['coverage_pct']}%")
+                lines.append(f"  Queries handled: {report['total_queries_processed']}")
+                lines.append(f"  Avg wisdom     : {report['avg_wisdom_score']:.2f}")
+                lines.append(col('CYB', "\n  Capability types:"))
+                for ct, n in sorted(report['capability_types'].items(), key=lambda x: -x[1]):
+                    lines.append(f"    {ct}: {n} caps")
+                lines.append(col('DIM', "\n  Usage: /nexus <any question — routes through all capabilities>"))
+                return "\n".join(lines)
+            safe_print(col('MG', "  ◈  Routing through unified mind..."))
+            result = self.nexus.process(arg)
+            caps_str = ', '.join(result.get('caps_used', []))
+            lines = [col('MGB', "\n  ◈  Nexus Response\n")]
+            lines.append(result['response'])
+            lines.append(col('DIM',
+                f"\n  Sources: {caps_str} · "
+                f"wisdom={result['wisdom_score']:.2f} · "
+                f"synthesis={result['synthesis_score']:.2f}"))
+            return "\n".join(lines)
 
         # /tone — 528Hz / Solfeggio tone player
         if cmd in ('/tone', '/528', '/solfeggio', '/miracle'):
