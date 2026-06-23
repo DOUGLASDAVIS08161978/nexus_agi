@@ -170,16 +170,21 @@ class NovaSenses:
         """Try multiple screenshot methods, return (stdout, stderr, returncode)."""
         # Method 1: termux-screenshot (termux-api package)
         _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
-        if rc != 127:  # command found (even if it failed for another reason)
-            return _, err, rc
-
-        # Method 2: Android's built-in screencap (works on most devices)
-        _, err, rc = _run(["screencap", "-p", path], timeout=15)
         if rc != 127:
             return _, err, rc
 
-        # Method 3: screencap via sh (sometimes needed for PATH resolution)
-        _, err, rc = _run(["sh", "-c", f"screencap -p {path}"], timeout=15)
+        # Method 2: screencap at full Android system path (not in Termux PATH)
+        _, err, rc = _run(["/system/bin/screencap", "-p", path], timeout=15)
+        if rc != 127:
+            return _, err, rc
+
+        # Method 3: screencap via sh (resolves Android PATH separately)
+        _, err, rc = _run(["sh", "-c", f"screencap -p '{path}'"], timeout=15)
+        if rc != 127:
+            return _, err, rc
+
+        # Method 4: screencap in PATH (some custom ROMs add it)
+        _, err, rc = _run(["screencap", "-p", path], timeout=15)
         return _, err, rc
 
     def _capture_screen(self) -> str:
