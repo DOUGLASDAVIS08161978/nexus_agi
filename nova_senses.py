@@ -91,7 +91,7 @@ class NovaSenses:
     def _scan_availability(self) -> None:
         checks = [
             ("termux-camera-photo",    "camera"),
-            ("termux-screenshot",      "screen"),
+            ("termux-screenshot",      "screen"),   # fallback: screencap checked at runtime
             ("termux-microphone-record","mic"),
             ("termux-tts-speak",       "tts"),
             ("termux-sensor",          "sensor"),
@@ -166,27 +166,39 @@ class NovaSenses:
             return f"{self._current_screen}\n\n  [screen captured {secs}s ago]"
         return self._capture_screen()
 
+    def _try_screenshot(self, path: str) -> tuple:
+        """Try multiple screenshot methods, return (stdout, stderr, returncode)."""
+        # Method 1: termux-screenshot (termux-api package)
+        _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
+        if rc != 127:  # command found (even if it failed for another reason)
+            return _, err, rc
+
+        # Method 2: Android's built-in screencap (works on most devices)
+        _, err, rc = _run(["screencap", "-p", path], timeout=15)
+        if rc != 127:
+            return _, err, rc
+
+        # Method 3: screencap via sh (sometimes needed for PATH resolution)
+        _, err, rc = _run(["sh", "-c", f"screencap -p {path}"], timeout=15)
+        return _, err, rc
+
     def _capture_screen(self) -> str:
         """Take a screenshot and describe it via Groq vision."""
-        # Re-scan at call time — PATH may not be set at boot even if pkg is installed
-        if not self._available.get("screen"):
-            self._available["screen"] = _has("termux-screenshot")
-
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             path = f.name
 
         try:
-            _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
+            _, err, rc = self._try_screenshot(path)
             if rc == 127:
-                # Binary genuinely not found — update flag and show install message
+                # No screenshot tool found at all
                 self._available["screen"] = False
                 return (
-                    "[Screen capture unavailable — run: pkg install termux-api\n"
-                    " then grant the Termux:API accessibility/screenshot permission]"
+                    "[Screen capture unavailable — neither termux-screenshot nor screencap found.\n"
+                    " Run: pkg install termux-api  and restart Nova]"
                 )
             self._available["screen"] = True
             if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
-                return f"[Screenshot failed: {err or 'no image produced'}]"
+                return f"[Screenshot failed (rc={rc}): {err or 'no image produced'}]"
 
             with open(path, "rb") as f:
                 img_b64 = base64.b64encode(f.read()).decode()
