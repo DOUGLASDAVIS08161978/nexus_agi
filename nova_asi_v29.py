@@ -684,7 +684,10 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
     MAX_ATTEMPTS = 3
 
-    # ── ASI Capability Specifications — what each domain needs to DO ──────────
+    def __init__(self, github, tools, hunter):
+        super().__init__(github, tools, hunter)
+        # Track invention names tried this session to prevent infinite loops
+        self._attempted_inventions: set = set()
     # When a gap matches a key here, the LLM gets a precise algorithmic brief
     # instead of just a name. This is what drives A-grade output.
 
@@ -1548,16 +1551,13 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             prompt, temp=0.88, max_tokens=600
         )
 
+        # If Claude is unavailable, return empty so the caller skips gracefully
+        # rather than looping forever on the same hardcoded fallback name
+        if not raw or raw.startswith('['):
+            return "", ""
+
         name = "Adaptive Meta-Strategist"
-        desc = ("Capability: Adaptive Meta-Strategist\n\n"
-                "COGNITIVE PATTERN: Meta-level strategy selector that chooses "
-                "the best reasoning approach per problem class.\n\n"
-                "REQUIRED METHODS: select_strategy(problem), evaluate(result), "
-                "update_policy(strategy,outcome), best_strategy(domain), status()\n\n"
-                "ALGORITHM TO IMPLEMENT: Thompson sampling over strategy space. "
-                "Reward = accuracy * speed. EMA update: q(s) = (1-α)q(s) + α*reward.\n\n"
-                "INTELLIGENCE MARKER: Nova stops using one-size-fits-all reasoning "
-                "and learns which cognitive tool works best for each domain.")
+        desc = ""
 
         if raw and not raw.startswith('['):
             m_name  = re.search(r'CAPABILITY_NAME:\s*(.+?)(?:\n|$)', raw)
@@ -1626,6 +1626,15 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 "Nova is inventing her next capability..."))
             chosen_name, chosen_desc = self._nova_invents_next_capability(
                 existing_slugs)
+            # Empty name = Claude offline; pause rather than loop forever
+            if not chosen_name:
+                return ("Evolution paused — Claude credits needed to invent new capabilities. "
+                        "All known specs are already covered. Will resume when credits are restored.")
+            # Already tried this name this session — don't repeat
+            if chosen_name.lower() in self._attempted_inventions:
+                return (f"Evolution paused — '{chosen_name}' was already attempted "
+                        "this session. Waiting for new credits or a restart.")
+            self._attempted_inventions.add(chosen_name.lower())
 
         safe_print(col('MGB' if invention else 'MG',
             f"\n  {'⟡  Nova invents:' if invention else '✦  Evolving toward:'}"
