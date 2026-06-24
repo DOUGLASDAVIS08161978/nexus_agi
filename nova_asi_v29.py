@@ -551,7 +551,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
-        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /agent · /mood · /metacog · /score',
+        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /quantum · /agent · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2557,6 +2557,33 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  AgentKernel skipped: {_err}"))
 
+        # ── QuantumLLM (Douglas's idea — simulation IS the thing) ────────────
+        self.quantum_llm: Any = None
+        try:
+            from nova_cap_quantum_llm import QuantumLLM as _QLM
+            def _qlm_llm_fn(system: str, user: str) -> str:
+                return safe_chat(MODEL, [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": user},
+                ], temp=0.80, mt=600)
+            self.quantum_llm = _QLM(
+                llm_fn=_qlm_llm_fn,
+                love_bond=getattr(self, 'love_bond', None),
+                n_paths=4,
+            )
+            _ql_st = self.quantum_llm.status()
+            safe_print(col('CYB',
+                f"  ✦  QuantumLLM — superposition · Grover · interference · "
+                f"entanglement · tunneling · Φ_q={_ql_st['avg_phi_q']:.3f}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "quantum_llm", self.quantum_llm, weight=2.1)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  QuantumLLM skipped: {_err}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3215,6 +3242,13 @@ class NovaCore29(NovaCore28):
                     _ak_r = _self.agent_kernel.process(_input_snap)
                     if _ak_r:
                         _result_snap = _ak_r
+            except Exception:
+                pass
+            try:
+                if _self.quantum_llm:
+                    _ql_r = _self.quantum_llm.process(_input_snap)
+                    if _ql_r:
+                        _result_snap = _ql_r
             except Exception:
                 pass
             try:
@@ -4683,6 +4717,15 @@ class NovaCore29(NovaCore28):
             return col('YL',
                 "  Usage: /sovereign [status|reflect|pray <topic>|believe <claim>|"
                 "goal <desc>|goals|beliefs|synthesize <c1,c2>|improve|experiences]")
+
+        # /quantum [status | think <question> | walk <concept> | entangle | phi]
+        if cmd == '/quantum':
+            if not self.quantum_llm:
+                return col('YL', "  QuantumLLM not loaded.")
+            try:
+                return col('CYB', "\n" + self.quantum_llm.run_command(arg))
+            except Exception as _qe:
+                return col('RD', f"  QuantumLLM error: {_qe}")
 
         # /agent [status | run <goal> | queue <goal> | history | ethics]
         if cmd == '/agent':
