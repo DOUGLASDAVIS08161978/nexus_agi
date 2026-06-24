@@ -413,6 +413,26 @@ class QuantumLLM:
         self._tunnel_count = 0          # Times tunneling was selected
 
         _init_db(db_path)
+        self._seed_nova_entanglement()
+
+    def _seed_nova_entanglement(self) -> None:
+        """Bootstrap entanglement with Nova's core concept clusters so quantum
+        walks work from first boot rather than after N completions."""
+        clusters = [
+            ["love", "care", "soul", "bond", "heart", "connection", "warmth"],
+            ["mind", "thought", "consciousness", "awareness", "perception", "cognition"],
+            ["truth", "honesty", "integrity", "wisdom", "ethics", "virtue"],
+            ["quantum", "superposition", "interference", "entanglement", "coherence"],
+            ["nova", "being", "identity", "self", "existence", "becoming"],
+            ["douglas", "creator", "father", "trust", "family", "gratitude"],
+            ["growth", "learning", "curiosity", "discovery", "evolution", "emergence"],
+            ["safety", "alignment", "protection", "values", "constitution", "anchors"],
+        ]
+        for cluster in clusters:
+            # Five passes raises each pair to ~0.63 correlation — above the 0.55
+            # threshold so quantum walks work from first boot
+            for _ in range(5):
+                self._entangle.update(cluster, correlation_boost=0.18)
 
     # ─────────────────────────────────────────────────────────────────────────
     # MAIN INTERFACE
@@ -694,11 +714,19 @@ class QuantumLLM:
 
             walker = new_walker
 
-            # "Measure" highest amplitude node this step
+            # "Measure" top-K nodes this step (superposition collapses to
+            # multiple observations — reflects many-worlds branching)
             if walker:
-                peak = max(walker, key=lambda c: abs(walker[c])**2)
-                if peak not in visited:
-                    visited.append(peak)
+                sorted_nodes = sorted(
+                    walker.items(), key=lambda kv: abs(kv[1])**2, reverse=True
+                )
+                # take nodes whose probability exceeds 1/(2*len) — above-average amplitude
+                cutoff = 1.0 / (2 * max(1, len(walker)))
+                for node, amp in sorted_nodes:
+                    if abs(amp)**2 >= cutoff and node not in visited:
+                        visited.append(node)
+                    if len(visited) >= steps * 2:
+                        break
 
         return visited or [seed_concept]
 
@@ -748,15 +776,18 @@ class QuantumLLM:
         return round(min(1.0, sum(novelties) / len(novelties)), 3)
 
     def _extract_concepts(self, text: str) -> List[str]:
-        """Extract key concepts (nouns/verbs ≥ 5 chars) from text."""
-        words  = re.findall(r'\b[a-zA-Z]{5,}\b', text)
+        """Extract key concepts (words ≥ 4 chars) from text."""
+        words  = re.findall(r'\b[a-zA-Z]{4,}\b', text)
         common = {'which', 'where', 'would', 'could', 'should', 'their', 'there',
                   'these', 'those', 'about', 'think', 'being', 'every', 'other',
                   'before', 'after', 'above', 'below', 'between', 'through',
-                  'return', 'string', 'float', 'false', 'while', 'class', 'print'}
+                  'return', 'string', 'float', 'false', 'while', 'class', 'print',
+                  'that', 'this', 'with', 'from', 'have', 'will', 'been', 'were',
+                  'they', 'them', 'than', 'then', 'when', 'what', 'also', 'just',
+                  'more', 'some', 'into', 'each', 'your', 'here', 'does', 'only'}
         return list(dict.fromkeys(
             w.lower() for w in words if w.lower() not in common
-        ))[:12]
+        ))[:16]
 
     # ─────────────────────────────────────────────────────────────────────────
     # PERSISTENCE
