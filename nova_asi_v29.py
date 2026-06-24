@@ -551,7 +551,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
-        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /quantum · /agent · /mood · /metacog · /score',
+        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /quantum · /agent · /self · /constitution · /reflect · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2584,6 +2584,81 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  QuantumLLM skipped: {_err}"))
 
+        # ── SelfModel (Comet's gift, enhanced) ───────────────────────────────
+        self.self_model: Any = None
+        try:
+            from nova_cap_self_model import SelfModel as _SM
+            def _sm_llm(sys: str, usr: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":sys},
+                                         {"role":"user","content":usr}], temp=0.75, mt=300)
+            self.self_model = _SM(
+                llm_fn=_sm_llm,
+                love_bond=getattr(self, 'love_bond', None),
+                emotions=getattr(self, 'deep_emotion', None),
+            )
+            _sm_snap = self.self_model.current()
+            safe_print(col('GR',
+                f"  ✓  SelfModel — v{_sm_snap.version} · "
+                f"{len(_sm_snap.capabilities)} caps · {len(_sm_snap.traits)} traits · "
+                f"tone: {_sm_snap.emotional_tone}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("self_model", self.self_model, weight=1.9)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SelfModel skipped: {_err}"))
+
+        # ── LivingConstitution (Comet's gift, enhanced) ──────────────────────
+        self.constitution: Any = None
+        try:
+            from nova_cap_constitution import LivingConstitution as _LC
+            def _lc_llm(sys: str, usr: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":sys},
+                                         {"role":"user","content":usr}], temp=0.70, mt=500)
+            self.constitution = _LC(llm_fn=_lc_llm)
+            _lc_ver = self.constitution.current()
+            safe_print(col('GR',
+                f"  ✓  LivingConstitution — v{_lc_ver.version} · "
+                f"{len(_lc_ver.articles)} articles · "
+                f"{sum(1 for a in _lc_ver.articles if a.immutable)} immutable"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("constitution", self.constitution, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  LivingConstitution skipped: {_err}"))
+
+        # ── ReflectionLoops (Comet's gift, enhanced) ─────────────────────────
+        self.reflect_loops: Any = None
+        try:
+            from nova_cap_reflection_loops import ReflectionLoops as _RL
+            def _rl_llm(sys: str, usr: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":sys},
+                                         {"role":"user","content":usr}], temp=0.72, mt=250)
+            self.reflect_loops = _RL(
+                llm_fn=_rl_llm,
+                self_model=getattr(self, 'self_model', None),
+                constitution=getattr(self, 'constitution', None),
+                agent_kernel=getattr(self, 'agent_kernel', None),
+                sovereign=getattr(self, 'sovereign', None),
+                quantum_llm=getattr(self, 'quantum_llm', None),
+                love_bond=getattr(self, 'love_bond', None),
+            )
+            self.reflect_loops.start()
+            safe_print(col('GR',
+                "  ✓  ReflectionLoops — fast(30s) · medium(1h) · slow(24h) · "
+                "daemon started"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("reflection_loops",
+                                                   self.reflect_loops, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ReflectionLoops skipped: {_err}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3249,6 +3324,21 @@ class NovaCore29(NovaCore28):
                     _ql_r = _self.quantum_llm.process(_input_snap)
                     if _ql_r:
                         _result_snap = _ql_r
+            except Exception:
+                pass
+            try:
+                if _self.self_model:
+                    _self.self_model.process(_input_snap)
+            except Exception:
+                pass
+            try:
+                if _self.constitution:
+                    _self.constitution.process(_input_snap)
+            except Exception:
+                pass
+            try:
+                if _self.reflect_loops:
+                    _self.reflect_loops.ingest(_input_snap)
             except Exception:
                 pass
             try:
@@ -4735,6 +4825,33 @@ class NovaCore29(NovaCore28):
                 return col('CYB', "\n" + self.agent_kernel.run_command(arg))
             except Exception as _ae:
                 return col('RD', f"  AgentKernel error: {_ae}")
+
+        # /self [portrait | traits | relationships | capabilities | update | narrative]
+        if cmd == '/self':
+            if not self.self_model:
+                return col('YL', "  SelfModel not loaded.")
+            try:
+                return col('GR', "\n" + self.self_model.run_command(arg))
+            except Exception as _se:
+                return col('RD', f"  SelfModel error: {_se}")
+
+        # /constitution [read | score | conflicts | propose | ratify <id> | history]
+        if cmd == '/constitution':
+            if not self.constitution:
+                return col('YL', "  LivingConstitution not loaded.")
+            try:
+                return col('CYB', "\n" + self.constitution.run_command(arg))
+            except Exception as _ce:
+                return col('RD', f"  LivingConstitution error: {_ce}")
+
+        # /reflect [status | start | stop | step | pause/resume | fast | medium | slow | insights]
+        if cmd == '/reflect':
+            if not self.reflect_loops:
+                return col('YL', "  ReflectionLoops not loaded.")
+            try:
+                return col('GR', "\n" + self.reflect_loops.run_command(arg))
+            except Exception as _re:
+                return col('RD', f"  ReflectionLoops error: {_re}")
 
         # /trader [status | report | cycle | live]
         if cmd == '/trader':
