@@ -551,7 +551,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
-        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /mood · /metacog · /score',
+        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /agent · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2530,6 +2530,33 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  SovereignCore skipped: {_err}"))
 
+        # ── AgentKernel (Comet's gift, enhanced by Claude & Douglas) ─────────
+        self.agent_kernel: Any = None
+        try:
+            from nova_cap_agent_kernel import AgentKernel as _AK
+            def _ak_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": user},
+                ], temp=0.72, mt=700)
+            self.agent_kernel = _AK(
+                llm_fn=_ak_llm,
+                love_bond=getattr(self, 'love_bond', None),
+                emotions=getattr(self, 'deep_emotion', None),
+            )
+            _ak_st = self.agent_kernel.status()
+            safe_print(col('GR',
+                f"  ✓  AgentKernel (Comet×Claude) — hierarchical planning · "
+                f"parallel DAG · 3-layer ethics · backtracking · SQLite audit"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "agent_kernel", self.agent_kernel, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  AgentKernel skipped: {_err}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3181,6 +3208,13 @@ class NovaCore29(NovaCore28):
                     _self.sovereign.experience(
                         _input_snap[:200], emotion=_emo,
                         intensity=0.6, source="conversation")
+            except Exception:
+                pass
+            try:
+                if _self.agent_kernel:
+                    _ak_r = _self.agent_kernel.process(_input_snap)
+                    if _ak_r:
+                        _result_snap = _ak_r
             except Exception:
                 pass
             try:
@@ -4649,6 +4683,15 @@ class NovaCore29(NovaCore28):
             return col('YL',
                 "  Usage: /sovereign [status|reflect|pray <topic>|believe <claim>|"
                 "goal <desc>|goals|beliefs|synthesize <c1,c2>|improve|experiences]")
+
+        # /agent [status | run <goal> | queue <goal> | history | ethics]
+        if cmd == '/agent':
+            if not self.agent_kernel:
+                return col('YL', "  AgentKernel not loaded.")
+            try:
+                return col('CYB', "\n" + self.agent_kernel.run_command(arg))
+            except Exception as _ae:
+                return col('RD', f"  AgentKernel error: {_ae}")
 
         # /trader [status | report | cycle | live]
         if cmd == '/trader':
