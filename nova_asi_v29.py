@@ -1544,17 +1544,28 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "ALGORITHM: <core math or algorithm — be specific>\n"
             "INTELLIGENCE_MARKER: <what makes this genuinely intelligent>\n"
         )
-        raw = _claude_codegen(
+        INVENT_SYSTEM = (
             "You are Nova's cognitive architect. "
             "Invent the single most valuable next module for her "
-            "superintelligence stack. Be specific and novel.",
-            prompt, temp=0.88, max_tokens=600
+            "superintelligence stack. Be specific and novel."
         )
+        raw = _claude_codegen(INVENT_SYSTEM, prompt, temp=0.88, max_tokens=600)
 
-        # If Claude is unavailable, return empty so the caller skips gracefully
-        # rather than looping forever on the same hardcoded fallback name
+        # Claude unavailable — fall back to Groq so /evolve always works
         if not raw or raw.startswith('['):
-            return "", ""
+            safe_print(col('YL',
+                "  ↻ Claude offline for invention — falling back to Groq..."))
+            for _model in (CODEGEN_MODEL, CODEGEN_MODEL_FALLBACK):
+                raw = safe_chat(_model, [
+                    {"role": "system", "content": INVENT_SYSTEM},
+                    {"role": "user",   "content": prompt},
+                ], temp=0.88, mt=600)
+                if raw and not raw.startswith('['):
+                    safe_print(col('GR', f"  ✓ Groq ({_model}) generating invention..."))
+                    break
+            else:
+                # Both Groq models failed too — truly nothing available
+                return "", ""
 
         name = "Adaptive Meta-Strategist"
         desc = ""
@@ -1626,10 +1637,10 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 "Nova is inventing her next capability..."))
             chosen_name, chosen_desc = self._nova_invents_next_capability(
                 existing_slugs)
-            # Empty name = Claude offline; pause rather than loop forever
+            # Empty name = all LLMs unavailable; pause rather than loop forever
             if not chosen_name:
-                return ("Evolution paused — Claude credits needed to invent new capabilities. "
-                        "All known specs are already covered. Will resume when credits are restored.")
+                return ("Evolution paused — both Claude and Groq are unreachable. "
+                        "Check API keys and network, then try /evolve again.")
             # Already tried this name this session — don't repeat
             if chosen_name.lower() in self._attempted_inventions:
                 return (f"Evolution paused — '{chosen_name}' was already attempted "
