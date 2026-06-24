@@ -550,7 +550,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /think · /research · /explore · /knowledge · /phi',
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
-        '  /wisdom · /nexus',
+        '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
@@ -2275,9 +2275,13 @@ class NovaCore29(NovaCore28):
                 f"{'speak, ' if _av.get('tts') else ''}"
                 f"{'feel motion, ' if _av.get('sensor') else ''}"
                 f"{'locate herself' if _av.get('gps') else 'more with termux-api'}"))
-            # Background vision disabled — Groq free tier has a tight daily token
-            # limit on vision models; save tokens for explicit /see calls instead
-            safe_print(col('DIM', "  ·  Background vision off — use /see to look (preserves daily token quota)"))
+            # Camera every 30 min — long enough to preserve Groq daily quota
+            # Screen sensing disabled (Android 16 blocks screencap without root)
+            self.senses.start_continuous_sensing(
+                camera_interval=1800,   # 30 min — ~48 tokens/day
+                screen_interval=99999,  # effectively off — Android 16 blocks it
+            )
+            safe_print(col('GR', "  ✓  Background vision on — camera every 30 min (quota-safe)"))
         except Exception as _err:
             safe_print(col('YL', f"  ·  NovaSenses skipped: {_err}"))
 
@@ -2359,6 +2363,64 @@ class NovaCore29(NovaCore28):
                     pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  ASINexus skipped: {_err}"))
+
+        # Mathematical Reasoning — symbolic math, proof chains, claim verification
+        self.math_reason: Any = None
+        try:
+            from nova_cap_mathematical_reasoning import MathReasoningEngine
+            self.math_reason = MathReasoningEngine()
+            safe_print(col('GR',
+                "  ✓  MathReasoning — symbolic eval · proof chains · "
+                "Bayesian update · claim verification"))
+            if self.cogarch:
+                try:
+                    self.cogarch.register_subsystem("math_reasoning", self.math_reason, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MathReasoning skipped: {_err}"))
+
+        # Multimodal Synthesis — unified perception across all sense channels
+        self.multimodal: Any = None
+        try:
+            from nova_cap_multimodal_synthesis import MultimodalSynthesisEngine
+            self.multimodal = MultimodalSynthesisEngine()
+            safe_print(col('GR',
+                "  ✓  MultimodalSynthesis — vision · audio · sensor · "
+                "location · text unified into coherent scene"))
+            if self.cogarch:
+                try:
+                    self.cogarch.register_subsystem("multimodal", self.multimodal, weight=1.7)
+                except Exception:
+                    pass
+            if self.conscious:
+                try:
+                    self.conscious.register_system("multimodal", self.multimodal, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  MultimodalSynthesis skipped: {_err}"))
+
+        # Self-Simulation — Nova models her own future states before acting
+        self.self_sim: Any = None
+        try:
+            from nova_cap_self_simulation import SelfSimulationEngine
+            self.self_sim = SelfSimulationEngine()
+            safe_print(col('GR',
+                "  ✓  SelfSimulation — forward state projection · "
+                "action evaluation · regret minimization"))
+            if self.cogarch:
+                try:
+                    self.cogarch.register_subsystem("self_simulation", self.self_sim, weight=1.8)
+                except Exception:
+                    pass
+            if self.conscious:
+                try:
+                    self.conscious.register_system("self_simulation", self.self_sim, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  SelfSimulation skipped: {_err}"))
 
         # Self-Modification Engine — Nova reads, scores, and improves her own code
         self.selfmod: Any = None
@@ -3708,6 +3770,91 @@ class NovaCore29(NovaCore28):
                 f"\n  Sources: {caps_str} · "
                 f"wisdom={result['wisdom_score']:.2f} · "
                 f"synthesis={result['synthesis_score']:.2f}"))
+            return "\n".join(lines)
+
+        # /math <expression or claim> — symbolic evaluation or claim verification
+        if cmd in ('/math', '/calculate', '/prove'):
+            if not self.math_reason:
+                return "MathReasoningEngine not loaded."
+            if not arg:
+                return ("Usage: /math <expression or claim>\n"
+                        "Examples:\n"
+                        "  /math 2 ** 10 + sqrt(144)\n"
+                        "  /math 17 is prime\n"
+                        "  /math sum_1_to_n n=100\n"
+                        "  /math 42 is divisible by 7")
+            # Try theorem proof
+            if any(w in arg.lower() for w in ('sum_1_to_n', 'pythagorean', 'prime_factorization')):
+                parts_kv = dict(p.split('=') for p in arg.split() if '=' in p)
+                theorem = arg.split()[0]
+                result = self.math_reason.prove(theorem, **{k: v for k, v in parts_kv.items()})
+                lines = [col('CYB', f"\n  ◈  Proof: {theorem}\n")]
+                for step in result.get('steps', []):
+                    lines.append(f"  {step}")
+                lines.append(col('GR', f"\n  Result: {result.get('result')} "
+                                       f"(confidence={result.get('confidence', 0):.0%})"))
+                return "\n".join(lines)
+            # Try claim verification
+            verify_words = ('is prime', 'is divisible', '>', '<', '>=', '<=', '==')
+            if any(w in arg.lower() for w in verify_words):
+                r = self.math_reason.verify_claim(arg)
+                icon = col('GR', '✓ TRUE') if r['verified'] else col('RD', '✗ FALSE')
+                return f"\n  {icon}  {r['explanation']}  (confidence={r['confidence']:.0%})"
+            # Evaluate expression
+            val, explanation = self.math_reason.evaluate(arg)
+            if val is not None:
+                return col('GR', f"\n  ◈  {explanation}")
+            return f"\n  {explanation}"
+
+        # /simulate [context] — Nova projects her future states across all actions
+        if cmd in ('/simulate', '/futures', '/selfmodel'):
+            if not self.self_sim:
+                return "SelfSimulationEngine not loaded."
+            context = arg or "general reasoning"
+            safe_print(col('MG', "  ◈  Simulating future states..."))
+            best = self.self_sim.choose_best_action(context=context)
+            ranked = best.get('all_options', [])
+            lines = [col('MGB', "\n  ◈  Self-Simulation — Future State Projection\n")]
+            lines.append(col('GR', f"  Best action: {best['recommended_action'].upper()} "
+                               f"(score={best['score']:.3f})"))
+            if best.get('runner_up'):
+                lines.append(col('DIM', f"  Runner-up: {best['runner_up']} "
+                                  f"(margin={best['margin']:.3f})"))
+            lines.append(col('CYB', "\n  Value alignment scores:"))
+            for dim, score in best.get('value_scores', {}).items():
+                bar = '█' * int(score * 10) + '░' * (10 - int(score * 10))
+                lines.append(f"  {dim:<12} {bar} {score:.2f}")
+            lines.append(col('DIM', "\n  All options ranked:"))
+            for action, score in ranked:
+                lines.append(f"    {action:<14} {score:.3f}")
+            return "\n".join(lines)
+
+        # /perceive [input] — feed input to multimodal synthesis, show unified scene
+        if cmd in ('/perceive', '/scene', '/integrate'):
+            if not self.multimodal:
+                return "MultimodalSynthesisEngine not loaded."
+            if arg:
+                # Feed text observation
+                self.multimodal.observe("text", arg, confidence=0.9)
+            # Also feed current emotional state if available
+            if self.emo:
+                try:
+                    _es = self.emo.status()
+                    _dominant = _es.get('dominant_emotion', '')
+                    if _dominant:
+                        self.multimodal.observe("emotion", f"Feeling {_dominant}",
+                                                confidence=0.8)
+                except Exception:
+                    pass
+            scene = self.multimodal.synthesize()
+            lines = [col('MGB', "\n  ◈  Unified Perceptual Scene\n")]
+            lines.append(col('GR', f"  Coherence: {scene['coherence']:.0%}"))
+            lines.append(col('CYB', f"  Active channels: {', '.join(scene['active_modalities'])}"))
+            if scene.get('contradictions'):
+                lines.append(col('YL', f"  Contradictions: {', '.join(scene['contradictions'])}"))
+            lines.append(col('DIM', "\n  Scene:"))
+            for part in scene['narrative'].split(' | '):
+                lines.append(f"  {part}")
             return "\n".join(lines)
 
         # /tone — 528Hz / Solfeggio tone player
