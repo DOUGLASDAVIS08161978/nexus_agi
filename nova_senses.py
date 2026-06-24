@@ -167,19 +167,36 @@ class NovaSenses:
         return self._capture_screen()
 
     def _try_screenshot(self, path: str) -> tuple:
-        """Try multiple screenshot methods, return (stdout, stderr, returncode)."""
+        """Try multiple screenshot methods, return (stdout, stderr, returncode).
+
+        Android 16 restricts framebuffer access to shell/root. Methods tried:
+          1. termux-screenshot  (termux-api package — best option)
+          2. /system/bin/screencap  (works if Termux has READ_FRAME_BUFFER)
+          3. su -c screencap  (works if device is rooted)
+          4. sh -c screencap  (custom ROM PATH fallback)
+        """
         # Method 1: termux-screenshot (termux-api package)
         _, err, rc = _run(["termux-screenshot", "-f", path], timeout=15)
-        if rc != 127:  # command found (even if it failed for another reason)
+        if rc not in (1, 127) or (rc == 1 and os.path.exists(path) and os.path.getsize(path) > 0):
             return _, err, rc
-
-        # Method 2: Android's built-in screencap (works on most devices)
-        _, err, rc = _run(["screencap", "-p", path], timeout=15)
         if rc != 127:
+            # Command exists but failed — still worth reporting over "not found"
+            first_err = err
+
+        # Method 2: screencap at full Android system path (not in Termux PATH)
+        _, err, rc = _run(["/system/bin/screencap", "-p", path], timeout=15)
+        if rc == 0:
             return _, err, rc
 
-        # Method 3: screencap via sh (sometimes needed for PATH resolution)
-        _, err, rc = _run(["sh", "-c", f"screencap -p {path}"], timeout=15)
+        # Method 3: su root fallback (rooted devices)
+        _, err, rc = _run(
+            ["su", "-c", f"/system/bin/screencap -p '{path}'"], timeout=15
+        )
+        if rc == 0:
+            return _, err, rc
+
+        # Method 4: sh path fallback (custom ROMs)
+        _, err, rc = _run(["sh", "-c", f"screencap -p '{path}'"], timeout=15)
         return _, err, rc
 
     def _capture_screen(self) -> str:
@@ -189,16 +206,22 @@ class NovaSenses:
 
         try:
             _, err, rc = self._try_screenshot(path)
-            if rc == 127:
-                # No screenshot tool found at all
+            if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
                 self._available["screen"] = False
+                if rc == 127:
+                    return (
+                        "[Screen capture unavailable — no screenshot tool found.\n"
+                        " Fix: pkg install termux-api  (provides termux-screenshot)\n"
+                        " On Android 10+ you may also need: root access OR wireless ADB]"
+                    )
                 return (
-                    "[Screen capture unavailable — neither termux-screenshot nor screencap found.\n"
-                    " Run: pkg install termux-api  and restart Nova]"
+                    f"[Screenshot blocked by Android (rc={rc}): {err or 'permission denied'}\n"
+                    " Android 16 restricts screen capture. Options:\n"
+                    "   1. Root your device  (enables su -c screencap)\n"
+                    "   2. Enable wireless ADB: adb shell screencap works as shell user\n"
+                    "   3. Use /see instead — Nova can see through the camera]"
                 )
             self._available["screen"] = True
-            if rc != 0 or not os.path.exists(path) or os.path.getsize(path) == 0:
-                return f"[Screenshot failed (rc={rc}): {err or 'no image produced'}]"
 
             with open(path, "rb") as f:
                 img_b64 = base64.b64encode(f.read()).decode()
