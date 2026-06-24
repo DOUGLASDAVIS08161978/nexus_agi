@@ -134,26 +134,46 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
     if DEMO_MODE or not GROQ_KEY:
         last = next((m['content'] for m in reversed(msgs) if m['role']=='user'), '')
         return f"[DEMO — set GROQ_API_KEY] Input: {last[:60]}"
-    try:
-        import requests as _req
-        resp = _req.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_KEY}",
-                     "Content-Type": "application/json"},
-            json={"model": model, "messages": msgs,
-                  "temperature": min(temp, 1.0), "max_tokens": mt},
-            timeout=20,   # hard TCP + read timeout — cannot hang beyond this
-        )
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
+    import requests as _req, time as _time
+    _delays = (2, 4, 8)
+    for _attempt, _delay in enumerate((*_delays, None)):
         try:
-            usage = data.get("usage", {})
-            budget.add(usage.get("total_tokens", 0))
-        except Exception:
-            pass
-        return content
-    except Exception as _e:
-        return f"[Groq error: {str(_e)[:120]}]"
+            resp = _req.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_KEY}",
+                         "Content-Type": "application/json"},
+                json={"model": model, "messages": msgs,
+                      "temperature": min(temp, 1.0), "max_tokens": mt},
+                timeout=25,
+            )
+            # Rate-limit: back off and retry
+            if resp.status_code == 429:
+                if _delay is None:
+                    return "[Groq error: rate limit — please slow down]"
+                _time.sleep(_delay)
+                continue
+            data = resp.json()
+            # API-level error (e.g. invalid request, auth failure)
+            if "error" in data:
+                _msg = data["error"].get("message", str(data["error"]))[:120]
+                if resp.status_code == 429 or "rate" in _msg.lower():
+                    if _delay is None:
+                        return f"[Groq rate limit: {_msg}]"
+                    _time.sleep(_delay)
+                    continue
+                return f"[Groq error: {_msg}]"
+            content = data["choices"][0]["message"]["content"]
+            try:
+                usage = data.get("usage", {})
+                budget.add(usage.get("total_tokens", 0))
+            except Exception:
+                pass
+            return content
+        except Exception as _e:
+            if _delay is None:
+                return f"[Groq error: {str(_e)[:120]}]"
+            _time.sleep(_delay)
+    return "[Groq error: all retries exhausted]"
 
 def simple_search(query: str, max_results: int=5) -> List[dict]:
     if not REQUESTS_AVAILABLE: return []
