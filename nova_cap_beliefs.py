@@ -417,13 +417,14 @@ class BeliefEngine:
 
     def status(self) -> Dict[str, Any]:
         with self._lock:
-            n    = len(self._beliefs)
-            top  = self.strongest(1)
-            unc  = self.most_uncertain(1)
+            n  = len(self._beliefs)
+            bs = list(self._beliefs.values())
+        top = sorted(bs, key=lambda b: b.confidence, reverse=True)[:1]
+        unc = sorted(bs, key=lambda b: abs(b.confidence - 0.5))[:1]
         return {
             "items":          n,
             "confidence":     round(top[0].confidence if top else 0.5, 4),
-            "accuracy":       round(sum(b.confidence for b in self._beliefs.values()) / max(n, 1), 4),
+            "accuracy":       round(sum(b.confidence for b in bs) / max(n, 1), 4),
             "total_beliefs":  n,
             "strongest":      top[0].proposition[:60] if top else "",
             "most_uncertain": unc[0].proposition[:60] if unc else "",
