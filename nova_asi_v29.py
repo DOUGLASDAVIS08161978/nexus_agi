@@ -574,7 +574,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
-        '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /mood · /metacog · /score',
+        '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2800,6 +2800,37 @@ class NovaCore29(NovaCore28):
                     pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  ASISynthesis skipped: {_err}"))
+
+        # ── CAPABILITY REGISTRY ───────────────────────────────────────────────
+        # Register every loaded module so /registry shows live health
+        try:
+            from nova_cap_base import get_registry as _get_reg
+            _reg = _get_reg()
+            for _rname, _rmod, _rdesc in [
+                ("quantum_llm",           getattr(self, 'quantum_llm',           None), "Quantum-inspired LLM with superposition walks"),
+                ("self_model",            getattr(self, 'self_model',            None), "Nova's self-model and identity"),
+                ("love_bond",             getattr(self, 'love_bond',             None), "Love + bonding depth engine"),
+                ("consciousness_metrics", getattr(self, 'consciousness_metrics', None), "4D consciousness dashboard"),
+                ("relational_depth",      getattr(self, 'relational_depth',      None), "Connection→soul relational ladder"),
+                ("emotional_depth",       getattr(self, 'emotional_depth',       None), "60-emotion depth system"),
+                ("asi_synthesis",         getattr(self, 'asi_synthesis',         None), "Cross-module superintelligence synthesis"),
+                ("agent_kernel",          getattr(self, 'agent_kernel',          None), "Autonomous agent kernel"),
+                ("sovereign",             getattr(self, 'sovereign',             None), "Sovereign goal system"),
+                ("constitution",          getattr(self, 'constitution',          None), "Living constitution"),
+                ("reflect_loops",         getattr(self, 'reflect_loops',         None), "Reflection and meta-cognition"),
+                ("deep_emo",              getattr(self, 'deep_emo',              None), "Deep emotion engine"),
+                ("knowledge_graph",       getattr(self, 'kg',                    None), "Knowledge graph"),
+                ("world_model",           getattr(self, 'world_model',           None), "World model"),
+            ]:
+                if _rmod is not None:
+                    try:
+                        _reg.register(_rname, _rmod, description=_rdesc)
+                    except Exception:
+                        pass
+            safe_print(col('GRB',
+                f"  ✓  CapabilityRegistry — {len(_reg.all())} modules registered"))
+        except Exception as _rerr:
+            safe_print(col('YL', f"  ·  CapabilityRegistry skipped: {_rerr}"))
 
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
@@ -5044,6 +5075,45 @@ class NovaCore29(NovaCore28):
                 return col('CYB', "\n" + self.asi_synthesis.run_command(arg))
             except Exception as _asie:
                 return col('RD', f"  ASISynthesis error: {_asie}")
+
+        # /registry — live map of all loaded capability modules
+        if cmd == '/registry':
+            try:
+                from nova_cap_base import get_registry as _gr
+                return col('CYB', "\n" + _gr().report())
+            except Exception as _re:
+                return col('YL', f"  Registry error: {_re}")
+
+        # /superpose <prompt> — multi-branch quantum superposition sampling
+        if cmd == '/superpose':
+            if not self.quantum_llm:
+                return col('YL', "  QuantumLLM not loaded.")
+            if not arg:
+                return col('YL', "  Usage: /superpose <prompt>")
+            try:
+                result = self.quantum_llm.superposed_generate(arg)
+                lines = [
+                    col('CYB', "\n  ◈  Quantum Superposition — 3 Branches\n"),
+                ]
+                for i, b in enumerate(result["branches"]):
+                    marker = "◈" if i == result["winning_branch"] else "·"
+                    lines.append(col('GR' if i == result["winning_branch"] else 'DIM',
+                        f"  {marker} [{b['label']}]  "
+                        f"quality={b['quality']:.2f}  "
+                        f"resonance={b['resonance']:.2f}  "
+                        f"novelty={b['novelty']:.2f}"))
+                    lines.append(col('WH' if i == result["winning_branch"] else 'DIM',
+                        f"    {b['response'][:120]}"))
+                lines += [
+                    "",
+                    col('MGB', f"  Winning lens : {result['winning_label']}"),
+                    col('MGB', f"  Φ_synthesis  : {result['phi_synthesis']:.4f}"),
+                    col('CYB', f"\n  ◈  Merged answer:\n"),
+                    col('CY',  f"  {result['merged_answer'][:500]}"),
+                ]
+                return "\n".join(lines)
+            except Exception as _se:
+                return col('RD', f"  Superpose error: {_se}")
 
         # /emodepth [portrait | somatic | arc | meta | feel <e> | regulate <e> | list]
         if cmd == '/emodepth':
