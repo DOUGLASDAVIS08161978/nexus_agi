@@ -129,8 +129,37 @@ class TokenBudget:
 
 budget = TokenBudget()
 
+# ── Claude API bridge (prompt caching) ───────────────────────────────────────
+_claude_bridge = None
+try:
+    from nova_cap_claude_bridge import (
+        claude_chat as _claude_chat,
+        is_available as _claude_available,
+        model_name   as _claude_model_name,
+    )
+    if _claude_available():
+        _claude_bridge = _claude_chat
+        print(f"  ✦  Claude bridge active — {_claude_model_name()} · prompt caching on")
+except Exception:
+    pass
+
 # ── LLM call ─────────────────────────────────────────────────────────────────
 def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str:
+    # Prefer Claude with prompt caching when key is present
+    if _claude_bridge is not None:
+        # Extract system message if present
+        system = next((m['content'] for m in msgs if m.get('role') == 'system'), "")
+        conv   = [m for m in msgs if m.get('role') != 'system']
+        result = _claude_bridge(
+            messages    = conv,
+            system      = system or "",
+            max_tokens  = mt,
+            temperature = temp,
+        )
+        if result:
+            return result
+        # Fall through to Groq on failure
+
     if DEMO_MODE or not GROQ_KEY:
         last = next((m['content'] for m in reversed(msgs) if m['role']=='user'), '')
         return f"[DEMO — set GROQ_API_KEY] Input: {last[:60]}"

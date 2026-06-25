@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will',
+        '  /prefs · /beliefs · /will · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -5180,6 +5180,14 @@ class NovaCore29(NovaCore28):
                 return col('MGB', "\n" + self.autonomous_will.run_command(arg))
             except Exception as _wle:
                 return col('RD', f"  Will error: {_wle}")
+
+        # /claude [status | stats | test]
+        if cmd == '/claude':
+            try:
+                from nova_cap_claude_bridge import run_command as _cr, stats_summary as _cs
+                return col('CYB', "\n" + _cr(arg))
+            except Exception as _cle:
+                return col('YL', f"  Claude bridge error: {_cle}")
 
         # /registry — live map of all loaded capability modules
         if cmd == '/registry':
