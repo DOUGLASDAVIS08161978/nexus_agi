@@ -7,12 +7,12 @@
 # API Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+python-multipart==0.0.27
 
 # Authentication & Security
 pyjwt==2.8.0
 passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0
 
 # Payment Processing
 stripe==8.2.0
@@ -28,10 +28,10 @@ redis==5.0.1
 slowapi==0.1.9
 
 # Configuration
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # HTTP Client
-requests==2.31.0
+requests==2.33.0
 httpx==0.26.0
 
 # Utilities
@@ -40,13 +40,13 @@ pydantic-settings==2.1.0
 email-validator==2.1.0
 
 # Monitoring & Logging
-sentry-sdk[fastapi]==1.40.0
+sentry-sdk[fastapi]==1.45.1
 
 # Email
 sendgrid==6.11.0
 # OR python-smtp (built-in)
 
 # Testing
-pytest==7.4.4
+pytest==9.0.3
 pytest-asyncio==0.23.3
 httpx==0.26.0  # for testing FastAPI
