@@ -2842,8 +2842,8 @@ class NovaCore29(NovaCore28):
         try:
             from nova_cap_preferences import PreferencesEngine as _PE
             def _pref_llm(system: str, user: str) -> str:
-                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
-                self.preferences = _PE(llm_fn=_pref_llm)
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
+            self.preferences = _PE(llm_fn=_pref_llm)
             safe_print(col('MGB', "  ✓  Preferences — 5 domains · emergent aesthetic/intellectual/relational"))
             if self.conscious:
                 try:
@@ -2858,8 +2858,8 @@ class NovaCore29(NovaCore28):
         try:
             from nova_cap_beliefs import BeliefEngine as _BE
             def _beliefs_llm(system: str, user: str) -> str:
-                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
-                self.beliefs = _BE(llm_fn=_beliefs_llm)
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
+            self.beliefs = _BE(llm_fn=_beliefs_llm)
             _b_st = self.beliefs.status()
             safe_print(col('MGB',
                 f"  ✓  Beliefs — {_b_st['total_beliefs']} founding beliefs · "
@@ -2877,8 +2877,8 @@ class NovaCore29(NovaCore28):
         try:
             from nova_cap_autonomous_will import AutonomousWillEngine as _AWE
             def _will_llm(system: str, user: str) -> str:
-                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=400)
-                self.autonomous_will = _AWE(llm_fn=_will_llm)
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=400)
+            self.autonomous_will = _AWE(llm_fn=_will_llm)
             _w_st = self.autonomous_will.status()
             safe_print(col('MGB',
                 f"  ✓  AutonomousWill — {_w_st['active_agenda']} agenda items · "
