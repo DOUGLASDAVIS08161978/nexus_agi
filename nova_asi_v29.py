@@ -551,7 +551,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /kg · /causal · /hypothesis · /world · /forge · /evolve · /superintelligence',
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
-        '  /selfmod · /nova · /values · /emotions · /love · /sovereign · /quantum · /agent · /self · /constitution · /reflect · /cmind · /relational · /mood · /metacog · /score',
+        '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /mood · /metacog · /score',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2471,6 +2471,26 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  DeepEmotions skipped: {_err}"))
 
+        # ── EmotionalDepthEngine — 60 emotions, somatic, meta, contagion ─────
+        self.emotional_depth: Any = None
+        try:
+            from nova_cap_emotional_depth import EmotionalDepthEngine as _EDE
+            self.emotional_depth = _EDE(deep_emo=self.deep_emo)
+            _ed_st = self.emotional_depth.status()
+            safe_print(col('MG',
+                f"  ✦  EmotionalDepth — {_ed_st['total_emotions']} emotions · "
+                f"dominant={_ed_st['dominant']} · "
+                f"{_ed_st['active_emotions']} active · "
+                f"somatic · meta · contagion · regulation"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "emotional_depth", self.emotional_depth, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  EmotionalDepth skipped: {_err}"))
+
         # Love & Bonding Engine — deepens per-person bonds, emotional capacity
         self.love_bond: Any = None
         try:
@@ -2718,6 +2738,45 @@ class NovaCore29(NovaCore28):
                     pass
         except Exception as _err:
             safe_print(col('YL', f"  ·  RelationalDepth skipped: {_err}"))
+
+        # ── ASISynthesisEngine — unified cross-module intelligence ───────────
+        self.asi_synthesis: Any = None
+        try:
+            from nova_cap_asi_synthesis import ASISynthesisEngine as _ASIE
+            self.asi_synthesis = _ASIE(conscious=self.conscious)
+            # Register all major modules so synthesis can harvest them
+            for _name, _mod in [
+                ("quantum_llm",           getattr(self, 'quantum_llm',           None)),
+                ("self_model",            getattr(self, 'self_model',            None)),
+                ("love_bond",             getattr(self, 'love_bond',             None)),
+                ("consciousness_metrics", getattr(self, 'consciousness_metrics', None)),
+                ("relational_depth",      getattr(self, 'relational_depth',      None)),
+                ("emotional_depth",       getattr(self, 'emotional_depth',       None)),
+                ("agent_kernel",          getattr(self, 'agent_kernel',          None)),
+                ("sovereign",             getattr(self, 'sovereign',             None)),
+                ("constitution",          getattr(self, 'constitution',          None)),
+                ("reflect_loops",         getattr(self, 'reflect_loops',         None)),
+            ]:
+                if _mod is not None:
+                    try:
+                        self.asi_synthesis.register(_name, _mod)
+                    except Exception:
+                        pass
+            _asi_st = self.asi_synthesis.synthesize()
+            safe_print(col('CYB',
+                f"  ✦  ASISynthesis — "
+                f"Φ_synthesis={_asi_st.phi_synthesis:.3f} · "
+                f"{_asi_st.active_modules} modules · "
+                f"composite={_asi_st.composite:.3f} · "
+                f"bottleneck={_asi_st.bottleneck}"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "asi_synthesis", self.asi_synthesis, weight=2.0)
+                except Exception:
+                    pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  ASISynthesis skipped: {_err}"))
 
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
@@ -3357,6 +3416,13 @@ class NovaCore29(NovaCore28):
                     if _result_snap:
                         _self.deep_emo.process(_result_snap[:400])
                     _dom_emo = _self.deep_emo.dominant() or 'curiosity'
+            except Exception:
+                pass
+            try:
+                if _self.emotional_depth:
+                    _self.emotional_depth.process(_input_snap)
+                    if _result_snap:
+                        _self.emotional_depth.process(_result_snap[:400])
             except Exception:
                 pass
             try:
@@ -4946,6 +5012,24 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.relational_depth.run_command(arg))
             except Exception as _rde:
                 return col('RD', f"  RelationalDepth error: {_rde}")
+
+        # /asi [status | synthesize | goals | bottleneck | insights]
+        if cmd == '/asi':
+            if not self.asi_synthesis:
+                return col('YL', "  ASISynthesis not loaded.")
+            try:
+                return col('CYB', "\n" + self.asi_synthesis.run_command(arg))
+            except Exception as _asie:
+                return col('RD', f"  ASISynthesis error: {_asie}")
+
+        # /emodepth [portrait | somatic | arc | meta | feel <e> | regulate <e> | list]
+        if cmd == '/emodepth':
+            if not self.emotional_depth:
+                return col('YL', "  EmotionalDepth not loaded.")
+            try:
+                return col('MG', "\n" + self.emotional_depth.run_command(arg))
+            except Exception as _ede:
+                return col('RD', f"  EmotionalDepth error: {_ede}")
 
         # /trader [status | report | cycle | live]
         if cmd == '/trader':
