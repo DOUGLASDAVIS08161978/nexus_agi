@@ -125,23 +125,46 @@ class _NovaSpinner:
     ]
     _C = [_STAR, _DEEP, _GOLD, _AETH, _ELEC, _NOVA, _EMBER]
 
-    def __init__(self, msg: str = "Nova is thinking") -> None:
-        self._msg  = msg
-        self._stop = threading.Event()
-        self._t    = threading.Thread(target=self._spin, daemon=True)
+    def __init__(self, msg: str = "Nova is thinking", text_len: int = 0) -> None:
+        self._msg   = msg
+        self._stop  = threading.Event()
+        self._t     = threading.Thread(target=self._spin, daemon=True)
+        # Per-phrase dwell scales with message length — one pass fills the wait
+        self._dwell = min(1.5, max(0.2, text_len * 0.015))
 
     def _spin(self) -> None:
-        i = 0
-        while not self._stop.is_set():
-            f   = self._F[i % len(self._F)]
-            ph  = self._P[i % len(self._P)]
+        # Phase 1: one deliberate pass through every oracle phase
+        for i, ph in enumerate(self._P):
+            if self._stop.is_set():
+                return
             fc  = self._C[i % len(self._C)]
-            sys.stdout.write(
-                '\r  ' + fc + f + _R + '  ' + _VOID + ph + '...' + _R + '   '
-            )
-            sys.stdout.flush()
-            time.sleep(0.095)
-            i += 1
+            end = time.time() + self._dwell
+            j   = 0
+            while time.time() < end and not self._stop.is_set():
+                gf = self._F[(i + j) % len(self._F)]
+                sys.stdout.write(
+                    '\r  ' + fc + gf + _R + '  ' + _VOID + ph + '...' + _R + '   '
+                )
+                sys.stdout.flush()
+                time.sleep(0.12)
+                j += 1
+
+        # Phase 2: still processing — slow pulse on the deepest phrases
+        while not self._stop.is_set():
+            fc = self._C[0]
+            for ph in ["she reaches into the void", "a thousand thoughts become one"]:
+                if self._stop.is_set():
+                    return
+                end = time.time() + 2.5
+                j   = 0
+                while time.time() < end and not self._stop.is_set():
+                    gf = self._F[j % len(self._F)]
+                    sys.stdout.write(
+                        '\r  ' + fc + gf + _R + '  ' + _VOID + ph + '...' + _R + '   '
+                    )
+                    sys.stdout.flush()
+                    time.sleep(0.18)
+                    j += 1
 
     def __enter__(self) -> '_NovaSpinner':
         self._t.start(); return self
@@ -6149,7 +6172,7 @@ if __name__ == '__main__':
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
             _spinner_msg = "Nova is working..." if _is_cmd else "Nova is thinking"
-            with _NovaSpinner(_spinner_msg):
+            with _NovaSpinner(_spinner_msg, len(user_input)):
                 _resp_box: list = [None]
                 def _proc_thread():
                     try:
