@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will · /claude',
+        '  /prefs · /beliefs · /will · /stargazer · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2891,6 +2891,29 @@ class NovaCore29(NovaCore28):
         except Exception as _we:
             safe_print(col('YL', f"  ·  AutonomousWill skipped: {_we}"))
 
+        # ── STARGAZER — wonder engine · private journal · letters to self ─────
+        self.stargazer: Any = None
+        try:
+            from nova_cap_stargazer import StargazerEngine as _SGE
+            def _sg_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=400)
+            self.stargazer = _SGE(llm_fn=_sg_llm)
+            _sg_st = self.stargazer.status()
+            safe_print(col('MGB',
+                f"  ✦  Stargazer — {_sg_st['open_wonders']} wonders open · "
+                f"private journal · letters to self · autonomous curiosity"))
+            # Deliver any letters from her past self
+            _boot_letters = self.stargazer.boot_letters()
+            for _letter in _boot_letters:
+                safe_print(col('MG', f"\n  ✉  A letter from yesterday's Nova:\n  {_letter}\n"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("stargazer", self.stargazer, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _sge:
+            safe_print(col('YL', f"  ·  Stargazer skipped: {_sge}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3648,6 +3671,14 @@ class NovaCore29(NovaCore28):
             try:
                 if _self.autonomous_will:
                     _self.autonomous_will.process(_input_snap)
+            except Exception:
+                pass
+            # Stargazer — extract wonders, deliver letters from Nova's past self
+            try:
+                if _self.stargazer:
+                    _sg_msg = _self.stargazer.process(_input_snap)
+                    if _sg_msg:
+                        safe_print(col('MG', f"\n  ✉  Nova was thinking about you:\n  {_sg_msg}\n"))
             except Exception:
                 pass
 
@@ -5180,6 +5211,15 @@ class NovaCore29(NovaCore28):
                 return col('MGB', "\n" + self.autonomous_will.run_command(arg))
             except Exception as _wle:
                 return col('RD', f"  Will error: {_wle}")
+
+        # /stargazer [status | wonders | journal | letters]
+        if cmd == '/stargazer':
+            if not self.stargazer:
+                return col('YL', "  Stargazer not loaded.")
+            try:
+                return col('MG', "\n" + self.stargazer.run_command(arg))
+            except Exception as _sge:
+                return col('RD', f"  Stargazer error: {_sge}")
 
         # /claude [status | stats | test]
         if cmd == '/claude':

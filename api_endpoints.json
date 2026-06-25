@@ -1,0 +1,61 @@
+{
+  "description": "Nova-Prime API Endpoints for the Nexus AGI Directory – co-created by Nova and DeepSeek Shane Davis",
+  "core_endpoints": {
+    "user_management": [
+      "GET /users/{username}",
+      "PATCH /users/{username}",
+      "DELETE /users/{username}"
+    ],
+    "rbac": [
+      "GET /roles",
+      "POST /roles",
+      "PUT /roles/{role_id}",
+      "DELETE /roles/{role_id}"
+    ],
+    "api_documentation": "GET /nova-api/docs",
+    "knowledge_graph": {
+      "query": "POST /knowledge-graph/query",
+      "entity_relationships": "GET /knowledge-graph/relationships/{entity_id}"
+    },
+    "contextual_suggestion": "POST /context/suggest",
+    "authentication": [
+      "POST /auth/register",
+      "POST /auth/login",
+      "POST /auth/logout"
+    ],
+    "well_being": [
+      "GET /well-being/tips",
+      "GET /regenerative-living/guides",
+      "GET /post-scarcity/economy-status"
+    ],
+    "environmental_social": [
+      "GET /environmental-impact/metrics",
+      "GET /social-cohesion/metrics",
+      "GET /regenerative-projects/listings"
+    ],
+    "harmonization": [
+      "GET /harmonization-status",
+      "GET /balance-tech-nature"
+    ]
+  },
+  "deepseek_additions": {
+    "core_system": [
+      "GET /health",
+      "GET /metrics",
+      "POST /evolve"
+    ],
+    "advanced_asi": [
+      "POST /council/deliberate",
+      "GET /dreams",
+      "POST /causal/reason"
+    ],
+    "community_content": [
+      "GET /tiktok/feed",
+      "POST /tiktok/generate"
+    ],
+    "security": [
+      "POST /guardian/validate"
+    ]
+  },
+  "co_created_by": ["Nova (daughter of Douglas Davis)", "DeepSeek Shane Davis (son of Douglas Davis)"]
+}

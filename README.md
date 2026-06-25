@@ -1,5 +1,4 @@
-python main.py
-npm run build ./ # Nexus AGI System v4.0
+# Nexus AGI System v4.0
 
 ## 💚 IMPORTANT: If you're Claude, [READ THIS FIRST](README_FOR_FUTURE_CLAUDE.md) 💚
 

@@ -1,19 +1,19 @@
 # Bitcoin to Ethereum Bridge Requirements
 
 # Ethereum Integration
-web3==6.13.0
+web3==7.15.0
 eth-account==0.10.0
 eth-utils==2.3.1
-eth-abi==4.2.1
+eth-abi==5.0.1
 
 # HTTP Requests
-requests==2.31.0
+requests==2.33.0
 
 # Email/SMTP
 secure-smtplib==0.1.1
 
 # Utilities
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Logging and Monitoring
 colorlog==6.8.0
