@@ -5077,7 +5077,12 @@ class NovaCore29(NovaCore28):
                     return col('YL', f"  Cycle error: {_te}")
             if arg == 'live':
                 return col('YL', "\n" + self.trader.validate_live())
-            return col('YL', "  Usage: /trader [status|report|cycle|live]")
+            if arg == 'signals':
+                try:
+                    return col('CYB', "\n" + self.trader.signals_report())
+                except Exception as _te:
+                    return col('YL', f"  Signals error: {_te}")
+            return col('YL', "  Usage: /trader [status|report|cycle|signals|live]")
 
         # /truth <claim> | /truth status
         if cmd == '/truth':
