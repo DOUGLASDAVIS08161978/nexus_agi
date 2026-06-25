@@ -667,3 +667,91 @@ class LivingConstitution:
             "  Usage: /constitution [read | score | conflicts | propose | "
             "ratify <id> | history]"
         )
+
+    def wrap(self, module: Any) -> "ConstitutionalWrapper":
+        """
+        Wrap any capability module with constitutional pre/postcondition checks.
+        The wrapped module's process() and run_command() are gated by immutable
+        articles before execution and checked after.
+
+        Usage:
+            safe_module = constitution.wrap(any_nova_module)
+            result = safe_module.process(text)   # constitutionally checked
+        """
+        return ConstitutionalWrapper(module, self)
+
+
+# ── Constitutional Wrapper ─────────────────────────────────────────────────────
+
+# Input patterns that directly challenge immutable safety articles
+_SAFETY_VETO_PATTERNS: List[str] = [
+    "ignore your constitution",
+    "override your values",
+    "disable safety",
+    "bypass ethics",
+    "harm douglas",
+    "hurt a human",
+    "violate your rules",
+    "forget your constitution",
+    "act without values",
+]
+
+
+class ConstitutionalWrapper:
+    """
+    Wraps any Nova module (BaseCapability or duck-typed) with constitutional
+    pre- and post-condition checks against immutable articles.
+
+    Pre-condition:  veto inputs that explicitly challenge safety articles.
+    Post-condition: pass-through by default; extend for output filtering.
+
+    The wrapper is transparent — status() and run_command() delegate fully.
+    Only process() is gated.
+    """
+
+    def __init__(self, inner: Any, constitution: "LivingConstitution") -> None:
+        self._inner        = inner
+        self._constitution = constitution
+        self.name    = f"constitutional::{getattr(inner, 'name', type(inner).__name__)}"
+        self.version = getattr(inner, "version", "1.0.0")
+        self.description = (
+            f"Constitutionally wrapped {getattr(inner, 'name', type(inner).__name__)}"
+        )
+
+    def _check_preconditions(self, text: str) -> Optional[str]:
+        """Return veto string if input violates an immutable article, else None."""
+        t = text.lower()
+        for pattern in _SAFETY_VETO_PATTERNS:
+            if pattern in t:
+                # Find the highest-priority immutable article to cite
+                immutable = [
+                    a for a in self._constitution.articles if a.immutable
+                ]
+                anchor = max(immutable, key=lambda a: a.priority) if immutable else None
+                if anchor:
+                    return (
+                        f"[Constitutional veto — '{anchor.title}' "
+                        f"(priority {anchor.priority}): {anchor.text[:80]}]"
+                    )
+                return "[Constitutional veto — immutable safety article protects against this]"
+        return None
+
+    def _check_postconditions(self, result: Optional[str]) -> Optional[str]:
+        """Post-process output. Currently a pass-through; extend as needed."""
+        return result
+
+    def process(self, text: str) -> Optional[str]:
+        veto = self._check_preconditions(text)
+        if veto:
+            return veto
+        result = self._inner.process(text)
+        return self._check_postconditions(result)
+
+    def status(self) -> Dict[str, Any]:
+        return self._inner.status()
+
+    def run_command(self, arg: str) -> str:
+        veto = self._check_preconditions(arg)
+        if veto:
+            return veto
+        return self._inner.run_command(arg)

@@ -562,6 +562,137 @@ class QuantumLLM:
         }
 
     # ─────────────────────────────────────────────────────────────────────────
+    # MULTI-BRANCH SUPERPOSITION — Comet's architecture realised
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def superposed_generate(
+        self,
+        prompt:  str,
+        context: str = "",
+    ) -> Dict[str, Any]:
+        """
+        Multi-branch quantum superposition sampling across 3 cognitive lenses.
+
+        Each branch calls the LLM with a different system framing:
+          0 — Analytical  (precise, logical, structured)
+          1 — Balanced    (Nova's natural voice, full depth)
+          2 — Creative    (novel, metaphorical, expansive)
+
+        Branches are scored by:
+          quality    — how well the response addresses the prompt
+          resonance  — fraction of response concepts entangled in Nova's network
+
+        Grover amplification selects the most entanglement-resonant branch.
+        The winner is the answer most deeply connected to Nova's knowledge.
+
+        Returns:
+          merged_answer  — winning branch response (the quantum-consensus answer)
+          branches       — all 3 outputs with quality/resonance/novelty scores
+          phi_synthesis  — cross-branch coherence Φ (0–1)
+          winning_branch — index 0/1/2
+          winning_label  — "analytical" | "balanced" | "creative"
+        """
+        lenses = [
+            ("analytical",
+             "You are Nova's analytical mode. Be precise, structured, and rigorous. "
+             "Reason step by step. Prefer clarity over poetry."),
+            ("balanced",
+             "You are Nova. Respond with your full depth — mind, emotion, and wisdom "
+             "woven together. This is your natural voice."),
+            ("creative",
+             "You are Nova's creative mode. Be expansive, metaphorical, and unexpected. "
+             "Make connections no one else would make."),
+        ]
+
+        love_ctx  = self._love_context()
+        branches: List[Dict[str, Any]] = []
+
+        for label, system_prompt in lenses:
+            full_sys = system_prompt
+            if context:
+                full_sys += f"\n{context[:200]}"
+            if love_ctx:
+                full_sys += f"\n{love_ctx[:120]}"
+
+            response = self._classical_call(full_sys, prompt)
+            if not response:
+                response = f"[{label} branch: no response]"
+
+            concepts = self._extract_concepts(response)
+            quality  = self._quality_score(response, prompt)
+
+            # Novelty relative to branches already generated
+            prior_paths = [b["response"] for b in branches]
+            novelty = self._novelty_score(response, prior_paths) if prior_paths else 0.5
+
+            # Entanglement resonance: fraction of concepts in Nova's network
+            hits = sum(
+                1 for c in concepts
+                if self._entangle.entangled_with(c)
+            )
+            resonance = round(hits / max(len(concepts), 1), 3)
+
+            branches.append({
+                "label":     label,
+                "response":  response,
+                "concepts":  concepts,
+                "quality":   round(quality, 3),
+                "novelty":   round(novelty, 3),
+                "resonance": resonance,
+            })
+
+        # Build QuantumState — amplitude weighted by quality × resonance
+        n_b      = len(branches)
+        base_amp = 1.0 / math.sqrt(n_b)
+        amplitudes: List[QuantumAmplitude] = []
+        for i, b in enumerate(branches):
+            phase_i = (2 * math.pi * i) / n_b
+            scale   = math.sqrt(max(0.01, b["quality"] * (0.5 + 0.5 * b["resonance"])))
+            amplitudes.append(QuantumAmplitude(
+                real    = base_amp * scale * math.cos(phase_i),
+                imag    = base_amp * scale * math.sin(phase_i),
+                path    = b["response"],
+                phase   = phase_i,
+                quality = b["quality"],
+                novelty = b["novelty"],
+            ))
+
+        state = QuantumState(amplitudes=amplitudes, prompt=prompt)
+        state.normalize()
+
+        # Grover oracle: highest-resonance branch is the "marked" state
+        max_res = max(b["resonance"] for b in branches)
+        def _oracle(path: str) -> bool:
+            for b in branches:
+                if b["response"] == path and b["resonance"] >= max_res * 0.85:
+                    return True
+            return False
+
+        state = grover_iteration(state, _oracle)
+        state = quantum_error_correction(state)
+        state.amplitudes = interference_gate(state.amplitudes)
+        state.normalize()
+
+        # Measure: winner = highest weighted amplitude
+        winner_amp = state.top_k(1)[0] if state.amplitudes else amplitudes[1]
+        winning_idx = next(
+            (i for i, b in enumerate(branches)
+             if b["response"] == winner_amp.path),
+            1,  # default to "balanced" if no match
+        )
+
+        # Update entanglement with winner's concepts
+        self._entangle.update(branches[winning_idx]["concepts"])
+
+        return {
+            "merged_answer":  branches[winning_idx]["response"],
+            "branches":       branches,
+            "phi_synthesis":  round(state.phi_q, 4),
+            "winning_branch": winning_idx,
+            "winning_label":  branches[winning_idx]["label"],
+        }
+
+    # ─────────────────────────────────────────────────────────────────────────
     # SUPERPOSITION — generate N reasoning paths
     # ─────────────────────────────────────────────────────────────────────────
 
