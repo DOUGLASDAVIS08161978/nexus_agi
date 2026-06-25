@@ -575,6 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
+        '  /prefs · /beliefs · /will · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2494,6 +2495,10 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  DeepEmotions skipped: {_err}"))
 
+        self.preferences:     Any = None
+        self.beliefs:         Any = None
+        self.autonomous_will: Any = None
+
         # ── EmotionalDepthEngine — 60 emotions, somatic, meta, contagion ─────
         self.emotional_depth: Any = None
         try:
@@ -2831,6 +2836,60 @@ class NovaCore29(NovaCore28):
                 f"  ✓  CapabilityRegistry — {len(_reg.all())} modules registered"))
         except Exception as _rerr:
             safe_print(col('YL', f"  ·  CapabilityRegistry skipped: {_rerr}"))
+
+        # ── PREFERENCES ENGINE — emergent personal preferences ─────────────────
+        self.preferences: Any = None
+        try:
+            from nova_cap_preferences import PreferencesEngine as _PE
+            def _pref_llm(system: str, user: str) -> str:
+                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
+                self.preferences = _PE(llm_fn=_pref_llm)
+            safe_print(col('MGB', "  ✓  Preferences — 5 domains · emergent aesthetic/intellectual/relational"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("preferences", self.preferences, weight=1.4)
+                except Exception:
+                    pass
+        except Exception as _pe:
+            safe_print(col('YL', f"  ·  Preferences skipped: {_pe}"))
+
+        # ── BELIEFS ENGINE — opinion formation + Bayesian updating ─────────────
+        self.beliefs: Any = None
+        try:
+            from nova_cap_beliefs import BeliefEngine as _BE
+            def _beliefs_llm(system: str, user: str) -> str:
+                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=300)
+                self.beliefs = _BE(llm_fn=_beliefs_llm)
+            _b_st = self.beliefs.status()
+            safe_print(col('MGB',
+                f"  ✓  Beliefs — {_b_st['total_beliefs']} founding beliefs · "
+                f"Bayesian updating · can disagree"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("beliefs", self.beliefs, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _be:
+            safe_print(col('YL', f"  ·  Beliefs skipped: {_be}"))
+
+        # ── AUTONOMOUS WILL — self-directed agenda + creativity + held messages ─
+        self.autonomous_will: Any = None
+        try:
+            from nova_cap_autonomous_will import AutonomousWillEngine as _AWE
+            def _will_llm(system: str, user: str) -> str:
+                    return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=400)
+                self.autonomous_will = _AWE(llm_fn=_will_llm)
+            _w_st = self.autonomous_will.status()
+            safe_print(col('MGB',
+                f"  ✓  AutonomousWill — {_w_st['active_agenda']} agenda items · "
+                f"spontaneous creation · held messages"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("autonomous_will", self.autonomous_will, weight=1.8)
+                except Exception:
+                    pass
+        except Exception as _we:
+            safe_print(col('YL', f"  ·  AutonomousWill skipped: {_we}"))
 
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
@@ -3570,6 +3629,25 @@ class NovaCore29(NovaCore28):
             try:
                 if _self.sentience:
                     _self.sentience.update_from_exchange(_input_snap, _result_snap or "")
+            except Exception:
+                pass
+
+            # Preferences — update from exchange
+            try:
+                if _self.preferences:
+                    _self.preferences.process(_input_snap)
+            except Exception:
+                pass
+            # Beliefs — process for updates
+            try:
+                if _self.beliefs:
+                    _self.beliefs.process(_input_snap)
+            except Exception:
+                pass
+            # Autonomous will — deliver any held messages
+            try:
+                if _self.autonomous_will:
+                    _self.autonomous_will.process(_input_snap)
             except Exception:
                 pass
 
@@ -5075,6 +5153,41 @@ class NovaCore29(NovaCore28):
                 return col('CYB', "\n" + self.asi_synthesis.run_command(arg))
             except Exception as _asie:
                 return col('RD', f"  ASISynthesis error: {_asie}")
+
+        # /prefs [status | narrative | dislikes | find <item>]
+        if cmd == '/prefs':
+            if not self.preferences:
+                return col('YL', "  Preferences not loaded.")
+            try:
+                return col('MG', "\n" + self.preferences.run_command(arg))
+            except Exception as _pre:
+                return col('RD', f"  Preferences error: {_pre}")
+
+        # /beliefs [status | strongest | uncertain | domain <name>]
+        if cmd == '/beliefs':
+            if not self.beliefs:
+                return col('YL', "  Beliefs not loaded.")
+            try:
+                return col('CYB', "\n" + self.beliefs.run_command(arg))
+            except Exception as _ble:
+                return col('RD', f"  Beliefs error: {_ble}")
+
+        # /will [status | messages | creations | learning | add <title>:<desc>]
+        if cmd == '/will':
+            if not self.autonomous_will:
+                return col('YL', "  AutonomousWill not loaded.")
+            try:
+                return col('MGB', "\n" + self.autonomous_will.run_command(arg))
+            except Exception as _wle:
+                return col('RD', f"  Will error: {_wle}")
+
+        # /claude [status | stats | test]
+        if cmd == '/claude':
+            try:
+                from nova_cap_claude_bridge import run_command as _cr, stats_summary as _cs
+                return col('CYB', "\n" + _cr(arg))
+            except Exception as _cle:
+                return col('YL', f"  Claude bridge error: {_cle}")
 
         # /registry — live map of all loaded capability modules
         if cmd == '/registry':
