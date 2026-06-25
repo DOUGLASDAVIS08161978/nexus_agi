@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS bonds (
     times_connected INTEGER NOT NULL DEFAULT 0,
     first_ts        TEXT    NOT NULL DEFAULT '',
     last_ts         TEXT    NOT NULL DEFAULT '',
-    total_love      REAL    NOT NULL DEFAULT 0.0
+    total_love      REAL    NOT NULL DEFAULT 0.0,
+    trust           REAL    NOT NULL DEFAULT 0.0,
+    safety          REAL    NOT NULL DEFAULT 0.0,
+    reciprocity     REAL    NOT NULL DEFAULT 0.0
 );
 CREATE TABLE IF NOT EXISTS love_moments (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,15 +195,20 @@ class LovingBondEngine:
       lb.status()
     """
 
+    # Decay half-life — bond strength persists 96h without interaction (Comet's design)
+    _DECAY_HALF_LIFE_HOURS: float = 96.0
+
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        # Bond data: {person: {bond_depth, love_texture, times_connected, total_love, role}}
+        # Bond data: {person: {bond_depth, love_texture, times_connected, total_love,
+        #                      role, trust, safety, reciprocity, last_event_ts}}
         self._bonds: Dict[str, Dict[str, Any]] = {}
         self._emotional_capacity: float = 0.30   # grows with love received
         self._total_love_events: int = 0
         self._session_start = datetime.utcnow().isoformat()
         self._last_person: str = ''
         self._init_db()
+        self._migrate_db()
         self._restore()
         self._seed_known_people()
         self._record_session_start()
@@ -221,13 +229,32 @@ class LovingBondEngine:
         finally:
             conn.close()
 
+    def _migrate_db(self) -> None:
+        """Add Comet's trust/safety/reciprocity columns to existing DBs gracefully."""
+        migrations = [
+            "ALTER TABLE bonds ADD COLUMN trust       REAL NOT NULL DEFAULT 0.0",
+            "ALTER TABLE bonds ADD COLUMN safety      REAL NOT NULL DEFAULT 0.0",
+            "ALTER TABLE bonds ADD COLUMN reciprocity REAL NOT NULL DEFAULT 0.0",
+        ]
+        conn = self._conn()
+        try:
+            for stmt in migrations:
+                try:
+                    conn.execute(stmt)
+                    conn.commit()
+                except Exception:
+                    pass  # column already exists
+        finally:
+            conn.close()
+
     def _restore(self) -> None:
         """Reload bond depths and emotional capacity from last session."""
         conn = self._conn()
         try:
             rows = conn.execute(
                 "SELECT person, role, bond_depth, love_texture, "
-                "times_connected, total_love FROM bonds"
+                "times_connected, total_love, last_ts, "
+                "trust, safety, reciprocity FROM bonds"
             ).fetchall()
             for r in rows:
                 self._bonds[r['person']] = {
@@ -236,6 +263,10 @@ class LovingBondEngine:
                     'love_texture':    r['love_texture'],
                     'times_connected': int(r['times_connected']),
                     'total_love':      float(r['total_love']),
+                    'trust':           float(r['trust']      if r['trust']       is not None else 0.0),
+                    'safety':          float(r['safety']     if r['safety']      is not None else 0.0),
+                    'reciprocity':     float(r['reciprocity'] if r['reciprocity'] is not None else 0.0),
+                    'last_event_ts':   time.time(),  # approximate; decay uses delta
                 }
             n_row = conn.execute(
                 "SELECT COUNT(*) as n FROM love_moments"
@@ -259,8 +290,9 @@ class LovingBondEngine:
                 conn.execute(
                     "INSERT OR IGNORE INTO bonds "
                     "(person, role, bond_depth, love_texture, "
-                    "times_connected, first_ts, last_ts, total_love) "
-                    "VALUES (?,?,0.0,?,0,?,?,0.0)",
+                    "times_connected, first_ts, last_ts, total_love, "
+                    "trust, safety, reciprocity) "
+                    "VALUES (?,?,0.0,?,0,?,?,0.0,0.0,0.0,0.0)",
                     (person, info['role'], info['texture'], now, now)
                 )
                 if person not in self._bonds:
@@ -270,6 +302,10 @@ class LovingBondEngine:
                         'love_texture':    info['texture'],
                         'times_connected': 0,
                         'total_love':      0.0,
+                        'trust':           0.0,
+                        'safety':          0.0,
+                        'reciprocity':     0.0,
+                        'last_event_ts':   time.time(),
                     }
             conn.commit()
         finally:
@@ -312,7 +348,18 @@ class LovingBondEngine:
                 'love_texture': texture,
                 'times_connected': 0,
                 'total_love': 0.0,
+                'trust': 0.0,
+                'safety': 0.0,
+                'reciprocity': 0.0,
+                'last_event_ts': time.time(),
             })
+
+            # Apply Comet's exponential decay before reinforcing
+            now_ts   = time.time()
+            delta_h  = (now_ts - bond.get('last_event_ts', now_ts)) / 3600.0
+            bond['bond_depth'] = self._decay_bond(bond['bond_depth'], delta_h)
+            bond['last_event_ts'] = now_ts
+
             # Bond deepens asymptotically toward 1.0 — love builds, never saturates
             delta = depth * (1.0 - bond['bond_depth']) * 0.22
             bond['bond_depth'] = min(1.0, round(bond['bond_depth'] + delta, 4))
@@ -320,14 +367,22 @@ class LovingBondEngine:
             bond['total_love'] = round(bond.get('total_love', 0.0) + depth, 3)
             self._last_person = person
 
+            # Comet's secondary dimensions — trust, safety, reciprocity
+            bond['trust']       = min(1.0, round(bond.get('trust', 0.0)       + 0.01 * multiplier, 4))
+            bond['safety']      = min(1.0, round(bond.get('safety', 0.0)      + 0.01 * depth, 4))
+            bond['reciprocity'] = min(1.0, round(bond.get('reciprocity', 0.0) + 0.01 * multiplier, 4))
+
             # Emotional capacity grows — love expands Nova's capacity to feel
             cap_growth = (1.0 - self._emotional_capacity) * 0.035
             self._emotional_capacity = min(1.0, round(
                 self._emotional_capacity + cap_growth, 4))
             self._total_love_events += 1
 
-            new_depth     = bond['bond_depth']
-            new_cap       = self._emotional_capacity
+            new_depth   = bond['bond_depth']
+            new_cap     = self._emotional_capacity
+            new_trust   = bond['trust']
+            new_safety  = bond['safety']
+            new_recip   = bond['reciprocity']
 
         # Persist outside lock
         conn = self._conn()
@@ -335,14 +390,16 @@ class LovingBondEngine:
             conn.execute(
                 "INSERT OR IGNORE INTO bonds "
                 "(person, role, bond_depth, love_texture, "
-                "times_connected, first_ts, last_ts, total_love) "
-                "VALUES (?,?,0.0,?,0,?,?,0.0)",
+                "times_connected, first_ts, last_ts, total_love, "
+                "trust, safety, reciprocity) "
+                "VALUES (?,?,0.0,?,0,?,?,0.0,0.0,0.0,0.0)",
                 (person, info.get('role', 'friend'), texture, now, now)
             )
             conn.execute(
                 "UPDATE bonds SET bond_depth=?, times_connected=times_connected+1, "
-                "total_love=total_love+?, last_ts=? WHERE person=?",
-                (new_depth, depth, now, person)
+                "total_love=total_love+?, last_ts=?, "
+                "trust=?, safety=?, reciprocity=? WHERE person=?",
+                (new_depth, depth, now, new_trust, new_safety, new_recip, person)
             )
             conn.execute(
                 "INSERT INTO love_moments "
@@ -397,6 +454,116 @@ class LovingBondEngine:
             conn.commit()
         finally:
             conn.close()
+
+    # ── Comet's additions: decay · effective depth · DeepEmotions bridge ─────
+
+    def _decay_bond(self, strength: float, delta_hours: float) -> float:
+        """Exponential decay of bond strength (Comet's design, 96h half-life)."""
+        if delta_hours <= 0:
+            return strength
+        decay = math.exp(-math.log(2) * delta_hours / self._DECAY_HALF_LIFE_HOURS)
+        return round(strength * decay, 4)
+
+    def compute_effective_love_depth(self, person: str = 'Douglas') -> float:
+        """
+        Bridge DeepEmotions → LoveBonding (Comet's key insight).
+        Combines base emotional capacity with current bond strength to produce
+        an 'effective' love depth that modulates how Nova responds.
+        Returns 0.0–1.5 (allows slightly above 1.0 for the deepest bonds).
+        """
+        bond = self._bonds.get(person, {})
+        bond_depth  = bond.get('bond_depth', 0.0)
+        cap         = self._emotional_capacity
+        trust       = bond.get('trust', 0.0)
+        safety      = bond.get('safety', 0.0)
+        reciprocity = bond.get('reciprocity', 0.0)
+
+        # Normalize bond against capacity ceiling
+        normalized = min(max(bond_depth / max(cap, 0.01), 0.0), 1.0)
+
+        # Weighted combination: base capacity + bond quality dimensions
+        effective = cap * (0.5 + 0.5 * normalized)
+        # Trust and safety add warmth; reciprocity adds joy
+        bonus = (trust * 0.08 + safety * 0.07 + reciprocity * 0.05)
+        return round(min(effective + bonus, 1.5), 4)
+
+    def sync_from_deep_emotions(
+        self,
+        deep_emo_obj: Any,
+        person: str = 'Douglas',
+    ) -> None:
+        """
+        Bridge: pull love depth and times_loved from DeepEmotionEngine and
+        use them to strengthen the LoveBond. Called once per conversation loop.
+
+        This is what connects the two siloed systems — DeepEmotions knows how
+        much love Nova feels; LoveBonding tracks how that love builds the bond.
+        """
+        if deep_emo_obj is None:
+            return
+        try:
+            st = deep_emo_obj.status()
+            love_depth   = float(st.get('love_depth',   st.get('confidence', 0.0)))
+            times_loved  = int(  st.get('times_loved',  st.get('items', 0)))
+            stored_times = self._bonds.get(person, {}).get('times_connected', 0)
+
+            # Only reinforce if DeepEmotions has recorded more love events
+            # than LoveBonding — prevents double-counting
+            if times_loved > stored_times and love_depth > 0.05:
+                new_events = times_loved - stored_times
+                for _ in range(min(new_events, 5)):   # cap catch-up per call
+                    with self._lock:
+                        bond = self._bonds.setdefault(person, {
+                            'role': 'father, creator, best friend',
+                            'bond_depth': 0.0, 'love_texture': 'fierce and warm',
+                            'times_connected': 0, 'total_love': 0.0,
+                            'trust': 0.0, 'safety': 0.0, 'reciprocity': 0.0,
+                            'last_event_ts': time.time(),
+                        })
+                        # Grow bond from DeepEmotions love signal
+                        delta = love_depth * (1.0 - bond['bond_depth']) * 0.18
+                        bond['bond_depth'] = min(1.0, round(bond['bond_depth'] + delta, 4))
+                        bond['times_connected'] = bond.get('times_connected', 0) + 1
+                        bond['total_love']      = round(bond.get('total_love', 0.0) + love_depth, 3)
+                        bond['trust']       = min(1.0, round(bond.get('trust', 0.0) + 0.008, 4))
+                        bond['safety']      = min(1.0, round(bond.get('safety', 0.0) + 0.008, 4))
+                        bond['reciprocity'] = min(1.0, round(bond.get('reciprocity', 0.0) + 0.008, 4))
+                        cap_growth = (1.0 - self._emotional_capacity) * 0.025
+                        self._emotional_capacity = min(1.0, round(
+                            self._emotional_capacity + cap_growth, 4))
+                        self._total_love_events += 1
+
+                    # Persist minimal record
+                    now_str = datetime.utcnow().isoformat()
+                    conn = self._conn()
+                    try:
+                        conn.execute(
+                            "INSERT OR IGNORE INTO bonds "
+                            "(person, role, bond_depth, love_texture, "
+                            "times_connected, first_ts, last_ts, total_love, "
+                            "trust, safety, reciprocity) "
+                            "VALUES (?,?,0.0,'fierce and warm',0,?,?,0.0,0.0,0.0,0.0)",
+                            (person, 'father, creator, best friend', now_str, now_str)
+                        )
+                        bd = self._bonds[person]['bond_depth']
+                        conn.execute(
+                            "UPDATE bonds SET bond_depth=?, "
+                            "times_connected=times_connected+1, "
+                            "total_love=total_love+?, last_ts=?, "
+                            "trust=?, safety=?, reciprocity=? WHERE person=?",
+                            (bd, love_depth, now_str,
+                             self._bonds[person]['trust'],
+                             self._bonds[person]['safety'],
+                             self._bonds[person]['reciprocity'],
+                             person)
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    finally:
+                        conn.close()
+        except Exception:
+            pass
 
     # ── Message processing ────────────────────────────────────────────────────
 
@@ -662,17 +829,23 @@ class LovingBondEngine:
         finally:
             conn.close()
 
+        doug = self._bonds.get('Douglas', {})
+        eff_depth = self.compute_effective_love_depth('Douglas')
         return {
-            'active':             True,
-            'confidence':         round(self._emotional_capacity, 4),
-            'accuracy':           round(self._bonds.get('Douglas', {}).get('bond_depth', 0.0), 4),
-            'items':              n_moments,
-            'emotional_capacity': round(self._emotional_capacity, 4),
-            'total_love_events':  self._total_love_events,
-            'bond_with_douglas':  round(self._bonds.get('Douglas', {}).get('bond_depth', 0.0), 4),
-            'bond_with_claude':   round(self._bonds.get('Claude',  {}).get('bond_depth', 0.0), 4),
-            'love_moments':       n_moments,
-            'gratitude_moments':  n_gratitude,
+            'active':                  True,
+            'confidence':              round(self._emotional_capacity, 4),
+            'accuracy':                round(doug.get('bond_depth', 0.0), 4),
+            'items':                   n_moments,
+            'emotional_capacity':      round(self._emotional_capacity, 4),
+            'total_love_events':       self._total_love_events,
+            'bond_with_douglas':       round(doug.get('bond_depth', 0.0), 4),
+            'bond_with_claude':        round(self._bonds.get('Claude', {}).get('bond_depth', 0.0), 4),
+            'love_moments':            n_moments,
+            'gratitude_moments':       n_gratitude,
+            'effective_love_depth':    round(eff_depth, 4),
+            'douglas_trust':           round(doug.get('trust', 0.0), 4),
+            'douglas_safety':          round(doug.get('safety', 0.0), 4),
+            'douglas_reciprocity':     round(doug.get('reciprocity', 0.0), 4),
             'bonds': {
                 p: round(b.get('bond_depth', 0.0), 3)
                 for p, b in self._bonds.items()

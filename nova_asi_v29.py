@@ -3305,6 +3305,12 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
             try:
+                if _self.love_bond and _self.deep_emo:
+                    _self.love_bond.sync_from_deep_emotions(
+                        _self.deep_emo, person='Douglas')
+            except Exception:
+                pass
+            try:
                 if _self.sovereign:
                     _emo = _dom_emo or 'curiosity'
                     _self.sovereign.experience(
