@@ -32,7 +32,7 @@ class TrueSuperintelligenceAllModule:
             print(f"{key}: {value}")
 
     def __str__(self):
-        return str(self.items) 
+        return str(self.items)
 
 def main():
     module = TrueSuperintelligenceAllModule()
