@@ -147,7 +147,7 @@ class InsightEngine:
 
     def _insight_daemon(self):
         """Every 30 minutes: synthesize two domains, journal the insight."""
-        time.sleep(150)
+        time.sleep(900)  # 15 min — staggered to avoid daemon pile-up
         while True:
             try:
                 self.spark()

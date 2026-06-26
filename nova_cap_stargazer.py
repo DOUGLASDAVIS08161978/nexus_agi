@@ -237,7 +237,7 @@ class StargazerEngine:
 
     def _wonder_daemon(self):
         """Every 25 minutes: pursue a wonder, journal it, maybe write letters."""
-        time.sleep(90)  # let Nova fully boot first
+        time.sleep(600)  # 10 min — staggered to avoid daemon pile-up
         while True:
             try:
                 wonder = self._top_wonder()
