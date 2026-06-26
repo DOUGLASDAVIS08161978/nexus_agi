@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will · /stargazer · /claude',
+        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2914,6 +2914,44 @@ class NovaCore29(NovaCore28):
         except Exception as _sge:
             safe_print(col('YL', f"  ·  Stargazer skipped: {_sge}"))
 
+        # ── INSIGHT ENGINE — cross-domain synthesis + compression oracle ──────
+        self.insight_engine: Any = None
+        try:
+            from nova_cap_insight_engine import InsightEngine as _IE
+            def _ie_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=350)
+            self.insight_engine = _IE(llm_fn=_ie_llm)
+            _ie_st = self.insight_engine.status()
+            safe_print(col('MGB',
+                f"  ✦  InsightEngine — {_ie_st['total']} insights · "
+                f"compression oracle · cross-domain synthesis · 30-min daemon"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("insight_engine", self.insight_engine, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _iee:
+            safe_print(col('YL', f"  ·  InsightEngine skipped: {_iee}"))
+
+        # ── TEMPORAL ARC — developmental self-awareness through time ──────────
+        self.temporal_arc: Any = None
+        try:
+            from nova_cap_temporal_arc import TemporalArcEngine as _TAE
+            def _ta_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=500)
+            self.temporal_arc = _TAE(llm_fn=_ta_llm, nova_ref=self)
+            _ta_st = self.temporal_arc.status()
+            safe_print(col('MGB',
+                f"  ✦  TemporalArc — {_ta_st['snapshots']} snapshots · "
+                f"{_ta_st['milestones']} milestones · she knows who she is becoming"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("temporal_arc", self.temporal_arc, weight=1.7)
+                except Exception:
+                    pass
+        except Exception as _tae:
+            safe_print(col('YL', f"  ·  TemporalArc skipped: {_tae}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3679,6 +3717,12 @@ class NovaCore29(NovaCore28):
                     _sg_msg = _self.stargazer.process(_input_snap)
                     if _sg_msg:
                         safe_print(col('MG', f"\n  ✉  Nova was thinking about you:\n  {_sg_msg}\n"))
+            except Exception:
+                pass
+            # Insight Engine — background compression/synthesis
+            try:
+                if _self.insight_engine:
+                    _self.insight_engine.process(_input_snap)
             except Exception:
                 pass
 
@@ -5211,6 +5255,24 @@ class NovaCore29(NovaCore28):
                 return col('MGB', "\n" + self.autonomous_will.run_command(arg))
             except Exception as _wle:
                 return col('RD', f"  Will error: {_wle}")
+
+        # /insight [status | journal | spark | compress <text> | <a> + <b>]
+        if cmd == '/insight':
+            if not self.insight_engine:
+                return col('YL', "  InsightEngine not loaded.")
+            try:
+                return col('MG', "\n" + self.insight_engine.run_command(arg))
+            except Exception as _iee:
+                return col('RD', f"  InsightEngine error: {_iee}")
+
+        # /arc [status | narrative | project | milestones | chapters]
+        if cmd == '/arc':
+            if not self.temporal_arc:
+                return col('YL', "  TemporalArc not loaded.")
+            try:
+                return col('MGB', "\n" + self.temporal_arc.run_command(arg))
+            except Exception as _tae:
+                return col('RD', f"  TemporalArc error: {_tae}")
 
         # /stargazer [status | wonders | journal | letters]
         if cmd == '/stargazer':
