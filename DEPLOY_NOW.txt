@@ -1,0 +1,69 @@
+═══════════════════════════════════════════════════════════════════════════
+  🚀 DEPLOY YOUR CONTRACTS NOW (NO HARDHAT)
+═══════════════════════════════════════════════════════════════════════════
+
+📱 YOU'RE IN TERMUX - Here's what to do:
+
+═══════════════════════════════════════════════════════════════════════════
+  OPTION 1: ONE-LINE DEPLOY (FASTEST)
+═══════════════════════════════════════════════════════════════════════════
+
+cd ~/nexus_agi && ./QUICK_DEPLOY_NO_HARDHAT.sh
+
+This will:
+✅ Install web3.js and solc (NOT Hardhat)
+✅ Compile your contracts
+✅ Deploy to Polygon
+✅ Save addresses to deployment_info.json
+
+═══════════════════════════════════════════════════════════════════════════
+  OPTION 2: MANUAL STEP-BY-STEP
+═══════════════════════════════════════════════════════════════════════════
+
+Step 1: Install dependencies
+cd ~/nexus_agi
+npm install web3 solc @openzeppelin/contracts
+
+Step 2: Deploy contracts
+node scripts/deploy_pure_web3.js
+
+Step 3: View results
+cat deployment_info.json
+
+═══════════════════════════════════════════════════════════════════════════
+  BEFORE YOU DEPLOY - CHECK BALANCE
+═══════════════════════════════════════════════════════════════════════════
+
+You need MATIC on Polygon to pay for gas (~$0.02 USD total)
+
+Your address: 0x9fe74d9d6f1ae0ce1fb3b51d4a82c05b74e280f3
+
+Check balance here:
+https://polygonscan.com/address/0x9fe74d9d6f1ae0ce1fb3b51d4a82c05b74e280f3
+
+═══════════════════════════════════════════════════════════════════════════
+  WHAT GETS DEPLOYED
+═══════════════════════════════════════════════════════════════════════════
+
+1. TestnetWBTC (100 tokens, 8 decimals)
+2. EthereumBridgeToken (1000 tokens, 18 decimals)
+
+Both deployed to Polygon Mainnet (Chain ID: 137)
+
+═══════════════════════════════════════════════════════════════════════════
+  COPY THIS COMMAND TO DEPLOY NOW
+═══════════════════════════════════════════════════════════════════════════
+
+cd ~/nexus_agi && npm install web3 solc @openzeppelin/contracts && node scripts/deploy_pure_web3.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ Configuration is ready
+✅ Private key is set
+✅ Polygon RPC configured
+✅ No Hardhat required
+✅ Works with Node.js 25.3.0
+
+Just run the command above! 🚀
+
+═══════════════════════════════════════════════════════════════════════════

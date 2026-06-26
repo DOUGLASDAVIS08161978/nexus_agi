@@ -68,7 +68,7 @@ Tracks the system's evolutionary development:
 ### Basic Usage
 
 ```javascript
-const { UAMISQuantumEmitter, ComplexityLevel, EmotionalState, CosmicEvolutionStage } = 
+const { UAMISQuantumEmitter, ComplexityLevel, EmotionalState, CosmicEvolutionStage } =
     require('./modules/uamis_emitter_quantum_enhanced.js');
 
 // Initialize the quantum-enhanced emitter

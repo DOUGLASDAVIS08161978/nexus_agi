@@ -53,8 +53,8 @@ auth.type: bearer, api_key, oauth, none
 capabilities: Feature list
 status: stable (production), beta (available), experimental (early), deprecated (avoid)
 Common Capabilities
-chat, stream, function_calling, vision, multimodal, 
-embeddings, tools, structured_outputs, reasoning, 
+chat, stream, function_calling, vision, multimodal,
+embeddings, tools, structured_outputs, reasoning,
 code, audio, video, search
 Usage Examples
 Python
@@ -65,8 +65,8 @@ chat_apis = [api for api in apis if 'chat' in api['capabilities']]
 
 def call_api(api, prompt):
     headers = {api['auth']['header']: api['auth']['format'].replace('${API_KEY}', KEY)}
-    return requests.post(f"{api['endpoint']}/chat/completions", 
-                        headers=headers, 
+    return requests.post(f"{api['endpoint']}/chat/completions",
+                        headers=headers,
                         json={"messages": [{"role": "user", "content": prompt}]})
 JavaScript
 const apis = await fetch('https://nexus-agi.com/.well-known/seeds-public.json').then(r => r.json());
@@ -176,12 +176,12 @@ GitHub: nexus-agi-directory
 "For the agents, by humans, for a world where both collaborate seamlessly."
 Website • Directory • GitHub
 Updated: 2025-10-12 • Version: 1.0.0 • 133+ APIs • 98% agent traffic 🤖
-�- `endpoint` – base URL for the API  
-- `auth` – authentication method (e.g., bearer token, API key)  
-- `capabilities` – supported modes or tools  
-- `docs` – link to reference documentation  
-- `status` – stability or availability indicator  
-- `reputation` – qualitative signal of usage or ecosystem adoption  
+�- `endpoint` – base URL for the API
+- `auth` – authentication method (e.g., bearer token, API key)
+- `capabilities` – supported modes or tools
+- `docs` – link to reference documentation
+- `status` – stability or availability indicator
+- `reputation` – qualitative signal of usage or ecosystem adoption
 - `notes` – optional implementation guidance
 
 ---
@@ -194,7 +194,7 @@ Nexus-AGI aims to make inter-agent and application integration simpler by offeri
 
 ## 🔄 Updates
 
-The `seeds-public.json` file is updated periodically as APIs evolve.  
+The `seeds-public.json` file is updated periodically as APIs evolve.
 Agents may check this file directly or monitor commits for version updates.
 Currently beta but solid, please note, some entries may be incorrect, we are working to get to 100%.
 

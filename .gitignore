@@ -63,6 +63,9 @@ logs/
 README_OLD.py
 nexus_agi_cleaned.py
 
+# Shopify embed config (contains API keys)
+shopify_embed/config.js
+
 # Environment and secrets (NEVER commit these!)
 .env
 .env.local
@@ -112,3 +115,4 @@ coverage.json
 # Hardhat
 cache/
 artifacts/
+.claude/

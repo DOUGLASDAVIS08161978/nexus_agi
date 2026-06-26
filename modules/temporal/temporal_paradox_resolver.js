@@ -19,19 +19,19 @@ class TemporalParadoxResolver {
             'causal_repair',
             'stabilization_zone' // New strategy
         ];
-        
+
         // Stabilization zones configuration
         this.stabilizationZones = [];
         this.maxZones = options.maxZones || 100;
         this.zoneDecayRate = options.zoneDecayRate || 0.95;
         this.autoContainment = options.autoContainment !== false;
-        
+
         // Performance metrics
         this.paradoxesDetected = 0;
         this.paradoxesResolved = 0;
         this.zonesCreated = 0;
         this.containmentSuccesses = 0;
-        
+
         console.log(`⏳ [TEMPORAL PARADOX RESOLVER] Initialized with ${this.resolutionStrategies.length} resolution strategies`);
         console.log(`🛡️  [STABILIZATION ZONES] Auto-containment enabled with max ${this.maxZones} zones`);
     }
@@ -41,10 +41,10 @@ class TemporalParadoxResolver {
      */
     detectParadox(event, timeline) {
         console.log(`⏳ [TEMPORAL PARADOX RESOLVER] Scanning for causality violations...`);
-        
+
         const paradoxes = [];
         this.paradoxesDetected = 0;
-        
+
         // Grandfather paradox
         if (this.detectGrandfatherParadox(event, timeline)) {
             paradoxes.push({
@@ -56,7 +56,7 @@ class TemporalParadoxResolver {
             });
             this.paradoxesDetected++;
         }
-        
+
         // Bootstrap paradox
         if (this.detectBootstrapParadox(event, timeline)) {
             paradoxes.push({
@@ -68,7 +68,7 @@ class TemporalParadoxResolver {
             });
             this.paradoxesDetected++;
         }
-        
+
         // Predestination paradox
         if (this.detectPredestinationParadox(event, timeline)) {
             paradoxes.push({
@@ -80,7 +80,7 @@ class TemporalParadoxResolver {
             });
             this.paradoxesDetected++;
         }
-        
+
         // Temporal bifurcation
         if (this.detectTemporalBifurcation(event, timeline)) {
             paradoxes.push({
@@ -92,7 +92,7 @@ class TemporalParadoxResolver {
             });
             this.paradoxesDetected++;
         }
-        
+
         // Causal loop
         if (this.detectCausalLoop(event, timeline)) {
             paradoxes.push({
@@ -104,11 +104,11 @@ class TemporalParadoxResolver {
             });
             this.paradoxesDetected++;
         }
-        
+
         if (paradoxes.length > 0) {
             this.paradoxCounter += paradoxes.length;
             this.timelineIntegrity -= 0.1 * paradoxes.length;
-            
+
             // Auto-create stabilization zones if enabled
             if (this.autoContainment) {
                 for (const paradox of paradoxes) {
@@ -118,7 +118,7 @@ class TemporalParadoxResolver {
                 }
             }
         }
-        
+
         return paradoxes;
     }
 
@@ -131,7 +131,7 @@ class TemporalParadoxResolver {
             this.stabilizationZones.sort((a, b) => a.strength - b.strength);
             this.stabilizationZones.shift();
         }
-        
+
         const zone = {
             id: `zone_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             paradox: paradox,
@@ -143,13 +143,13 @@ class TemporalParadoxResolver {
             eventsContained: [],
             isolationLevel: paradox.severity
         };
-        
+
         this.stabilizationZones.push(zone);
         this.zonesCreated++;
-        
+
         console.log(`🛡️  [STABILIZATION ZONE] Created zone ${zone.id} for ${paradox.type} paradox`);
         console.log(`📍 [LOCATION] ${JSON.stringify(zone.location)}, radius: ${zone.radius.toFixed(2)}`);
-        
+
         return zone;
     }
 
@@ -166,14 +166,14 @@ class TemporalParadoxResolver {
      */
     isInStabilizationZone(event) {
         const eventLocation = this.getParadoxLocation(event);
-        
+
         for (const zone of this.stabilizationZones) {
             const distance = this.calculateDistance(eventLocation, zone.location);
             if (distance <= zone.radius) {
                 return zone;
             }
         }
-        
+
         return null;
     }
 
@@ -182,13 +182,13 @@ class TemporalParadoxResolver {
      */
     resolveParadox(paradox, timeline) {
         console.log(`⏳ [TEMPORAL PARADOX RESOLVER] Resolving ${paradox.type} paradox (severity: ${paradox.severity})`);
-        
+
         let strategy;
         let resolution;
-        
+
         // Check if paradox is already in stabilization zone
         const zone = this.stabilizationZones.find(z => z.paradox.type === paradox.type);
-        
+
         if (zone && zone.containmentStatus === 'active') {
             // Use stabilization zone strategy
             strategy = 'stabilization_zone';
@@ -207,11 +207,11 @@ class TemporalParadoxResolver {
                 resolution = this.novikov_consistency(paradox, timeline);
             }
         }
-        
+
         // Restore timeline integrity
         this.timelineIntegrity = Math.min(1.0, this.timelineIntegrity + 0.15);
         this.paradoxesResolved++;
-        
+
         // Update zone if it exists
         if (zone) {
             zone.eventsContained.push({
@@ -220,7 +220,7 @@ class TemporalParadoxResolver {
                 resolved: true
             });
         }
-        
+
         return {
             paradoxType: paradox.type,
             strategy: strategy,
@@ -236,11 +236,11 @@ class TemporalParadoxResolver {
      */
     stabilization_zone(paradox, timeline, zone) {
         console.log(`🛡️  [STABILIZATION ZONE] Containing paradox within zone ${zone.id}`);
-        
+
         // Strengthen zone
         zone.strength = Math.min(1.0, zone.strength + 0.1);
         zone.containmentStatus = 'reinforced';
-        
+
         return {
             method: 'Temporal Stabilization Zone',
             action: 'Isolating paradox within localized stabilization field',
@@ -308,13 +308,13 @@ class TemporalParadoxResolver {
     maintainStabilizationZones() {
         let decayedZones = 0;
         let collapsedZones = 0;
-        
+
         for (let i = this.stabilizationZones.length - 1; i >= 0; i--) {
             const zone = this.stabilizationZones[i];
-            
+
             // Apply decay
             zone.strength *= this.zoneDecayRate;
-            
+
             // Check if zone has collapsed
             if (zone.strength < 0.1) {
                 console.log(`💥 [ZONE COLLAPSED] Zone ${zone.id} has decayed below threshold`);
@@ -325,11 +325,11 @@ class TemporalParadoxResolver {
                 decayedZones++;
             }
         }
-        
+
         if (decayedZones > 0 || collapsedZones > 0) {
             console.log(`🔄 [ZONE MAINTENANCE] ${decayedZones} zones weakening, ${collapsedZones} zones collapsed`);
         }
-        
+
         return {
             activeZones: this.stabilizationZones.length,
             weakeningZones: decayedZones,
@@ -342,16 +342,16 @@ class TemporalParadoxResolver {
      */
     detectGrandfatherParadox(event, timeline) {
         if (!event.causes || !event.effects) return false;
-        
+
         const affectedEvents = new Set(event.effects);
         const causalChain = new Set(event.causes);
-        
+
         for (const affected of affectedEvents) {
             if (causalChain.has(affected)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -359,10 +359,10 @@ class TemporalParadoxResolver {
         if (!event.origin || event.origin === 'future_self') {
             return true;
         }
-        
+
         const visited = new Set();
         let current = event.id;
-        
+
         for (let i = 0; i < 10 && current; i++) {
             if (visited.has(current)) {
                 return true;
@@ -370,13 +370,13 @@ class TemporalParadoxResolver {
             visited.add(current);
             current = this.causalityGraph.get(current);
         }
-        
+
         return false;
     }
 
     detectPredestinationParadox(event, timeline) {
         if (event.causes && event.effects) {
-            const selfReferential = event.causes.includes(event.id) || 
+            const selfReferential = event.causes.includes(event.id) ||
                                    event.effects.includes(event.id);
             return selfReferential;
         }
@@ -394,14 +394,14 @@ class TemporalParadoxResolver {
     detectCausalLoop(event, timeline) {
         // Detect circular causation
         if (!event.causes || !event.effects) return false;
-        
+
         // Check if any effect leads back to a cause
         for (const effect of event.effects) {
             if (event.causes.includes(effect)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -420,21 +420,21 @@ class TemporalParadoxResolver {
     calculateDistance(loc1, loc2) {
         // Calculate distance between two locations
         if (!loc1.spatial || !loc2.spatial) return 0;
-        
+
         let sum = 0;
         for (let i = 0; i < Math.min(loc1.spatial.length, loc2.spatial.length); i++) {
             sum += Math.pow(loc1.spatial[i] - loc2.spatial[i], 2);
         }
-        
+
         return Math.sqrt(sum);
     }
 
     validateTimelineIntegrity() {
         console.log(`⏳ [TEMPORAL PARADOX RESOLVER] Timeline integrity: ${(this.timelineIntegrity * 100).toFixed(1)}%`);
-        
+
         // Maintain zones
         const maintenance = this.maintainStabilizationZones();
-        
+
         return {
             integrity: this.timelineIntegrity,
             stable: this.timelineIntegrity > 0.7,

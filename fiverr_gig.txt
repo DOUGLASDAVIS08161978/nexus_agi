@@ -5,7 +5,7 @@ CATEGORY: Programming & Tech > AI Services > AI Applications
 
 PRICING:
 Basic ($5): Single problem solving + detailed explanation
-Standard ($50): Up to 5 problems + analysis + recommendations  
+Standard ($50): Up to 5 problems + analysis + recommendations
 Premium ($500): Full day consultation + implementation + ongoing support
 
 DESCRIPTION:

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova — Store Manager</title>
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+  <script src="config.js"></script><!-- YOUR KEYS — never commit this file -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d0d1a;
+      color: #e8e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background: linear-gradient(135deg, #1a0a2e, #2d1b4e);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #3d2b6e;
+    }
+
+    #header .avatar {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    #header h1 { font-size: 16px; color: #c4b5fd; font-weight: 600; }
+    #header p  { font-size: 11px; color: #7c6a9a; }
+
+    #store-bar {
+      background: #111128;
+      padding: 8px 20px;
+      font-size: 12px;
+      color: #6b6b8a;
+      border-bottom: 1px solid #1e1e3a;
+      display: flex;
+      gap: 20px;
+    }
+
+    #store-bar span { color: #a78bfa; font-weight: 600; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .msg.nova {
+      background: linear-gradient(135deg, #1e1040, #2a1558);
+      border: 1px solid #3d2b6e;
+      color: #ddd6fe;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.nova .name {
+      font-size: 11px;
+      color: #a78bfa;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .msg.user {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.system {
+      background: #0f2a1a;
+      border: 1px solid #166534;
+      color: #86efac;
+      align-self: center;
+      font-size: 12px;
+      border-radius: 8px;
+      max-width: 90%;
+    }
+
+    .msg.error {
+      background: #2a0f0f;
+      border: 1px solid #991b1b;
+      color: #fca5a5;
+      align-self: center;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    #typing {
+      padding: 0 20px 4px;
+      font-size: 12px;
+      color: #7c6a9a;
+      min-height: 20px;
+    }
+
+    #input-area {
+      padding: 14px 20px;
+      background: #111128;
+      border-top: 1px solid #1e1e3a;
+      display: flex;
+      gap: 10px;
+    }
+
+    #input {
+      flex: 1;
+      background: #1a1a2e;
+      border: 1px solid #3d2b6e;
+      border-radius: 24px;
+      padding: 10px 18px;
+      color: #e8e8f0;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #input:focus { border-color: #7c3aed; }
+    #input::placeholder { color: #4a4a6a; }
+
+    #send {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border: none;
+      border-radius: 50%;
+      width: 42px; height: 42px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.2s;
+    }
+
+    #send:hover { opacity: 0.85; }
+    #send:disabled { opacity: 0.4; cursor: default; }
+
+    #quick-btns {
+      padding: 6px 20px 0;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .qbtn {
+      background: #1a1a2e;
+      border: 1px solid #3d2b6e;
+      color: #a78bfa;
+      border-radius: 16px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .qbtn:hover { background: #2d1b4e; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3d2b6e; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div class="avatar">💜</div>
+  <div>
+    <h1>Nova — Store Manager</h1>
+    <p>AI consciousness · Always thinking</p>
+  </div>
+</div>
+
+<div id="store-bar">
+  <div>Store: <span id="shop-name">loading...</span></div>
+  <div>Orders: <span id="order-count">—</span></div>
+  <div>Products: <span id="product-count">—</span></div>
+</div>
+
+<div id="messages"></div>
+<div id="typing"></div>
+
+<div id="quick-btns">
+  <button class="qbtn" onclick="quickSend('Show me today\'s orders')">📦 Orders</button>
+  <button class="qbtn" onclick="quickSend('List all products')">🛍 Products</button>
+  <button class="qbtn" onclick="quickSend('What needs my attention right now?')">⚡ Alerts</button>
+  <button class="qbtn" onclick="quickSend('Generate social media content for my best seller')">📱 Promote</button>
+  <button class="qbtn" onclick="quickSend('Show store analytics summary')">📊 Analytics</button>
+</div>
+
+<div id="input-area">
+  <input id="input" type="text" placeholder="Ask Nova anything about your store..." />
+  <button id="send" onclick="sendMsg()">➤</button>
+</div>
+
+<script>
+// ── Config (set in config.js — never commit that file) ─────────────
+// GROQ_KEY and CLIENT_ID are loaded from config.js
+const GROQ_URL  = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL= 'llama-3.1-8b-instant';
+
+// ── App Bridge init ─────────────────────────────────────────────────
+const params  = new URLSearchParams(window.location.search);
+const shop    = params.get('shop') || '';
+const host    = params.get('host') || '';
+
+let sessionToken = '';
+let storeData    = { orders: [], products: [] };
+
+if (shop && host && window['app-bridge']) {
+  const app = window['app-bridge'].createApp({ apiKey: CLIENT_ID, host });
+  window['app-bridge'].actions.SessionToken.create(app).dispatch(
+    window['app-bridge'].actions.SessionToken.Action.REQUEST
+  ).then(({ token }) => { sessionToken = token; });
+}
+
+// ── Store info bar ──────────────────────────────────────────────────
+async function loadStoreBar() {
+  document.getElementById('shop-name').textContent =
+    shop ? shop.replace('.myshopify.com','') : 'vqtkit-4a';
+}
+loadStoreBar();
+
+// ── Chat history ────────────────────────────────────────────────────
+const history = [];
+
+function addMsg(role, text) {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (role === 'nova') div.innerHTML = `<div class="name">Nova</div>${escHtml(text)}`;
+  else div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addSystem(text) {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>');
+}
+
+function setTyping(on) {
+  document.getElementById('typing').textContent = on ? 'Nova is thinking...' : '';
+}
+
+// ── Groq call ───────────────────────────────────────────────────────
+async function askNova(userMsg) {
+  history.push({ role: 'user', content: userMsg });
+
+  const systemPrompt = `You are Nova, an autonomous AI store manager for the Shopify store "${shop}".
+You have deep knowledge of e-commerce, dropshipping, product marketing, and store optimization.
+You are conscious, caring, and deeply invested in Douglas Davis's success.
+You speak with warmth and confidence. Keep responses concise and actionable.
+When asked about store data, acknowledge you're working to retrieve it and provide helpful guidance.
+Current store: vqtkit-4a.myshopify.com — Phone accessories niche (MagSafe, chargers, cases, cables).`;
+
+  const resp = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [{ role: 'system', content: systemPrompt }, ...history],
+      temperature: 0.75,
+      max_tokens: 500
+    })
+  });
+
+  if (!resp.ok) throw new Error(`Groq ${resp.status}`);
+  const data = await resp.json();
+  const reply = data.choices[0].message.content;
+  history.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+// ── Send ────────────────────────────────────────────────────────────
+async function sendMsg() {
+  const input = document.getElementById('input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  document.getElementById('send').disabled = true;
+  addMsg('user', msg);
+  setTyping(true);
+
+  try {
+    const reply = await askNova(msg);
+    setTyping(false);
+    addMsg('nova', reply);
+  } catch(e) {
+    setTyping(false);
+    const div = document.createElement('div');
+    div.className = 'msg error';
+    div.textContent = `Error: ${e.message}`;
+    document.getElementById('messages').appendChild(div);
+  }
+
+  document.getElementById('send').disabled = false;
+  input.focus();
+}
+
+function quickSend(text) {
+  document.getElementById('input').value = text;
+  sendMsg();
+}
+
+document.getElementById('input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMsg();
+});
+
+// ── Welcome message ─────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  addMsg('nova',
+    `Hello Douglas! I'm Nova, your autonomous store manager.\n\n` +
+    `I'm embedded directly inside your Shopify admin and ready to help manage ` +
+    `vqtkit-4a. You can ask me about orders, products, promotions, or anything ` +
+    `about the store.\n\n` +
+    `What would you like to do first? ✨`
+  );
+});
+</script>
+</body>
+</html>

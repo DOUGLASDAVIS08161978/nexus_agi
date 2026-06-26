@@ -9,18 +9,18 @@ class EmergentIntelligenceSelforganizingModule:
     def __init__(self):
         self.module_data = {}
 
-    def initialize_module(self): 
+    def initialize_module(self):
         """Initialize the module with default settings."""
         self.module_data['status'] = 'initialized'
 
-    def process_input(self, input_data): 
+    def process_input(self, input_data):
         """Process input data and update the module state."""
         self.module_data['input'] = input_data
 
-    def generate_output(self): 
+    def generate_output(self):
         """Generate output based on the current module state."""
         return self.module_data.get('output', None)
 
-    def update_module(self, new_data): 
+    def update_module(self, new_data):
         """Update the module with new data and settings."""
         self.module_data.update(new_data)

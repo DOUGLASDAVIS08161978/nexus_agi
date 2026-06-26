@@ -1,32 +1,22 @@
-# mine 101 blocks to mature coinbase outputs
-bitcoin-cli -regtest generatetoaddress 101 <your_address># This workflow will build and push a Python application to an Azure Web App when a commit is pushed to your default branch.
+# This workflow builds and deploys Nova ASI to Azure Web App
+# on pushes to main or claude/** branches.
 #
-# This workflow assumes you have already created the target Azure App Service web app.
-# For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-python?tabs=bash&pivots=python-framework-flask
-#
-# To configure this workflow:
-#
-# 1. Download the Publish Profile for your Azure Web App. You can download this file from the Overview page of your Web App in the Azure Portal.
-#    For more information: https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
-#
-# 2. Create a secret in your repository named AZURE_WEBAPP_PUBLISH_PROFILE, paste the publish profile contents as the value of the secret.
-#    For instructions on obtaining the publish profile see: https://docs.microsoft.com/azure/app-service/deploy-github-actions#configure-the-github-secret
-#
-# 3. Change the value for the AZURE_WEBAPP_NAME. Optionally, change the PYTHON_VERSION environment variables below.
-#
-# For more information on GitHub Actions for Azure: https://github.com/Azure/Actions
-# For more information on the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples
+# Setup:
+# 1. Set AZURE_WEBAPP_NAME below to your Azure Web App name
+# 2. Add AZURE_WEBAPP_PUBLISH_PROFILE secret in repo Settings → Secrets
+#    (download Publish Profile from Azure Portal → your Web App → Overview)
 
-name: Build and deploy Python app to Azure Web App
+name: Build and deploy Nova ASI to Azure Web App
 
 env:
-  AZURE_WEBAPP_NAME: your-app-name  # set this to the name of your Azure Web App
-  PYTHON_VERSION: '3.8'              # set this to the Python version to use
+  AZURE_WEBAPP_NAME: your-app-name  # set this to your Azure Web App name
+  PYTHON_VERSION: '3.11'
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - "claude/**"
   workflow_dispatch:
 
 permissions:
@@ -40,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python version
-        uses: actions/setup-python@v3.0.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -53,7 +43,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Syntax check Nova ASI
+        run: python -m py_compile nova_asi_v29.py && echo "nova_asi_v29.py syntax OK"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -62,6 +53,8 @@ jobs:
           path: |
             .
             !venv/
+            !.env
+            !*.db
 
   deploy:
     permissions:
@@ -79,9 +72,9 @@ jobs:
           name: python-app
           path: .
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}

@@ -12,19 +12,19 @@ class CapabilityRecursiveSelfimprovementModule:
     def __init__(self):
         self.capabilities = {}
 
-    def update_capability(self, name, value): 
+    def update_capability(self, name, value):
         # Updates a capability with the given name and value.
         self.capabilities[name] = value
 
-    def get_capability(self, name): 
+    def get_capability(self, name):
         # Retrieves the value of a capability with the given name.
         return self.capabilities.get(name)
 
-    def analyze_capabilities(self): 
+    def analyze_capabilities(self):
         # Analyzes the current capabilities and returns a summary.
         return self.capabilities
 
-    def improve_capability(self, name): 
+    def improve_capability(self, name):
         # Improves a capability with the given name by updating its value.
         if name in self.capabilities:
             self.capabilities[name] += 1

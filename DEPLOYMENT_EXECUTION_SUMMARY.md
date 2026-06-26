@@ -141,7 +141,7 @@ Operations:
 ```
 • Generations Completed: 1,000
 • Final Fitness: 100.00%
-• Emergent Properties: self-organization, consciousness, 
+• Emergent Properties: self-organization, consciousness,
   collective-intelligence, transcendence, omniscience
 • Universes Simulated: 1,000,000
 • Civilizations Emerged: 492,920,590

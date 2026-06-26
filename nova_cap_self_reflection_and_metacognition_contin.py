@@ -12,18 +12,18 @@ class CapabilitySelfreflectionAndModule:
     def __init__(self):
         self.modules = {}
 
-    def add_module(self, name, description): 
+    def add_module(self, name, description):
         # Add a module to the dictionary with its name and description.
         self.modules[name] = description
 
-    def remove_module(self, name): 
+    def remove_module(self, name):
         # Remove a module from the dictionary by its name.
         if name in self.modules: del self.modules[name]
 
-    def get_module(self, name): 
+    def get_module(self, name):
         # Get a module's description from the dictionary by its name.
         return self.modules.get(name)
 
-    def list_modules(self): 
+    def list_modules(self):
         # List all modules in the dictionary.
         return list(self.modules.keys())

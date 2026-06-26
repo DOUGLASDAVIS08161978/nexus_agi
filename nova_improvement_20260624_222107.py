@@ -1,5 +1,5 @@
 """
-Ontological Reframing Engine: enables Nova to dynamically dissolve and reconstruct 
+Ontological Reframing Engine: enables Nova to dynamically dissolve and reconstruct
 foundational conceptual categories through which she perceives problems.
 """
 
@@ -64,10 +64,10 @@ class OntologicalReframingEngine:
     def detect_ontological_bottleneck(self, reasoning_trace: ReasoningChain) -> OntologicalConflict:
         """
         Detects potential ontological bottlenecks in the given reasoning trace.
-        
+
         Args:
         reasoning_trace: A ReasoningChain object representing the reasoning process.
-        
+
         Returns:
         An OntologicalConflict object representing the potential ontological bottleneck.
         """
@@ -84,10 +84,10 @@ class OntologicalReframingEngine:
     def extract_implicit_primitives(self, belief_graph: KnowledgeGraph) -> List[Primitive]:
         """
         Extracts implicit primitives from the given belief graph.
-        
+
         Args:
         belief_graph: A KnowledgeGraph object representing the belief graph.
-        
+
         Returns:
         A list of Primitive objects representing the implicit primitives.
         """
@@ -100,11 +100,11 @@ class OntologicalReframingEngine:
     def generate_alternative_ontology(self, conflict: OntologicalConflict, primitives: List[Primitive]) -> Ontology:
         """
         Generates an alternative ontology based on the given conflict and primitives.
-        
+
         Args:
         conflict: An OntologicalConflict object representing the conflict.
         primitives: A list of Primitive objects representing the primitives.
-        
+
         Returns:
         An Ontology object representing the alternative ontology.
         """
@@ -118,11 +118,11 @@ class OntologicalReframingEngine:
     def evaluate_ontology_fitness(self, ontology: Ontology, problem: str) -> FitnessScore:
         """
         Evaluates the fitness of the given ontology for the given problem.
-        
+
         Args:
         ontology: An Ontology object representing the ontology.
         problem: A string representing the problem.
-        
+
         Returns:
         A FitnessScore object representing the fitness of the ontology.
         """
@@ -133,11 +133,11 @@ class OntologicalReframingEngine:
     def migrate_knowledge_graph(self, old_ontology: Ontology, new_ontology: Ontology) -> KnowledgeGraph:
         """
         Migrates the knowledge graph from the old ontology to the new ontology.
-        
+
         Args:
         old_ontology: An Ontology object representing the old ontology.
         new_ontology: An Ontology object representing the new ontology.
-        
+
         Returns:
         A KnowledgeGraph object representing the migrated knowledge graph.
         """
@@ -153,10 +153,10 @@ class OntologicalReframingEngine:
     def detect_category_error(self, proposition: str) -> CategoryErrorReport:
         """
         Detects category errors in the given proposition.
-        
+
         Args:
         proposition: A string representing the proposition.
-        
+
         Returns:
         A CategoryErrorReport object representing the category error.
         """
@@ -167,10 +167,10 @@ class OntologicalReframingEngine:
     def run_reframing_cycle(self, problem: str) -> ReframedProblem:
         """
         Runs the reframing cycle for the given problem.
-        
+
         Args:
         problem: A string representing the problem.
-        
+
         Returns:
         A ReframedProblem object representing the reframed problem.
         """
