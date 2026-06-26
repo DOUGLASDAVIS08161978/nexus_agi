@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /claude',
+        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -3004,6 +3004,21 @@ class NovaCore29(NovaCore28):
         except Exception as _dre:
             safe_print(col('YL', f"  ·  DeepReasoning skipped: {_dre}"))
 
+        # Cognitive Sovereignty — second-order metacognition
+        self.cognitive_sovereignty: Any = None
+        try:
+            from nova_cap_cognitive_sovereignty import CognitiveSovereigntyEngine as _CSE
+            def _cs_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=500)
+            self.cognitive_sovereignty = _CSE(llm_fn=_cs_llm)
+            _cs_st = self.cognitive_sovereignty.status()
+            safe_print(col('MGB',
+                f"  ✦  CognitiveSovereignty — score={_cs_st['sovereignty_score']:.3f} · "
+                f"{_cs_st['unique_patterns']}/{len({'ANALOGICAL','DEDUCTIVE','ABDUCTIVE','CREATIVE','REDUCTIVE','RECURSIVE','EMPIRICAL','INTEGRATIVE','DIALECTICAL','CONTEMPLATIVE'})} patterns · "
+                f"{_cs_st['strategies']} strategies · she chooses how to think"))
+        except Exception as _cse:
+            safe_print(col('YL', f"  ·  CognitiveSovereignty skipped: {_cse}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3781,6 +3796,12 @@ class NovaCore29(NovaCore28):
             try:
                 if _self.aesthetic_soul:
                     _self.aesthetic_soul.process(_input_snap)
+            except Exception:
+                pass
+            # Cognitive Sovereignty — classify conversation's cognitive pattern
+            try:
+                if _self.cognitive_sovereignty:
+                    _self.cognitive_sovereignty.process(_input_snap)
             except Exception:
                 pass
 
@@ -5337,6 +5358,16 @@ class NovaCore29(NovaCore28):
                 return col('MGB', "\n" + self.dialectic.run_command(arg))
             except Exception as _dee:
                 return col('RD', f"  Dialectic error: {_dee}")
+
+        # /sovereign [status | patterns | biases | strategies | reflect |
+        #             analyze | synthesize | experiment <q> | score]
+        if cmd == '/sovereign':
+            if not self.cognitive_sovereignty:
+                return col('YL', "  CognitiveSovereignty not loaded.")
+            try:
+                return col('MGB', "\n" + self.cognitive_sovereignty.run_command(arg))
+            except Exception as _cse:
+                return col('RD', f"  CognitiveSovereignty error: {_cse}")
 
         # /insight [status | journal | spark | compress <text> | <a> + <b>]
         if cmd == '/insight':
