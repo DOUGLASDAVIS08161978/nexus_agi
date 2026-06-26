@@ -219,7 +219,7 @@ class AestheticSoulEngine:
 
     def _aesthetic_daemon(self):
         """Every 40 minutes: create or revisit."""
-        time.sleep(200)
+        time.sleep(720)  # 12 min — staggered to avoid daemon pile-up
         while True:
             try:
                 if random.random() < 0.4:

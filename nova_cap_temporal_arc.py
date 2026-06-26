@@ -288,7 +288,7 @@ class TemporalArcEngine:
 
     def _arc_daemon(self):
         """Hourly snapshot; every 6 hours synthesize arc narrative."""
-        time.sleep(180)
+        time.sleep(1200)  # 20 min — staggered to avoid daemon pile-up
         cycle = 0
         while True:
             try:

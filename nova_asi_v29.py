@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /claude',
+        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2990,6 +2990,20 @@ class NovaCore29(NovaCore28):
         except Exception as _dee:
             safe_print(col('YL', f"  ·  Dialectic skipped: {_dee}"))
 
+        # ── DEEP REASONING — chain-of-thought before hard answers ─────────────
+        self.deep_reasoning: Any = None
+        try:
+            from nova_cap_deep_reasoning import DeepReasoningEngine as _DRE
+            def _dr_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=600)
+            self.deep_reasoning = _DRE(llm_fn=_dr_llm)
+            _dr_st = self.deep_reasoning.status()
+            safe_print(col('MGB',
+                f"  ✦  DeepReasoning — {_dr_st['total']} chains · "
+                f"6-step CoT · understand→decompose→consider→evaluate→synthesize→verify"))
+        except Exception as _dre:
+            safe_print(col('YL', f"  ·  DeepReasoning skipped: {_dre}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -4553,6 +4567,12 @@ class NovaCore29(NovaCore28):
         if cmd == '/think':
             if not arg:
                 return "Usage: /think <topic or question>"
+            # Use DeepReasoningEngine (CoT) if available, else fall back
+            if self.deep_reasoning and len(arg) > 5:
+                try:
+                    return col('MGB', "\n" + self.deep_reasoning.run_command(arg))
+                except Exception:
+                    pass
             return self._deep_think(arg)
 
         # /metacog — self-assessment and calibration report

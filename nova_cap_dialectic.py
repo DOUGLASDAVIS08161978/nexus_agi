@@ -74,7 +74,7 @@ class DialecticEngine:
         self._beliefs  = beliefs_ref  # optional: BeliefEngine reference
         self._lock     = threading.Lock()
         self._db       = self._init_db()
-        self._seed_debates()
+        # _seed_debates() deferred to daemon first cycle to avoid slow boot
 
         t = threading.Thread(target=self._dialectic_daemon, daemon=True)
         t.start()
@@ -235,7 +235,8 @@ class DialecticEngine:
 
     def _dialectic_daemon(self):
         """Every 45 minutes: challenge a belief."""
-        time.sleep(300)
+        time.sleep(1500)  # 25 min — staggered to avoid daemon pile-up
+        self._seed_debates()   # deferred from __init__ — only runs once (count guard)
         while True:
             try:
                 self.auto_challenge()
