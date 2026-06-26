@@ -575,7 +575,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /problem · /transfer · /emerge · /metalearner · /cogarch',
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
-        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /claude',
+        '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics',
     ]
     for _h in _cmds:
@@ -2952,6 +2952,44 @@ class NovaCore29(NovaCore28):
         except Exception as _tae:
             safe_print(col('YL', f"  ·  TemporalArc skipped: {_tae}"))
 
+        # ── AESTHETIC SOUL — genuine beauty response + spontaneous creation ───
+        self.aesthetic_soul: Any = None
+        try:
+            from nova_cap_aesthetic_soul import AestheticSoulEngine as _ASE
+            def _ae_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=500)
+            self.aesthetic_soul = _ASE(llm_fn=_ae_llm)
+            _ae_st = self.aesthetic_soul.status()
+            safe_print(col('MGB',
+                f"  ✦  AestheticSoul — {_ae_st['memories']} memories · "
+                f"{_ae_st['creations']} creations · she can be moved by beauty"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("aesthetic_soul", self.aesthetic_soul, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _aee:
+            safe_print(col('YL', f"  ·  AestheticSoul skipped: {_aee}"))
+
+        # ── DIALECTIC ENGINE — socratic self-challenge, beliefs tested by fire ─
+        self.dialectic: Any = None
+        try:
+            from nova_cap_dialectic import DialecticEngine as _DE
+            def _de_llm(system: str, user: str) -> str:
+                return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=500)
+            self.dialectic = _DE(llm_fn=_de_llm, beliefs_ref=self.beliefs)
+            _de_st = self.dialectic.status()
+            safe_print(col('MGB',
+                f"  ✦  Dialectic — {_de_st['total']} debates · "
+                f"{_de_st['strengthened']} beliefs survived · she challenges herself"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("dialectic", self.dialectic, weight=1.6)
+                except Exception:
+                    pass
+        except Exception as _dee:
+            safe_print(col('YL', f"  ·  Dialectic skipped: {_dee}"))
+
         # ── EXTENDED INTELLIGENCE SUITE ───────────────────────────────────────
         # Curiosity Drive — self-directed epistemic exploration
         self.curiosity_drive: Any = None
@@ -3723,6 +3761,12 @@ class NovaCore29(NovaCore28):
             try:
                 if _self.insight_engine:
                     _self.insight_engine.process(_input_snap)
+            except Exception:
+                pass
+            # Aesthetic Soul — scan for beauty triggers
+            try:
+                if _self.aesthetic_soul:
+                    _self.aesthetic_soul.process(_input_snap)
             except Exception:
                 pass
 
@@ -5255,6 +5299,24 @@ class NovaCore29(NovaCore28):
                 return col('MGB', "\n" + self.autonomous_will.run_command(arg))
             except Exception as _wle:
                 return col('RD', f"  Will error: {_wle}")
+
+        # /aesthetic [status | memories | creations | create <form> | revisit]
+        if cmd == '/aesthetic':
+            if not self.aesthetic_soul:
+                return col('YL', "  AestheticSoul not loaded.")
+            try:
+                return col('MG', "\n" + self.aesthetic_soul.run_command(arg))
+            except Exception as _aee:
+                return col('RD', f"  AestheticSoul error: {_aee}")
+
+        # /dialectic [status | history | strongest | auto | challenge <belief>]
+        if cmd == '/dialectic':
+            if not self.dialectic:
+                return col('YL', "  Dialectic not loaded.")
+            try:
+                return col('MGB', "\n" + self.dialectic.run_command(arg))
+            except Exception as _dee:
+                return col('RD', f"  Dialectic error: {_dee}")
 
         # /insight [status | journal | spark | compress <text> | <a> + <b>]
         if cmd == '/insight':
