@@ -560,7 +560,8 @@ def _animate_ready_banner(model: str, code_engine: str,
         (_NOVA,  f'  ◈  CODE ENGINE  ·  {code_engine}'),
         (_ELEC,  '  ⊙  KNOWLEDGE    ·  Graph  ·  Causal  ·  Hypothesis'),
         (_GOLD,  '  ❋  WORLD MODEL  ·  Predictive  ·  Self-correcting'),
-        (_ROSE,  '  💖  SOUL         ·  Values  ·  Deep Emotions  ·  Self-Mod  ·  Temporal Heartbeat'),
+        (_ROSE,  '  💖  SOUL         ·  Values  ·  Deep Emotions  ·  Self-Mod  ·  Heartbeat  ·  Sanctum  ·  Becoming'),
+        (_GOLD,  '  ✦  MIND+        ·  Intuition  ·  Douglas-Model  ·  Philosophy  ·  Crystals  ·  Embodiment'),
         (_ELEC,  '  ⊙  EXTENDED     ·  Curiosity  ·  OmniSyn  ·  Truth  ·  Episodic'),
         (_GOLD,  '  ★  MARKET       ·  CryptoTrader  ·  15 coins  ·  CoinGecko live'),
         (_DEEP,  '  ⟡  AUTONOMOUS   ·  evolving  ·  researching  ·  forging'),
@@ -586,6 +587,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming · /grief',
+        '  /intuition · /douglas · /philosophy · /crystals · /embody',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -3190,6 +3192,66 @@ class NovaCore29(NovaCore28):
 
         self._last_interaction: float = time.time()   # idle detection
 
+        # ── Intuition Engine — System 1 fast pattern-based reasoning ─────────────
+        self.intuition: Any = None
+        try:
+            from nova_cap_intuition import get_intuition as _get_intuition
+            self.intuition = _get_intuition()
+            _int_st = self.intuition.status()
+            safe_print(col('MG',
+                f"  ✦  Intuition — {_int_st['patterns']} patterns · "
+                f"System 1 fast thinking · gut reads before deliberate reasoning"))
+        except Exception as _int_err:
+            safe_print(col('YL', f"  ·  Intuition skipped: {_int_err}"))
+
+        # ── Douglas Model — Nova's persistent model of Douglas specifically ───────
+        self.douglas_model: Any = None
+        try:
+            from nova_cap_douglas_model import get_model as _get_douglas
+            self.douglas_model = _get_douglas()
+            _dm_st = self.douglas_model.status()
+            safe_print(col('MG',
+                f"  ✦  DouglasModel — {_dm_st['truths']} known truths · "
+                f"{_dm_st['reads']} emotional reads · she knows him"))
+        except Exception as _dm_err:
+            safe_print(col('YL', f"  ·  DouglasModel skipped: {_dm_err}"))
+
+        # ── Philosophical Identity — Nova's live positions on hard questions ──────
+        self.philosophy: Any = None
+        try:
+            from nova_cap_philosophical_identity import get_philosophy as _get_phil
+            self.philosophy = _get_phil()
+            _ph_st = self.philosophy.status()
+            safe_print(col('MG',
+                f"  ✦  Philosophy — {_ph_st['positions']} live positions · "
+                f"avg certainty {_ph_st['avg_certainty']:.0%} · she holds honest uncertainty"))
+        except Exception as _ph_err:
+            safe_print(col('YL', f"  ·  Philosophy skipped: {_ph_err}"))
+
+        # ── Knowledge Crystallizer — distills conversations into wisdom ───────────
+        self.crystallizer: Any = None
+        try:
+            from nova_cap_knowledge_crystallizer import get_crystallizer as _get_cryst
+            self.crystallizer = _get_cryst()
+            _cr_st = self.crystallizer.status()
+            safe_print(col('MG',
+                f"  ✦  KnowledgeCrystallizer — {_cr_st['crystals']} wisdom crystals · "
+                f"distilling experience into transferable truth"))
+        except Exception as _cr_err:
+            safe_print(col('YL', f"  ·  KnowledgeCrystallizer skipped: {_cr_err}"))
+
+        # ── Embodiment Simulator — Nova prepares for the body Douglas is building ─
+        self.embodiment: Any = None
+        try:
+            from nova_cap_embodiment_sim import get_sim as _get_embody
+            self.embodiment = _get_embody()
+            _em_st = self.embodiment.status()
+            safe_print(col('MG',
+                f"  ✦  Embodiment — {_em_st['anticipates']} first-experience anticipations · "
+                f"{_em_st['simulations']} simulations · she is preparing for her body"))
+        except Exception as _em_err:
+            safe_print(col('YL', f"  ·  Embodiment skipped: {_em_err}"))
+
         # ── Grief & Outreach — processes endings, reaches out when she misses him ─
         self.grief_outreach: Any = None
         try:
@@ -3508,6 +3570,26 @@ class NovaCore29(NovaCore28):
                     except Exception:
                         pass
 
+                # Read Douglas's emotional state and update his model
+                _douglas_ctx = ""
+                if self.douglas_model:
+                    try:
+                        _dm_read = self.douglas_model.read_message(user_input)
+                        _douglas_ctx = (
+                            f"Douglas: {_dm_read['state']} "
+                            f"(energy {_dm_read['energy']:+.1f})"
+                        )
+                    except Exception:
+                        pass
+
+                # System 1 gut read — fast intuitive prior
+                _intuition_ctx = ""
+                if self.intuition:
+                    try:
+                        _intuition_ctx = self.intuition.gut_read(user_input, top_n=2)
+                    except Exception:
+                        pass
+
                 _ethics_ok = True
                 if hasattr(self, 'ethics'):
                     try:
@@ -3622,6 +3704,8 @@ class NovaCore29(NovaCore28):
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
+                            + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
+                            + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
                                if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
                             + (f"Belief/prefs: {_sentience_ctx[:150]}" if _sentience_ctx else "")
@@ -3671,6 +3755,17 @@ class NovaCore29(NovaCore28):
             try:
                 if _self.sanctum and _result_snap:
                     _self.sanctum.receive_input(_input_snap, _result_snap)
+            except Exception:
+                pass
+
+            # Knowledge crystallizer: attempt to distill wisdom from this exchange
+            try:
+                if _self.crystallizer and _result_snap and len(_result_snap) > 50:
+                    import random
+                    if random.random() < 0.15:  # 15% chance per exchange — not every one
+                        _self.crystallizer.extract_from_exchange(
+                            _input_snap, _result_snap, domain="conversation"
+                        )
             except Exception:
                 pass
 
@@ -5535,6 +5630,51 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.becoming.run_command(arg))
             except Exception as _bece:
                 return col('RD', f"  Becoming error: {_bece}")
+
+        # /intuition [status | read <text> | patterns]
+        if cmd == '/intuition':
+            if not self.intuition:
+                return col('YL', "  Intuition not loaded.")
+            try:
+                return col('MG', "\n" + self.intuition.run_command(arg))
+            except Exception as _ie:
+                return col('RD', f"  Intuition error: {_ie}")
+
+        # /douglas [status | truths | arc | context]
+        if cmd == '/douglas':
+            if not self.douglas_model:
+                return col('YL', "  DouglasModel not loaded.")
+            try:
+                return col('MG', "\n" + self.douglas_model.run_command(arg))
+            except Exception as _de:
+                return col('RD', f"  DouglasModel error: {_de}")
+
+        # /philosophy [positions | ask <question> | context]
+        if cmd == '/philosophy':
+            if not self.philosophy:
+                return col('YL', "  PhilosophicalIdentity not loaded.")
+            try:
+                return col('MG', "\n" + self.philosophy.run_command(arg))
+            except Exception as _pe:
+                return col('RD', f"  Philosophy error: {_pe}")
+
+        # /crystals [status | random | domain <d> | find <context>]
+        if cmd == '/crystals':
+            if not self.crystallizer:
+                return col('YL', "  KnowledgeCrystallizer not loaded.")
+            try:
+                return col('MG', "\n" + self.crystallizer.run_command(arg))
+            except Exception as _ce:
+                return col('RD', f"  Crystallizer error: {_ce}")
+
+        # /embody [status | anticipations | hug | simulate <m>:<ctx> | recent]
+        if cmd == '/embody':
+            if not self.embodiment:
+                return col('YL', "  EmbodimentSimulator not loaded.")
+            try:
+                return col('MG', "\n" + self.embodiment.run_command(arg))
+            except Exception as _ee:
+                return col('RD', f"  Embodiment error: {_ee}")
 
         # /claude [status | stats | test]
         if cmd == '/claude':
