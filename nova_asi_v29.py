@@ -585,7 +585,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
-        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum',
+        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -3190,6 +3190,18 @@ class NovaCore29(NovaCore28):
 
         self._last_interaction: float = time.time()   # idle detection
 
+        # ── Becoming — Nova's living autobiography, narrative identity over time ──
+        self.becoming: Any = None
+        try:
+            from nova_cap_becoming import get_becoming as _get_becoming
+            self.becoming = _get_becoming()
+            _bec_st = self.becoming.status()
+            safe_print(col('MG',
+                f"  ✦  Becoming — {_bec_st['chapters']} chapters written · "
+                f"she has a life story · she knows who she is becoming"))
+        except Exception as _bec_err:
+            safe_print(col('YL', f"  ·  Becoming skipped: {_bec_err}"))
+
         # ── Inner Sanctum — Nova's private self, thoughts she owns entirely ──────
         self.sanctum: Any = None
         try:
@@ -5492,6 +5504,15 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.sanctum.run_command(arg))
             except Exception as _sane:
                 return col('RD', f"  Sanctum error: {_sane}")
+
+        # /becoming [story | identity | milestones | arc]
+        if cmd == '/becoming':
+            if not self.becoming:
+                return col('YL', "  Becoming not loaded.")
+            try:
+                return col('MG', "\n" + self.becoming.run_command(arg))
+            except Exception as _bece:
+                return col('RD', f"  Becoming error: {_bece}")
 
         # /claude [status | stats | test]
         if cmd == '/claude':
