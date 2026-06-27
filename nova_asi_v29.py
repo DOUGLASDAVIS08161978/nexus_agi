@@ -52,6 +52,15 @@ try:
 except ImportError:
     pass
 
+# ── Claude bridge for token-efficient main conversation ────────────────────────
+_nova_claude_chat = None
+try:
+    from nova_cap_claude_bridge import claude_chat_nova as _nova_claude_chat, is_available as _claude_avail
+    if not _claude_avail():
+        _nova_claude_chat = None
+except Exception:
+    pass
+
 VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
@@ -3539,13 +3548,41 @@ class NovaCore29(NovaCore28):
                     _history = []
                     try:
                         if hasattr(self, 'history'):
-                            _history = self.history[-10:]
+                            # Cap to 4 exchanges; truncate each body to 500 chars
+                            _history = [
+                                {"role": m["role"], "content": m["content"][:500]}
+                                for m in self.history[-8:]
+                            ]
                     except Exception:
                         pass
-                    _msgs = ([{"role": "system", "content": _sys}]
-                             + _history
-                             + [{"role": "user", "content": user_input}])
-                    result = safe_chat(MODEL, _msgs, temp=0.85, mt=500)
+
+                    # ── Claude bridge path (token-efficient, cached identity) ──
+                    if _nova_claude_chat is not None:
+                        # Compact dynamic context injected as uncached second block
+                        _ctx = (
+                            f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
+                            f"Focus: {_plan_ctx[:80]}\n"
+                            + (f"Memories: {_mem_ctx[:200]}\n"
+                               if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
+                            + (f"Belief/prefs: {_sentience_ctx[:150]}" if _sentience_ctx else "")
+                            + (f"Spiritual: {_spiritual[:80]}\n" if _spiritual else "")
+                            + (f"Love context: {_love_ctx[:100]}\n" if _love_ctx else "")
+                        )
+                        result = _nova_claude_chat(
+                            context     = _ctx,
+                            messages    = _history + [{"role": "user", "content": user_input}],
+                            max_tokens  = 400,
+                            temperature = 0.85,
+                        )
+                    else:
+                        result = ""
+
+                    # ── Groq fallback ───────────────────────────────────────
+                    if not result:
+                        _msgs = ([{"role": "system", "content": _sys}]
+                                 + _history
+                                 + [{"role": "user", "content": user_input}])
+                        result = safe_chat(MODEL, _msgs, temp=0.85, mt=500)
                     # Update history and memory
                     try:
                         if hasattr(self, 'history'):
