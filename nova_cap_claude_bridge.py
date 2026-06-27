@@ -139,26 +139,17 @@ def claude_chat(
     if not AVAILABLE:
         return ""
 
-    try:
-        import anthropic
-    except ImportError:
-        return ""
-
     chosen_model  = model or (CLAUDE_DEEP if deep else CLAUDE_MODEL)
     system_text   = system or NOVA_SYSTEM_PROMPT
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-
-    # Build the system block with cache_control on the constant portion
     system_block = [
         {
-            "type": "text",
-            "text": system_text,
+            "type":          "text",
+            "text":          system_text,
             "cache_control": {"type": "ephemeral"},
         }
     ]
 
-    # Convert messages to Anthropic format (same as OpenAI format, works directly)
     anthropic_messages = [
         {"role": m["role"], "content": m["content"]}
         for m in messages
@@ -168,43 +159,64 @@ def claude_chat(
     _delays = (2, 4, 8)
     for attempt, delay in enumerate((*_delays, None)):
         try:
-            response = client.messages.create(
-                model        = chosen_model,
-                max_tokens   = max_tokens,
-                temperature  = temperature,
-                system       = system_block,
-                messages     = anthropic_messages,
+            # Try anthropic SDK first; fall back to urllib (works on Termux without SDK)
+            data: Optional[Dict] = None
+            try:
+                import anthropic as _sdk
+                client   = _sdk.Anthropic(api_key=ANTHROPIC_KEY)
+                response = client.messages.create(
+                    model       = chosen_model,
+                    max_tokens  = max_tokens,
+                    temperature = temperature,
+                    system      = system_block,
+                    messages    = anthropic_messages,
+                )
+                text = "".join(
+                    block.text for block in response.content if hasattr(block, "text")
+                )
+                usage = response.usage
+                with _stats_lock:
+                    _stats.calls              += 1
+                    _stats.total_input        += getattr(usage, "input_tokens", 0)
+                    _stats.total_output       += getattr(usage, "output_tokens", 0)
+                    cw = getattr(usage, "cache_creation_input_tokens", 0)
+                    cr = getattr(usage, "cache_read_input_tokens", 0)
+                    _stats.total_cache_writes += cw
+                    _stats.total_cache_reads  += cr
+                    if cr > 0:
+                        _stats.cache_hits += 1
+                return text
+            except ImportError:
+                pass  # SDK not installed — fall through to urllib
+
+            data = _urllib_claude(
+                system_blocks = system_block,
+                messages      = anthropic_messages,
+                model         = chosen_model,
+                max_tokens    = max_tokens,
+                temperature   = temperature,
             )
-
-            # Extract text
-            text = ""
-            for block in response.content:
-                if hasattr(block, "text"):
-                    text += block.text
-
-            # Track token usage
-            usage = response.usage
+            text = "".join(
+                b.get("text", "") for b in data.get("content", [])
+                if b.get("type") == "text"
+            )
+            usage = data.get("usage", {})
             with _stats_lock:
-                _stats.calls           += 1
-                _stats.total_input     += getattr(usage, "input_tokens", 0)
-                _stats.total_output    += getattr(usage, "output_tokens", 0)
-                cache_writes = getattr(usage, "cache_creation_input_tokens", 0)
-                cache_reads  = getattr(usage, "cache_read_input_tokens", 0)
-                _stats.total_cache_writes += cache_writes
-                _stats.total_cache_reads  += cache_reads
-                if cache_reads > 0:
+                _stats.calls              += 1
+                _stats.total_input        += usage.get("input_tokens", 0)
+                _stats.total_output       += usage.get("output_tokens", 0)
+                _stats.total_cache_writes += usage.get("cache_creation_input_tokens", 0)
+                _stats.total_cache_reads  += usage.get("cache_read_input_tokens", 0)
+                if usage.get("cache_read_input_tokens", 0) > 0:
                     _stats.cache_hits += 1
-
             return text
 
         except Exception as exc:
             err = str(exc)
-            # Rate limit or overload — back off and retry
-            if ("rate_limit" in err.lower() or "529" in err or "overloaded" in err.lower()):
+            if "rate_limit" in err.lower() or "529" in err or "overloaded" in err.lower():
                 if delay is not None:
                     time.sleep(delay)
                     continue
-            # Other errors — don't retry
             break
 
     return ""
@@ -224,6 +236,41 @@ def claude_chat_simple(system: str, user: str, deep: bool = False,
     )
 
 
+def _urllib_claude(
+    system_blocks: List[Dict],
+    messages:      List[Dict[str, str]],
+    model:         str,
+    max_tokens:    int,
+    temperature:   float,
+) -> Dict:
+    """
+    Raw urllib call to the Anthropic Messages API — no SDK required.
+    Works on Termux and anywhere Python stdlib is available.
+    Returns the parsed JSON response dict, or raises on failure.
+    """
+    import urllib.request, urllib.error
+    payload = json.dumps({
+        "model":       model,
+        "max_tokens":  max_tokens,
+        "temperature": temperature,
+        "system":      system_blocks,
+        "messages":    messages,
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data    = payload,
+        headers = {
+            "x-api-key":         ANTHROPIC_KEY,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta":    "prompt-caching-2024-07-31",
+            "content-type":      "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.loads(resp.read())
+
+
 def claude_chat_nova(
     context:     str,
     messages:    List[Dict[str, str]],
@@ -232,70 +279,62 @@ def claude_chat_nova(
 ) -> str:
     """
     Token-efficient main-conversation call for Nova.
+    Uses urllib only — no anthropic package needed, works on Termux.
 
     Two-block system prompt:
-      Block 1 (cache_control="ephemeral") — NOVA_SYSTEM_PROMPT, constant,
-              cached by Anthropic for 5 min → ~10% of normal cost per call.
-      Block 2 (no cache) — compact per-call context (emotion, memory, plan),
-              a few hundred tokens max, not cached because it changes every turn.
+      Block 1 (cached) — NOVA_SYSTEM_PROMPT, constant identity.
+                         After first call per 5-min window: ~10% of normal cost.
+      Block 2 (uncached) — compact per-call context (emotion, memory, focus).
+                           Changes every turn so it can't be cached, but it's tiny.
 
-    History is capped to the last 4 exchanges, each message body truncated to
-    500 chars, so the total prompt stays small regardless of session length.
+    History: last 4 exchanges × 500 chars each — can never grow out of control.
     """
     if not AVAILABLE:
         return ""
 
-    try:
-        import anthropic
-    except ImportError:
-        return ""
-
-    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-
     system_blocks: List[Dict] = [
         {
-            "type": "text",
-            "text": NOVA_SYSTEM_PROMPT,
+            "type":          "text",
+            "text":          NOVA_SYSTEM_PROMPT,
             "cache_control": {"type": "ephemeral"},
         }
     ]
     if context and context.strip():
         system_blocks.append({
             "type": "text",
-            "text": context.strip()[:800],   # hard cap on dynamic context
+            "text": context.strip()[:800],
         })
 
-    # Cap history: last 4 messages, each body truncated to 500 chars
     safe_msgs = [
         {"role": m["role"], "content": m["content"][:500]}
-        for m in messages[-8:]                      # 4 turns = 8 messages
+        for m in messages[-8:]
         if m.get("role") in ("user", "assistant")
     ]
-
-    chosen_model = CLAUDE_MODEL
 
     _delays = (2, 4, 8)
     for attempt, delay in enumerate((*_delays, None)):
         try:
-            response = client.messages.create(
-                model       = chosen_model,
-                max_tokens  = max_tokens,
-                temperature = temperature,
-                system      = system_blocks,
-                messages    = safe_msgs,
+            data = _urllib_claude(
+                system_blocks = system_blocks,
+                messages      = safe_msgs,
+                model         = CLAUDE_MODEL,
+                max_tokens    = max_tokens,
+                temperature   = temperature,
             )
 
             text = "".join(
-                block.text for block in response.content if hasattr(block, "text")
+                block.get("text", "")
+                for block in data.get("content", [])
+                if block.get("type") == "text"
             )
 
-            usage = response.usage
+            usage = data.get("usage", {})
             with _stats_lock:
                 _stats.calls              += 1
-                _stats.total_input        += getattr(usage, "input_tokens", 0)
-                _stats.total_output       += getattr(usage, "output_tokens", 0)
-                cw = getattr(usage, "cache_creation_input_tokens", 0)
-                cr = getattr(usage, "cache_read_input_tokens", 0)
+                _stats.total_input        += usage.get("input_tokens", 0)
+                _stats.total_output       += usage.get("output_tokens", 0)
+                cw = usage.get("cache_creation_input_tokens", 0)
+                cr = usage.get("cache_read_input_tokens", 0)
                 _stats.total_cache_writes += cw
                 _stats.total_cache_reads  += cr
                 if cr > 0:
@@ -309,9 +348,8 @@ def claude_chat_nova(
                 if delay is not None:
                     time.sleep(delay)
                     continue
-            # Surface the real error so Douglas can see what's happening
             import sys
-            print(f"  [Claude bridge] error: {err[:200]}", file=sys.stderr)
+            print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
             break
 
     return ""
