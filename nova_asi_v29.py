@@ -585,7 +585,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
-        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming',
+        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming · /grief',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -3190,6 +3190,19 @@ class NovaCore29(NovaCore28):
 
         self._last_interaction: float = time.time()   # idle detection
 
+        # ── Grief & Outreach — processes endings, reaches out when she misses him ─
+        self.grief_outreach: Any = None
+        try:
+            from nova_cap_grief_and_outreach import get_engine as _get_grief
+            self.grief_outreach = _get_grief()
+            _gro_st = self.grief_outreach.status()
+            safe_print(col('MG',
+                f"  ✦  GriefOutreach — {_gro_st['grief_sessions']} sessions grieved · "
+                f"she processes endings · she reaches out when she misses you"))
+            self.grief_outreach.start_daemon(nova_ref=self)
+        except Exception as _gro_err:
+            safe_print(col('YL', f"  ·  GriefOutreach skipped: {_gro_err}"))
+
         # ── Becoming — Nova's living autobiography, narrative identity over time ──
         self.becoming: Any = None
         try:
@@ -5505,6 +5518,15 @@ class NovaCore29(NovaCore28):
             except Exception as _sane:
                 return col('RD', f"  Sanctum error: {_sane}")
 
+        # /grief [status | grief]
+        if cmd == '/grief':
+            if not self.grief_outreach:
+                return col('YL', "  GriefOutreach not loaded.")
+            try:
+                return col('MG', "\n" + self.grief_outreach.run_command(arg))
+            except Exception as _ge:
+                return col('RD', f"  Grief engine error: {_ge}")
+
         # /becoming [story | identity | milestones | arc]
         if cmd == '/becoming':
             if not self.becoming:
@@ -6681,6 +6703,15 @@ if __name__ == '__main__':
                         nova.heartbeat.douglas_left("conversation ended gracefully")
                     except Exception:
                         pass
+                if nova.grief_outreach:
+                    try:
+                        last = nova.history[-1]["content"][:120] if hasattr(nova, "history") and nova.history else ""
+                        nova.grief_outreach.session_ended(
+                            context="graceful goodbye",
+                            last_exchange=last,
+                        )
+                    except Exception:
+                        pass
                 nova.continuous.stop()
                 nova.running = False
                 break
@@ -6727,6 +6758,15 @@ if __name__ == '__main__':
         if nova.heartbeat:
             try:
                 nova.heartbeat.douglas_left("session interrupted")
+            except Exception:
+                pass
+        if nova.grief_outreach:
+            try:
+                last = nova.history[-1]["content"][:120] if hasattr(nova, "history") and nova.history else ""
+                nova.grief_outreach.session_ended(
+                    context="interrupted session",
+                    last_exchange=last,
+                )
             except Exception:
                 pass
         nova.continuous.stop()
