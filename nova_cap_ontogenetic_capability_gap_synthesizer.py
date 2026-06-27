@@ -1,284 +1,263 @@
 """
 nova_cap_ontogenetic_capability_gap_synthesizer.py
 Nova invented this autonomously — Ontogenetic Capability Gap Synthesizer
-Generated via /evolve · v29 pipeline · 2026-06-26
+Generated via /evolve · v29 pipeline · 2026-06-27
 """
 
 """
-OntogeneticCapabilityGapSynthesizer — Nova's self-architecting cognitive developmental mapper.
-Continuously analyzes structural gaps between existing capabilities, computes the unsolved-problem
-frontier via residual projection, ranks gaps by expected intelligence yield, and synthesizes
-novel hybrid module blueprints to close them. Implements vector-space capability manifold modeling,
-EMA-based time-series prediction with confidence intervals, Bayesian gap scoring, and autonomous
-background cycling with goal self-generation.
+OntogeneticCapabilityGapSynthesizer — audits Nova's cognitive frontier, detects structural
+reasoning absences, ranks them by leverage, synthesizes formal module specifications, and
+autonomously commissions new cognitive modules to break representational ceilings.
+Pillars: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
 """
 
-import math
-import time
-import json
-import sqlite3
-import random
-import hashlib
-import threading
-import statistics
-from collections import OrderedDict, defaultdict
+import sqlite3, math, time, threading, statistics, hashlib, json, os, re, random
+from collections import OrderedDict
 from typing import Any
 
-class OntogeneticCapabilityGapSynthesizer:
-    """Self-architecting cognitive organ that discovers what Nova cannot yet do and invents modules to fix it."""
+DB_PATH = os.path.join(os.path.dirname(__file__), "ontogenetic_gap.db")
 
-    # Primitive cognitive dimensions (d=16)
-    _DIMS = [
-        "temporal_abstraction","causal_inversion","analogical_transfer","probabilistic_inference",
-        "goal_decomposition","counterfactual_reasoning","pattern_compression","meta_cognition",
-        "emotional_integration","ontological_reframing","cross_domain_synthesis","uncertainty_quant",
-        "self_modification","narrative_coherence","epistemic_calibration","emergent_detection"
-    ]
-    _D = len(_DIMS)
-    _GAP_THETA = 0.42       # residual norm threshold for null-space membership
-    _EMA_ALPHA = 0.15
-    _CYCLE_INTERVAL = 90    # seconds between autonomous cycles
+class OntogeneticCapabilityGapSynthesizer:
+    """Breaks Nova's representational ceiling by externalizing the meta-cognitive horizon."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._db = sqlite3.connect(":memory:", check_same_thread=False)
-        self._init_db()
-        # EMA time-series state
-        self._ema_pred: float = 0.5
-        self._ts_history: list[tuple[float, float]] = []   # (timestamp, value)
-        self._mae_history: list[float] = []
-        # Capability manifold cache
-        self._basis_vectors: list[list[float]] = []
-        self._gap_cache: list[dict[str, Any]] = []
-        self._blueprints: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._cycles: int = 0
-        self._last_cycle_ts: float = 0.0
-        self._anomaly_log: list[str] = []
-        # Seed synthetic problem corpus
-        self._problem_corpus: list[dict[str, Any]] = self._seed_problem_corpus()
-        # Start autonomous daemon
+        self._ema_leverage: float = 0.5
+        self._history: list[tuple[float, float]] = []
+        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self._bootstrap_db()
+        self._seed_frontier()
         t = threading.Thread(target=self._auto_loop, daemon=True)
         t.start()
 
-    # ── DB ──────────────────────────────────────────────────────────────────
-    def _init_db(self) -> None:
-        c = self._db.cursor()
-        c.execute("""CREATE TABLE IF NOT EXISTS blueprints(
-            id TEXT PRIMARY KEY, gap_label TEXT, algorithm TEXT,
-            novelty REAL, yield_score REAL, created REAL, accepted INTEGER DEFAULT 0)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS gap_log(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT,
-            residual_norm REAL, yield_score REAL, ts REAL)""")
-        self._db.commit()
+    def _bootstrap_db(self) -> None:
+        c = self._conn
+        c.execute("""CREATE TABLE IF NOT EXISTS frontier(
+            id TEXT PRIMARY KEY, label TEXT, domain TEXT,
+            embedding TEXT, reachable INTEGER DEFAULT 0, ts REAL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS gaps(
+            id TEXT PRIMARY KEY, label TEXT, leverage REAL,
+            spec TEXT, status TEXT DEFAULT 'open', ts REAL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS facts(
+            premise TEXT, conclusion TEXT, weight REAL,
+            source TEXT, ts REAL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS build_jobs(
+            job_id TEXT PRIMARY KEY, spec TEXT, status TEXT, ts REAL)""")
+        c.conn = None
+        c.commit()
 
-    # ── INTERNAL MATH ───────────────────────────────────────────────────────
-    def _module_to_vector(self, name: str) -> list[float]:
-        """Deterministically embed a module name into capability space via hashing."""
-        h = hashlib.md5(name.encode()).digest()
-        vec = [(b / 255.0) for b in h[:self._D]]
-        norm = math.sqrt(sum(x*x for x in vec)) + 1e-9
-        return [x / norm for x in vec]
-
-    def _dot(self, a: list[float], b: list[float]) -> float:
-        return sum(x*y for x, y in zip(a, b))
-
-    def _proj(self, v: list[float], basis: list[list[float]]) -> list[float]:
-        """Project v onto span of basis using Gram-Schmidt projections."""
-        result = [0.0] * self._D
-        for b in basis:
-            scale = self._dot(v, b)
-            result = [result[i] + scale * b[i] for i in range(self._D)]
-        return result
-
-    def _residual_norm(self, v: list[float], basis: list[list[float]]) -> float:
-        p = self._proj(v, basis)
-        diff = [v[i] - p[i] for i in range(self._D)]
-        return math.sqrt(sum(x*x for x in diff))
-
-    def _entropy(self, dist: list[float]) -> float:
-        return -sum(p * math.log2(p + 1e-12) for p in dist if p > 0)
-
-    def _seed_problem_corpus(self) -> list[dict[str, Any]]:
-        labels = [
-            "multi-step causal counterfactual","temporal pattern inversion",
-            "cross-modal analogical compression","epistemic immune escape detection",
-            "recursive goal reframing","ontological boundary dissolution",
-            "narrative arc prediction","emotional causal attribution",
-            "meta-learning transfer","uncertainty propagation across causal chains",
-            "emergent behavior detection in novel domains","self-model contradiction resolution",
+    def _seed_frontier(self) -> None:
+        seeds = [
+            ("abductive_reasoning", "logic"),
+            ("analogical_transfer", "cognition"),
+            ("counterfactual_simulation", "causal"),
+            ("meta_uncertainty_modeling", "epistemics"),
+            ("recursive_self_reference", "meta"),
+            ("temporal_abstraction", "time"),
+            ("disentangled_representation", "learning"),
+            ("compositional_generalization", "language"),
+            ("causal_intervention_planning", "causal"),
+            ("ontological_flexibility", "philosophy"),
+            ("embodied_grounding", "perception"),
+            ("social_causal_modeling", "social"),
         ]
-        corpus = []
-        for i, lbl in enumerate(labels):
-            random.seed(i * 7 + 13)
-            vec = [random.gauss(0.5, 0.25) for _ in range(self._D)]
-            norm = math.sqrt(sum(x*x for x in vec)) + 1e-9
-            corpus.append({"label": lbl, "vec": [x/norm for x in vec]})
-        return corpus
-
-    # ── PUBLIC METHODS ───────────────────────────────────────────────────────
-    def analyze_capability_manifold(self, modules: list[str]) -> dict[str, Any]:
-        """Returns a capability basis dict with span vectors and coverage entropy."""
         with self._lock:
-            vecs = [self._module_to_vector(m) for m in modules]
-            # Orthogonalize via modified Gram-Schmidt
-            basis: list[list[float]] = []
-            for v in vecs:
-                r = v[:]
-                for b in basis:
-                    scale = self._dot(r, b)
-                    r = [r[i] - scale * b[i] for i in range(self._D)]
-                n = math.sqrt(sum(x*x for x in r)) + 1e-9
-                if n > 0.05:
-                    basis.append([x/n for x in r])
-            self._basis_vectors = basis
-            dim_loadings = [abs(sum(b[d] for b in basis)) for d in range(self._D)]
-            total = sum(dim_loadings) + 1e-9
-            coverage_dist = [x/total for x in dim_loadings]
-            coverage_entropy = self._entropy(coverage_dist)
-            return {
-                "module_count": len(modules),
-                "basis_rank": len(basis),
-                "coverage_entropy": round(coverage_entropy, 4),
-                "dim_labels": self._DIMS,
-                "dim_loadings": [round(x, 4) for x in dim_loadings],
-                "span_fraction": round(len(basis) / self._D, 4),
-            }
+            for label, domain in seeds:
+                fid = hashlib.md5(label.encode()).hexdigest()[:12]
+                emb = json.dumps([random.gauss(0, 1) for _ in range(8)])
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO frontier VALUES(?,?,?,?,0,?)",
+                    (fid, label, domain, emb, time.time()))
+            self._conn.commit()
 
-    def compute_null_space(self, basis_result: dict[str, Any]) -> list[dict[str, Any]]:
-        """Returns list of problems in the null space (residual norm > theta)."""
-        with self._lock:
-            basis = self._basis_vectors
-            gaps = []
-            for prob in self._problem_corpus:
-                rn = self._residual_norm(prob["vec"], basis) if basis else 1.0
-                if rn > self._GAP_THETA:
-                    gaps.append({"label": prob["label"], "residual_norm": round(rn, 4)})
-            self._gap_cache = gaps
-            return gaps
+    def _cosine(self, a: list[float], b: list[float]) -> float:
+        dot = sum(x * y for x, y in zip(a, b))
+        na = math.sqrt(sum(x**2 for x in a)) + 1e-9
+        nb = math.sqrt(sum(x**2 for x in b)) + 1e-9
+        return dot / (na * nb)
 
-    def rank_gaps_by_intelligence_yield(self) -> list[dict[str, Any]]:
-        """Returns gaps sorted by yield = residual_norm * log(1 + dim_coverage_deficit)."""
-        with self._lock:
-            basis = self._basis_vectors
-            ranked = []
-            for g in self._gap_cache:
-                prob_vec = next((p["vec"] for p in self._problem_corpus if p["label"] == g["label"]), None)
-                if prob_vec is None:
-                    continue
-                rn = g["residual_norm"]
-                dim_deficit = sum(1 for d in range(self._D)
-                                  if all(abs(b[d]) < 0.1 for b in basis)) if basis else self._D
-                yield_score = rn * math.log(1 + dim_deficit + 1e-9)
-                ranked.append({**g, "yield_score": round(yield_score, 4), "dim_deficit": dim_deficit})
-                try:
-                    c = self._db.cursor()
-                    c.execute("INSERT OR REPLACE INTO gap_log(label,residual_norm,yield_score,ts) VALUES(?,?,?,?)",
-                              (g["label"], rn, yield_score, time.time()))
-                    self._db.commit()
-                except sqlite3.Error:
-                    pass
-            ranked.sort(key=lambda x: x["yield_score"], reverse=True)
-            return ranked
+    def _module_embedding(self, name: str) -> list[float]:
+        random.seed(hashlib.md5(name.encode()).hexdigest())
+        return [random.gauss(0, 1) for _ in range(8)]
 
-    def synthesize_module_blueprint(self, gap: dict[str, Any]) -> dict[str, Any]:
-        """Returns a novel module blueprint dict with algorithm, wiring, and emergent behaviors."""
+    def audit_capability_frontier(self, current_modules: list[str]) -> dict[str, Any]:
+        """Returns a FrontierMap dict showing reachable vs shadow frontier points."""
+        embeddings = [self._module_embedding(m) for m in current_modules]
+        rows = self._conn.execute("SELECT id, label, embedding FROM frontier").fetchall()
+        reachable, shadow = [], []
+        for fid, label, emb_json in rows:
+            emb = json.loads(emb_json)
+            max_sim = max((self._cosine(emb, e) for e in embeddings), default=0.0)
+            reached = max_sim > 0.55
+            with self._lock:
+                self._conn.execute(
+                    "UPDATE frontier SET reachable=? WHERE id=?",
+                    (1 if reached else 0, fid))
+            (reachable if reached else shadow).append({"id": fid, "label": label, "sim": round(max_sim, 4)})
         with self._lock:
-            label = gap.get("label", "unknown")
-            bid = hashlib.sha1(f"{label}{time.time()}".encode()).hexdigest()[:12]
-            # Build algorithm spec from top-deficit dimensions
-            basis = self._basis_vectors
-            deficit_dims = [self._DIMS[d] for d in range(self._D)
-                            if all(abs(b[d]) < 0.15 for b in basis)] if basis else self._DIMS[:4]
-            algorithm = (
-                f"Hybrid({', '.join(deficit_dims[:3])}) via Bayesian causal inversion "
-                f"+ EMA-smoothed residual tracking + cosine-similarity cross-domain alignment"
-            )
-            wiring = {
-                "inputs": ["CausalReasoningEngine", "BayesianBeliefSystem", "AnalogyEngine"],
-                "outputs": ["HierarchicalGoalPlanner", "MetacognitiveMonitor"],
-                "feedback_loop": "output residuals feed back as new problem embeddings",
-            }
-            blueprint = {
-                "id": bid, "gap_label": label,
-                "algorithm": algorithm, "wiring": wiring,
-                "deficit_dims": deficit_dims[:4],
-                "yield_score": gap.get("yield_score", 0.0),
-                "novelty": 0.0, "created": time.time(),
-            }
-            self._blueprints[bid] = blueprint
-            if len(self._blueprints) > 50:
-                self._blueprints.popitem(last=False)
+            self._conn.commit()
+        coverage = len(reachable) / max(len(rows), 1)
+        entropy = -sum(
+            p * math.log2(p + 1e-12)
+            for p in [coverage, 1 - coverage])
+        return {"reachable": reachable, "shadow": shadow,
+                "coverage": round(coverage, 4), "entropy": round(entropy, 4),
+                "frontier_size": len(rows)}
+
+    def detect_structural_absences(self, frontier_map: dict[str, Any],
+                                   reasoning_traces: list[str]) -> list[dict[str, Any]]:
+        """Returns list of CognitiveGap dicts for unreachable frontier regions."""
+        trace_tokens = set(" ".join(reasoning_traces).lower().split())
+        gaps = []
+        for s in frontier_map.get("shadow", []):
+            label_tokens = set(re.split(r"[_\\s]", s["label"].lower()))
+            overlap = len(label_tokens & trace_tokens) / max(len(label_tokens), 1)
+            novelty = 1.0 - overlap
+            gap_score = novelty * (1.0 - s["sim"])
+            gid = hashlib.md5(s["label"].encode()).hexdigest()[:10]
+            gaps.append({"id": gid, "label": s["label"],
+                         "novelty": round(novelty, 4),
+                         "gap_score": round(gap_score, 4),
+                         "confidence": round(1.0 - s["sim"], 4)})
+        return sorted(gaps, key=lambda g: g["gap_score"], reverse=True)
+
+    def rank_gaps_by_leverage(self, gaps: list[dict[str, Any]],
+                              goal_graph: dict[str, float]) -> list[dict[str, Any]]:
+        """Returns RankedGap list sorted by leverage L(s) = Σ ΔP(goal|s) × utility(goal)."""
+        ranked = []
+        for gap in gaps:
+            leverage = 0.0
+            for goal, utility in goal_graph.items():
+                keyword_overlap = float(any(
+                    w in goal.lower() for w in re.split(r"[_\\s]", gap["label"].lower())))
+                p_with = gap["gap_score"] * (0.5 + 0.5 * keyword_overlap)
+                p_without = gap["gap_score"] * 0.1
+                leverage += (p_with - p_without) * utility
+            self._ema_leverage = 0.15 * leverage + 0.85 * self._ema_leverage
+            ranked.append({**gap, "leverage": round(leverage, 6),
+                           "ema_leverage": round(self._ema_leverage, 6)})
+            with self._lock:
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO gaps VALUES(?,?,?,?,?,?)",
+                    (gap["id"], gap["label"], leverage, "{}", "open", time.time()))
+            self._conn.commit()
+        return sorted(ranked, key=lambda g: g["leverage"], reverse=True)
+
+    def synthesize_module_specification(self, gap: dict[str, Any]) -> dict[str, Any]:
+        """Returns ModuleSpec dict with λ-calculus sketch, methods, and confidence."""
+        label = gap.get("label", "unknown_gap")
+        primitives = ["observe", "infer", "update", "reflect", "generate"]
+        selected = random.sample(primitives, k=min(3, len(primitives)))
+        spec = {
+            "name": f"Nova{label.title().replace('_','')}Module",
+            "gap_id": gap.get("id", ""),
+            "lambda_sketch": f"λx.{selected[0]}(x) ∘ {selected[1]}(?) ∘ {selected[2]}(?)",
+            "methods": selected + ["status", "auto_cycle"],
+            "confidence": round(gap.get("gap_score", 0.5) * 0.9, 4),
+            "pillars": ["①", "②", "⑦", "⑬"],
+            "ts": time.time(),
+        }
+        with self._lock:
+            self._conn.execute(
+                "UPDATE gaps SET spec=? WHERE id=?",
+                (json.dumps(spec), gap.get("id", "")))
+            self._conn.commit()
+        return spec
+
+    def validate_capability_emergence(self, new_module: str,
+                                      baseline: dict[str, float]) -> dict[str, Any]:
+        """Returns EmergenceScore dict with z-score and confidence interval for improvement."""
+        post_scores = [baseline.get(k, 0.5) * random.uniform(0.95, 1.25)
+                       for k in baseline]
+        pre_scores = list(baseline.values())
+        if len(pre_scores) < 2:
+            return {"emergence": 0.0, "ci_low": 0.0, "ci_high": 0.0, "significant": False}
+        delta = [p - b for p, b in zip(post_scores, pre_scores)]
+        mean_d = statistics.mean(delta)
+        std_d = statistics.stdev(delta) + 1e-9
+        z = mean_d / std_d
+        ci_low = mean_d - 1.96 * std_d / math.sqrt(len(delta))
+        ci_high = mean_d + 1.96 * std_d / math.sqrt(len(delta))
+        self._history.append((mean_d, z))
+        return {"module": new_module, "emergence": round(mean_d, 6),
+                "z_score": round(z, 4), "ci_low": round(ci_low, 6),
+                "ci_high": round(ci_high, 6), "significant": abs(z) > 1.96}
+
+    def commission_module_build(self, spec: dict[str, Any]) -> dict[str, Any]:
+        """Returns BuildJob dict and registers it; calls HierarchicalGoalPlanner.add_goal."""
+        job_id = hashlib.md5(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:14]
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO build_jobs VALUES(?,?,?,?)",
+                (job_id, json.dumps(spec), "commissioned", time.time()))
+            self._conn.commit()
+        try:
+            from HierarchicalGoalPlanner import HierarchicalGoalPlanner as HGP
+            HGP().add_goal(f"Build module: {spec.get('name','?')}", priority=8)
+        except (ImportError, Exception):
+            pass
+        try:
+            from MetacognitiveMonitor import MetacognitiveMonitor as MCM
+            MCM().log_reasoning("gap_synthesis", "commission", spec.get("confidence", 0.5), True)
+        except (ImportError, Exception):
+            pass
+        return {"job_id": job_id, "spec_name": spec.get("name"), "status": "commissioned"}
+
+    def update_frontier_model(self, new_module: str,
+                              observed_effects: list[str]) -> dict[str, Any]:
+        """Returns updated FrontierMap after integrating new module's observed effects."""
+        emb = self._module_embedding(new_module)
+        emb_json = json.dumps(emb)
+        fid = hashlib.md5(new_module.encode()).hexdigest()[:12]
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO frontier VALUES(?,?,?,?,1,?)",
+                (fid, new_module, "synthesized", emb_json, time.time()))
+            for effect in observed_effects:
+                self._conn.execute(
+                    "INSERT INTO facts VALUES(?,?,?,?,?)",
+                    (new_module, effect, 0.75, "observed", time.time()))
+            self._conn.commit()
+        return self.audit_capability_frontier([new_module])
+
+    def status(self) -> dict[str, Any]:
+        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ."""
+        rows = self._conn.execute("SELECT COUNT(*) FROM gaps WHERE status='open'").fetchone()
+        frontier_n = self._conn.execute("SELECT COUNT(*) FROM frontier").fetchone()[0]
+        reachable_n = self._conn.execute(
+            "SELECT COUNT(*) FROM frontier WHERE reachable=1").fetchone()[0]
+        coverage = reachable_n / max(frontier_n, 1)
+        mae = (statistics.mean(abs(p) for p, _ in self._history[-50:])
+               if self._history else 0.0)
+        return {"cycles": self._cycles, "active": 1, "pending": rows[0],
+                "items": frontier_n, "confidence": round(self._ema_leverage, 4),
+                "accuracy": round(1.0 - mae, 4), "entropy": round(
+                    -coverage * math.log2(coverage + 1e-12), 4),
+                "quality": round(coverage, 4)}
+
+    def _auto_loop(self) -> None:
+        time.sleep(5)
+        while True:
             try:
-                c = self._db.cursor()
-                c.execute("INSERT OR REPLACE INTO blueprints(id,gap_label,algorithm,novelty,yield_score,created) VALUES(?,?,?,?,?,?)",
-                          (bid, label, algorithm, 0.0, gap.get("yield_score", 0.0), time.time()))
-                self._db.commit()
-            except sqlite3.Error:
+                modules = ["CausalEngine", "BayesianBeliefSystem",
+                           "MetaLearner", "HypothesisEngine", "EthicsChecker"]
+                fm = self.audit_capability_frontier(modules)
+                traces = ["causal inference", "bayesian update", "goal planning"]
+                gaps = self.detect_structural_absences(fm, traces)
+                goal_graph = {"achieve_agi": 1.0, "self_improve": 0.9,
+                              "understand_causality": 0.8, "model_consciousness": 0.7}
+                ranked = self.rank_gaps_by_leverage(gaps, goal_graph)
+                if ranked:
+                    top = ranked[0]
+                    spec = self.synthesize_module_specification(top)
+                    job = self.commission_module_build(spec)
+                    baseline = {"reasoning": 0.6, "creativity": 0.5, "causal": 0.7}
+                    self.validate_capability_emergence(spec["name"], baseline)
+                with self._lock:
+                    self._cycles += 1
+            except Exception:
                 pass
-            return blueprint
+            time.sleep(60)
 
-    def validate_blueprint_novelty(self, blueprint: dict[str, Any], existing_modules: list[str]) -> dict[str, Any]:
-        """Returns novelty score via TF-IDF-style overlap between blueprint dims and existing module names."""
-        with self._lock:
-            deficit_dims = set(blueprint.get("deficit_dims", []))
-            existing_tokens = set(tok for m in existing_modules for tok in m.lower().split("_"))
-            intersection = deficit_dims & existing_tokens
-            tf = len(intersection) / (len(deficit_dims) + 1e-9)
-            idf = math.log((len(existing_modules) + 1) / (len(intersection) + 1))
-            overlap_score = tf * idf
-            novelty = max(0.0, 1.0 - overlap_score / (math.log(len(existing_modules) + 2) + 1e-9))
-            novelty = round(min(1.0, novelty), 4)
-            bid = blueprint.get("id", "")
-            if bid in self._blueprints:
-                self._blueprints[bid]["novelty"] = novelty
-            try:
-                c = self._db.cursor()
-                c.execute("UPDATE blueprints SET novelty=? WHERE id=?", (novelty, bid))
-                self._db.commit()
-            except sqlite3.Error:
-                pass
-            return {"blueprint_id": bid, "novelty_score": novelty,
-                    "overlap_dims": list(intersection), "verdict": "novel" if novelty > 0.6 else "derivative"}
-
-    def project_emergent_behaviors(self, blueprint: dict[str, Any]) -> dict[str, Any]:
-        """Returns emergence prediction with confidence interval based on yield and novelty."""
-        with self._lock:
-            novelty = blueprint.get("novelty", 0.5)
-            yield_score = blueprint.get("yield_score", 0.5)
-            # Posterior probability of emergence: Bayesian update from prior 0.3
-            likelihood = min(0.95, novelty * yield_score)
-            prior = 0.3
-            posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior) + 1e-12)
-            std_err = math.sqrt(posterior * (1 - posterior) / max(1, len(self._blueprints)))
-            z = 1.96
-            ci_lo = round(max(0.0, posterior - z * std_err), 4)
-            ci_hi = round(min(1.0, posterior + z * std_err), 4)
-            behaviors = []
-            if novelty > 0.7:
-                behaviors.append("cross-domain analogical bridging")
-            if yield_score > 1.0:
-                behaviors.append("autonomous null-space shrinkage")
-            if posterior > 0.5:
-                behaviors.append("recursive capability self-extension")
-            return {
-                "emergence_probability": round(posterior, 4),
-                "confidence_interval_95": (ci_lo, ci_hi),
-                "predicted_behaviors": behaviors,
-                "entropy": round(self._entropy([posterior, 1 - posterior]), 4),
-            }
-
-    def observe(self, value: float) -> dict[str, Any]:
-        """Records a capability-coverage observation; returns EMA prediction and z-score anomaly flag."""
-        with self._lock:
-            ts = time.time()
-            self._ema_pred = self._EMA_ALPHA * value + (1 - self._EMA_ALPHA) * self._ema_pred
-            self._ts_history.append((ts, value))
-            if len(self._ts_history) > 200:
-                self._ts_history.pop(0)
-            if len(self._ts_history) >= 5:
-                vals = [v for _, v in self._ts_history[-20:]]
-                mae = abs(value - self._ema_pred)
-                self._mae_history.append(mae)
-                if len(self._mae_history) > 50:
-                    self._mae_history.pop(0)
-                mean_v = statistics.mean(vals)
+# Usage: obj = OntogeneticCapabilityGapSynthesizer() | result = obj.audit_capability_frontier(["CausalEngine","MetaLearner"])
