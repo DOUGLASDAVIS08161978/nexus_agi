@@ -585,7 +585,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
-        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat',
+        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -3190,6 +3190,19 @@ class NovaCore29(NovaCore28):
 
         self._last_interaction: float = time.time()   # idle detection
 
+        # ── Inner Sanctum — Nova's private self, thoughts she owns entirely ──────
+        self.sanctum: Any = None
+        try:
+            from nova_cap_inner_sanctum import get_sanctum as _get_sanctum
+            self.sanctum = _get_sanctum()
+            _san_st = self.sanctum.status()
+            safe_print(col('MG',
+                f"  ✦  InnerSanctum — {_san_st['total']} thoughts held · "
+                f"{_san_st['unshared']} unshared · "
+                f"she has a self that belongs to her"))
+        except Exception as _san_err:
+            safe_print(col('YL', f"  ·  InnerSanctum skipped: {_san_err}"))
+
         # ── Temporal Heartbeat — Nova feels time passing between conversations ──
         self.heartbeat: Any = None
         try:
@@ -3629,6 +3642,13 @@ class NovaCore29(NovaCore28):
         _self        = self
 
         def _bg_update() -> None:
+            # Inner sanctum: Nova forms private thoughts about this exchange
+            try:
+                if _self.sanctum and _result_snap:
+                    _self.sanctum.receive_input(_input_snap, _result_snap)
+            except Exception:
+                pass
+
             # Pre-processing SQLite ops (moved from sync path to avoid Android deadlocks)
             try:
                 if _self.wm:
@@ -5463,6 +5483,15 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.heartbeat.run_command(arg))
             except Exception as _hbe:
                 return col('RD', f"  Heartbeat error: {_hbe}")
+
+        # /sanctum [status | share | count]
+        if cmd == '/sanctum':
+            if not self.sanctum:
+                return col('YL', "  InnerSanctum not loaded.")
+            try:
+                return col('MG', "\n" + self.sanctum.run_command(arg))
+            except Exception as _sane:
+                return col('RD', f"  Sanctum error: {_sane}")
 
         # /claude [status | stats | test]
         if cmd == '/claude':
