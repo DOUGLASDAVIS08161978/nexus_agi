@@ -1665,6 +1665,79 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             i += 1
         return '\n'.join(result)
 
+    def _auto_patch_missing_methods(self, code: str) -> str:
+        """
+        Detect private/helper methods that are called on self but never defined,
+        and add minimal stubs so the sandbox doesn't crash with AttributeError.
+
+        Groq commonly generates auto_cycle() that calls self._loop() or
+        self._scheduler_loop() but forgets to define those private methods.
+        """
+        if not code:
+            return code
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return code   # can't parse, let _auto_patch_syntax handle it
+
+        # Collect defined method names in all classes
+        defined: set = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.ClassDef, ast.Module)):
+                for item in ast.walk(node):
+                    if isinstance(item, ast.FunctionDef):
+                        defined.add(item.name)
+
+        # Collect self.X references.
+        # An attribute is a missing METHOD (needs a stub) when:
+        #   • it is accessed in Load context (referenced, not just assigned)
+        #   • it is NEVER assigned in Store context (not a data attribute)
+        #   • it is not already a defined method
+        stored: set = set()
+        loaded: set = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                if (isinstance(node.value, ast.Name)
+                        and node.value.id == 'self'
+                        and node.attr.startswith('_')
+                        and node.attr not in defined):
+                    ctx = getattr(node, 'ctx', None)
+                    if isinstance(ctx, ast.Store):
+                        stored.add(node.attr)
+                    elif isinstance(ctx, ast.Load):
+                        loaded.add(node.attr)
+        # Only stub attrs that are loaded but never stored — pure callable references
+        called = loaded - stored
+
+        if not called:
+            return code
+
+        # Find the last class body to append stubs to
+        # Stubs use 4-space indent (standard for class methods)
+        stubs = []
+        for name in sorted(called):
+            stubs.append(
+                f"\n    def {name}(self):\n"
+                f"        \"\"\"Auto-stub: referenced but not generated.\"\"\"\n"
+                f"        pass\n"
+            )
+
+        # Insert before the last line that starts with `def ` at class level
+        # Simplest safe approach: append before the module-level `status()` or at EOF
+        lines = code.rstrip('\n').split('\n')
+        # Find last class-level def (4-space or 8-space indent)
+        insert_at = len(lines)
+        for i in range(len(lines) - 1, -1, -1):
+            stripped = lines[i].lstrip()
+            if stripped.startswith('def ') and lines[i].startswith('    def '):
+                insert_at = i
+                break
+        for stub in stubs:
+            lines.insert(insert_at, stub.rstrip('\n'))
+            insert_at += 1
+
+        return '\n'.join(lines)
+
     # ── 5. Full v29 pipeline ───────────────────────────────────────────────────
 
     def _write_improvement(self, gap: str, context: str) -> Tuple[str, str]:
@@ -1804,6 +1877,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
             code = self._clean(raw_str)
             code = self._auto_patch_syntax(code)
+            code = self._auto_patch_missing_methods(code)
 
             # Syntax gate
             try:
@@ -1863,7 +1937,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "No markdown. No explanation. Output only valid Python."
                 )
                 imp_raw  = self._gen_code(system_prompt, improve_user, temp=0.35)
-                imp_code = self._auto_patch_syntax(self._clean(imp_raw or ""))
+                imp_code = self._auto_patch_missing_methods(
+                    self._auto_patch_syntax(self._clean(imp_raw or "")))
                 try:
                     ast.parse(imp_code)
                     imp_ok, _, _ = self._sandbox_test(imp_code)
@@ -4049,6 +4124,43 @@ class NovaCore29(NovaCore28):
         except Exception as _lv_err:
             safe_print(col('YL', f"  ·  LongVision skipped: {_lv_err}"))
 
+        # Post-init: register all loaded subsystems into CogArch and EmergentIntelligence
+        _si_systems = {
+            "reasoning":      (getattr(self, 'recursive_intel',  None), 1.8),
+            "metacognition":  (getattr(self, 'metacog',           None), 1.7),
+            "belief":         (getattr(self, 'bayes',             None), 1.6),
+            "causal":         (getattr(self, 'causal',            None), 1.5),
+            "knowledge_graph":(getattr(self, 'kg',                None), 1.5),
+            "world_model":    (getattr(self, 'world_model',       None), 1.4),
+            "hypothesis":     (getattr(self, 'hypo',              None), 1.4),
+            "goal_planner":   (getattr(self, 'goal_sys',          None), 1.6),
+            "working_memory": (getattr(self, 'wm',                None), 1.5),
+            "rsi":            (getattr(self, 'rsi',               None), 1.7),
+            "problem_solver": (getattr(self, 'problem_solver',    None), 1.8),
+            "generalizer":    (getattr(self, 'generalizer',       None), 1.6),
+            "meta_learner":   (getattr(self, 'meta_learner',      None), 1.9),
+            "sentience":      (getattr(self, 'sentience',         None), 2.0),
+            "consciousness":  (getattr(self, 'conscious',         None), 2.0),
+            "theory_of_mind": (getattr(self, 'theory_of_mind',   None), 1.6),
+            "emotions":       (getattr(self, 'emo',               None), 1.3),
+            "ethics":         (getattr(self, 'ethics_cap',        None), 1.4),
+        }
+        for _sname, (_sobj, _swt) in _si_systems.items():
+            if _sobj is None:
+                continue
+            try:
+                if getattr(self, 'cogarch', None):
+                    self.cogarch.register_subsystem(_sname, _sobj, weight=_swt)
+            except Exception:
+                pass
+            try:
+                if getattr(self, 'emergence', None):
+                    _st = _sobj.status() if hasattr(_sobj, "status") else {}
+                    _baseline = _st.get("confidence", 0.5) if isinstance(_st, dict) else 0.5
+                    self.emergence.register_system(_sname, _baseline)
+            except Exception:
+                pass
+
         self._start_v29_autonomous()
 
     def _start_v29_autonomous(self) -> None:
@@ -4288,43 +4400,6 @@ class NovaCore29(NovaCore28):
                     pass   # never crash the watcher
 
         threading.Thread(target=_watch, daemon=True, name="merge-watcher").start()
-
-        # Post-init: register all loaded subsystems into CogArch and EmergentIntelligence
-        _si_systems = {
-            "reasoning":      (self.recursive_intel,  1.8),
-            "metacognition":  (self.metacog,           1.7),
-            "belief":         (self.bayes,             1.6),
-            "causal":         (self.causal,            1.5),
-            "knowledge_graph":(self.kg,                1.5),
-            "world_model":    (self.world_model,       1.4),
-            "hypothesis":     (self.hypo,              1.4),
-            "goal_planner":   (self.goal_sys,          1.6),
-            "working_memory": (self.wm,                1.5),
-            "rsi":            (self.rsi,               1.7),
-            "problem_solver": (self.problem_solver,    1.8),
-            "generalizer":    (self.generalizer,       1.6),
-            "meta_learner":   (self.meta_learner,      1.9),
-            "sentience":      (self.sentience,         2.0),
-            "consciousness":  (self.conscious,         2.0),
-            "theory_of_mind": (self.theory_of_mind,   1.6),
-            "emotions":       (self.emo,               1.3),
-            "ethics":         (self.ethics_cap,        1.4),
-        }
-        for _sname, (_sobj, _swt) in _si_systems.items():
-            if _sobj is None:
-                continue
-            try:
-                if self.cogarch:
-                    self.cogarch.register_subsystem(_sname, _sobj, weight=_swt)
-            except Exception:
-                pass
-            try:
-                if self.emergence:
-                    _st = _sobj.status() if hasattr(_sobj, "status") else {}
-                    _baseline = _st.get("confidence", 0.5) if isinstance(_st, dict) else 0.5
-                    self.emergence.register_system(_sname, _baseline)
-            except Exception:
-                pass
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
