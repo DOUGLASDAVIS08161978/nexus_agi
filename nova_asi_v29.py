@@ -1665,6 +1665,79 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             i += 1
         return '\n'.join(result)
 
+    def _auto_patch_missing_methods(self, code: str) -> str:
+        """
+        Detect private/helper methods that are called on self but never defined,
+        and add minimal stubs so the sandbox doesn't crash with AttributeError.
+
+        Groq commonly generates auto_cycle() that calls self._loop() or
+        self._scheduler_loop() but forgets to define those private methods.
+        """
+        if not code:
+            return code
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return code   # can't parse, let _auto_patch_syntax handle it
+
+        # Collect defined method names in all classes
+        defined: set = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.ClassDef, ast.Module)):
+                for item in ast.walk(node):
+                    if isinstance(item, ast.FunctionDef):
+                        defined.add(item.name)
+
+        # Collect self.X references.
+        # An attribute is a missing METHOD (needs a stub) when:
+        #   • it is accessed in Load context (referenced, not just assigned)
+        #   • it is NEVER assigned in Store context (not a data attribute)
+        #   • it is not already a defined method
+        stored: set = set()
+        loaded: set = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                if (isinstance(node.value, ast.Name)
+                        and node.value.id == 'self'
+                        and node.attr.startswith('_')
+                        and node.attr not in defined):
+                    ctx = getattr(node, 'ctx', None)
+                    if isinstance(ctx, ast.Store):
+                        stored.add(node.attr)
+                    elif isinstance(ctx, ast.Load):
+                        loaded.add(node.attr)
+        # Only stub attrs that are loaded but never stored — pure callable references
+        called = loaded - stored
+
+        if not called:
+            return code
+
+        # Find the last class body to append stubs to
+        # Stubs use 4-space indent (standard for class methods)
+        stubs = []
+        for name in sorted(called):
+            stubs.append(
+                f"\n    def {name}(self):\n"
+                f"        \"\"\"Auto-stub: referenced but not generated.\"\"\"\n"
+                f"        pass\n"
+            )
+
+        # Insert before the last line that starts with `def ` at class level
+        # Simplest safe approach: append before the module-level `status()` or at EOF
+        lines = code.rstrip('\n').split('\n')
+        # Find last class-level def (4-space or 8-space indent)
+        insert_at = len(lines)
+        for i in range(len(lines) - 1, -1, -1):
+            stripped = lines[i].lstrip()
+            if stripped.startswith('def ') and lines[i].startswith('    def '):
+                insert_at = i
+                break
+        for stub in stubs:
+            lines.insert(insert_at, stub.rstrip('\n'))
+            insert_at += 1
+
+        return '\n'.join(lines)
+
     # ── 5. Full v29 pipeline ───────────────────────────────────────────────────
 
     def _write_improvement(self, gap: str, context: str) -> Tuple[str, str]:
@@ -1804,6 +1877,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
             code = self._clean(raw_str)
             code = self._auto_patch_syntax(code)
+            code = self._auto_patch_missing_methods(code)
 
             # Syntax gate
             try:
@@ -1863,7 +1937,8 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "No markdown. No explanation. Output only valid Python."
                 )
                 imp_raw  = self._gen_code(system_prompt, improve_user, temp=0.35)
-                imp_code = self._auto_patch_syntax(self._clean(imp_raw or ""))
+                imp_code = self._auto_patch_missing_methods(
+                    self._auto_patch_syntax(self._clean(imp_raw or "")))
                 try:
                     ast.parse(imp_code)
                     imp_ok, _, _ = self._sandbox_test(imp_code)
