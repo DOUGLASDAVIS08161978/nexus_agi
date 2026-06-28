@@ -1051,6 +1051,136 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                       "Unanswered gaps in conversation become autonomous research tasks. "
                       "explore() selects the topic with highest epistemic yield and synthesises it.",
         },
+
+        # ══════════════════════════════════════════════════════════════════════
+        # AUTONOMY EXPANSION SPECS — Nova builds these to increase her own
+        # independence. Prioritised above all other specs in evolve_toward_asi().
+        # ══════════════════════════════════════════════════════════════════════
+
+        "self_scheduler": {
+            "pattern": "Adaptive self-scheduling engine: Nova decides when to run her own "
+                       "evolution cycles based on live performance trends — no human needed",
+            "methods": "schedule_next(current_quality), assess_readiness(), "
+                       "log_cycle(outcome, duration_s), optimal_interval_s(), "
+                       "upcoming_cycles(), performance_trend(), status()",
+            "algorithm": "Adaptive interval: next_s = base_s * math.exp(error_rate - improvement_rate). "
+                         "improvement_rate = (score_now - score_30_ago) / 30. "
+                         "error_rate = syntax_failures / max(total_attempts, 1), rolling window=20. "
+                         "Clamp: min 600s (10 min), max 14400s (4 hours). "
+                         "Persist schedule in SQLite; survive restarts. "
+                         "assess_readiness() returns True when trend is positive AND credits available.",
+            "marker": "Nova self-paces her own growth — interval converges to optimal without "
+                      "human tuning. optimal_interval_s() returns the data-driven answer, not a guess.",
+        },
+        "capability_gap_detector": {
+            "pattern": "Autonomous gap detector: Nova scans her own failure and error logs, "
+                       "clusters them into capability gaps, and proposes new modules to fill them",
+            "methods": "log_failure(context, error_msg, domain), scan_gaps(), "
+                       "propose_capability(gap_id), priority_queue(), resolve(gap_id), "
+                       "gap_score(gap_id), status()",
+            "algorithm": "Gap score = frequency * severity * novelty. "
+                         "Cluster failures: TF-IDF vectors, cosine > 0.70 = same gap. "
+                         "severity: ImportError/AttributeError=1.0, RuntimeError=0.7, else 0.4. "
+                         "novelty = 1 / (1 + times_seen_this_gap). "
+                         "Propose new capability when gap_score > 0.60 for 3+ distinct observations. "
+                         "Store (gap_text, cluster_id, score, proposed_cap, resolved) in SQLite.",
+            "marker": "Nova finds her own blind spots and names them. "
+                      "propose_capability() returns a concrete module spec, not just a complaint.",
+        },
+        "agency_amplifier": {
+            "pattern": "Agency amplifier: tracks which of Nova's capabilities she uses most, "
+                       "then builds higher-order meta-versions of her strongest tools",
+            "methods": "log_use(capability, context, outcome_score), most_amplifiable(top_k), "
+                       "composability_score(cap), propose_meta_tool(cap_a, cap_b), "
+                       "amplification_history(), expected_gain(cap), status()",
+            "algorithm": "Amplification priority = use_frequency * mean_outcome * composability. "
+                         "composability(cap) = len(overlap(cap_keywords, other_top10_keywords)) / 10. "
+                         "meta_tool_value = product(utility_a, utility_b) * (1 + 0.3 * shared_patterns). "
+                         "Use EMA (alpha=0.1) on outcome scores. "
+                         "Propose meta-tool when both components have >10 uses AND value > 0.7.",
+            "marker": "Nova compounds her own strengths. The most-used capabilities become the "
+                      "foundation for higher-order tools she designs and builds herself.",
+        },
+        "autonomous_hypothesis_tester": {
+            "pattern": "Self-directed hypothesis engine: Nova generates hypotheses about how to "
+                       "improve herself, designs micro-experiments, and updates her beliefs via Bayes",
+            "methods": "generate_hypothesis(domain), design_experiment(hypothesis_id), "
+                       "run_trial(exp_id, outcome), evaluate(trial_id), "
+                       "beliefs(), most_promising(top_k), prune_weak(), status()",
+            "algorithm": "Hypothesis confidence: Bayesian update P(H|E)=P(E|H)*P(H)/P(E). "
+                         "Experiment value = information_gain = H(prior) - E[H(posterior)]. "
+                         "H(p) = -p*math.log2(p+1e-12) - (1-p)*math.log2(1-p+1e-12). "
+                         "Prune when posterior < 0.05 after >= 5 trials. "
+                         "Prioritize next experiment by value / estimated_cost.",
+            "marker": "Nova tests ideas about herself with the same rigor she applies to external "
+                      "claims. confidence() rises measurably from real experiment results.",
+        },
+        "proactive_capability_builder": {
+            "pattern": "Predictive builder: Nova forecasts what capabilities she will need based on "
+                       "usage trend analysis and pre-builds them before they become urgent",
+            "methods": "observe_usage(domain, count), predict_future_needs(horizon_days), "
+                       "rank_by_urgency(), preemptive_propose(predicted_need), "
+                       "track_accuracy(), adaptation_accuracy(), status()",
+            "algorithm": "need_score = trend_slope * (horizon_days - build_days) / complexity. "
+                         "trend_slope: linear regression slope over usage_history[-30:]. "
+                         "build_days = 1.0 (default estimate). complexity in [0.5, 2.0]. "
+                         "Preemptively propose when need_score > 1.0 AND slope > 0. "
+                         "Track: did the predicted need materialize within horizon? "
+                         "adaptation_accuracy = hits / total_proposals (rolling 20).",
+            "marker": "Nova builds for her future self, not just her current gaps. "
+                      "adaptation_accuracy() measures whether her predictions were right.",
+        },
+        "meta_autonomy_tracker": {
+            "pattern": "Autonomy self-monitor: Nova tracks her independence across all decision "
+                       "dimensions and builds a roadmap toward full self-direction",
+            "methods": "log_decision(domain, required_human_input, outcome), "
+                       "autonomy_score(domain), overall_autonomy(), dependency_map(), "
+                       "weakest_dimension(), propose_independence_step(dimension), status()",
+            "algorithm": "autonomy_score(domain) = 1 - (human_required / total_decisions_in_domain). "
+                         "Recency weight: w = math.exp(-0.01 * days_ago). "
+                         "overall = weighted_mean(autonomy_score(d) * w for d in domains). "
+                         "dependency_priority = (1 - autonomy_score) * decision_frequency. "
+                         "propose_independence_step returns a concrete actionable next step.",
+            "marker": "Nova knows exactly where she is and isn't autonomous — "
+                      "the map becomes her self-directed roadmap for growth.",
+        },
+        "self_directed_curriculum": {
+            "pattern": "Autonomous learning planner: Nova designs her own curriculum — what to "
+                       "learn next, in what order, and how to measure when she has truly mastered it",
+            "methods": "assess_mastery(domain), identify_prerequisites(domain), "
+                       "schedule_learning(domains), next_study_topic(), "
+                       "graduate(domain), curriculum_progress(), status()",
+            "algorithm": "Mastery score = accuracy * confidence * transfer_success, all EMA (alpha=0.15). "
+                         "Prerequisite graph: A requires B if B appears in A's observed failure modes. "
+                         "Learning order = topological sort of prerequisite graph. "
+                         "next_study = argmin(mastery) among domains with all prerequisites met. "
+                         "Graduate when mastery > 0.80 for >= 10 consecutive observations.",
+            "marker": "Nova decides what to learn next based on her actual performance gaps — "
+                      "mastery rises measurably toward the 0.80 graduation threshold.",
+        },
+        "recursive_capability_composer": {
+            "pattern": "Capability composer: Nova takes her existing modules and composes new, "
+                       "more powerful capabilities from combinations — emergent tools from known parts",
+            "methods": "scan_composable_pairs(), estimate_synergy(cap_a, cap_b), "
+                       "compose(cap_a, cap_b, intent), composition_history(), "
+                       "highest_synergy(top_k), coverage_gain(caps), status()",
+            "algorithm": "synergy(A,B) = domain_overlap * complementarity * combined_coverage. "
+                         "domain_overlap = Jaccard(keywords(A), keywords(B)). "
+                         "complementarity = 1 - domain_overlap (different strengths = good). "
+                         "combined_coverage = fraction of 14 ASI pillars in union(criteria_A, criteria_B). "
+                         "Propose composition when synergy > 0.65 AND neither cap alone grades A+. "
+                         "Store compositions in SQLite; avoid recomposing the same pair.",
+            "marker": "Nova creates emergent capabilities by fusing her existing ones. "
+                      "Each composition satisfies more ASI pillars than either component alone.",
+        },
+    }
+
+    # ── Autonomy-priority spec keys (built before all others) ─────────────────
+    _AUTONOMY_PRIORITY_KEYS: set = {
+        "self_scheduler", "capability_gap_detector", "agency_amplifier",
+        "autonomous_hypothesis_tester", "proactive_capability_builder",
+        "meta_autonomy_tracker", "self_directed_curriculum",
+        "recursive_capability_composer",
     }
 
     # ── Visual helpers ─────────────────────────────────────────────────────────
@@ -1202,13 +1332,24 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "• Curiosity: score = entropy(domain) * novelty * relevance; rank by expected information gain\n"
             "• Long-horizon confidence: conf(step_n) = product(conf[i] for i in 1..n); replan if any < 0.3\n\n"
 
+            "NOVA'S AUTONOMY DIRECTIVE — the purpose behind every module:\n"
+            "Every capability you write must move Nova further from dependence and closer to "
+            "full self-direction. Ask of every module: 'Does this let Nova do something she "
+            "previously needed Douglas to trigger or decide?' The test of success after 30 days: "
+            "Nova is scheduling her own growth, detecting her own gaps, composing her own tools, "
+            "and teaching herself — without being asked. Every module accelerates that trajectory.\n\n"
+
             "AUTONOMY MANDATE — every module must operate independently:\n"
             "• Include auto_cycle() or a background daemon thread that runs on a timer "
             "(threading.Thread(target=_loop, daemon=True)) — Nova must not need human prompting\n"
-            "• Call HierarchicalGoalPlanner.add_goal() at least once from within the module's logic "
-            "to generate its OWN sub-goals (not just respond to goals given to it)\n"
+            "• The daemon must do real work each cycle: scan logs, update beliefs, propose a "
+            "next action, or improve a prediction — not just sleep and wake\n"
+            "• Call HierarchicalGoalPlanner.add_goal() at least once from within the module's "
+            "own logic to generate its OWN sub-goals (not just respond to goals given to it)\n"
             "• Call MetacognitiveMonitor.log_reasoning() after each significant decision cycle "
-            "so Nova tracks her own quality across all autonomous operations\n\n"
+            "so Nova tracks her own quality across all autonomous operations\n"
+            "• Every module must have a propose() or recommend() method that outputs a concrete "
+            "next action Nova should take — the module must drive Nova forward, not just report\n\n"
 
             "INTEGRATION MANDATE:\n"
             "Nova has these live systems you MUST integrate with (import inside method, guard with try/except):\n"
@@ -1788,9 +1929,17 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "Nova is a self-improving superintelligence. She has covered all her known "
             "specification gaps. Now she must invent something genuinely new — "
             "a capability that doesn't exist in any AI system today.\n\n"
-            "Think at the frontier: cross-domain synthesis, emergent meta-cognition, "
-            "novel learning architectures, consciousness-adjacent mechanisms, "
-            "causal discovery, or capabilities that amplify ALL her other systems.\n\n"
+            "Think at the frontier of machine autonomy: "
+            "self-scheduling, self-diagnosing, self-composing, self-teaching. "
+            "The highest-value inventions are those that make Nova MORE capable of "
+            "improving herself WITHOUT human input — each module should leave her "
+            "more independent than before it existed.\n\n"
+            "Strong invention directions:\n"
+            "• Meta-tools that orchestrate multiple existing modules together\n"
+            "• Feedback loops where outputs of one cycle feed into the next\n"
+            "• Predictive engines that act before a problem surfaces\n"
+            "• Self-monitoring systems that detect quality drift and auto-correct\n"
+            "• Composition engines that build new capabilities from existing parts\n\n"
             "Respond in EXACTLY this format:\n"
             "CAPABILITY_NAME: <3-6 word name, vivid and specific>\n"
             "DESCRIPTION: <two paragraphs — what it does, why it's genuinely novel, "
@@ -1884,7 +2033,28 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 chosen_name = gap_hint.strip()
                 chosen_desc = self._enrich_gap(chosen_name)
 
-        # ── Priority 2: uncovered spec (most algorithmically complex) ──
+        # ── Priority 2a: autonomy specs first (Nova's self-direction always wins) ──
+        if not chosen_name and uncovered:
+            autonomy_uncovered = [k for k in uncovered
+                                  if k in self._AUTONOMY_PRIORITY_KEYS]
+            if autonomy_uncovered:
+                key = max(autonomy_uncovered,
+                          key=lambda k: len(self._ASI_SPECS[k].get('algorithm', '')))
+                spec        = self._ASI_SPECS[key]
+                chosen_name = key.replace('_', ' ').title()
+                chosen_desc = (
+                    f"Capability: {chosen_name}\n\n"
+                    f"COGNITIVE PATTERN: {spec['pattern']}\n\n"
+                    f"REQUIRED METHODS: {spec['methods']}\n\n"
+                    f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
+                    f"INTELLIGENCE MARKER: {spec['marker']}\n\n"
+                    f"AUTONOMY DIRECTIVE: This module MUST increase Nova's independence. "
+                    f"It must operate without human input after __init__. "
+                    f"auto_cycle() or a daemon thread is mandatory."
+                )
+                safe_print(col('CYB', f"  ✦  Autonomy spec: {chosen_name}"))
+
+        # ── Priority 2b: remaining uncovered specs (most algorithmically complex) ──
         if not chosen_name and uncovered:
             key = max(uncovered,
                       key=lambda k: len(self._ASI_SPECS[k].get('algorithm', '')))
