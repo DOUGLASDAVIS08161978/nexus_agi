@@ -1360,13 +1360,56 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         return code.strip()
 
+    # ── 4b. Auto-patch common LLM syntax mistakes ─────────────────────────────
+
+    def _auto_patch_syntax(self, code: str) -> str:
+        """Repair common LLM syntax mistakes before AST parsing."""
+        if not code:
+            return code
+        # Close unclosed triple-quoted strings (odd count means one is open)
+        if len(re.findall(r'"""', code)) % 2 != 0:
+            code = code.rstrip('\n') + '\n"""'
+        if len(re.findall(r"'''", code)) % 2 != 0:
+            code = code.rstrip('\n') + "\n'''"
+        # Add missing except clause to bare try: blocks
+        lines: List[str] = code.split('\n')
+        result: List[str] = []
+        i = 0
+        while i < len(lines):
+            result.append(lines[i])
+            m = re.match(r'^(\s*)try\s*:\s*$', lines[i])
+            if m:
+                indent   = m.group(1)
+                j        = i + 1
+                body_end = j
+                while j < len(lines):
+                    if not lines[j].strip():
+                        j += 1
+                        continue
+                    line_ind = len(lines[j]) - len(lines[j].lstrip())
+                    if line_ind <= len(indent):
+                        break
+                    body_end = j + 1
+                    j += 1
+                next_stmt = lines[j].strip() if j < len(lines) else ''
+                if not (next_stmt.startswith('except') or next_stmt.startswith('finally')):
+                    result.extend(lines[i + 1:body_end])
+                    result.append(f'{indent}except Exception:')
+                    result.append(f'{indent}    pass')
+                    i = body_end
+                    continue
+            i += 1
+        return '\n'.join(result)
+
     # ── 5. Full v29 pipeline ───────────────────────────────────────────────────
 
     def _write_improvement(self, gap: str, context: str) -> Tuple[str, str]:
         """
         v29 pipeline:
-          master prompt → generate → syntax check →
+          master prompt → generate → auto-patch → syntax check →
           sandbox test → score → iterative refinement (up to 3 passes).
+          Pass 2 feeds the exact error back for targeted repair.
+          Pass 3 uses a stripped-down skeleton prompt.
         Best passing attempt wins; grade shown in PR.
         """
         existing     = self._read_capability_summary()
@@ -1382,16 +1425,59 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         # Enrich the gap with a precise algorithmic spec if one exists
         enriched_gap = self._enrich_gap(gap)
 
-        engine_label = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
-        user_content = f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"
+        engine_label  = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
+        base_content  = f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"
+
+        # Track error state for repair prompts on subsequent passes
+        _last_syntax_err  = ""
+        _last_broken_code = ""
 
         for attempt, temp in enumerate(temps[:self.MAX_ATTEMPTS]):
             n = attempt + 1
-            if n > 1:
-                safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
-                                     f"(temp={temp})..."))
 
-            raw     = self._gen_code(system_prompt, user_content, temp=temp)
+            # Pass-specific user content strategy
+            if n == 1 or not _last_syntax_err:
+                curr_user = base_content
+                if n > 1:
+                    safe_print(col('YL', f"  ↻ Refinement pass {n}/{self.MAX_ATTEMPTS} "
+                                         f"(temp={temp})..."))
+            elif n == 2:
+                # Targeted repair: feed exact error + broken code back to model
+                safe_print(col('YL', f"  ↻ Repair pass 2/3 — feeding error back to model..."))
+                curr_user = (
+                    "The Python code below has a syntax error. "
+                    "Fix ONLY the syntax error and output the COMPLETE corrected code.\n\n"
+                    f"SYNTAX ERROR: {_last_syntax_err}\n\n"
+                    f"BROKEN CODE:\n{_last_broken_code}\n\n"
+                    "Critical rules:\n"
+                    "- Output ONLY valid Python. Zero markdown. No ``` fences.\n"
+                    "- Every try: block MUST have an except clause immediately after the body.\n"
+                    "- Every triple-quoted string MUST be closed on its own line with \"\"\".\n"
+                    "- Do not truncate — output the full corrected file."
+                )
+            else:
+                # Skeleton pass: minimal structural prompt to guarantee valid syntax
+                safe_print(col('YL', f"  ↻ Skeleton pass 3/3 — simplified structure..."))
+                _cm = re.search(r'class\s+(\w+)', _last_broken_code)
+                _cname = (_cm.group(1) if _cm else
+                          ''.join(w.title() for w in
+                                  re.sub(r'[^a-z ]', '', gap.lower()).split()[:3]) + "Module")
+                curr_user = (
+                    f"Write a Python class named {_cname} for Nova ASI.\n"
+                    f"Capability: {enriched_gap[:200]}\n\n"
+                    "CRITICAL SYNTAX RULES — every violation breaks the file:\n"
+                    "1. Line 1 must be: \"\"\" (opening docstring)\n"
+                    "2. Line 2: one-line description\n"
+                    "3. Line 3: \"\"\" (closing docstring — MUST close it!)\n"
+                    f"4. Line 4: class {_cname}:\n"
+                    "5. Every def ends its signature with a colon.\n"
+                    "6. Every try: MUST be followed by except Exception as e: pass\n"
+                    "7. No open strings — every \"\"\" opens AND closes a docstring.\n"
+                    f"8. Last line: # Usage: obj = {_cname}()\n"
+                    "9. Output ONLY Python. 60-80 lines. Simple and correct beats complex and broken."
+                )
+
+            raw     = self._gen_code(system_prompt, curr_user, temp=temp)
             raw_str = raw or ""
 
             # Claude auth error — bad ANTHROPIC_API_KEY
@@ -1408,7 +1494,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 safe_print(col('YL', f"  ↻ Claude unavailable (pass {n}) — falling back to Groq..."))
                 raw     = safe_chat(CODEGEN_MODEL, [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": user_content},
+                    {"role": "user",   "content": curr_user},
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
 
@@ -1431,7 +1517,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 time.sleep(wait)
                 raw     = safe_chat(CODEGEN_MODEL, [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": user_content},
+                    {"role": "user",   "content": curr_user},
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
                 if any(e in raw_str for e in ('429', 'Rate limit', 'Too Many Requests')):
@@ -1445,13 +1531,15 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 continue
 
             code = self._clean(raw_str)
+            code = self._auto_patch_syntax(code)
 
             # Syntax gate
             try:
                 ast.parse(code)
             except SyntaxError as e:
+                _last_syntax_err  = str(e)
+                _last_broken_code = code[:3000]
                 safe_print(col('YL', f"  ✗ Syntax error (pass {n}): {e}"))
-                # Show first 120 chars of raw so we can diagnose persistent failures
                 raw_preview = (raw or "")[:120].replace('\n', '↵')
                 safe_print(col('DIM', f"  ↳ Raw preview: {raw_preview}"))
                 continue
