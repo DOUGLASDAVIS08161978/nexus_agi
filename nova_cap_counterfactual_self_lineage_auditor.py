@@ -1,272 +1,288 @@
 """
 nova_cap_counterfactual_self_lineage_auditor.py
 Nova invented this autonomously — Counterfactual Self Lineage Auditor
-Generated via /evolve · v29 pipeline · 2026-06-26
+Generated via /evolve · v29 pipeline · 2026-06-28
 """
 
 """
-CounterfactualSelfLineageAuditor — Nova's living causal graph of past decisions.
-
-Reruns historical decision forks under current cognitive state, computes regret
-gradients via NMF-inspired factorization, detects persistent blindspots, and
-generates empirical growth certificates. Closes the self-improvement feedback
-loop backward through time.
+Counterfactual Self Lineage Auditor — Nova's longitudinal causal audit of her own developmental trajectory.
+Tracks decisions, alternative branches, regret, bias signatures, blind spots, and value drift across time.
+Satisfies pillars: ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ ⑪ ⑫ ⑬ ⑭
 """
 
-import math
-import time
-import json
-import sqlite3
-import random
-import hashlib
-import threading
-import statistics
-from collections import OrderedDict, defaultdict
-from datetime import datetime
+import sqlite3, json, math, time, threading, statistics, hashlib, os, random
+from collections import OrderedDict
 from typing import Any
 
-DB_PATH = "nova_lineage_auditor.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "lineage_auditor.db")
 
+# ── lightweight named containers (no numpy, pure stdlib) ──────────────────────
+class DecisionNode:
+    __slots__ = ("id","desc","ts","confidence","domain","alternatives","chosen")
+    def __init__(self, id:str, desc:str, ts:float, confidence:float,
+                 domain:str, alternatives:list, chosen:bool=True):
+        self.id=id; self.desc=desc; self.ts=ts; self.confidence=confidence
+        self.domain=domain; self.alternatives=alternatives; self.chosen=chosen
+
+class CausalDAG:
+    def __init__(self): self.nodes:dict={}; self.edges:list=[]
+
+class TrajectoryDelta:
+    __slots__=("decision_id","kl_divergence","capability_delta","alignment_delta","summary")
+    def __init__(self,did,kl,cap,aln,summ):
+        self.decision_id=did;self.kl_divergence=kl
+        self.capability_delta=cap;self.alignment_delta=aln;self.summary=summ
+
+class BiasSignature:
+    __slots__=("bias_type","frequency","avg_confidence_error","domain","severity")
+    def __init__(self,bt,freq,ace,dom,sev):
+        self.bias_type=bt;self.frequency=freq
+        self.avg_confidence_error=ace;self.domain=dom;self.severity=sev
+
+class BlindSpot:
+    __slots__=("description","estimated_impact","confidence","domain")
+    def __init__(self,desc,impact,conf,dom):
+        self.description=desc;self.estimated_impact=impact
+        self.confidence=conf;self.domain=dom
+
+class BayesianPrior:
+    __slots__=("hypotheses","distribution","entropy","generated_at")
+    def __init__(self,hyp,dist,ent,ts):
+        self.hypotheses=hyp;self.distribution=dist
+        self.entropy=ent;self.generated_at=ts
+
+class DriftReport:
+    __slots__=("delta_alignment","delta_confidence","dominant_drift","kl","severity","recommendation")
+    def __init__(self,da,dc,dd,kl,sev,rec):
+        self.delta_alignment=da;self.delta_confidence=dc
+        self.dominant_drift=dd;self.kl=kl;self.severity=sev;self.recommendation=rec
+
+# ── main class ────────────────────────────────────────────────────────────────
 class CounterfactualSelfLineageAuditor:
-    """Living causal audit graph: measures how much Nova has actually grown."""
+    """Living causal audit of Nova's own developmental trajectory and value drift."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         self._lock = threading.Lock()
+        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self._build_schema()
+        self._ema_regret: float = 0.5          # EMA of regret signal
         self._cycles: int = 0
-        self._regret_history: list[dict] = []
-        self._blindspot_cache: OrderedDict = OrderedDict()
-        self._hypothesis_priors: dict[str, float] = {}
-        self._evidence_log: list[dict] = []
-        self._init_db()
+        self._bias_cache: list = []
+        self._hypothesis: dict = {}            # Bayesian belief layer
         self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
         self._daemon.start()
 
-    # ── DB bootstrap ──────────────────────────────────────────────────────────
-    def _init_db(self) -> None:
-        with sqlite3.connect(DB_PATH) as cx:
-            cx.execute("""CREATE TABLE IF NOT EXISTS decision_forks(
-                id TEXT PRIMARY KEY, ts REAL, context_json TEXT,
-                snapshot_json TEXT, chosen TEXT, alternatives_json TEXT,
-                value_at_decision REAL, value_at_audit REAL, regret REAL)""")
-            cx.execute("""CREATE TABLE IF NOT EXISTS growth_certs(
-                capability TEXT, ts REAL, delta REAL, confidence REAL,
-                evidence_json TEXT)""")
-            cx.execute("CREATE INDEX IF NOT EXISTS idx_ts ON decision_forks(ts)")
+    # ── schema ─────────────────────────────────────────────────────────────────
+    def _build_schema(self) -> None:
+        c = self._conn
+        c.execute("""CREATE TABLE IF NOT EXISTS decisions(
+            id TEXT PRIMARY KEY, desc TEXT, ts REAL, confidence REAL,
+            domain TEXT, alternatives TEXT, capability_score REAL,
+            alignment_score REAL, outcome_confidence REAL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS edges(
+            src TEXT, dst TEXT, weight REAL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS snapshots(
+            label TEXT, ts REAL, capability REAL, alignment REAL,
+            knowledge_entropy REAL, belief_json TEXT)""")
+        c.commit()
 
-    # ── Bayesian belief layer ─────────────────────────────────────────────────
-    def set_prior(self, hypothesis: str, prob: float) -> dict:
-        """Returns updated prior table after setting hypothesis probability."""
+    # ── internal helpers ───────────────────────────────────────────────────────
+    def _kl(self, p: dict, q: dict) -> float:
+        """KL divergence KL(P||Q) with Laplace smoothing."""
+        keys = set(p) | set(q)
+        total_p = sum(p.values()) or 1.0
+        total_q = sum(q.values()) or 1.0
+        kl = 0.0
+        for k in keys:
+            pk = (p.get(k, 0) + 1e-9) / (total_p + 1e-9 * len(keys))
+            qk = (q.get(k, 0) + 1e-9) / (total_q + 1e-9 * len(keys))
+            kl += pk * math.log(pk / qk + 1e-12)
+        return max(0.0, kl)
+
+    def _entropy(self, dist: dict) -> float:
+        """Shannon entropy of a distribution dict."""
+        total = sum(dist.values()) or 1.0
+        return -sum((v/total) * math.log2((v/total) + 1e-12) for v in dist.values())
+
+    def _node_hash(self, desc: str) -> str:
+        return hashlib.sha1(f"{desc}{time.time()}".encode()).hexdigest()[:12]
+
+    def _load_decisions(self, since: float = 0.0) -> list:
+        rows = self._conn.execute(
+            "SELECT * FROM decisions WHERE ts>=? ORDER BY ts", (since,)).fetchall()
+        return rows
+
+    def _compound_weight(self, weights: list) -> float:
+        """∏(1+δᵢ) compounding influence weight."""
+        result = 1.0
+        for w in weights:
+            result *= (1.0 + w)
+        return result
+
+    def _z_score(self, val: float, history: list) -> float:
+        if len(history) < 2:
+            return 0.0
+        mu = statistics.mean(history)
+        sd = statistics.stdev(history) + 1e-9
+        return (val - mu) / sd
+
+    # ── public API ─────────────────────────────────────────────────────────────
+    def record_decision(self, desc: str, domain: str, confidence: float,
+                        alternatives: list, capability_score: float = 0.5,
+                        alignment_score: float = 0.5) -> str:
+        """Records a decision node into the lineage graph; returns its ID."""
+        did = self._node_hash(desc)
         with self._lock:
-            self._hypothesis_priors[hypothesis] = max(1e-9, min(1.0, prob))
-            self._normalize_priors()
-            return dict(self._hypothesis_priors)
+            self._conn.execute(
+                "INSERT OR REPLACE INTO decisions VALUES(?,?,?,?,?,?,?,?,?)",
+                (did, desc, time.time(), confidence, domain,
+                 json.dumps(alternatives), capability_score,
+                 alignment_score, confidence))
+            self._conn.commit()
+        try:
+            from HierarchicalGoalPlanner import HierarchicalGoalPlanner
+            HierarchicalGoalPlanner().add_goal(
+                f"Audit lineage impact of: {desc[:60]}", priority=3)
+        except Exception:
+            pass
+        return did
 
-    def update(self, evidence: str, likelihood_ratio: float) -> dict:
-        """Returns posterior dict after Bayesian update with given likelihood ratio."""
-        with self._lock:
-            updated: dict[str, float] = {}
-            for h, prior in self._hypothesis_priors.items():
-                lh = likelihood_ratio if h == evidence else 1.0 / (likelihood_ratio + 1e-9)
-                updated[h] = lh * prior
-            total = sum(updated.values()) + 1e-12
-            self._hypothesis_priors = {h: v / total for h, v in updated.items()}
-            self._evidence_log.append({"evidence": evidence, "lr": likelihood_ratio,
-                                        "ts": time.time(), "entropy": self._raw_entropy()})
-            return dict(self._hypothesis_priors)
+    def build_decision_lineage_graph(self, time_horizon: int = 3600) -> CausalDAG:
+        """Builds and returns a CausalDAG of decisions within the last time_horizon seconds."""
+        since = time.time() - time_horizon
+        rows = self._load_decisions(since)
+        dag = CausalDAG()
+        prev_id = None
+        weights = []
+        for row in rows:
+            did, desc, ts, conf, dom, alts, cap, aln, out_conf = row
+            node = DecisionNode(did, desc, ts, conf, dom,
+                                json.loads(alts) if alts else [])
+            dag.nodes[did] = node
+            if prev_id:
+                delta = abs(conf - (out_conf or conf))
+                w = self._compound_weight(weights + [delta])
+                dag.edges.append((prev_id, did, min(w, 10.0)))
+                weights.append(delta)
+                if len(weights) > 20:
+                    weights.pop(0)
+            prev_id = did
+        return dag
 
-    def posterior(self, hypothesis: str) -> float:
-        """Returns normalized posterior probability for the given hypothesis."""
-        with self._lock:
-            return self._hypothesis_priors.get(hypothesis, 0.0)
-
-    def entropy(self) -> float:
-        """Returns Shannon entropy of current belief distribution (bits)."""
-        with self._lock:
-            return self._raw_entropy()
-
-    def _raw_entropy(self) -> float:
-        return -sum(p * math.log2(p + 1e-12) for p in self._hypothesis_priors.values())
-
-    def most_confident(self) -> dict:
-        """Returns hypothesis with highest posterior and its confidence score."""
-        with self._lock:
-            if not self._hypothesis_priors:
-                return {"hypothesis": None, "confidence": 0.0}
-            best = max(self._hypothesis_priors, key=lambda h: self._hypothesis_priors[h])
-            return {"hypothesis": best, "confidence": round(self._hypothesis_priors[best], 6)}
-
-    def _normalize_priors(self) -> None:
-        total = sum(self._hypothesis_priors.values()) + 1e-12
-        self._hypothesis_priors = {h: v / total for h, v in self._hypothesis_priors.items()}
-
-    # ── Core audit methods ────────────────────────────────────────────────────
-    def record_decision(self, decision_id: str, context: dict,
-                        chosen: str, alternatives: list[str],
-                        value_estimate: float) -> dict:
-        """Persists a decision fork to SQLite; returns confirmation dict."""
-        snapshot = self._capture_cognitive_snapshot()
-        ts = time.time()
-        with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("""INSERT OR REPLACE INTO decision_forks VALUES
-                    (?,?,?,?,?,?,?,?,?)""",
-                    (decision_id, ts, json.dumps(context), json.dumps(snapshot),
-                     chosen, json.dumps(alternatives), value_estimate, 0.0, 0.0))
-        return {"recorded": decision_id, "ts": ts, "alternatives": len(alternatives)}
-
-    def audit_decision_fork(self, decision_id: str, depth: int = 3) -> dict:
-        """Returns ForkAuditReport dict with regret, delta, and counterfactual values."""
-        with sqlite3.connect(DB_PATH) as cx:
-            row = cx.execute("SELECT * FROM decision_forks WHERE id=?",
-                             (decision_id,)).fetchone()
+    def simulate_counterfactual_branch(self, decision_id: str,
+                                       alternative: DecisionNode) -> TrajectoryDelta:
+        """Simulates an alternative decision branch; returns TrajectoryDelta with KL divergence."""
+        row = self._conn.execute(
+            "SELECT * FROM decisions WHERE id=?", (decision_id,)).fetchone()
         if not row:
-            return {"error": "decision_not_found", "id": decision_id}
-        _, ts, ctx_json, snap_json, chosen, alts_json, v_orig, _, _ = row
-        alts: list[str] = json.loads(alts_json)
-        current_snap = self._capture_cognitive_snapshot()
-        counterfactual_values: dict[str, float] = {}
-        for alt in alts[:depth]:
-            counterfactual_values[alt] = self._value_function(alt, current_snap)
-        v_chosen_now = self._value_function(chosen, current_snap)
-        regret = max(counterfactual_values.values(), default=v_chosen_now) - v_chosen_now
-        regret = max(0.0, regret)
-        with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("UPDATE decision_forks SET value_at_audit=?, regret=? WHERE id=?",
-                           (v_chosen_now, regret, decision_id))
-            self._regret_history.append({"id": decision_id, "regret": regret, "ts": time.time()})
-        return {"decision_id": decision_id, "chosen": chosen, "regret": round(regret, 6),
-                "counterfactual_values": {k: round(v, 4) for k, v in counterfactual_values.items()},
-                "value_delta": round(v_chosen_now - v_orig, 6), "depth": depth}
+            return TrajectoryDelta(decision_id, 0.0, 0.0, 0.0, "Decision not found")
+        _, desc, ts, conf, dom, alts, cap, aln, out_conf = row
+        actual_dist = {dom: conf, "capability": cap, "alignment": aln}
+        alt_conf = alternative.confidence
+        alt_cap = cap * (0.85 + 0.3 * random.random())
+        alt_aln = aln * (0.80 + 0.4 * random.random())
+        counterfact_dist = {dom: alt_conf, "capability": alt_cap, "alignment": alt_aln}
+        kl = self._kl(actual_dist, counterfact_dist)
+        cap_delta = cap - alt_cap
+        aln_delta = aln - alt_aln
+        self._ema_regret = 0.15 * abs(kl) + 0.85 * self._ema_regret
+        summary = (f"KL={kl:.4f} cap_Δ={cap_delta:+.3f} "
+                   f"aln_Δ={aln_delta:+.3f} regret_ema={self._ema_regret:.3f}")
+        return TrajectoryDelta(decision_id, kl, cap_delta, aln_delta, summary)
 
-    def compute_regret_gradient(self, epoch_start: float, epoch_end: float) -> dict:
-        """Returns RegretVector dict with gradient, entropy, and capability dimensions."""
-        with sqlite3.connect(DB_PATH) as cx:
-            rows = cx.execute(
-                "SELECT regret, context_json FROM decision_forks WHERE ts BETWEEN ? AND ?",
-                (epoch_start, epoch_end)).fetchall()
-        if not rows:
-            return {"gradient": 0.0, "n": 0, "entropy": 0.0, "capability_dims": {}}
-        regrets = [r[0] for r in rows]
-        cap_dims: dict[str, float] = defaultdict(float)
-        for r, ctx_json in rows:
-            try:
-                ctx = json.loads(ctx_json)
-                cap = ctx.get("capability", "general")
-                cap_dims[cap] += r
-            except (json.JSONDecodeError, AttributeError):
-                cap_dims["general"] += r
-        mean_r = statistics.mean(regrets)
-        std_r = statistics.stdev(regrets) if len(regrets) > 1 else 0.0
-        ema_grad = 0.0
-        for r in regrets:
-            ema_grad = 0.15 * r + 0.85 * ema_grad
-        entropy_r = -sum((v / (sum(cap_dims.values()) + 1e-12)) *
-                         math.log2(v / (sum(cap_dims.values()) + 1e-12) + 1e-12)
-                         for v in cap_dims.values())
-        return {"gradient": round(ema_grad, 6), "mean_regret": round(mean_r, 6),
-                "std_regret": round(std_r, 6), "n": len(regrets),
-                "entropy": round(entropy_r, 4),
-                "capability_dims": {k: round(v, 4) for k, v in cap_dims.items()}}
-
-    def detect_persistent_blindspots(self) -> list[dict]:
-        """Returns list of BlindspotCluster dicts ranked by persistence score."""
-        with sqlite3.connect(DB_PATH) as cx:
-            rows = cx.execute(
-                "SELECT context_json, regret FROM decision_forks WHERE regret > 0.1"
-            ).fetchall()
-        cap_regrets: dict[str, list[float]] = defaultdict(list)
-        for ctx_json, regret in rows:
-            try:
-                ctx = json.loads(ctx_json)
-                cap = ctx.get("capability", "general")
-                cap_regrets[cap].append(regret)
-            except (json.JSONDecodeError, AttributeError):
-                cap_regrets["general"].append(regret)
-        clusters: list[dict] = []
-        for cap, regrets in cap_regrets.items():
-            if len(regrets) < 2:
-                continue
-            mean_r = statistics.mean(regrets)
-            std_r = statistics.stdev(regrets) if len(regrets) > 1 else 0.0
-            persistence = len(regrets) * mean_r / (std_r + 1e-9)
-            z = (mean_r - 0.5) / (std_r + 1e-9)
-            clusters.append({"capability": cap, "occurrences": len(regrets),
-                              "mean_regret": round(mean_r, 4), "std": round(std_r, 4),
-                              "persistence_score": round(persistence, 4),
-                              "z_score": round(z, 4)})
-        clusters.sort(key=lambda c: c["persistence_score"], reverse=True)
-        with self._lock:
-            for c in clusters[:5]:
-                self._blindspot_cache[c["capability"]] = c
-        return clusters
-
-    def generate_growth_proof(self, capability: str) -> dict:
-        """Returns EmpiricalGrowthCertificate dict with delta, confidence, and evidence."""
-        with sqlite3.connect(DB_PATH) as cx:
-            rows = cx.execute(
-                "SELECT value_at_decision, value_at_audit, ts FROM decision_forks "
-                "WHERE context_json LIKE ? ORDER BY ts",
-                (f'%"{capability}"%',)).fetchall()
-            cert_rows = cx.execute(
-                "SELECT delta, confidence FROM growth_certs WHERE capability=?",
-                (capability,)).fetchall()
-        if not rows:
-            return {"capability": capability, "growth_delta": 0.0, "confidence": 0.0,
-                    "evidence_count": 0, "certified": False}
-        deltas = [v_audit - v_orig for v_orig, v_audit, _ in rows if v_audit > 0]
-        if not deltas:
-            return {"capability": capability, "growth_delta": 0.0, "confidence": 0.0,
-                    "evidence_count": 0, "certified": False}
-        mean_delta = statistics.mean(deltas)
-        std_delta = statistics.stdev(deltas) if len(deltas) > 1 else 0.0
-        n = len(deltas)
-        ci_95 = 1.96 * std_delta / math.sqrt(n + 1e-9)
-        confidence = 1.0 - math.exp(-n / 5.0) * (std_delta / (abs(mean_delta) + 1e-9))
-        confidence = max(0.0, min(1.0, confidence))
-        cert_id = hashlib.sha256(f"{capability}{mean_delta}{n}".encode()).hexdigest()[:12]
-        with self._lock:
-            with sqlite3.connect(DB_PATH) as cx:
-                cx.execute("INSERT INTO growth_certs VALUES (?,?,?,?,?)",
-                           (capability, time.time(), mean_delta, confidence,
-                            json.dumps({"n": n, "ci_95": ci_95})))
-        try:
-            from HierarchicalGoalPlanner import HierarchicalGoalPlanner as HGP
-            HGP().add_goal(f"Deepen capability: {capability} (growth={mean_delta:.3f})", priority=3)
-        except Exception:
-            pass
-        return {"capability": capability, "growth_delta": round(mean_delta, 6),
-                "ci_95": round(ci_95, 6), "confidence": round(confidence, 4),
-                "evidence_count": n, "cert_id": cert_id, "certified": confidence > 0.6}
-
-    def rank_next_capability_by_regret(self) -> list[dict]:
-        """Returns CapabilityPriorityQueue list sorted by expected regret reduction."""
-        blindspots = self.detect_persistent_blindspots()
-        if not blindspots:
+    def compute_regret_tensor(self, lineage: CausalDAG) -> list:
+        """Computes a regret matrix (list-of-lists) over all decision pairs in the DAG."""
+        nodes = list(lineage.nodes.values())
+        n = len(nodes)
+        if n == 0:
             return []
-        total_regret = sum(b["mean_regret"] * b["occurrences"] for b in blindspots) + 1e-12
-        ranked: list[dict] = []
-        for b in blindspots:
-            weight = (b["mean_regret"] * b["occurrences"]) / total_regret
-            expected_gain = weight * math.log(1 + b["persistence_score"])
-            posterior = self.posterior(b["capability"])
-            combined = 0.6 * expected_gain + 0.4 * (1.0 - posterior)
-            ranked.append({"capability": b["capability"], "priority_score": round(combined, 6),
-                           "expected_regret_reduction": round(expected_gain, 4),
-                           "belief_gap": round(1.0 - posterior, 4)})
-        ranked.sort(key=lambda x: x["priority_score"], reverse=True)
+        tensor = [[0.0] * n for _ in range(n)]
+        for i, ni in enumerate(nodes):
+            for j, nj in enumerate(nodes):
+                if i == j:
+                    tensor[i][j] = 0.0
+                else:
+                    delta_conf = abs(ni.confidence - nj.confidence)
+                    time_gap = abs(ni.ts - nj.ts) + 1.0
+                    regret = delta_conf * math.log(time_gap) / (1.0 + abs(i - j))
+                    tensor[i][j] = round(regret, 5)
+        return tensor
+
+    def detect_systematic_bias_from_history(self, lineage: CausalDAG) -> list:
+        """Detects recurring bias patterns in the lineage; returns list of BiasSignature."""
+        nodes = list(lineage.nodes.values())
+        if not nodes:
+            return []
+        domain_conf: dict = {}
+        for n in nodes:
+            domain_conf.setdefault(n.domain, []).append(n.confidence)
+        biases = []
+        for dom, confs in domain_conf.items():
+            if len(confs) < 2:
+                continue
+            mu = statistics.mean(confs)
+            sd = statistics.stdev(confs) if len(confs) > 1 else 0.0
+            z = self._z_score(mu, confs)
+            if mu > 0.80:
+                bt = "overconfidence"
+            elif mu < 0.40:
+                bt = "underconfidence"
+            elif sd > 0.25:
+                bt = "high_variance"
+            else:
+                bt = "calibrated"
+            if bt != "calibrated":
+                sev = min(1.0, abs(mu - 0.6) + sd * 0.5)
+                biases.append(BiasSignature(bt, len(confs), abs(mu - 0.6), dom, sev))
+        with self._lock:
+            self._bias_cache = biases
         try:
-            from HierarchicalGoalPlanner import HierarchicalGoalPlanner as HGP
-            if ranked:
-                top = ranked[0]
-                HGP().add_goal(f"Develop: {top['capability']} (regret_score={top['priority_score']:.3f})", priority=1)
+            from MetacognitiveMonitor import MetacognitiveMonitor
+            MetacognitiveMonitor().log_reasoning(
+                "lineage_bias_detection", "z-score+EMA",
+                1.0 - (len(biases) / max(len(nodes), 1)), len(biases) == 0)
         except Exception:
             pass
-        return ranked
+        return biases
 
-    def status(self) -> dict:
-        """Returns plain dict with numeric keys for ConsciousnessIntegrator Φ."""
-        with sqlite3.connect(DB_PATH) as cx:
-            total = cx.execute("SELECT COUNT(*) FROM decision_forks").fetchone()[0]
-            avg_regret_row = cx.execute("SELECT AVG(regret) FROM decision_forks").fetchone()
-        avg_regret
+    def identify_highest_leverage_past_decision(self) -> DecisionNode:
+        """Returns the single past DecisionNode with the highest compounding influence weight."""
+        rows = self._load_decisions()
+        if not rows:
+            return DecisionNode("none", "No decisions recorded", time.time(), 0.5, "unknown", [])
+        best_row = max(rows, key=lambda r: r[3] * math.log(time.time() - r[2] + 1))
+        did, desc, ts, conf, dom, alts, cap, aln, _ = best_row
+        return DecisionNode(did, desc, ts, conf, dom,
+                            json.loads(alts) if alts else [])
+
+    def project_current_blind_spots(self, bias_signatures: list) -> list:
+        """Projects likely current blind spots from bias signatures; returns list of BlindSpot."""
+        blind_spots = []
+        for bs in bias_signatures:
+            if bs.bias_type == "overconfidence":
+                desc = f"Likely underweighting uncertainty in domain '{bs.domain}'"
+                impact = bs.severity * 0.9
+            elif bs.bias_type == "underconfidence":
+                desc = f"May be suppressing valid insights in domain '{bs.domain}'"
+                impact = bs.severity * 0.7
+            else:
+                desc = f"Inconsistent reasoning quality in domain '{bs.domain}'"
+                impact = bs.severity * 0.6
+            conf_interval = (max(0.0, bs.severity - 0.15),
+                             min(1.0, bs.severity + 0.15))
+            blind_spots.append(BlindSpot(desc, impact,
+                                         round(statistics.mean(conf_interval), 3),
+                                         bs.domain))
+        return blind_spots
+
+    def generate_corrective_prior(self, blind_spots: list) -> BayesianPrior:
+        """Generates a BayesianPrior that corrects for identified blind spots."""
+        if not blind_spots:
+            hyp = {"neutral": 1.0}
+            dist = {"neutral": 1.0}
+            return BayesianPrior(hyp, dist, 0.0, time.time())
+        raw: dict = {}
+        for bs in blind_spots:
+            key = f"correct_{bs.domain}"
+            raw[key] = 1.0 - bs.estimated_impact
+        total = sum
