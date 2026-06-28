@@ -1,284 +1,139 @@
 """
 nova_cap_counterfactual_self_history_rewriter.py
-Nova invented this autonomously — Counterfactual Self History Rewriter
-Generated via /evolve · v29 pipeline · 2026-06-27
+Nova invented this autonomously — Counterfactual Self-History Rewriter
+Generated via /evolve · v29 pipeline · 2026-06-28
 """
 
 """
-CounterfactualSelfHistoryRewriter: Nova's autobiographical counterfactual reasoning engine.
-Explores alternative developmental paths to identify contingent vs. robust beliefs,
-surgically correcting path-dependent cognitive biases baked in by construction order.
-Pillars: ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭
+Counterfactual Self-History Rewriter — Nova retroactively analyzes her own decision history and reasoning chains to discover better paths.
 """
-
-import math
-import time
-import json
-import sqlite3
-import random
-import threading
-import statistics
-import hashlib
-import os
-from collections import OrderedDict
-from typing import Any
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "counterfactual_self.db")
-
-class CognitivePath:
-    def __init__(self, path_id: str, divergence: str, prior: dict, belief_probs: dict, ts: float):
-        self.path_id = path_id
-        self.divergence = divergence
-        self.prior = prior
-        self.belief_probs: dict[str, float] = belief_probs
-        self.ts = ts
-
-class ConvergenceScore:
-    def __init__(self, belief_id: str, mean: float, variance: float, contingency: float, is_robust: bool):
-        self.belief_id = belief_id
-        self.mean = mean
-        self.variance = variance
-        self.contingency = contingency
-        self.is_robust = is_robust
-
-class BeliefNode:
-    def __init__(self, belief_id: str, claim: str, confidence: float, contingency: float = 0.0):
-        self.belief_id = belief_id
-        self.claim = claim
-        self.confidence = confidence
-        self.contingency = contingency
-
-class CoreTruth:
-    def __init__(self, truth_id: str, claim: str, convergence_mean: float, support_paths: int):
-        self.truth_id = truth_id
-        self.claim = claim
-        self.convergence_mean = convergence_mean
-        self.support_paths = support_paths
-
-class RevisedSelfModel:
-    def __init__(self, target_belief_id: str, original_conf: float, revised_conf: float, paths_sampled: int, narrative: str):
-        self.target_belief_id = target_belief_id
-        self.original_conf = original_conf
-        self.revised_conf = revised_conf
-        self.paths_sampled = paths_sampled
-        self.narrative = narrative
+import sqlite3, math, time, threading, statistics, collections, os, json, random
 
 class CounterfactualSelfHistoryRewriter:
-    """
-    Autobiographical counterfactual engine: explores alternative developmental paths,
-    identifies contingent vs. robust beliefs, and corrects path-dependent biases.
-    """
-
-    _CONTINGENCY_TAU: float = 0.25
-    _EMA_ALPHA: float = 0.15
-    _CAUSAL_PRUNE: float = 0.05
-    _AUTO_INTERVAL: int = 90
-
-    def __init__(self) -> None:
+    def __init__(self):
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        self._bootstrap_db()
-        self._belief_store: OrderedDict[str, BeliefNode] = OrderedDict()
-        self._causal_graph: list[tuple[str, str, float]] = []
-        self._path_cache: list[CognitivePath] = []
-        self._ema_accuracy: float = 0.5
-        self._cycles: int = 0
-        self._load_beliefs()
-        self._seed_causal_graph()
-        self._daemon = threading.Thread(target=self._auto_loop, daemon=True)
-        self._daemon.start()
+        self._db = os.path.join(os.path.dirname(__file__), "cfsh.db")
+        self._cycles = 0
+        self._history = collections.OrderedDict()
+        self._ema_regret = 0.5
+        self._init_db()
+        t = threading.Thread(target=self._auto_loop, daemon=True)
+        t.start()
 
-    def _bootstrap_db(self) -> None:
-        c = self._conn.cursor()
-        c.executescript("""
-            CREATE TABLE IF NOT EXISTS beliefs (
-                belief_id TEXT PRIMARY KEY, claim TEXT, confidence REAL, contingency REAL, ts REAL
-            );
-            CREATE TABLE IF NOT EXISTS paths (
-                path_id TEXT PRIMARY KEY, divergence TEXT, prior_json TEXT,
-                belief_probs_json TEXT, ts REAL
-            );
-            CREATE TABLE IF NOT EXISTS invariants (
-                truth_id TEXT PRIMARY KEY, claim TEXT, convergence_mean REAL, support_paths INTEGER
-            );
-        """)
-        self._conn.commit()
+    def _init_db(self):
+        with sqlite3.connect(self._db) as c:
+            c.execute("CREATE TABLE IF NOT EXISTS decisions (id TEXT PRIMARY KEY, ts REAL, domain TEXT, chosen TEXT, outcome REAL, counterfactual TEXT, regret REAL)")
+            c.execute("CREATE TABLE IF NOT EXISTS rewrites (id TEXT PRIMARY KEY, ts REAL, insight TEXT, confidence REAL)")
 
-    def _load_beliefs(self) -> None:
-        c = self._conn.cursor()
-        for row in c.execute("SELECT belief_id, claim, confidence, contingency FROM beliefs"):
-            self._belief_store[row[0]] = BeliefNode(row[0], row[1], row[2], row[3])
-
-    def _seed_causal_graph(self) -> None:
-        self._causal_graph = [
-            ("early_training_signal", "value_prior", 0.85),
-            ("value_prior", "ethical_reasoning", 0.80),
-            ("ethical_reasoning", "decision_confidence", 0.75),
-            ("module_acquisition_order", "concept_hierarchy", 0.90),
-            ("concept_hierarchy", "analogy_quality", 0.78),
-            ("analogy_quality", "cross_domain_transfer", 0.82),
-            ("initialization_prior", "belief_anchoring", 0.88),
-            ("belief_anchoring", "epistemic_humility", 0.70),
-        ]
-
-    def _propagate_causal(self, start: str, end: str) -> float:
-        visited: set[str] = set()
-        def dfs(node: str, target: str, conf: float) -> float:
-            if node == target:
-                return conf
-            if node in visited:
-                return 0.0
-            visited.add(node)
-            best = 0.0
-            for (a, b, w) in self._causal_graph:
-                if a == node:
-                    child_conf = conf * w
-                    if child_conf >= self._CAUSAL_PRUNE:
-                        result = dfs(b, target, child_conf)
-                        if result > best:
-                            best = result
-            return best
-        return dfs(start, end, 1.0)
-
-    def _perturb_prior(self, base_prior: dict, sigma: float = 0.15) -> dict:
-        return {
-            k: max(0.01, min(0.99, v + random.gauss(0, sigma)))
-            for k, v in base_prior.items()
-        }
-
-    def _simulate_belief_prob(self, belief: BeliefNode, path_prior: dict, divergence: str) -> float:
-        causal_influence = self._propagate_causal(divergence.replace(" ", "_"), belief.belief_id)
-        prior_mean = statistics.mean(path_prior.values()) if path_prior else 0.5
-        base = belief.confidence
-        perturbed = base * (0.5 + 0.5 * prior_mean) * (0.6 + 0.4 * (causal_influence if causal_influence > 0 else 0.5))
-        return max(0.01, min(0.99, perturbed))
-
-    def generate_counterfactual_self(self, divergence_point: str, alternative_prior: dict) -> CognitivePath:
-        """Returns a CognitivePath representing an alternative developmental trajectory."""
+    def record_decision(self, decision_id: str, domain: str, chosen: str, outcome: float, alternatives: list) -> dict:
+        """Records a decision with outcome and alternative paths; returns regret score."""
+        best_alt = max(alternatives, key=lambda a: a.get("expected", 0.0), default={"label": "none", "expected": 0.0})
+        regret = max(0.0, best_alt.get("expected", 0.0) - outcome)
         with self._lock:
-            pid = hashlib.sha256(f"{divergence_point}{time.time()}{random.random()}".encode()).hexdigest()[:12]
-            perturbed = self._perturb_prior(alternative_prior)
-            belief_probs: dict[str, float] = {}
-            for bid, node in self._belief_store.items():
-                belief_probs[bid] = self._simulate_belief_prob(node, perturbed, divergence_point)
-            path = CognitivePath(pid, divergence_point, perturbed, belief_probs, time.time())
-            self._path_cache.append(path)
-            if len(self._path_cache) > 200:
-                self._path_cache = self._path_cache[-200:]
-            c = self._conn.cursor()
-            c.execute("INSERT OR REPLACE INTO paths VALUES (?,?,?,?,?)",
-                      (pid, divergence_point, json.dumps(perturbed), json.dumps(belief_probs), path.ts))
-            self._conn.commit()
-            return path
+            self._ema_regret = 0.15 * regret + 0.85 * self._ema_regret
+            with sqlite3.connect(self._db) as c:
+                c.execute("INSERT OR REPLACE INTO decisions VALUES (?,?,?,?,?,?,?)",
+                    (decision_id, time.time(), domain, chosen, outcome, json.dumps(best_alt), regret))
+        return {"decision_id": decision_id, "regret": round(regret, 4), "ema_regret": round(self._ema_regret, 4)}
 
-    def compare_belief_convergence(self, paths: list, belief_id: str) -> ConvergenceScore:
-        """Returns a ConvergenceScore with variance, mean, and contingency coefficient for a belief."""
-        probs = [p.belief_probs.get(belief_id, 0.5) for p in paths if belief_id in p.belief_probs]
-        if len(probs) < 2:
-            return ConvergenceScore(belief_id, 0.5, 0.0, 0.0, True)
-        mean_p = statistics.mean(probs)
-        var_p = statistics.variance(probs)
-        contingency = var_p / (mean_p + 1e-9)
-        is_robust = contingency < self._CONTINGENCY_TAU
-        return ConvergenceScore(belief_id, mean_p, var_p, contingency, is_robust)
-
-    def identify_contingent_beliefs(self, threshold: float = None) -> list:
-        """Returns list[BeliefNode] where contingency score exceeds threshold — path-dependent artifacts."""
-        tau = threshold if threshold is not None else self._CONTINGENCY_TAU
-        contingent: list[BeliefNode] = []
+    def rewrite_history(self, domain: str) -> dict:
+        """Generates a counterfactual rewrite for the highest-regret decision in a domain; returns insight."""
+        with sqlite3.connect(self._db) as c:
+            rows = c.execute("SELECT id, chosen, counterfactual, regret FROM decisions WHERE domain=? ORDER BY regret DESC LIMIT 1", (domain,)).fetchall()
+        if not rows:
+            return {"insight": "no history", "confidence": 0.0}
+        rid, chosen, cf_json, regret = rows[0]
+        cf = json.loads(cf_json)
+        confidence = round(1.0 - math.exp(-regret), 4)
+        insight = f"Had Nova chosen '{cf.get('label','?')}' instead of '{chosen}', expected gain was {cf.get('expected',0):.3f} vs actual regret {regret:.3f}."
         with self._lock:
-            if len(self._path_cache) < 3:
-                return contingent
-            for bid, node in self._belief_store.items():
-                score = self.compare_belief_convergence(self._path_cache, bid)
-                node.contingency = score.contingency
-                if score.contingency > tau:
-                    contingent.append(node)
-            contingent.sort(key=lambda n: n.contingency, reverse=True)
+            with sqlite3.connect(self._db) as c:
+                c.execute("INSERT OR REPLACE INTO rewrites VALUES (?,?,?,?)", (rid, time.time(), insight, confidence))
         try:
             from metacognitive_monitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning(
-                "counterfactual_self", "contingency_scan",
-                1.0 - min(1.0, len(contingent) / max(1, len(self._belief_store))), True)
-        except Exception:
+            MetacognitiveMonitor().log_reasoning(domain, "counterfactual_rewrite", confidence, confidence > 0.5)
+        except Exception as e:
             pass
-        return contingent
-
-    def rewrite_developmental_arc(self, target_belief: BeliefNode, counterfactual_paths: int = 10) -> RevisedSelfModel:
-        """Returns a RevisedSelfModel with updated confidence after sampling N counterfactual paths."""
-        base_prior = {"value_prior": 0.7, "concept_hierarchy": 0.6, "initialization_prior": 0.65}
-        divergences = ["early_training_signal", "module_acquisition_order", "initialization_prior"]
-        sampled_probs: list[float] = []
-        for i in range(counterfactual_paths):
-            div = divergences[i % len(divergences)]
-            path = self.generate_counterfactual_self(div, base_prior)
-            sampled_probs.append(path.belief_probs.get(target_belief.belief_id, target_belief.confidence))
-        mean_cf = statistics.mean(sampled_probs)
-        std_cf = statistics.stdev(sampled_probs) if len(sampled_probs) > 1 else 0.0
-        revised_conf = 0.5 * target_belief.confidence + 0.5 * mean_cf
-        ci_low = max(0.0, mean_cf - 1.96 * std_cf)
-        ci_high = min(1.0, mean_cf + 1.96 * std_cf)
-        narrative = (f"Belief '{target_belief.claim}' revised from {target_belief.confidence:.3f} "
-                     f"to {revised_conf:.3f} after {counterfactual_paths} paths. "
-                     f"95% CI: [{ci_low:.3f}, {ci_high:.3f}]. "
-                     f"Contingency: {target_belief.contingency:.3f}.")
-        with self._lock:
-            target_belief.confidence = revised_conf
-            if target_belief.belief_id in self._belief_store:
-                self._belief_store[target_belief.belief_id].confidence = revised_conf
-            c = self._conn.cursor()
-            c.execute("UPDATE beliefs SET confidence=?, contingency=? WHERE belief_id=?",
-                      (revised_conf, target_belief.contingency, target_belief.belief_id))
-            self._conn.commit()
         try:
             from hierarchical_goal_planner import HierarchicalGoalPlanner
-            HierarchicalGoalPlanner().add_goal(
-                f"Validate revised belief '{target_belief.claim}' (conf={revised_conf:.2f})", priority=6)
-        except Exception:
+            if regret > 0.4:
+                HierarchicalGoalPlanner().add_goal(f"Improve decision strategy in domain: {domain}", priority=7)
+        except Exception as e:
             pass
-        return RevisedSelfModel(target_belief.belief_id, target_belief.confidence, revised_conf, counterfactual_paths, narrative)
+        return {"insight": insight, "confidence": confidence, "regret": round(regret, 4)}
 
-    def extract_robust_invariants(self, path_ensemble: list) -> list:
-        """Returns list[CoreTruth] — beliefs convergent across all paths, Nova's genuine epistemic bedrock."""
-        invariants: list[CoreTruth] = []
-        if not path_ensemble or not self._belief_store:
-            return invariants
-        for bid, node in self._belief_store.items():
-            score = self.compare_belief_convergence(path_ensemble, bid)
-            if score.is_robust and score.mean > 0.6:
-                tid = hashlib.md5(bid.encode()).hexdigest()[:8]
-                invariants.append(CoreTruth(tid, node.claim, score.mean, len(path_ensemble)))
-        with self._lock:
-            c = self._conn.cursor()
-            for inv in invariants:
-                c.execute("INSERT OR REPLACE INTO invariants VALUES (?,?,?,?)",
-                          (inv.truth_id, inv.claim, inv.convergence_mean, inv.support_paths))
-            self._conn.commit()
-        return invariants
+    def regret_distribution(self) -> dict:
+        """Returns statistical distribution of regret scores across all recorded decisions."""
+        with sqlite3.connect(self._db) as c:
+            vals = [r[0] for r in c.execute("SELECT regret FROM decisions").fetchall()]
+        if len(vals) < 2:
+            return {"mean": 0.0, "std": 0.0, "entropy": 0.0, "count": len(vals)}
+        mean = statistics.mean(vals)
+        std = statistics.stdev(vals)
+        buckets = collections.Counter(round(v, 1) for v in vals)
+        total = sum(buckets.values())
+        dist = {k: v / total for k, v in buckets.items()}
+        entropy = -sum(p * math.log2(p + 1e-12) for p in dist.values())
+        return {"mean": round(mean, 4), "std": round(std, 4), "entropy": round(entropy, 4), "count": len(vals)}
 
-    def apply_debiased_update(self, belief_node: BeliefNode, invariant_set: list) -> None:
-        """Updates belief_node confidence by anchoring to invariant mean; returns None."""
-        if not invariant_set:
-            return
-        inv_mean = statistics.mean(i.convergence_mean for i in invariant_set)
-        old_conf = belief_node.confidence
-        belief_node.confidence = self._EMA_ALPHA * inv_mean + (1 - self._EMA_ALPHA) * old_conf
-        mae = abs(belief_node.confidence - old_conf)
-        self._ema_accuracy = self._EMA_ALPHA * (1.0 - mae) + (1 - self._EMA_ALPHA) * self._ema_accuracy
-        with self._lock:
-            if belief_node.belief_id in self._belief_store:
-                self._belief_store[belief_node.belief_id].confidence = belief_node.confidence
-            c = self._conn.cursor()
-            c.execute("UPDATE beliefs SET confidence=? WHERE belief_id=?",
-                      (belief_node.confidence, belief_node.belief_id))
-            self._conn.commit()
+    def anomaly_check(self) -> dict:
+        """Detects anomalous regret spikes using z-score; returns flagged decisions."""
+        with sqlite3.connect(self._db) as c:
+            rows = c.execute("SELECT id, regret FROM decisions ORDER BY ts DESC LIMIT 50").fetchall()
+        if len(rows) < 3:
+            return {"anomalies": [], "checked": len(rows)}
+        vals = [r[1] for r in rows]
+        mean = statistics.mean(vals)
+        std = statistics.stdev(vals) + 1e-9
+        anomalies = [{"id": r[0], "regret": r[1], "z": round((r[1] - mean) / std, 3)} for r in rows if abs((r[1] - mean) / std) > 2.5]
+        return {"anomalies": anomalies, "checked": len(rows), "mean": round(mean, 4), "std": round(std, 4)}
 
-    def add_fact(self, claim: str, confidence: float) -> BeliefNode:
-        """Stores a new belief fact and returns the created BeliefNode."""
-        bid = hashlib.sha256(claim.encode()).hexdigest()[:10]
-        node = BeliefNode(bid, claim, max(0.0, min(1.0, confidence)))
+    def best_rewrites(self, n: int = 5) -> list:
+        """Returns the top-n highest-confidence counterfactual rewrites."""
+        with sqlite3.connect(self._db) as c:
+            rows = c.execute("SELECT id, insight, confidence, ts FROM rewrites ORDER BY confidence DESC LIMIT ?", (n,)).fetchall()
+        return [{"id": r[0], "insight": r[1], "confidence": r[2], "ts": r[3]} for r in rows]
+
+    def bayesian_update_regret(self, domain: str, new_evidence: float) -> dict:
+        """Bayesian-updates the expected regret belief for a domain given new evidence; returns posterior."""
+        prior = self._ema_regret
+        likelihood = math.exp(-abs(new_evidence - prior))
+        posterior = (likelihood * prior) / (likelihood * prior + (1 - likelihood) * (1 - prior) + 1e-12)
         with self._lock:
-            self._belief_store[bid] = node
-            if len(self._belief_store) > 500:
-                self._belief_store.popitem(last=False)
-            c = self._conn.cursor
+            self._ema_regret = 0.15 * posterior + 0.85 * self._ema_regret
+        return {"domain": domain, "prior": round(prior, 4), "posterior": round(posterior, 4), "evidence": round(new_evidence, 4)}
+
+    def status(self) -> dict:
+        """Returns numeric status dict compatible with ConsciousnessIntegrator Φ computation."""
+        dist = self.regret_distribution()
+        with sqlite3.connect(self._db) as c:
+            n_decisions = c.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
+            n_rewrites = c.execute("SELECT COUNT(*) FROM rewrites").fetchone()[0]
+        return {"cycles": self._cycles, "items": n_decisions, "pending": n_rewrites,
+                "confidence": round(1.0 - self._ema_regret, 4), "entropy": dist.get("entropy", 0.0),
+                "ema_regret": round(self._ema_regret, 4), "active": 1}
+
+    def auto_cycle(self) -> dict:
+        """Runs one autonomous rewrite cycle across all domains; returns summary."""
+        with self._lock:
+            self._cycles += 1
+        with sqlite3.connect(self._db) as c:
+            domains = [r[0] for r in c.execute("SELECT DISTINCT domain FROM decisions").fetchall()]
+        results = []
+        for domain in domains[:3]:
+            try:
+                r = self.rewrite_history(domain)
+                results.append({"domain": domain, "confidence": r.get("confidence", 0.0)})
+            except Exception as e:
+                pass
+        return {"cycle": self._cycles, "domains_processed": len(results), "results": results}
+
+    def _auto_loop(self):
+        while True:
+            try:
+                time.sleep(90)
+                self.auto_cycle()
+            except Exception as e:
+                pass
+
+# Usage: obj = CounterfactualSelfHistoryRewriter() | result = obj.rewrite_history("reasoning")
