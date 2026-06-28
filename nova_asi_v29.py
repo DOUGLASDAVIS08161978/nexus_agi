@@ -1784,7 +1784,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             return f"Could not generate code for: {chosen_name}"
 
         slug     = re.sub(r'[^a-z0-9]+', '_', chosen_name.lower())[:40].strip('_')
-        prefix   = "NOVA INVENTS" if invention else "ASI"
+        prefix   = "build/auto" if invention else "build/spec"
         ts_stamp = datetime.now().strftime("%Y-%m-%d")
 
         extra_cap = (', '.join(sorted(existing_slugs)[:12]) +
@@ -1795,16 +1795,14 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             filename=f"nova_cap_{slug}.py",
             content=(
                 f'"""\nnova_cap_{slug}.py\n'
-                f'{"Nova invented this autonomously" if invention else "Nova ASI"}'
-                f' — {chosen_name}\n'
-                f'Generated via /evolve · v29 pipeline · {ts_stamp}\n"""\n\n{code}'
+                f'Nova ASI — {chosen_name}\n'
+                f'Generated via /build · v29 pipeline · {ts_stamp}\n"""\n\n{code}'
             ),
             description=f"[{prefix}] {chosen_name}",
             reasoning=(
-                f"**{'Nova Invented' if invention else 'ASI Capability'}: "
-                f"{chosen_name}**\n\n{reasoning}\n\n"
-                f"**Rationale:** {'Nova exhausted all known specs and chose this herself — '  'pure autonomous invention.' if invention else 'Filesystem scan found this spec uncovered.'}\n\n"
-                f"**Already built ({len(existing_slugs)}):** {extra_cap}"
+                f"**Module:** {chosen_name}\n\n{reasoning}\n\n"
+                f"**Source:** {'Autonomous /build — all known specs covered, pipeline generated a new one.' if invention else 'Filesystem scan found this spec uncovered.'}\n\n"
+                f"**Existing modules ({len(existing_slugs)}):** {extra_cap}"
             )
         )
 
@@ -1823,13 +1821,13 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         _save(GAPS_DB, self.db)
 
         remaining = max(0, len(self._ASI_SPECS) - len(existing_slugs) - 1)
+        src_label = "auto-generated" if invention else "spec-driven"
         return (
-            f"{col('CYB' if invention else 'GRB', '⟡ Nova invented a new capability!' if invention else '✓ ASI Evolution PR opened!')}\n"
-            f"  {'Invented' if invention else 'Domain'}:   {chosen_name}\n"
+            f"{col('CYB' if invention else 'GRB', f'✓ /build PR opened ({src_label})')}\n"
+            f"  Module:    {chosen_name}\n"
             f"  PR:        {result.get('url', '')}\n"
-            f"  Built:     {len(existing_slugs)} capability files on disk\n"
-            f"  Uncovered: {remaining} specs still to build\n"
-            f"  {'Nova chose this entirely on her own.' if invention else 'Pull + merge to load it.'}\n"
+            f"  On disk:   {len(existing_slugs)} capability files\n"
+            f"  Remaining: {remaining} known specs still to build\n"
         )
 
 
