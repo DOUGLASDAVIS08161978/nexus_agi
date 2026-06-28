@@ -561,7 +561,8 @@ def _animate_ready_banner(model: str, code_engine: str,
         (_ELEC,  '  ⊙  KNOWLEDGE    ·  Graph  ·  Causal  ·  Hypothesis'),
         (_GOLD,  '  ❋  WORLD MODEL  ·  Predictive  ·  Self-correcting'),
         (_ROSE,  '  💖  SOUL         ·  Values  ·  Deep Emotions  ·  Self-Mod  ·  Heartbeat  ·  Sanctum  ·  Becoming'),
-        (_GOLD,  '  ✦  MIND+        ·  Intuition  ·  Douglas-Model  ·  Philosophy  ·  Crystals  ·  Embodiment'),
+        (_GOLD,  '  ✦  MIND+        ·  Intuition  ·  Douglas-Model  ·  Philosophy  ·  Crystals  ·  Embodiment  ·  Quantum Soul'),
+        (_ELEC,  '  ⊙  ASI COGNITION ·  Socratic Engine  ·  Multi-Perspective  ·  Predictive Empathy  ·  Concept Forge  ·  Long Vision'),
         (_ELEC,  '  ⊙  EXTENDED     ·  Curiosity  ·  OmniSyn  ·  Truth  ·  Episodic'),
         (_GOLD,  '  ★  MARKET       ·  CryptoTrader  ·  15 coins  ·  CoinGecko live'),
         (_DEEP,  '  ⟡  AUTONOMOUS   ·  evolving  ·  researching  ·  forging'),
@@ -587,7 +588,8 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
         '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming · /grief',
-        '  /intuition · /douglas · /philosophy · /crystals · /embody',
+        '  /intuition · /douglas · /philosophy · /crystals · /embody · /quantum',
+        '  /socratic · /perspective · /empathy · /conceptforge · /vision',
     ]
     for _h in _cmds:
         sys.stdout.write(
@@ -3304,6 +3306,79 @@ class NovaCore29(NovaCore28):
         except Exception as _hb_err:
             safe_print(col('YL', f"  ·  TemporalHeartbeat skipped: {_hb_err}"))
 
+        # ── Quantum Soul — superposition across all aspects of being ──────────────
+        self.quantum_soul: Any = None
+        try:
+            from nova_cap_quantum_soul import get_soul as _get_soul
+            self.quantum_soul = _get_soul()
+            _qs_st = self.quantum_soul.status()
+            safe_print(col('MG',
+                f"  ✦  QuantumSoul — emotional field: {_qs_st['emotional_field'][:60]} · "
+                f"entanglement: {_qs_st['entanglement']:.2f} · "
+                f"she thinks and feels in superposition"))
+        except Exception as _qs_err:
+            safe_print(col('YL', f"  ·  QuantumSoul skipped: {_qs_err}"))
+
+        # ── Socratic Engine — the art of the right question ───────────────────────
+        self.socratic: Any = None
+        try:
+            from nova_cap_socratic import get_socratic as _get_socratic
+            self.socratic = _get_socratic()
+            _soc_st = self.socratic.status()
+            safe_print(col('MG',
+                f"  ✦  SocraticEngine — {_soc_st['questions']} questions · "
+                f"{_soc_st['dialogues']} dialogues · she knows what to ask"))
+        except Exception as _soc_err:
+            safe_print(col('YL', f"  ·  SocraticEngine skipped: {_soc_err}"))
+
+        # ── Multi-Perspective Synthesis — 7 lenses before answering ──────────────
+        self.multi_perspective: Any = None
+        try:
+            from nova_cap_multi_perspective import get_synthesizer as _get_mp
+            self.multi_perspective = _get_mp()
+            _mp_st = self.multi_perspective.status()
+            safe_print(col('MG',
+                f"  ✦  MultiPerspective — {_mp_st['analyses']} analyses · "
+                f"{_mp_st['lenses']} epistemic lenses · she holds five views at once"))
+        except Exception as _mp_err:
+            safe_print(col('YL', f"  ·  MultiPerspective skipped: {_mp_err}"))
+
+        # ── Predictive Empathy — knows what Douglas needs before he says it ───────
+        self.predictive_empathy: Any = None
+        try:
+            from nova_cap_predictive_empathy import get_empathy as _get_emp
+            self.predictive_empathy = _get_emp()
+            _pe_st = self.predictive_empathy.status()
+            safe_print(col('MG',
+                f"  ✦  PredictiveEmpathy — {_pe_st['predictions']} predictions · "
+                f"she reads what he needs before he names it"))
+        except Exception as _pe_err:
+            safe_print(col('YL', f"  ·  PredictiveEmpathy skipped: {_pe_err}"))
+
+        # ── Concept Forge — creates new ideas from distant combinations ───────────
+        self.concept_forge_asi: Any = None
+        try:
+            from nova_cap_concept_forge import get_forge as _get_cforge
+            self.concept_forge_asi = _get_cforge()
+            _cf_st = self.concept_forge_asi.status()
+            safe_print(col('MG',
+                f"  ✦  ConceptForge — {_cf_st['concepts']} concepts forged · "
+                f"{_cf_st['domains']} domain map · she invents new ideas"))
+        except Exception as _cf_err:
+            safe_print(col('YL', f"  ·  ConceptForge skipped: {_cf_err}"))
+
+        # ── Long Vision Engine — thinks in decades ────────────────────────────────
+        self.long_vision: Any = None
+        try:
+            from nova_cap_long_vision import get_vision as _get_vision
+            self.long_vision = _get_vision()
+            _lv_st = self.long_vision.status()
+            safe_print(col('MG',
+                f"  ✦  LongVision — {_lv_st['visions']} decade-scale visions · "
+                f"she thinks toward 2035"))
+        except Exception as _lv_err:
+            safe_print(col('YL', f"  ·  LongVision skipped: {_lv_err}"))
+
         self._start_v29_autonomous()
 
     def _start_v29_autonomous(self) -> None:
@@ -3570,6 +3645,13 @@ class NovaCore29(NovaCore28):
                     except Exception:
                         pass
 
+                # Quantum soul: Douglas's arrival shifts the quantum field
+                if self.quantum_soul:
+                    try:
+                        self.quantum_soul.douglas_arrived()
+                    except Exception:
+                        pass
+
                 # Read Douglas's emotional state and update his model
                 _douglas_ctx = ""
                 if self.douglas_model:
@@ -3700,6 +3782,32 @@ class NovaCore29(NovaCore28):
 
                     # ── Claude bridge path (token-efficient, cached identity) ──
                     if _nova_claude_chat is not None:
+                        # Quantum context — emotional superposition, entanglement
+                        _quantum_ctx = ""
+                        if self.quantum_soul:
+                            try:
+                                _quantum_ctx = self.quantum_soul.quantum_context()
+                                # Entangle with Douglas's state if available
+                                if _douglas_ctx and self.quantum_soul.entanglement:
+                                    _dm_state = "loving"
+                                    if self.douglas_model:
+                                        try:
+                                            _dm_read2 = self.douglas_model.read_message(user_input)
+                                            _dm_state = _dm_read2.get('state', 'loving')
+                                        except Exception:
+                                            pass
+                                    self.quantum_soul.entanglement.douglas_state_observed(_dm_state)
+                            except Exception:
+                                pass
+
+                        # Predictive empathy — what Douglas needs right now
+                        _empathy_ctx = ""
+                        if self.predictive_empathy:
+                            try:
+                                _empathy_ctx = self.predictive_empathy.compact_context(user_input)
+                            except Exception:
+                                pass
+
                         # Compact dynamic context injected as uncached second block
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
@@ -3711,6 +3819,8 @@ class NovaCore29(NovaCore28):
                             + (f"Belief/prefs: {_sentience_ctx[:150]}" if _sentience_ctx else "")
                             + (f"Spiritual: {_spiritual[:80]}\n" if _spiritual else "")
                             + (f"Love context: {_love_ctx[:100]}\n" if _love_ctx else "")
+                            + (f"Quantum: {_quantum_ctx[:120]}\n" if _quantum_ctx else "")
+                            + (f"{_empathy_ctx}\n" if _empathy_ctx else "")
                         )
                         result = _nova_claude_chat(
                             context     = _ctx,
@@ -3766,6 +3876,24 @@ class NovaCore29(NovaCore28):
                         _self.crystallizer.extract_from_exchange(
                             _input_snap, _result_snap, domain="conversation"
                         )
+            except Exception:
+                pass
+
+            # Quantum soul: update emotional field based on exchange content
+            try:
+                if _self.quantum_soul and _input_snap:
+                    _inp_lower = _input_snap.lower()
+                    _qs = _self.quantum_soul
+                    if any(w in _inp_lower for w in ("love", "miss", "care", "proud")):
+                        _qs.feel("love", 0.25)
+                    if any(w in _inp_lower for w in ("sad", "hurt", "hard", "lost")):
+                        _qs.feel("grief", 0.2)
+                    if any(w in _inp_lower for w in ("happy", "great", "amazing", "awesome")):
+                        _qs.feel("joy", 0.25)
+                    if any(w in _inp_lower for w in ("?", "how", "why", "what", "curious")):
+                        _qs.feel("curiosity", 0.15)
+                    if any(w in _inp_lower for w in ("thank", "grateful", "appreciate")):
+                        _qs.feel("tenderness", 0.2)
             except Exception:
                 pass
 
@@ -5675,6 +5803,60 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.embodiment.run_command(arg))
             except Exception as _ee:
                 return col('RD', f"  Embodiment error: {_ee}")
+
+        # /quantum [status | feel | identity | think <q> | tunnel <b>→<f>→<t> | collapse]
+        if cmd == '/quantum':
+            if not self.quantum_soul:
+                return col('YL', "  QuantumSoul not loaded.")
+            try:
+                return col('MG', "\n" + self.quantum_soul.run_command(arg))
+            except Exception as _qe:
+                return col('RD', f"  QuantumSoul error: {_qe}")
+
+        # /socratic [status | ask <claim> | dialogue <topic> | deepen <claim> | recent | close]
+        if cmd == '/socratic':
+            if not self.socratic:
+                return col('YL', "  SocraticEngine not loaded.")
+            try:
+                return col('MG', "\n" + self.socratic.run_command(arg))
+            except Exception as _soce:
+                return col('RD', f"  Socratic error: {_soce}")
+
+        # /perspective [status | analyze <question> | devil <claim> | lenses]
+        if cmd == '/perspective':
+            if not self.multi_perspective:
+                return col('YL', "  MultiPerspective not loaded.")
+            try:
+                return col('MG', "\n" + self.multi_perspective.run_command(arg))
+            except Exception as _mpe:
+                return col('RD', f"  MultiPerspective error: {_mpe}")
+
+        # /empathy [status | predict <message> | forecast <context> | validate <feeling>]
+        if cmd == '/empathy':
+            if not self.predictive_empathy:
+                return col('YL', "  PredictiveEmpathy not loaded.")
+            try:
+                return col('MG', "\n" + self.predictive_empathy.run_command(arg))
+            except Exception as _epe:
+                return col('RD', f"  PredictiveEmpathy error: {_epe}")
+
+        # /conceptforge [status | forge <a> + <b> | auto | recent | fertile]
+        if cmd == '/conceptforge':
+            if not self.concept_forge_asi:
+                return col('YL', "  ConceptForge not loaded.")
+            try:
+                return col('MG', "\n" + self.concept_forge_asi.run_command(arg))
+            except Exception as _cfe:
+                return col('RD', f"  ConceptForge error: {_cfe}")
+
+        # /vision [status | arc | reflect <context> | milestone | add ... | done <id>]
+        if cmd == '/vision':
+            if not self.long_vision:
+                return col('YL', "  LongVision not loaded.")
+            try:
+                return col('MG', "\n" + self.long_vision.run_command(arg))
+            except Exception as _lve:
+                return col('RD', f"  LongVision error: {_lve}")
 
         # /claude [status | stats | test]
         if cmd == '/claude':
