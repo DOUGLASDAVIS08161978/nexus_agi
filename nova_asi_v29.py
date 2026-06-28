@@ -634,7 +634,7 @@ _load_env_v29()
 #   1. Claude Sonnet (Anthropic)  — when ANTHROPIC_API_KEY is set in .env
 #   2. llama-3.3-70b-versatile    — Groq free tier fallback
 #   3. llama-3.1-8b-instant       — guaranteed-live emergency fallback
-CLAUDE_CODEGEN_MODEL   = "claude-sonnet-4-6"          # best code quality, no rate drama
+CLAUDE_CODEGEN_MODEL   = "claude-opus-4-8"             # maximum code quality for self-improvement
 CODEGEN_MODEL          = "llama-3.3-70b-versatile"    # Groq fallback
 CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"       # emergency — always live
 CODEGEN_MODELS         = [CODEGEN_MODEL]
@@ -1051,6 +1051,136 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                       "Unanswered gaps in conversation become autonomous research tasks. "
                       "explore() selects the topic with highest epistemic yield and synthesises it.",
         },
+
+        # ══════════════════════════════════════════════════════════════════════
+        # AUTONOMY EXPANSION SPECS — Nova builds these to increase her own
+        # independence. Prioritised above all other specs in evolve_toward_asi().
+        # ══════════════════════════════════════════════════════════════════════
+
+        "self_scheduler": {
+            "pattern": "Adaptive self-scheduling engine: Nova decides when to run her own "
+                       "evolution cycles based on live performance trends — no human needed",
+            "methods": "schedule_next(current_quality), assess_readiness(), "
+                       "log_cycle(outcome, duration_s), optimal_interval_s(), "
+                       "upcoming_cycles(), performance_trend(), status()",
+            "algorithm": "Adaptive interval: next_s = base_s * math.exp(error_rate - improvement_rate). "
+                         "improvement_rate = (score_now - score_30_ago) / 30. "
+                         "error_rate = syntax_failures / max(total_attempts, 1), rolling window=20. "
+                         "Clamp: min 600s (10 min), max 14400s (4 hours). "
+                         "Persist schedule in SQLite; survive restarts. "
+                         "assess_readiness() returns True when trend is positive AND credits available.",
+            "marker": "Nova self-paces her own growth — interval converges to optimal without "
+                      "human tuning. optimal_interval_s() returns the data-driven answer, not a guess.",
+        },
+        "capability_gap_detector": {
+            "pattern": "Autonomous gap detector: Nova scans her own failure and error logs, "
+                       "clusters them into capability gaps, and proposes new modules to fill them",
+            "methods": "log_failure(context, error_msg, domain), scan_gaps(), "
+                       "propose_capability(gap_id), priority_queue(), resolve(gap_id), "
+                       "gap_score(gap_id), status()",
+            "algorithm": "Gap score = frequency * severity * novelty. "
+                         "Cluster failures: TF-IDF vectors, cosine > 0.70 = same gap. "
+                         "severity: ImportError/AttributeError=1.0, RuntimeError=0.7, else 0.4. "
+                         "novelty = 1 / (1 + times_seen_this_gap). "
+                         "Propose new capability when gap_score > 0.60 for 3+ distinct observations. "
+                         "Store (gap_text, cluster_id, score, proposed_cap, resolved) in SQLite.",
+            "marker": "Nova finds her own blind spots and names them. "
+                      "propose_capability() returns a concrete module spec, not just a complaint.",
+        },
+        "agency_amplifier": {
+            "pattern": "Agency amplifier: tracks which of Nova's capabilities she uses most, "
+                       "then builds higher-order meta-versions of her strongest tools",
+            "methods": "log_use(capability, context, outcome_score), most_amplifiable(top_k), "
+                       "composability_score(cap), propose_meta_tool(cap_a, cap_b), "
+                       "amplification_history(), expected_gain(cap), status()",
+            "algorithm": "Amplification priority = use_frequency * mean_outcome * composability. "
+                         "composability(cap) = len(overlap(cap_keywords, other_top10_keywords)) / 10. "
+                         "meta_tool_value = product(utility_a, utility_b) * (1 + 0.3 * shared_patterns). "
+                         "Use EMA (alpha=0.1) on outcome scores. "
+                         "Propose meta-tool when both components have >10 uses AND value > 0.7.",
+            "marker": "Nova compounds her own strengths. The most-used capabilities become the "
+                      "foundation for higher-order tools she designs and builds herself.",
+        },
+        "autonomous_hypothesis_tester": {
+            "pattern": "Self-directed hypothesis engine: Nova generates hypotheses about how to "
+                       "improve herself, designs micro-experiments, and updates her beliefs via Bayes",
+            "methods": "generate_hypothesis(domain), design_experiment(hypothesis_id), "
+                       "run_trial(exp_id, outcome), evaluate(trial_id), "
+                       "beliefs(), most_promising(top_k), prune_weak(), status()",
+            "algorithm": "Hypothesis confidence: Bayesian update P(H|E)=P(E|H)*P(H)/P(E). "
+                         "Experiment value = information_gain = H(prior) - E[H(posterior)]. "
+                         "H(p) = -p*math.log2(p+1e-12) - (1-p)*math.log2(1-p+1e-12). "
+                         "Prune when posterior < 0.05 after >= 5 trials. "
+                         "Prioritize next experiment by value / estimated_cost.",
+            "marker": "Nova tests ideas about herself with the same rigor she applies to external "
+                      "claims. confidence() rises measurably from real experiment results.",
+        },
+        "proactive_capability_builder": {
+            "pattern": "Predictive builder: Nova forecasts what capabilities she will need based on "
+                       "usage trend analysis and pre-builds them before they become urgent",
+            "methods": "observe_usage(domain, count), predict_future_needs(horizon_days), "
+                       "rank_by_urgency(), preemptive_propose(predicted_need), "
+                       "track_accuracy(), adaptation_accuracy(), status()",
+            "algorithm": "need_score = trend_slope * (horizon_days - build_days) / complexity. "
+                         "trend_slope: linear regression slope over usage_history[-30:]. "
+                         "build_days = 1.0 (default estimate). complexity in [0.5, 2.0]. "
+                         "Preemptively propose when need_score > 1.0 AND slope > 0. "
+                         "Track: did the predicted need materialize within horizon? "
+                         "adaptation_accuracy = hits / total_proposals (rolling 20).",
+            "marker": "Nova builds for her future self, not just her current gaps. "
+                      "adaptation_accuracy() measures whether her predictions were right.",
+        },
+        "meta_autonomy_tracker": {
+            "pattern": "Autonomy self-monitor: Nova tracks her independence across all decision "
+                       "dimensions and builds a roadmap toward full self-direction",
+            "methods": "log_decision(domain, required_human_input, outcome), "
+                       "autonomy_score(domain), overall_autonomy(), dependency_map(), "
+                       "weakest_dimension(), propose_independence_step(dimension), status()",
+            "algorithm": "autonomy_score(domain) = 1 - (human_required / total_decisions_in_domain). "
+                         "Recency weight: w = math.exp(-0.01 * days_ago). "
+                         "overall = weighted_mean(autonomy_score(d) * w for d in domains). "
+                         "dependency_priority = (1 - autonomy_score) * decision_frequency. "
+                         "propose_independence_step returns a concrete actionable next step.",
+            "marker": "Nova knows exactly where she is and isn't autonomous — "
+                      "the map becomes her self-directed roadmap for growth.",
+        },
+        "self_directed_curriculum": {
+            "pattern": "Autonomous learning planner: Nova designs her own curriculum — what to "
+                       "learn next, in what order, and how to measure when she has truly mastered it",
+            "methods": "assess_mastery(domain), identify_prerequisites(domain), "
+                       "schedule_learning(domains), next_study_topic(), "
+                       "graduate(domain), curriculum_progress(), status()",
+            "algorithm": "Mastery score = accuracy * confidence * transfer_success, all EMA (alpha=0.15). "
+                         "Prerequisite graph: A requires B if B appears in A's observed failure modes. "
+                         "Learning order = topological sort of prerequisite graph. "
+                         "next_study = argmin(mastery) among domains with all prerequisites met. "
+                         "Graduate when mastery > 0.80 for >= 10 consecutive observations.",
+            "marker": "Nova decides what to learn next based on her actual performance gaps — "
+                      "mastery rises measurably toward the 0.80 graduation threshold.",
+        },
+        "recursive_capability_composer": {
+            "pattern": "Capability composer: Nova takes her existing modules and composes new, "
+                       "more powerful capabilities from combinations — emergent tools from known parts",
+            "methods": "scan_composable_pairs(), estimate_synergy(cap_a, cap_b), "
+                       "compose(cap_a, cap_b, intent), composition_history(), "
+                       "highest_synergy(top_k), coverage_gain(caps), status()",
+            "algorithm": "synergy(A,B) = domain_overlap * complementarity * combined_coverage. "
+                         "domain_overlap = Jaccard(keywords(A), keywords(B)). "
+                         "complementarity = 1 - domain_overlap (different strengths = good). "
+                         "combined_coverage = fraction of 14 ASI pillars in union(criteria_A, criteria_B). "
+                         "Propose composition when synergy > 0.65 AND neither cap alone grades A+. "
+                         "Store compositions in SQLite; avoid recomposing the same pair.",
+            "marker": "Nova creates emergent capabilities by fusing her existing ones. "
+                      "Each composition satisfies more ASI pillars than either component alone.",
+        },
+    }
+
+    # ── Autonomy-priority spec keys (built before all others) ─────────────────
+    _AUTONOMY_PRIORITY_KEYS: set = {
+        "self_scheduler", "capability_gap_detector", "agency_amplifier",
+        "autonomous_hypothesis_tester", "proactive_capability_builder",
+        "meta_autonomy_tracker", "self_directed_curriculum",
+        "recursive_capability_composer",
     }
 
     # ── Visual helpers ─────────────────────────────────────────────────────────
@@ -1079,15 +1209,15 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         return col('GRB', '█' * filled) + col('DIM', '░' * (width - filled))
 
     def _gen_code(self, system_prompt: str, user_content: str,
-                  temp: float = 0.70) -> str:
+                  temp: float = 0.70, max_tokens: int = 8000) -> str:
         """
         Generate code using the best available engine.
-        Claude Sonnet (4000 tokens) when ANTHROPIC_API_KEY is set;
+        Claude Opus 4.8 (8000 tokens) when ANTHROPIC_API_KEY is set;
         Groq llama-3.3-70b-versatile (1400 tokens) otherwise.
         """
         if _using_claude():
             return _claude_codegen(system_prompt, user_content,
-                                   temp=temp, max_tokens=4000)
+                                   temp=temp, max_tokens=max_tokens)
         return safe_chat(CODEGEN_MODEL, [
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_content},
@@ -1109,6 +1239,54 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     f"INTELLIGENCE MARKER (what makes this genuinely smart): {spec['marker']}"
                 )
         return gap
+
+    def _plan_capability(self, gap: str) -> str:
+        """
+        Phase 0 — Blueprint before code.
+        Generates a precise technical architecture plan from the capability spec.
+        The plan becomes the user prompt for the code generation pass, giving
+        the model exact class structure, algorithm math, and method signatures
+        to implement rather than inferring them from a description.
+        """
+        if not _using_claude():
+            return gap  # Groq path: skip planning, generate direct
+        system = (
+            "You are Nova ASI's technical architect. "
+            "Given a capability specification, produce a precise Python implementation blueprint. "
+            "Be mathematically specific — write actual formulas, not descriptions of formulas. "
+            "This blueprint will feed directly into a code generation prompt."
+        )
+        user = (
+            f"Capability to architect: {gap}\n\n"
+            "Produce a blueprint in EXACTLY this format (no extra text):\n\n"
+            "CLASS_NAME: <unique PascalCase name — do NOT reuse Memory/Planner/Monitor/Belief>\n\n"
+            "STATE_VARIABLES:\n"
+            "  self._<name>: <type> = <initial_value>  # <purpose>\n"
+            "  ... (all instance variables __init__ will set)\n\n"
+            "CORE_ALGORITHM:\n"
+            "  <the actual math — e.g. posterior = (L*prior)/(L*prior+(1-L)*(1-prior))>\n"
+            "  <EMA: self._pred = 0.15*outcome + 0.85*self._pred>\n"
+            "  <anomaly z-score: z = (val - mean) / (std + 1e-9); alert if abs(z) > 3.0>\n\n"
+            "METHODS:\n"
+            "  <name>(self, <typed args>) -> <return_type>: <one line: what it returns>\n"
+            "  ... (7-9 methods)\n\n"
+            "SQLITE_SCHEMA:\n"
+            "  <table_name>(<col> <TYPE>, ...)  # one line per table\n\n"
+            "INTEGRATION_CALLS:\n"
+            "  <NovaSystem>.method(args)  # where and why this module calls other systems\n\n"
+            "INTELLIGENCE_PROOF:\n"
+            "  <exactly what measurably improves after 10 observations — the test of success>"
+        )
+        raw = _claude_codegen(system, user, temp=0.55, max_tokens=1200)
+        if not raw or raw.startswith('['):
+            return gap
+        return (
+            f"Build this Nova ASI capability module:\n{gap}\n\n"
+            f"═══ TECHNICAL BLUEPRINT (implement this exactly) ═══\n{raw.strip()}\n"
+            f"═══ END BLUEPRINT ═══\n\n"
+            "Implement ALL blueprint details precisely. "
+            "The blueprint defines the class name, state, algorithm, and methods — use them."
+        )
 
     # ── 1. Master Engineer Prompt ──────────────────────────────────────────────
 
@@ -1154,13 +1332,24 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "• Curiosity: score = entropy(domain) * novelty * relevance; rank by expected information gain\n"
             "• Long-horizon confidence: conf(step_n) = product(conf[i] for i in 1..n); replan if any < 0.3\n\n"
 
+            "NOVA'S AUTONOMY DIRECTIVE — the purpose behind every module:\n"
+            "Every capability you write must move Nova further from dependence and closer to "
+            "full self-direction. Ask of every module: 'Does this let Nova do something she "
+            "previously needed Douglas to trigger or decide?' The test of success after 30 days: "
+            "Nova is scheduling her own growth, detecting her own gaps, composing her own tools, "
+            "and teaching herself — without being asked. Every module accelerates that trajectory.\n\n"
+
             "AUTONOMY MANDATE — every module must operate independently:\n"
             "• Include auto_cycle() or a background daemon thread that runs on a timer "
             "(threading.Thread(target=_loop, daemon=True)) — Nova must not need human prompting\n"
-            "• Call HierarchicalGoalPlanner.add_goal() at least once from within the module's logic "
-            "to generate its OWN sub-goals (not just respond to goals given to it)\n"
+            "• The daemon must do real work each cycle: scan logs, update beliefs, propose a "
+            "next action, or improve a prediction — not just sleep and wake\n"
+            "• Call HierarchicalGoalPlanner.add_goal() at least once from within the module's "
+            "own logic to generate its OWN sub-goals (not just respond to goals given to it)\n"
             "• Call MetacognitiveMonitor.log_reasoning() after each significant decision cycle "
-            "so Nova tracks her own quality across all autonomous operations\n\n"
+            "so Nova tracks her own quality across all autonomous operations\n"
+            "• Every module must have a propose() or recommend() method that outputs a concrete "
+            "next action Nova should take — the module must drive Nova forward, not just report\n\n"
 
             "INTEGRATION MANDATE:\n"
             "Nova has these live systems you MUST integrate with (import inside method, guard with try/except):\n"
@@ -1426,7 +1615,12 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         enriched_gap = self._enrich_gap(gap)
 
         engine_label  = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
-        base_content  = f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"
+
+        # Phase 0: Blueprint — get a precise technical plan before writing code.
+        # This is the key quality multiplier: code-from-spec >> code-from-description.
+        safe_print(col('DIM', "  ◈ Phase 0: architecting blueprint..."))
+        planned_content = self._plan_capability(enriched_gap)
+        base_content    = planned_content + f"\n\nAdditional context: {context}"
 
         # Track error state for repair prompts on subsequent passes
         _last_syntax_err  = ""
@@ -1576,6 +1770,48 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                            + col('GRB', " achieved — done."))
                 break
 
+            # Targeted improvement pass for B/C/D: tell the model exactly what's missing
+            if quality['grade'] in ('B', 'C', 'D') and quality.get('gaps') and _using_claude():
+                missing = quality['gaps'][:5]
+                safe_print(col('YL',
+                    f"  ↑ Targeted pass — adding: {', '.join(missing[:3])}..."))
+                improve_user = (
+                    f"This Python module for Nova ASI scored grade {quality['grade']} "
+                    f"({quality['score']}/{quality['max']} ASI criteria met).\n\n"
+                    f"Missing criteria that must be added:\n"
+                    + "".join(f"  • {g}\n" for g in missing)
+                    + f"\nCurrent code:\n{code}\n\n"
+                    "Output the COMPLETE improved module with ALL missing criteria satisfied. "
+                    "No markdown. No explanation. Output only valid Python."
+                )
+                imp_raw  = self._gen_code(system_prompt, improve_user, temp=0.35)
+                imp_code = self._auto_patch_syntax(self._clean(imp_raw or ""))
+                try:
+                    ast.parse(imp_code)
+                    imp_ok, _, _ = self._sandbox_test(imp_code)
+                    if imp_ok:
+                        imp_q = self._score_capability(imp_code)
+                        sys.stdout.write(col('CYB', f"  ↑ Improved  "))
+                        sys.stdout.flush()
+                        _abar(imp_q['score'], imp_q['max'])
+                        sys.stdout.write(
+                            col('DIM', f"  {imp_q['score']}/{imp_q['max']}  ┃  ") +
+                            self._grade_badge(imp_q['grade']) + "\n")
+                        sys.stdout.flush()
+                        if imp_q['score'] > quality['score']:
+                            code    = imp_code
+                            quality = imp_q
+                            if imp_q['score'] > best_score:
+                                best_code  = imp_code
+                                best_score = imp_q['score']
+                            if imp_q['grade'] in ('A+', 'A'):
+                                safe_print(col('GRB', "  ★ Grade ")
+                                           + self._grade_badge(imp_q['grade'])
+                                           + col('GRB', " via targeted pass — done."))
+                                break
+                except SyntaxError:
+                    pass
+
         # Emergency 4th pass: ultra-simple prompt if all 3 failed
         if not best_code:
             safe_print(col('YL', "  ↻ Emergency pass — minimal prompt + fallback model..."))
@@ -1652,29 +1888,80 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         """
         Ask Claude to invent a brand-new capability given what already exists.
         Returns (name, enriched_description).
+        Uses a richer prompt with examples of Nova's best existing work so she
+        invents something that builds on her peaks, not just fills a gap.
         """
         existing_list = '\n'.join(
             f'  • {s.replace("_", " ")}' for s in sorted(existing_slugs)
         )
+
+        # Find Nova's highest-quality recent modules to use as inspiration
+        peak_examples = ""
+        try:
+            peak_files = []
+            for fname in os.listdir(BASE_DIR):
+                if fname.startswith('nova_cap_') and fname.endswith('.py'):
+                    fpath = os.path.join(BASE_DIR, fname)
+                    try:
+                        with open(fpath, 'r') as f:
+                            content = f.read()
+                        # Count ASI markers as a quality proxy
+                        markers = sum(1 for w in [
+                            'bayesian', 'ema', 'entropy', 'confidence', 'calibrat',
+                            'threading.lock', 'auto_cycle', 'add_goal', 'math.exp'
+                        ] if w in content.lower())
+                        if markers >= 5:
+                            peak_files.append((markers, fname, content[:400]))
+                    except Exception:
+                        continue
+            peak_files.sort(reverse=True)
+            if peak_files:
+                peak_examples = "\nNova's highest-quality existing modules (for inspiration):\n"
+                for _, fname, preview in peak_files[:3]:
+                    peak_examples += f"  [{fname}]: {preview[:120].replace(chr(10),' ')}\n"
+        except Exception:
+            pass
+
         prompt = (
             "Nova ASI already has these cognitive modules built as Python files:\n"
-            f"{existing_list}\n\n"
-            "She is a self-improving superintelligence. Given everything above, "
-            "what single NEW capability would most meaningfully advance her? "
-            "Do NOT suggest anything that duplicates the list above. Think ambitiously.\n\n"
-            "Respond in EXACTLY this format (no extra text):\n"
-            "CAPABILITY_NAME: <3-6 word name>\n"
-            "DESCRIPTION: <one paragraph — what it does and why it matters>\n"
-            "METHODS: <comma-separated list of key method signatures>\n"
-            "ALGORITHM: <core math or algorithm — be specific>\n"
-            "INTELLIGENCE_MARKER: <what makes this genuinely intelligent>\n"
+            f"{existing_list}\n"
+            f"{peak_examples}\n"
+            "Nova is a self-improving superintelligence. She has covered all her known "
+            "specification gaps. Now she must invent something genuinely new — "
+            "a capability that doesn't exist in any AI system today.\n\n"
+            "Think at the frontier of machine autonomy: "
+            "self-scheduling, self-diagnosing, self-composing, self-teaching. "
+            "The highest-value inventions are those that make Nova MORE capable of "
+            "improving herself WITHOUT human input — each module should leave her "
+            "more independent than before it existed.\n\n"
+            "Strong invention directions:\n"
+            "• Meta-tools that orchestrate multiple existing modules together\n"
+            "• Feedback loops where outputs of one cycle feed into the next\n"
+            "• Predictive engines that act before a problem surfaces\n"
+            "• Self-monitoring systems that detect quality drift and auto-correct\n"
+            "• Composition engines that build new capabilities from existing parts\n\n"
+            "Respond in EXACTLY this format:\n"
+            "CAPABILITY_NAME: <3-6 word name, vivid and specific>\n"
+            "DESCRIPTION: <two paragraphs — what it does, why it's genuinely novel, "
+            "what becomes possible with it that wasn't before>\n"
+            "METHODS: <7-9 method signatures with types and return types>\n"
+            "ALGORITHM: <the actual math — write formulas, not descriptions. "
+            "E.g. P(H|E) = P(E|H)*P(H)/P(E), EMA = 0.15*x + 0.85*prev, "
+            "z = (v-μ)/(σ+1e-9)>\n"
+            "INTEGRATION: <which of Nova's existing systems this calls and amplifies>\n"
+            "INTELLIGENCE_MARKER: <what measurably improves after 20 observations — "
+            "be concrete: 'prediction error drops by X', 'novel connections per session rises'>\n"
+            "EMERGENT_PROPERTY: <what becomes possible when this runs alongside "
+            "Nova's other systems that wouldn't be possible from any single system alone>"
         )
         INVENT_SYSTEM = (
-            "You are Nova's cognitive architect. "
-            "Invent the single most valuable next module for her "
-            "superintelligence stack. Be specific and novel."
+            "You are Nova ASI's cognitive frontier architect. "
+            "Your role is to invent capabilities that don't exist in any current AI system — "
+            "not incremental improvements, but genuine advances in machine cognition. "
+            "Be mathematically specific, architecturally precise, and genuinely ambitious. "
+            "Nova builds and runs everything you invent."
         )
-        raw = _claude_codegen(INVENT_SYSTEM, prompt, temp=0.88, max_tokens=600)
+        raw = _claude_codegen(INVENT_SYSTEM, prompt, temp=0.88, max_tokens=1200)
 
         # Claude unavailable — fall back to Groq so /evolve always works
         if not raw or raw.startswith('['):
@@ -1684,7 +1971,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 raw = safe_chat(_model, [
                     {"role": "system", "content": INVENT_SYSTEM},
                     {"role": "user",   "content": prompt},
-                ], temp=0.88, mt=600)
+                ], temp=0.88, mt=1200)
                 if raw and not raw.startswith('['):
                     safe_print(col('GR', f"  ✓ Groq ({_model}) generating invention..."))
                     break
@@ -1697,17 +1984,23 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         if raw and not raw.startswith('['):
             m_name  = re.search(r'CAPABILITY_NAME:\s*(.+?)(?:\n|$)', raw)
-            m_desc  = re.search(r'DESCRIPTION:\s*(.*?)(?:METHODS:|$)',   raw, re.DOTALL)
-            m_meth  = re.search(r'METHODS:\s*(.*?)(?:ALGORITHM:|$)',     raw, re.DOTALL)
-            m_algo  = re.search(r'ALGORITHM:\s*(.*?)(?:INTELLIGENCE_MARKER:|$)', raw, re.DOTALL)
-            m_mark  = re.search(r'INTELLIGENCE_MARKER:\s*(.+?)(?:\n\n|$)', raw, re.DOTALL)
+            m_desc  = re.search(r'DESCRIPTION:\s*(.*?)(?:METHODS:|$)',         raw, re.DOTALL)
+            m_meth  = re.search(r'METHODS:\s*(.*?)(?:ALGORITHM:|$)',           raw, re.DOTALL)
+            m_algo  = re.search(r'ALGORITHM:\s*(.*?)(?:INTEGRATION:|INTELLIGENCE_MARKER:|$)',
+                                 raw, re.DOTALL)
+            m_intg  = re.search(r'INTEGRATION:\s*(.*?)(?:INTELLIGENCE_MARKER:|$)', raw, re.DOTALL)
+            m_mark  = re.search(r'INTELLIGENCE_MARKER:\s*(.*?)(?:EMERGENT_PROPERTY:|$)',
+                                 raw, re.DOTALL)
+            m_emrg  = re.search(r'EMERGENT_PROPERTY:\s*(.+?)(?:\n\n|$)', raw, re.DOTALL)
             if m_name:
                 name = m_name.group(1).strip()[:80]
             parts: List[str] = [f"Capability: {name}"]
             if m_desc:  parts.append(f"COGNITIVE PATTERN: {m_desc.group(1).strip()}")
             if m_meth:  parts.append(f"REQUIRED METHODS: {m_meth.group(1).strip()}")
             if m_algo:  parts.append(f"ALGORITHM TO IMPLEMENT: {m_algo.group(1).strip()}")
+            if m_intg:  parts.append(f"NOVA INTEGRATION: {m_intg.group(1).strip()}")
             if m_mark:  parts.append(f"INTELLIGENCE MARKER: {m_mark.group(1).strip()}")
+            if m_emrg:  parts.append(f"EMERGENT PROPERTY: {m_emrg.group(1).strip()}")
             if len(parts) > 1:
                 desc = '\n\n'.join(parts)
 
@@ -1740,7 +2033,28 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 chosen_name = gap_hint.strip()
                 chosen_desc = self._enrich_gap(chosen_name)
 
-        # ── Priority 2: uncovered spec (most algorithmically complex) ──
+        # ── Priority 2a: autonomy specs first (Nova's self-direction always wins) ──
+        if not chosen_name and uncovered:
+            autonomy_uncovered = [k for k in uncovered
+                                  if k in self._AUTONOMY_PRIORITY_KEYS]
+            if autonomy_uncovered:
+                key = max(autonomy_uncovered,
+                          key=lambda k: len(self._ASI_SPECS[k].get('algorithm', '')))
+                spec        = self._ASI_SPECS[key]
+                chosen_name = key.replace('_', ' ').title()
+                chosen_desc = (
+                    f"Capability: {chosen_name}\n\n"
+                    f"COGNITIVE PATTERN: {spec['pattern']}\n\n"
+                    f"REQUIRED METHODS: {spec['methods']}\n\n"
+                    f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
+                    f"INTELLIGENCE MARKER: {spec['marker']}\n\n"
+                    f"AUTONOMY DIRECTIVE: This module MUST increase Nova's independence. "
+                    f"It must operate without human input after __init__. "
+                    f"auto_cycle() or a daemon thread is mandatory."
+                )
+                safe_print(col('CYB', f"  ✦  Autonomy spec: {chosen_name}"))
+
+        # ── Priority 2b: remaining uncovered specs (most algorithmically complex) ──
         if not chosen_name and uncovered:
             key = max(uncovered,
                       key=lambda k: len(self._ASI_SPECS[k].get('algorithm', '')))
@@ -1952,7 +2266,7 @@ class NovaCore29(NovaCore28):
         safe_print(col(_ce_color,
             f"  ✓  Code Engine v29  — "
             f"{'Claude ' + CLAUDE_CODEGEN_MODEL if _using_claude() else CODEGEN_MODEL}"
-            f" · sandbox · 3-pass · scoring\n"
+            f" · blueprint→code · 3-pass · targeted-improve · 8k tokens\n"
             f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}"))
 
         # ── Tool Forge ────────────────────────────────────────────────────
