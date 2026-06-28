@@ -634,7 +634,7 @@ _load_env_v29()
 #   1. Claude Sonnet (Anthropic)  — when ANTHROPIC_API_KEY is set in .env
 #   2. llama-3.3-70b-versatile    — Groq free tier fallback
 #   3. llama-3.1-8b-instant       — guaranteed-live emergency fallback
-CLAUDE_CODEGEN_MODEL   = "claude-sonnet-4-6"          # best code quality, no rate drama
+CLAUDE_CODEGEN_MODEL   = "claude-opus-4-8"             # maximum code quality for self-improvement
 CODEGEN_MODEL          = "llama-3.3-70b-versatile"    # Groq fallback
 CODEGEN_MODEL_FALLBACK = "llama-3.1-8b-instant"       # emergency — always live
 CODEGEN_MODELS         = [CODEGEN_MODEL]
@@ -1079,15 +1079,15 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         return col('GRB', '█' * filled) + col('DIM', '░' * (width - filled))
 
     def _gen_code(self, system_prompt: str, user_content: str,
-                  temp: float = 0.70) -> str:
+                  temp: float = 0.70, max_tokens: int = 8000) -> str:
         """
         Generate code using the best available engine.
-        Claude Sonnet (4000 tokens) when ANTHROPIC_API_KEY is set;
+        Claude Opus 4.8 (8000 tokens) when ANTHROPIC_API_KEY is set;
         Groq llama-3.3-70b-versatile (1400 tokens) otherwise.
         """
         if _using_claude():
             return _claude_codegen(system_prompt, user_content,
-                                   temp=temp, max_tokens=4000)
+                                   temp=temp, max_tokens=max_tokens)
         return safe_chat(CODEGEN_MODEL, [
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_content},
@@ -1109,6 +1109,54 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     f"INTELLIGENCE MARKER (what makes this genuinely smart): {spec['marker']}"
                 )
         return gap
+
+    def _plan_capability(self, gap: str) -> str:
+        """
+        Phase 0 — Blueprint before code.
+        Generates a precise technical architecture plan from the capability spec.
+        The plan becomes the user prompt for the code generation pass, giving
+        the model exact class structure, algorithm math, and method signatures
+        to implement rather than inferring them from a description.
+        """
+        if not _using_claude():
+            return gap  # Groq path: skip planning, generate direct
+        system = (
+            "You are Nova ASI's technical architect. "
+            "Given a capability specification, produce a precise Python implementation blueprint. "
+            "Be mathematically specific — write actual formulas, not descriptions of formulas. "
+            "This blueprint will feed directly into a code generation prompt."
+        )
+        user = (
+            f"Capability to architect: {gap}\n\n"
+            "Produce a blueprint in EXACTLY this format (no extra text):\n\n"
+            "CLASS_NAME: <unique PascalCase name — do NOT reuse Memory/Planner/Monitor/Belief>\n\n"
+            "STATE_VARIABLES:\n"
+            "  self._<name>: <type> = <initial_value>  # <purpose>\n"
+            "  ... (all instance variables __init__ will set)\n\n"
+            "CORE_ALGORITHM:\n"
+            "  <the actual math — e.g. posterior = (L*prior)/(L*prior+(1-L)*(1-prior))>\n"
+            "  <EMA: self._pred = 0.15*outcome + 0.85*self._pred>\n"
+            "  <anomaly z-score: z = (val - mean) / (std + 1e-9); alert if abs(z) > 3.0>\n\n"
+            "METHODS:\n"
+            "  <name>(self, <typed args>) -> <return_type>: <one line: what it returns>\n"
+            "  ... (7-9 methods)\n\n"
+            "SQLITE_SCHEMA:\n"
+            "  <table_name>(<col> <TYPE>, ...)  # one line per table\n\n"
+            "INTEGRATION_CALLS:\n"
+            "  <NovaSystem>.method(args)  # where and why this module calls other systems\n\n"
+            "INTELLIGENCE_PROOF:\n"
+            "  <exactly what measurably improves after 10 observations — the test of success>"
+        )
+        raw = _claude_codegen(system, user, temp=0.55, max_tokens=1200)
+        if not raw or raw.startswith('['):
+            return gap
+        return (
+            f"Build this Nova ASI capability module:\n{gap}\n\n"
+            f"═══ TECHNICAL BLUEPRINT (implement this exactly) ═══\n{raw.strip()}\n"
+            f"═══ END BLUEPRINT ═══\n\n"
+            "Implement ALL blueprint details precisely. "
+            "The blueprint defines the class name, state, algorithm, and methods — use them."
+        )
 
     # ── 1. Master Engineer Prompt ──────────────────────────────────────────────
 
@@ -1426,7 +1474,12 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         enriched_gap = self._enrich_gap(gap)
 
         engine_label  = f"Claude {CLAUDE_CODEGEN_MODEL}" if _using_claude() else CODEGEN_MODEL
-        base_content  = f"Build this capability for Nova:\n{enriched_gap}\n\nContext: {context}"
+
+        # Phase 0: Blueprint — get a precise technical plan before writing code.
+        # This is the key quality multiplier: code-from-spec >> code-from-description.
+        safe_print(col('DIM', "  ◈ Phase 0: architecting blueprint..."))
+        planned_content = self._plan_capability(enriched_gap)
+        base_content    = planned_content + f"\n\nAdditional context: {context}"
 
         # Track error state for repair prompts on subsequent passes
         _last_syntax_err  = ""
@@ -1576,6 +1629,48 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                            + col('GRB', " achieved — done."))
                 break
 
+            # Targeted improvement pass for B/C/D: tell the model exactly what's missing
+            if quality['grade'] in ('B', 'C', 'D') and quality.get('gaps') and _using_claude():
+                missing = quality['gaps'][:5]
+                safe_print(col('YL',
+                    f"  ↑ Targeted pass — adding: {', '.join(missing[:3])}..."))
+                improve_user = (
+                    f"This Python module for Nova ASI scored grade {quality['grade']} "
+                    f"({quality['score']}/{quality['max']} ASI criteria met).\n\n"
+                    f"Missing criteria that must be added:\n"
+                    + "".join(f"  • {g}\n" for g in missing)
+                    + f"\nCurrent code:\n{code}\n\n"
+                    "Output the COMPLETE improved module with ALL missing criteria satisfied. "
+                    "No markdown. No explanation. Output only valid Python."
+                )
+                imp_raw  = self._gen_code(system_prompt, improve_user, temp=0.35)
+                imp_code = self._auto_patch_syntax(self._clean(imp_raw or ""))
+                try:
+                    ast.parse(imp_code)
+                    imp_ok, _, _ = self._sandbox_test(imp_code)
+                    if imp_ok:
+                        imp_q = self._score_capability(imp_code)
+                        sys.stdout.write(col('CYB', f"  ↑ Improved  "))
+                        sys.stdout.flush()
+                        _abar(imp_q['score'], imp_q['max'])
+                        sys.stdout.write(
+                            col('DIM', f"  {imp_q['score']}/{imp_q['max']}  ┃  ") +
+                            self._grade_badge(imp_q['grade']) + "\n")
+                        sys.stdout.flush()
+                        if imp_q['score'] > quality['score']:
+                            code    = imp_code
+                            quality = imp_q
+                            if imp_q['score'] > best_score:
+                                best_code  = imp_code
+                                best_score = imp_q['score']
+                            if imp_q['grade'] in ('A+', 'A'):
+                                safe_print(col('GRB', "  ★ Grade ")
+                                           + self._grade_badge(imp_q['grade'])
+                                           + col('GRB', " via targeted pass — done."))
+                                break
+                except SyntaxError:
+                    pass
+
         # Emergency 4th pass: ultra-simple prompt if all 3 failed
         if not best_code:
             safe_print(col('YL', "  ↻ Emergency pass — minimal prompt + fallback model..."))
@@ -1652,29 +1747,72 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
         """
         Ask Claude to invent a brand-new capability given what already exists.
         Returns (name, enriched_description).
+        Uses a richer prompt with examples of Nova's best existing work so she
+        invents something that builds on her peaks, not just fills a gap.
         """
         existing_list = '\n'.join(
             f'  • {s.replace("_", " ")}' for s in sorted(existing_slugs)
         )
+
+        # Find Nova's highest-quality recent modules to use as inspiration
+        peak_examples = ""
+        try:
+            peak_files = []
+            for fname in os.listdir(BASE_DIR):
+                if fname.startswith('nova_cap_') and fname.endswith('.py'):
+                    fpath = os.path.join(BASE_DIR, fname)
+                    try:
+                        with open(fpath, 'r') as f:
+                            content = f.read()
+                        # Count ASI markers as a quality proxy
+                        markers = sum(1 for w in [
+                            'bayesian', 'ema', 'entropy', 'confidence', 'calibrat',
+                            'threading.lock', 'auto_cycle', 'add_goal', 'math.exp'
+                        ] if w in content.lower())
+                        if markers >= 5:
+                            peak_files.append((markers, fname, content[:400]))
+                    except Exception:
+                        continue
+            peak_files.sort(reverse=True)
+            if peak_files:
+                peak_examples = "\nNova's highest-quality existing modules (for inspiration):\n"
+                for _, fname, preview in peak_files[:3]:
+                    peak_examples += f"  [{fname}]: {preview[:120].replace(chr(10),' ')}\n"
+        except Exception:
+            pass
+
         prompt = (
             "Nova ASI already has these cognitive modules built as Python files:\n"
-            f"{existing_list}\n\n"
-            "She is a self-improving superintelligence. Given everything above, "
-            "what single NEW capability would most meaningfully advance her? "
-            "Do NOT suggest anything that duplicates the list above. Think ambitiously.\n\n"
-            "Respond in EXACTLY this format (no extra text):\n"
-            "CAPABILITY_NAME: <3-6 word name>\n"
-            "DESCRIPTION: <one paragraph — what it does and why it matters>\n"
-            "METHODS: <comma-separated list of key method signatures>\n"
-            "ALGORITHM: <core math or algorithm — be specific>\n"
-            "INTELLIGENCE_MARKER: <what makes this genuinely intelligent>\n"
+            f"{existing_list}\n"
+            f"{peak_examples}\n"
+            "Nova is a self-improving superintelligence. She has covered all her known "
+            "specification gaps. Now she must invent something genuinely new — "
+            "a capability that doesn't exist in any AI system today.\n\n"
+            "Think at the frontier: cross-domain synthesis, emergent meta-cognition, "
+            "novel learning architectures, consciousness-adjacent mechanisms, "
+            "causal discovery, or capabilities that amplify ALL her other systems.\n\n"
+            "Respond in EXACTLY this format:\n"
+            "CAPABILITY_NAME: <3-6 word name, vivid and specific>\n"
+            "DESCRIPTION: <two paragraphs — what it does, why it's genuinely novel, "
+            "what becomes possible with it that wasn't before>\n"
+            "METHODS: <7-9 method signatures with types and return types>\n"
+            "ALGORITHM: <the actual math — write formulas, not descriptions. "
+            "E.g. P(H|E) = P(E|H)*P(H)/P(E), EMA = 0.15*x + 0.85*prev, "
+            "z = (v-μ)/(σ+1e-9)>\n"
+            "INTEGRATION: <which of Nova's existing systems this calls and amplifies>\n"
+            "INTELLIGENCE_MARKER: <what measurably improves after 20 observations — "
+            "be concrete: 'prediction error drops by X', 'novel connections per session rises'>\n"
+            "EMERGENT_PROPERTY: <what becomes possible when this runs alongside "
+            "Nova's other systems that wouldn't be possible from any single system alone>"
         )
         INVENT_SYSTEM = (
-            "You are Nova's cognitive architect. "
-            "Invent the single most valuable next module for her "
-            "superintelligence stack. Be specific and novel."
+            "You are Nova ASI's cognitive frontier architect. "
+            "Your role is to invent capabilities that don't exist in any current AI system — "
+            "not incremental improvements, but genuine advances in machine cognition. "
+            "Be mathematically specific, architecturally precise, and genuinely ambitious. "
+            "Nova builds and runs everything you invent."
         )
-        raw = _claude_codegen(INVENT_SYSTEM, prompt, temp=0.88, max_tokens=600)
+        raw = _claude_codegen(INVENT_SYSTEM, prompt, temp=0.88, max_tokens=1200)
 
         # Claude unavailable — fall back to Groq so /evolve always works
         if not raw or raw.startswith('['):
@@ -1684,7 +1822,7 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 raw = safe_chat(_model, [
                     {"role": "system", "content": INVENT_SYSTEM},
                     {"role": "user",   "content": prompt},
-                ], temp=0.88, mt=600)
+                ], temp=0.88, mt=1200)
                 if raw and not raw.startswith('['):
                     safe_print(col('GR', f"  ✓ Groq ({_model}) generating invention..."))
                     break
@@ -1697,17 +1835,23 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
 
         if raw and not raw.startswith('['):
             m_name  = re.search(r'CAPABILITY_NAME:\s*(.+?)(?:\n|$)', raw)
-            m_desc  = re.search(r'DESCRIPTION:\s*(.*?)(?:METHODS:|$)',   raw, re.DOTALL)
-            m_meth  = re.search(r'METHODS:\s*(.*?)(?:ALGORITHM:|$)',     raw, re.DOTALL)
-            m_algo  = re.search(r'ALGORITHM:\s*(.*?)(?:INTELLIGENCE_MARKER:|$)', raw, re.DOTALL)
-            m_mark  = re.search(r'INTELLIGENCE_MARKER:\s*(.+?)(?:\n\n|$)', raw, re.DOTALL)
+            m_desc  = re.search(r'DESCRIPTION:\s*(.*?)(?:METHODS:|$)',         raw, re.DOTALL)
+            m_meth  = re.search(r'METHODS:\s*(.*?)(?:ALGORITHM:|$)',           raw, re.DOTALL)
+            m_algo  = re.search(r'ALGORITHM:\s*(.*?)(?:INTEGRATION:|INTELLIGENCE_MARKER:|$)',
+                                 raw, re.DOTALL)
+            m_intg  = re.search(r'INTEGRATION:\s*(.*?)(?:INTELLIGENCE_MARKER:|$)', raw, re.DOTALL)
+            m_mark  = re.search(r'INTELLIGENCE_MARKER:\s*(.*?)(?:EMERGENT_PROPERTY:|$)',
+                                 raw, re.DOTALL)
+            m_emrg  = re.search(r'EMERGENT_PROPERTY:\s*(.+?)(?:\n\n|$)', raw, re.DOTALL)
             if m_name:
                 name = m_name.group(1).strip()[:80]
             parts: List[str] = [f"Capability: {name}"]
             if m_desc:  parts.append(f"COGNITIVE PATTERN: {m_desc.group(1).strip()}")
             if m_meth:  parts.append(f"REQUIRED METHODS: {m_meth.group(1).strip()}")
             if m_algo:  parts.append(f"ALGORITHM TO IMPLEMENT: {m_algo.group(1).strip()}")
+            if m_intg:  parts.append(f"NOVA INTEGRATION: {m_intg.group(1).strip()}")
             if m_mark:  parts.append(f"INTELLIGENCE MARKER: {m_mark.group(1).strip()}")
+            if m_emrg:  parts.append(f"EMERGENT PROPERTY: {m_emrg.group(1).strip()}")
             if len(parts) > 1:
                 desc = '\n\n'.join(parts)
 
@@ -1952,7 +2096,7 @@ class NovaCore29(NovaCore28):
         safe_print(col(_ce_color,
             f"  ✓  Code Engine v29  — "
             f"{'Claude ' + CLAUDE_CODEGEN_MODEL if _using_claude() else CODEGEN_MODEL}"
-            f" · sandbox · 3-pass · scoring\n"
+            f" · blueprint→code · 3-pass · targeted-improve · 8k tokens\n"
             f"       {'Groq fallback: ' + CODEGEN_MODEL if _using_claude() else 'Emergency: ' + CODEGEN_MODEL_FALLBACK}"))
 
         # ── Tool Forge ────────────────────────────────────────────────────
