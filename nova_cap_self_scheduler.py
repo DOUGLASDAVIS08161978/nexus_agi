@@ -31,7 +31,7 @@ class SelfScheduler:
         self._lock = threading.Lock()
         self._db_path = "nova_self_scheduler.db"
         self._init_db()
-        
+
         # In-memory state (synced to DB)
         self._cycle_log: OrderedDict[float, Dict[str, Any]] = OrderedDict()
         self._performance_window: List[float] = []  # Last 30 scores
@@ -41,7 +41,7 @@ class SelfScheduler:
         self._next_cycle_time: float = time.time() + 600  # Start in 10 min
         self._base_interval_s: float = 600.0
         self._daemon_running: bool = False
-        
+
         self._load_from_db()
         self._start_daemon()
 
@@ -74,7 +74,7 @@ class SelfScheduler:
                 "SELECT timestamp, outcome_score, duration_s, error_flag, quality_delta "
                 "FROM cycles ORDER BY timestamp DESC LIMIT 50"
             ).fetchall()
-            
+
             for ts, score, dur, err, delta in reversed(rows):
                 self._cycle_log[ts] = {
                     "score": score,
@@ -86,7 +86,7 @@ class SelfScheduler:
                     self._performance_window.append(score)
                 if len(self._error_window) < 20:
                     self._error_window.append(err)
-            
+
             # Load schedule state
             state_rows = conn.execute(
                 "SELECT key, value FROM schedule_state"
@@ -107,7 +107,7 @@ class SelfScheduler:
             if len(all_ts) > 100:
                 for old_ts in all_ts[:-100]:
                     conn.execute("DELETE FROM cycles WHERE timestamp = ?", (old_ts,))
-            
+
             # Save schedule state
             conn.execute("DELETE FROM schedule_state")
             conn.execute(
@@ -138,7 +138,7 @@ class SelfScheduler:
             try:
                 time.sleep(30)  # Check every 30 seconds
                 now = time.time()
-                
+
                 if now >= self._next_cycle_time and self.assess_readiness():
                     # Propose evolution cycle to goal planner
                     self._propose_cycle()
