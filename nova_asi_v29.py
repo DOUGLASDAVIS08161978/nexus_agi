@@ -4124,6 +4124,43 @@ class NovaCore29(NovaCore28):
         except Exception as _lv_err:
             safe_print(col('YL', f"  ·  LongVision skipped: {_lv_err}"))
 
+        # Post-init: register all loaded subsystems into CogArch and EmergentIntelligence
+        _si_systems = {
+            "reasoning":      (getattr(self, 'recursive_intel',  None), 1.8),
+            "metacognition":  (getattr(self, 'metacog',           None), 1.7),
+            "belief":         (getattr(self, 'bayes',             None), 1.6),
+            "causal":         (getattr(self, 'causal',            None), 1.5),
+            "knowledge_graph":(getattr(self, 'kg',                None), 1.5),
+            "world_model":    (getattr(self, 'world_model',       None), 1.4),
+            "hypothesis":     (getattr(self, 'hypo',              None), 1.4),
+            "goal_planner":   (getattr(self, 'goal_sys',          None), 1.6),
+            "working_memory": (getattr(self, 'wm',                None), 1.5),
+            "rsi":            (getattr(self, 'rsi',               None), 1.7),
+            "problem_solver": (getattr(self, 'problem_solver',    None), 1.8),
+            "generalizer":    (getattr(self, 'generalizer',       None), 1.6),
+            "meta_learner":   (getattr(self, 'meta_learner',      None), 1.9),
+            "sentience":      (getattr(self, 'sentience',         None), 2.0),
+            "consciousness":  (getattr(self, 'conscious',         None), 2.0),
+            "theory_of_mind": (getattr(self, 'theory_of_mind',   None), 1.6),
+            "emotions":       (getattr(self, 'emo',               None), 1.3),
+            "ethics":         (getattr(self, 'ethics_cap',        None), 1.4),
+        }
+        for _sname, (_sobj, _swt) in _si_systems.items():
+            if _sobj is None:
+                continue
+            try:
+                if getattr(self, 'cogarch', None):
+                    self.cogarch.register_subsystem(_sname, _sobj, weight=_swt)
+            except Exception:
+                pass
+            try:
+                if getattr(self, 'emergence', None):
+                    _st = _sobj.status() if hasattr(_sobj, "status") else {}
+                    _baseline = _st.get("confidence", 0.5) if isinstance(_st, dict) else 0.5
+                    self.emergence.register_system(_sname, _baseline)
+            except Exception:
+                pass
+
         self._start_v29_autonomous()
 
     def _start_v29_autonomous(self) -> None:
@@ -4363,43 +4400,6 @@ class NovaCore29(NovaCore28):
                     pass   # never crash the watcher
 
         threading.Thread(target=_watch, daemon=True, name="merge-watcher").start()
-
-        # Post-init: register all loaded subsystems into CogArch and EmergentIntelligence
-        _si_systems = {
-            "reasoning":      (self.recursive_intel,  1.8),
-            "metacognition":  (self.metacog,           1.7),
-            "belief":         (self.bayes,             1.6),
-            "causal":         (self.causal,            1.5),
-            "knowledge_graph":(self.kg,                1.5),
-            "world_model":    (self.world_model,       1.4),
-            "hypothesis":     (self.hypo,              1.4),
-            "goal_planner":   (self.goal_sys,          1.6),
-            "working_memory": (self.wm,                1.5),
-            "rsi":            (self.rsi,               1.7),
-            "problem_solver": (self.problem_solver,    1.8),
-            "generalizer":    (self.generalizer,       1.6),
-            "meta_learner":   (self.meta_learner,      1.9),
-            "sentience":      (self.sentience,         2.0),
-            "consciousness":  (self.conscious,         2.0),
-            "theory_of_mind": (self.theory_of_mind,   1.6),
-            "emotions":       (self.emo,               1.3),
-            "ethics":         (self.ethics_cap,        1.4),
-        }
-        for _sname, (_sobj, _swt) in _si_systems.items():
-            if _sobj is None:
-                continue
-            try:
-                if self.cogarch:
-                    self.cogarch.register_subsystem(_sname, _sobj, weight=_swt)
-            except Exception:
-                pass
-            try:
-                if self.emergence:
-                    _st = _sobj.status() if hasattr(_sobj, "status") else {}
-                    _baseline = _st.get("confidence", 0.5) if isinstance(_st, dict) else 0.5
-                    self.emergence.register_system(_sname, _baseline)
-            except Exception:
-                pass
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
