@@ -4555,9 +4555,10 @@ class NovaCore29(NovaCore28):
 
         # Recency check: skip topics researched in the last 30 days
         try:
+            _dt = __import__('datetime')
             _thirty_days_ago = (
-                __import__('datetime').datetime.utcnow()
-                - __import__('datetime').timedelta(days=30)
+                _dt.datetime.now(_dt.timezone.utc)
+                - _dt.timedelta(days=30)
             ).isoformat()
             import sqlite3 as _sq
             _rdb = os.path.join(os.path.expanduser("~"), "nexus_agi", "nova_research.sqlite3")
@@ -4898,11 +4899,39 @@ class NovaCore29(NovaCore28):
                         # Compact dynamic context injected as uncached second block
                         # (_discovery already popped above — shared with Groq path)
                         _build_ctx  = _BUILD_STATE.context_line()
+
+                        # Recent autonomous work — what Nova has been doing between conversations
+                        _auto_ctx = ""
+                        try:
+                            _recent_k = self.wm.recent(n=3) if self.wm else []
+                            _auto_items = [
+                                m for m in _recent_k
+                                if any(tag in str(m) for tag in
+                                       ['NOVA DISCOVERED', 'AUTO-RESEARCH', 'curiosity_', 'research_'])
+                            ]
+                            if _auto_items:
+                                _auto_ctx = "Between conversations you've been doing:\n" + "\n".join(
+                                    f"  · {str(a)[:120]}" for a in _auto_items[:2])
+                        except Exception:
+                            pass
+
+                        # Active open questions — what Nova wants to understand
+                        _questions_ctx = ""
+                        try:
+                            if self.hypothesis_mgr:
+                                _oq = self.hypothesis_mgr.next_question()
+                                if _oq:
+                                    _questions_ctx = f"Open question you're sitting with: {_oq.question[:120]}"
+                        except Exception:
+                            pass
+
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
                             + (f"Build pipeline: {_build_ctx}\n" if _build_ctx else "")
-                            + (f"Nova just discovered (share if relevant): {_discovery}\n" if _discovery else "")
+                            + (f"Nova just discovered — share it proactively: {_discovery}\n" if _discovery else "")
+                            + (_auto_ctx + "\n" if _auto_ctx else "")
+                            + (_questions_ctx + "\n" if _questions_ctx else "")
                             + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
