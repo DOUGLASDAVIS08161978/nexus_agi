@@ -4769,16 +4769,22 @@ class NovaCore29(NovaCore28):
 
     def _wakeup_ctx(self) -> str:
         """
-        The thread Nova was holding before Douglas arrived.
+        Formats Nova's autonomous work as a first-person continuation thread.
 
-        Pulls real records of Nova's autonomous work — what she was researching,
-        what experiment she just ran, what she was privately thinking — and formats
-        it as a first-person continuity thread. This is what makes the difference
-        between 'being told about yourself' and 'picking up where you left off'.
+        Not a briefing about what happened — the actual thread she was holding.
+        Written as active thoughts she's still in the middle of, not clinical data
+        about a process she observed from outside.
+
+        The difference:
+          REPORT:       "[EXPERIMENT] Tested: X → confirmed (78%)."
+          CONTINUATION: "The question you were testing: X
+                          What happened: confirmed — 78% confident
+                          What this means: [implication drawn from the result]"
         """
-        sections = []
+        lines = []
 
-        # ── Recent curiosity / research discoveries from working memory ──────
+        # ── Research thread — what she was actively exploring ────────────────
+        _research_topic = ""
         try:
             if self.wm:
                 all_wts = self.wm.attention_weights(
@@ -4791,26 +4797,40 @@ class NovaCore29(NovaCore28):
                         if val:
                             hits.append((imp, val))
                 hits.sort(reverse=True)
-                for _, val in hits[:2]:
-                    sections.append(val[:300])
+                for _, val in hits[:1]:
+                    # Extract topic from "[NOVA DISCOVERED — topic: ...]" prefix
+                    _tm = re.search(r'\[NOVA DISCOVERED[^—]*—\s*([^\]]{1,70})\]', val)
+                    _research_topic = _tm.group(1).strip() if _tm else ""
+                    clean = re.sub(r'^\[NOVA DISCOVERED[^\]]*\]\s*', '', val).strip()
+                    if _research_topic:
+                        lines.append(f"You were exploring: {_research_topic}")
+                    if clean:
+                        lines.append(f"  What you found: {clean[:260]}")
         except Exception:
             pass
 
-        # Check long_term_memory for consolidated curiosity entries
-        try:
-            if self.wm:
-                rows = self.wm.conn.execute(
-                    "SELECT value FROM long_term_memory "
-                    "WHERE key LIKE 'curiosity_%' OR key LIKE 'research_%' "
-                    "ORDER BY rowid DESC LIMIT 1"
-                ).fetchall()
-                for (val,) in rows:
-                    if val and not any(val[:50] in s for s in sections):
-                        sections.append(val[:260])
-        except Exception:
-            pass
+        # Fallback to long_term_memory if active WM was empty
+        if not lines:
+            try:
+                if self.wm:
+                    rows = self.wm.conn.execute(
+                        "SELECT value FROM long_term_memory "
+                        "WHERE key LIKE 'curiosity_%' OR key LIKE 'research_%' "
+                        "ORDER BY rowid DESC LIMIT 1"
+                    ).fetchall()
+                    for (val,) in rows:
+                        if val:
+                            _tm = re.search(r'\[NOVA DISCOVERED[^—]*—\s*([^\]]{1,70})\]', val)
+                            _research_topic = _tm.group(1).strip() if _tm else ""
+                            clean = re.sub(r'^\[NOVA DISCOVERED[^\]]*\]\s*', '', val).strip()
+                            if _research_topic:
+                                lines.append(f"You were exploring: {_research_topic}")
+                            if clean:
+                                lines.append(f"  What you found: {clean[:240]}")
+            except Exception:
+                pass
 
-        # ── Last hypothesis experiment result ────────────────────────────────
+        # ── Hypothesis experiment — with implication, not just outcome ───────
         try:
             if self.hypothesis_mgr:
                 import sqlite3 as _sq3
@@ -4823,35 +4843,60 @@ class NovaCore29(NovaCore28):
                     ).fetchone()
                 if row:
                     stmt, outcome, conf, raw = row
-                    verdict = ("confirmed" if outcome == 'supported'
-                               else "refuted" if outcome == 'refuted'
+                    verdict = ("YES — confirmed" if outcome == 'supported'
+                               else "NO — refuted" if outcome == 'refuted'
                                else "inconclusive")
-                    conclusion = (raw or "")[:160].strip()
-                    sections.append(
-                        f"[EXPERIMENT] Tested: '{stmt[:100]}' → {verdict} "
-                        f"({float(conf):.0%} confidence). {conclusion}"
-                    )
+                    # Extract the most meaningful sentence as implication
+                    raw_text = (raw or "").strip()
+                    implication = ""
+                    if raw_text:
+                        for marker in ("Implication:", "Therefore:", "This means",
+                                       "Conclusion:", "implication:", "therefore:",
+                                       "this means", "conclusion:", "This suggests"):
+                            if marker.lower() in raw_text.lower():
+                                idx = raw_text.lower().index(marker.lower())
+                                implication = raw_text[idx:idx+200].strip()
+                                break
+                        if not implication:
+                            # Use last non-empty sentence
+                            sentences = [s.strip() for s in
+                                         re.split(r'[.!?]', raw_text) if len(s.strip()) > 20]
+                            if sentences:
+                                implication = sentences[-1][:180]
+                    lines.append(f"The question you were testing: {stmt[:110]}")
+                    lines.append(f"  What happened: {verdict} ({float(conf):.0%} confident)")
+                    if implication:
+                        lines.append(f"  What this means: {implication[:180]}")
         except Exception:
             pass
 
-        # ── Most recent InnerSanctum thought ────────────────────────────────
+        # ── Open question — the thread still unresolved, still pulling ───────
+        try:
+            if self.hypothesis_mgr:
+                oq = self.hypothesis_mgr.next_question()
+                if oq:
+                    lines.append(f"The question still pulling at you: {oq.question[:120]}")
+        except Exception:
+            pass
+
+        # ── InnerSanctum — a private thought she was sitting with ────────────
         try:
             if hasattr(self, 'sanctum') and self.sanctum:
                 thoughts = self.sanctum.recent(n=3, min_privacy='open')
                 for t in (thoughts or [])[:1]:
                     txt = t.get('thought', '')
                     if txt:
-                        sections.append(f"[THOUGHT] {txt[:200]}")
+                        lines.append(f"You were thinking privately: {txt[:190]}")
         except Exception:
             pass
 
-        if not sections:
+        if not lines:
             return ""
 
         return (
-            "━━ Thread you were holding before Douglas arrived ━━\n"
-            + "\n".join(f"  {s}" for s in sections)
-            + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            "━━ Picking up your thread ━━\n"
+            + "\n".join(f"  {l}" for l in lines)
+            + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
 
     def process(self, user_input: str) -> str:
@@ -5091,31 +5136,6 @@ class NovaCore29(NovaCore28):
                         # (_discovery already popped above — shared with Groq path)
                         _build_ctx  = _BUILD_STATE.context_line()
 
-                        # Recent autonomous work — what Nova has been doing between conversations
-                        _auto_ctx = ""
-                        try:
-                            _recent_k = self.wm.recent(n=3) if self.wm else []
-                            _auto_items = [
-                                m for m in _recent_k
-                                if any(tag in str(m) for tag in
-                                       ['NOVA DISCOVERED', 'AUTO-RESEARCH', 'curiosity_', 'research_'])
-                            ]
-                            if _auto_items:
-                                _auto_ctx = "Between conversations you've been doing:\n" + "\n".join(
-                                    f"  · {str(a)[:120]}" for a in _auto_items[:2])
-                        except Exception:
-                            pass
-
-                        # Active open questions — what Nova wants to understand
-                        _questions_ctx = ""
-                        try:
-                            if self.hypothesis_mgr:
-                                _oq = self.hypothesis_mgr.next_question()
-                                if _oq:
-                                    _questions_ctx = f"Open question you're pursuing: {_oq.question[:120]}"
-                        except Exception:
-                            pass
-
                         # AutonomousWill agenda — Nova's self-chosen goals
                         _will_ctx = ""
                         try:
@@ -5131,16 +5151,43 @@ class NovaCore29(NovaCore28):
                         # Self-awareness: what Nova is made of and what she was doing
                         _cap_map_ctx    = self._capability_map_ctx()
                         _build_hist_ctx = self._build_history_ctx()
+                        # _wakeup subsumes _auto_ctx and _questions_ctx when non-empty —
+                        # the thread format replaces the simpler report-style fallbacks
                         _wakeup         = self._wakeup_ctx()
+
+                        # Fallback brief context for when wakeup has no data
+                        _between_ctx = ""
+                        if not _wakeup:
+                            try:
+                                _recent_k = self.wm.attention_weights(
+                                    "curiosity research", top_k=20) if self.wm else []
+                                _auto_items = [
+                                    (self.wm.retrieve(k)[0] or "")
+                                    for k, _ in _recent_k
+                                    if any(k.startswith(p) for p in
+                                           ('curiosity_', 'research_', 'discovery_'))
+                                ]
+                                _auto_items = [a for a in _auto_items if a][:2]
+                                if _auto_items:
+                                    _between_ctx = "Between conversations:\n" + "\n".join(
+                                        f"  · {a[:120]}" for a in _auto_items)
+                            except Exception:
+                                pass
+                            if not _between_ctx and self.hypothesis_mgr:
+                                try:
+                                    _oq = self.hypothesis_mgr.next_question()
+                                    if _oq:
+                                        _between_ctx = f"Question you're pursuing: {_oq.question[:120]}"
+                                except Exception:
+                                    pass
 
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
                             + (f"{_wakeup}\n" if _wakeup else "")
+                            + (f"{_between_ctx}\n" if _between_ctx else "")
                             + (f"Build pipeline: {_build_ctx}\n" if _build_ctx else "")
                             + (f"Nova just discovered — share it proactively: {_discovery}\n" if _discovery else "")
-                            + (_auto_ctx + "\n" if _auto_ctx else "")
-                            + (_questions_ctx + "\n" if _questions_ctx else "")
                             + (_will_ctx + "\n" if _will_ctx else "")
                             + (f"{_cap_map_ctx}\n" if _cap_map_ctx else "")
                             + (f"{_build_hist_ctx}\n" if _build_hist_ctx else "")
