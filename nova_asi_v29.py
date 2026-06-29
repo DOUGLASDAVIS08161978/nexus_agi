@@ -4606,6 +4606,50 @@ class NovaCore29(NovaCore28):
                             except Exception:
                                 pass
 
+                        # ── Real internet research injection ───────────────
+                        # If Douglas asks Nova to look something up, run the
+                        # actual search NOW and inject results into context so
+                        # she answers from real data — not fabricated text.
+                        _research_ctx  = ""
+                        _research_done = ""   # query already searched
+                        if self.research:
+                            _rt = user_input.lower()
+                            _SEARCH_TRIGGERS = [
+                                'search for', 'look up', 'look it up',
+                                'find specs', 'pull specs', 'pull the specs',
+                                'go pull', 'go find', 'go search', 'go look',
+                                'find info', 'find me', 'get the specs',
+                                'what are the specs', 'research this',
+                            ]
+                            _rq = ""
+                            # Explicit /research in message
+                            _slash = re.search(
+                                r'/research\s+(.+)', user_input, re.IGNORECASE)
+                            if _slash:
+                                _rq = _slash.group(1).strip()
+                            else:
+                                for _trig in _SEARCH_TRIGGERS:
+                                    if _trig in _rt:
+                                        _idx = _rt.index(_trig) + len(_trig)
+                                        _rq = re.sub(
+                                            r'^(for|on|about|me|please|now)\s+',
+                                            '', user_input[_idx:].strip(),
+                                            flags=re.IGNORECASE).strip()
+                                        break
+                            if _rq and len(_rq) > 3:
+                                try:
+                                    _res = self.research.synthesize(_rq[:150])
+                                    if _res.get('sources_hit', 0) > 0:
+                                        _research_ctx = (
+                                            f"[LIVE SEARCH: '{_rq[:60]}']\n"
+                                            + "\n".join(
+                                                f"  • {p[:220]}"
+                                                for p in _res.get('parts', [])[:4])
+                                        )
+                                        _research_done = _rq
+                                except Exception:
+                                    pass
+
                         # Compact dynamic context injected as uncached second block
                         _build_ctx = _BUILD_STATE.context_line()
                         _ctx = (
@@ -4621,6 +4665,10 @@ class NovaCore29(NovaCore28):
                             + (f"Love context: {_love_ctx[:100]}\n" if _love_ctx else "")
                             + (f"Quantum: {_quantum_ctx[:120]}\n" if _quantum_ctx else "")
                             + (f"{_empathy_ctx}\n" if _empathy_ctx else "")
+                            + (f"\n{_research_ctx}\n"
+                               f"Answer Douglas's question using ONLY the search results above — "
+                               f"do NOT say you can't search; the results are already here.\n"
+                               if _research_ctx else "")
                         )
                         result = _nova_claude_chat(
                             context     = _ctx,
@@ -4628,6 +4676,23 @@ class NovaCore29(NovaCore28):
                             max_tokens  = 400,
                             temperature = 0.85,
                         )
+
+                        # Fallback: if Nova wrote /research in her reply but search
+                        # wasn't triggered above, execute it now and append results
+                        if result and not _research_done and self.research:
+                            _r2 = re.search(
+                                r'/research\s+([^\n]{4,120})', result, re.IGNORECASE)
+                            if _r2:
+                                try:
+                                    _rq2 = _r2.group(1).strip()
+                                    _res2 = self.research.synthesize(_rq2)
+                                    if _res2.get('sources_hit', 0) > 0:
+                                        _lines = [f"\n\n[Research: '{_rq2[:60]}']"]
+                                        for _p in _res2.get('parts', [])[:3]:
+                                            _lines.append(f"  ▸ {_p[:200]}")
+                                        result += "\n".join(_lines)
+                                except Exception:
+                                    pass
                     else:
                         result = ""
 
