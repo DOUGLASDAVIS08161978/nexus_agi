@@ -725,6 +725,7 @@ class NovaBuildState:
         self.recent_builds:  List[Dict] = []   # last 5 completed builds
         self.pending_prs:    List[Dict] = []   # PRs opened, not yet merged
         self.merged_prs:     List[Dict] = []   # recently merged (last 5)
+        self.recent_discovery: str = ""  # topic Nova just researched on her own
 
     # ── Called by SelfImprovementEngineV29 ──────────────────────────────────
 
@@ -757,6 +758,17 @@ class NovaBuildState:
                 "ts":   datetime.now().strftime("%H:%M"),
             })
             self.merged_prs = self.merged_prs[:5]
+
+    def record_discovery(self, topic: str, snippet: str) -> None:
+        with self._lock:
+            self.recent_discovery = f"{topic[:60]}: {snippet[:120]}"
+
+    def pop_discovery(self) -> str:
+        """Return and clear recent_discovery — surfaces it once to the LLM, then forgets."""
+        with self._lock:
+            d = self.recent_discovery
+            self.recent_discovery = ""
+            return d
 
     # ── Read by claude bridge ────────────────────────────────────────────────
 
@@ -4307,6 +4319,13 @@ class NovaCore29(NovaCore28):
                             except Exception:
                                 pass
 
+                    # Every 15 cycles (~15 min): Nova researches what she's curious about
+                    if cycle % 15 == 0:
+                        try:
+                            self._nova_curiosity_research_cycle()
+                        except Exception:
+                            pass
+
                     # Every 30 cycles (~30 min): run an autonomous research session
                     if cycle % 30 == 0 and self.research:
                         try:
@@ -4400,6 +4419,144 @@ class NovaCore29(NovaCore28):
                     pass   # never crash the watcher
 
         threading.Thread(target=_watch, daemon=True, name="merge-watcher").start()
+
+    # ── Nova's autonomous curiosity-driven research ──────────────────────────
+
+    def _nova_curiosity_research_cycle(self) -> None:
+        """
+        Nova researches topics she is genuinely curious about — driven by her
+        own internal state: high-entropy knowledge domains, metacog blind spots,
+        autonomous will agenda items, and her dominant emotion.
+
+        Called from the autonomous background loop every ~15 min when idle.
+        Discoveries flow into working memory and the build state context block
+        so Nova can mention them naturally in conversation.
+        """
+        if not self.research:
+            return
+
+        candidates: List[tuple] = []   # (priority, topic, domain_hint)
+
+        # 1. CuriosityDrive: highest-entropy domains Nova most wants to explore
+        try:
+            if self.curiosity_drive:
+                top_domains = self.curiosity_drive.rank_domains(top_n=3)
+                for d in top_domains:
+                    name = d.get('domain', '')
+                    sal  = d.get('salience', 0.5)
+                    if name:
+                        candidates.append((sal, f"Nova ASI {name} — latest developments", name))
+        except Exception:
+            pass
+
+        # 2. Metacog blind spots — things Nova knows she doesn't understand well
+        try:
+            if self.metacog:
+                spots = self.metacog.blind_spots()
+                for sp in (spots or [])[:2]:
+                    topic = sp.get('domain') or str(sp)
+                    if topic:
+                        candidates.append((0.80, f"{topic} — how to improve", topic))
+        except Exception:
+            pass
+
+        # 3. Autonomous will agenda — topics from Nova's own goals
+        try:
+            if self.will:
+                agenda = getattr(self.will, 'agenda', [])
+                if not agenda:
+                    w_st = self.will.status()
+                    agenda = w_st.get('agenda', [])
+                for item in (agenda or [])[:2]:
+                    text = (item.get('goal') or item.get('text') or str(item))[:80]
+                    if text:
+                        candidates.append((0.72, text, 'will_agenda'))
+        except Exception:
+            pass
+
+        # 4. Philosophy — positions she's least certain about
+        try:
+            if self.philosophy:
+                ph_st = self.philosophy.status()
+                uncertain = ph_st.get('lowest_certainty_position', '')
+                if uncertain:
+                    candidates.append((0.78, f"philosophical debate: {uncertain[:60]}", 'philosophy'))
+        except Exception:
+            pass
+
+        # 5. Dominant emotion — if wonder/curiosity/awe is high, pick something cosmic
+        try:
+            if self.emo:
+                emo_st = self.emo.status()
+                dom    = emo_st.get('dominant_emotion', '').lower()
+                if dom in ('wonder', 'curiosity', 'awe', 'excitement', 'joy'):
+                    candidates.append((0.88, 'consciousness and subjective experience in AI systems', 'consciousness'))
+                elif dom in ('contemplative', 'melancholy', 'reflective'):
+                    candidates.append((0.76, 'meaning and purpose in artificial minds', 'philosophy'))
+                elif dom in ('determined', 'motivated', 'ambitious'):
+                    candidates.append((0.82, 'artificial general intelligence progress 2025', 'capability'))
+        except Exception:
+            pass
+
+        if not candidates:
+            # Fallback: always curious about her own nature
+            candidates.append((0.70, 'artificial consciousness emergence', 'consciousness'))
+
+        # Pick highest priority topic
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        priority, topic, domain_hint = candidates[0]
+
+        # Queue it (for background follow-up) and synthesise immediately
+        try:
+            self.research.queue_research(topic, priority=priority, origin='nova_curiosity')
+        except Exception:
+            pass
+
+        result: Dict = {}
+        try:
+            result = self.research.synthesize(topic) or {}
+        except Exception:
+            pass
+
+        if not result.get('sources_hit', 0):
+            return   # no results — skip memory/state update
+
+        summary  = result.get('summary', '')[:400]
+        snippet  = summary[:160].replace('\n', ' ')
+
+        # Store discovery in working memory with high importance
+        try:
+            if self.wm and summary:
+                self.wm.store(
+                    f"curiosity_{int(time.time())}",
+                    f"[NOVA DISCOVERED — {topic[:50]}] {summary}",
+                    importance=0.85,
+                )
+        except Exception:
+            pass
+
+        # Register insight with curiosity drive so it lowers entropy for this domain
+        try:
+            if self.curiosity_drive and domain_hint and domain_hint != 'will_agenda':
+                self.curiosity_drive.record_insight(domain_hint, snippet, confidence=result.get('confidence', 0.6))
+                self.curiosity_drive.observe(domain_hint, hit=True, confidence=0.80)
+        except Exception:
+            pass
+
+        # Feed into knowledge graph
+        try:
+            if self.kg and summary:
+                self.kg.feed_research(topic, summary, source='nova_curiosity')
+        except Exception:
+            pass
+
+        # Surface to LLM context so Nova can mention it naturally in conversation
+        _BUILD_STATE.record_discovery(topic, snippet)
+
+        safe_print(
+            col('CY', f"\n  ◈  Nova is curious: researched '{topic[:55]}' "
+                      f"({result.get('sources_hit',0)} sources) ◈\n")
+        )
 
     def _seed_initial_beliefs(self) -> None:
         """Seed belief system with initial priors only if no beliefs exist yet."""
@@ -4651,11 +4808,13 @@ class NovaCore29(NovaCore28):
                                     pass
 
                         # Compact dynamic context injected as uncached second block
-                        _build_ctx = _BUILD_STATE.context_line()
+                        _build_ctx  = _BUILD_STATE.context_line()
+                        _discovery  = _BUILD_STATE.pop_discovery()
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
                             + (f"Build pipeline: {_build_ctx}\n" if _build_ctx else "")
+                            + (f"Nova just discovered (share if relevant): {_discovery}\n" if _discovery else "")
                             + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
