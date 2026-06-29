@@ -587,7 +587,7 @@ def _animate_ready_banner(model: str, code_engine: str,
         '  /wisdom · /nexus · /math · /simulate · /perceive',
         '  /selfmod · /nova · /values · /emotions · /emodepth · /love · /sovereign · /quantum · /superpose · /agent · /self · /constitution · /reflect · /cmind · /relational · /asi · /registry · /mood · /metacog · /score',
         '  /prefs · /beliefs · /will · /stargazer · /insight · /arc · /aesthetic · /dialectic · /think · /sovereign · /claude',
-        '  /trader · /truth · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming · /grief',
+        '  /trader · /truth · /hypothesis · /episodic · /horizons · /omnisyn · /curiosity · /narrative · /ethics · /heartbeat · /sanctum · /becoming · /grief',
         '  /intuition · /douglas · /philosophy · /crystals · /embody · /quantum',
         '  /socratic · /perspective · /empathy · /conceptforge · /vision',
     ]
@@ -3830,6 +3830,18 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  TruthEngine skipped: {_err}"))
 
+        # Hypothesis Manager — uncertainty→question→experiment→evidence→belief loop
+        self.hypothesis_mgr: Any = None
+        try:
+            from nova_cap_hypothesis import get_hypothesis_manager
+            self.hypothesis_mgr = get_hypothesis_manager()
+            safe_print(col('GR', "  ✓  HypothesisManager — open questions · experiments · evidence · belief update"))
+            if self.conscious:
+                try: self.conscious.register_system("hypothesis", self.hypothesis_mgr, weight=1.1)
+                except Exception: pass
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  HypothesisManager skipped: {_err}"))
+
         # Long-Horizon Planner — 10+ step sequential planning with uncertainty decay
         self.long_horizon: Any = None
         try:
@@ -4362,6 +4374,44 @@ class NovaCore29(NovaCore28):
                         except Exception:
                             pass
 
+                    # Every 45 cycles (~45 min): run one hypothesis cycle
+                    # (uncertainty → experiment → evidence → belief update)
+                    if cycle % 45 == 5 and self.hypothesis_mgr:
+                        try:
+                            h_result = self.hypothesis_mgr.run_cycle(
+                                truth_engine = self.truth_engine,
+                                wm           = self.wm,
+                            )
+                            if h_result.get('status') == 'complete':
+                                safe_print(
+                                    col('CY',
+                                        f"\n  ◈  Hypothesis {h_result['outcome']}: "
+                                        f"'{h_result['hypothesis'][:55]}' "
+                                        f"(sr={h_result['success_rate']:.2f}) ◈\n")
+                                )
+                        except Exception:
+                            pass
+
+                    # Every 90 cycles (~90 min): check for stale beliefs and reopen questions
+                    if cycle % 90 == 7 and self.hypothesis_mgr and self.truth_engine:
+                        try:
+                            _volatility = {
+                                'ai_frameworks':   'high',
+                                'capability':      'high',
+                                'current_events':  'high',
+                                'consciousness':   'low',
+                                'mathematics':     'low',
+                                'philosophy':      'low',
+                                'python':          'medium',
+                                'research':        'medium',
+                            }
+                            n = self.hypothesis_mgr.reopen_stale_beliefs(
+                                self.truth_engine, _volatility, max_reopen=2)
+                            if n:
+                                safe_print(col('YL', f"\n  ·  {n} stale belief(s) queued for re-testing\n"))
+                        except Exception:
+                            pass
+
                     time.sleep(60)
                 except Exception:
                     time.sleep(120)
@@ -4502,9 +4552,43 @@ class NovaCore29(NovaCore28):
             # Fallback: always curious about her own nature
             candidates.append((0.70, 'artificial consciousness emergence', 'consciousness'))
 
-        # Pick highest priority topic
+        # Recency check: skip topics researched in the last 30 days
+        try:
+            _thirty_days_ago = (
+                __import__('datetime').datetime.utcnow()
+                - __import__('datetime').timedelta(days=30)
+            ).isoformat()
+            import sqlite3 as _sq
+            _rdb = str(Path.home() / "nexus_agi" / "nova_research.db")
+            with _sq.connect(_rdb) as _rc:
+                _recent = {
+                    r[0].lower() for r in _rc.execute(
+                        "SELECT topic FROM knowledge_base WHERE ts > ? LIMIT 200",
+                        (_thirty_days_ago,)
+                    ).fetchall()
+                }
+            candidates = [
+                c for c in candidates
+                if not any(word in _recent for word in c[1].lower().split()[:3])
+            ] or candidates  # keep all if everything was recently researched
+        except Exception:
+            pass
+
+        # Probabilistic selection (ChatGPT suggestion): don't always pick top topic.
+        # Weights: 45% top, 25% second, 15% third, 15% split among rest.
+        # This lets Nova occasionally surprise herself with a lower-ranked topic.
+        import random as _rand
         candidates.sort(key=lambda x: x[0], reverse=True)
-        priority, topic, domain_hint = candidates[0]
+        _weights = []
+        for _i, _ in enumerate(candidates):
+            if   _i == 0: _weights.append(0.45)
+            elif _i == 1: _weights.append(0.25)
+            elif _i == 2: _weights.append(0.15)
+            else:         _weights.append(0.15 / max(1, len(candidates) - 3))
+        _weights = _weights[:len(candidates)]
+        _total   = sum(_weights)
+        _weights = [w / _total for w in _weights]
+        priority, topic, domain_hint = _rand.choices(candidates, weights=_weights, k=1)[0]
 
         # Queue it (for background follow-up) and synthesise immediately
         try:
@@ -6994,6 +7078,22 @@ class NovaCore29(NovaCore28):
                 return "\n".join(lines)
             except Exception as _te:
                 return col('YL', f"  TruthEngine error: {_te}")
+
+        # /hypothesis [status | calibration | questions | ask <question>]
+        if cmd == '/hypothesis':
+            if not self.hypothesis_mgr:
+                return "HypothesisManager not loaded."
+            if arg.startswith('ask '):
+                q_text = arg[4:].strip()
+                if q_text:
+                    oq = self.hypothesis_mgr.add_question(
+                        q_text, origin='user_command', priority=0.90)
+                    return col('CY', f"\n  ◈  Question queued: '{oq.question[:100]}'\n"
+                                     f"  ID: {oq.question_id}  Priority: {oq.priority}\n")
+            try:
+                return col('CY', "\n" + self.hypothesis_mgr.run_command(arg))
+            except Exception as _he:
+                return col('YL', f"  HypothesisManager error: {_he}")
 
         # /episodic [recall <cue> | status]
         if cmd == '/episodic':
