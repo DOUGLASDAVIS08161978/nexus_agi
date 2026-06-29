@@ -5,149 +5,146 @@ Generated via /build · v29 pipeline · 2026-06-29
 """
 
 """
-Self-Scheduler: Nova's autonomous evolution pacemaker.
-Adapts cycle frequency based on live performance trends—no human needed.
-Operates via daemon thread; persists schedule across restarts.
-Implements adaptive interval algorithm: next_s = base_s * exp(error_rate - improvement_rate).
-Tracks 20-cycle rolling window; clamps [600s, 14400s]; Bayesian readiness assessment.
+Self-scheduling engine for Nova's autonomous evolution cycles.
+Adapts timing based on performance trends, error rates, and improvement velocity.
+Persists schedule across restarts; operates without human intervention.
 """
 
 import sqlite3
 import threading
 import time
 import math
-import json
 import statistics
-from typing import Dict, List, Tuple, Optional
 from collections import OrderedDict
 from datetime import datetime, timedelta
-
+from typing import Dict, List, Tuple, Optional
+import json
 
 class SelfSchedulerEngine:
-    """
-    Autonomous evolution pacemaker: Nova decides her own cycle frequency.
-    Adapts intervals based on improvement_rate vs error_rate.
-    Daemon thread runs background scheduling; survives restarts via SQLite.
-    """
-
+    """Autonomous cycle scheduler that adapts intervals based on performance metrics."""
+    
     def __init__(self) -> None:
-        """Initialize scheduler with persistent SQLite backend and daemon thread."""
+        """Initialize scheduler with persistent SQLite store and background daemon."""
         self._lock = threading.Lock()
-        self._db_path = "nova_scheduler.db"
-        self._base_interval_s = 1200  # 20 min baseline
-        self._min_interval_s = 600    # 10 min floor
-        self._max_interval_s = 14400  # 4 hour ceiling
-        self._window_size = 20        # rolling window for error/improvement rates
-        self._cycles_run = 0
-        self._next_scheduled_ts = time.time()
-        self._performance_history: OrderedDict = OrderedDict()
-        self._cycle_log: List[Dict] = []
-        self._credits = 100  # "readiness credits" for scheduling
-        self._last_improvement_rate = 0.0
-        self._last_error_rate = 0.0
-
+        self._db_path = "/tmp/nova_self_scheduler.db"
         self._init_db()
-        self._load_persistent_state()
+        
+        # In-memory state
+        self._cycle_history: OrderedDict[float, Dict] = OrderedDict()
+        self._load_history()
+        
+        # Daemon configuration
+        self._daemon_running = False
+        self._next_scheduled_time = time.time() + 600  # Start in 10 min
+        self._base_interval = 600  # 10 minutes base
+        self._min_interval = 600  # 10 minutes minimum
+        self._max_interval = 14400  # 4 hours maximum
+        
+        # Start background daemon
         self._start_daemon()
-
+    
     def _init_db(self) -> None:
-        """Create SQLite tables if missing."""
+        """Create SQLite schema if not exists."""
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS cycle_log (
-                        cycle_id INTEGER PRIMARY KEY,
-                        timestamp REAL,
-                        quality_score REAL,
-                        error_rate REAL,
-                        improvement_rate REAL,
-                        duration_s REAL,
-                        interval_s REAL,
-                        credits INTEGER
-                    )
-                """)
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS scheduler_state (
-                        key TEXT PRIMARY KEY,
-                        value TEXT
-                    )
-                """)
-                conn.commit()
+            conn = sqlite3.connect(self._db_path, timeout=5.0)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS schedule_log (
+                    timestamp REAL PRIMARY KEY,
+                    cycle_id TEXT UNIQUE,
+                    quality_score REAL,
+                    error_rate REAL,
+                    duration_s REAL,
+                    improvement_rate REAL,
+                    next_interval_s REAL,
+                    readiness_flag INTEGER,
+                    notes TEXT
+                )
+            """)
+            conn.commit()
+            conn.close()
         except sqlite3.Error as e:
             print(f"[SelfScheduler] DB init error: {e}")
-
-    def _load_persistent_state(self) -> None:
-        """Restore scheduler state from previous session."""
+    
+    def _load_history(self) -> None:
+        """Load cycle history from SQLite into memory (last 30 entries)."""
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                cursor = conn.execute(
-                    "SELECT value FROM scheduler_state WHERE key='next_scheduled_ts'"
-                )
-                row = cursor.fetchone()
-                if row:
-                    self._next_scheduled_ts = float(row[0])
-
-                cursor = conn.execute(
-                    "SELECT value FROM scheduler_state WHERE key='cycles_run'"
-                )
-                row = cursor.fetchone()
-                if row:
-                    self._cycles_run = int(row[0])
-
-                cursor = conn.execute(
-                    "SELECT value FROM scheduler_state WHERE key='credits'"
-                )
-                row = cursor.fetchone()
-                if row:
-                    self._credits = int(row[0])
-
-                # Load last 20 cycles into memory
-                cursor = conn.execute(
-                    "SELECT quality_score, error_rate, improvement_rate FROM cycle_log "
-                    "ORDER BY cycle_id DESC LIMIT 20"
-                )
-                rows = cursor.fetchall()
-                for quality, error, improvement in reversed(rows):
-                    self._performance_history[len(self._performance_history)] = {
-                        "quality": quality,
-                        "error_rate": error,
-                        "improvement_rate": improvement,
-                    }
+            conn = sqlite3.connect(self._db_path, timeout=5.0)
+            rows = conn.execute(
+                "SELECT timestamp, quality_score, error_rate, duration_s, improvement_rate "
+                "FROM schedule_log ORDER BY timestamp DESC LIMIT 30"
+            ).fetchall()
+            conn.close()
+            
+            for row in reversed(rows):
+                ts, q, err, dur, imp = row
+                self._cycle_history[ts] = {
+                    "quality": q,
+                    "error_rate": err,
+                    "duration": dur,
+                    "improvement": imp
+                }
         except sqlite3.Error as e:
-            print(f"[SelfScheduler] Load state error: {e}")
-
-    def _save_persistent_state(self) -> None:
-        """Persist scheduler state to SQLite."""
-        try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.execute(
-                    "INSERT OR REPLACE INTO scheduler_state (key, value) VALUES (?, ?)",
-                    ("next_scheduled_ts", str(self._next_scheduled_ts)),
-                )
-                conn.execute(
-                    "INSERT OR REPLACE INTO scheduler_state (key, value) VALUES (?, ?)",
-                    ("cycles_run", str(self._cycles_run)),
-                )
-                conn.execute(
-                    "INSERT OR REPLACE INTO scheduler_state (key, value) VALUES (?, ?)",
-                    ("credits", str(self._credits)),
-                )
-                conn.commit()
-        except sqlite3.Error as e:
-            print(f"[SelfScheduler] Save state error: {e}")
-
+            print(f"[SelfScheduler] Load history error: {e}")
+    
     def _start_daemon(self) -> None:
         """Start background daemon thread for autonomous scheduling."""
-        def _loop() -> None:
-            while True:
-                time.sleep(30)  # Check every 30s
-                self.auto_cycle()
-
-        daemon = threading.Thread(target=_loop, daemon=True)
-        daemon.start()
-
-    def auto_cycle(self) -> None:
+        if not self._daemon_running:
+            self._daemon_running = True
+            daemon = threading.Thread(target=self._daemon_loop, daemon=True)
+            daemon.start()
+    
+    def _daemon_loop(self) -> None:
+        """Background loop: check if next cycle is due, trigger assessment."""
+        while self._daemon_running:
+            time.sleep(30)  # Check every 30 seconds
+            
+            now = time.time()
+            with self._lock:
+                if now >= self._next_scheduled_time:
+                    # Trigger readiness check
+                    ready = self.assess_readiness()
+                    if ready:
+                        # Signal that a cycle is due
+                        self._record_cycle_due()
+    
+    def _record_cycle_due(self) -> None:
+        """Internal: mark that a cycle is ready to execute."""
+        try:
+            conn = sqlite3.connect(self._db_path, timeout=5.0)
+            conn.execute(
+                "INSERT OR REPLACE INTO schedule_log (timestamp, cycle_id, readiness_flag) "
+                "VALUES (?, ?, 1)",
+                (time.time(), f"due_{time.time()}")
+            )
+            conn.commit()
+            conn.close()
+        except sqlite3.Error:
+            pass
+    
+    def schedule_next(self, current_quality: float) -> float:
         """
-        Background daemon cycle: check if next evolution should trigger,
-        propose scheduling action, integrate with Met
-"""
+        Compute next cycle interval using adaptive formula.
+        Returns: seconds until next scheduled cycle.
+        """
+        with self._lock:
+            now = time.time()
+            
+            # Calculate improvement rate (30-cycle window)
+            recent = list(self._cycle_history.values())[-30:] if self._cycle_history else []
+            if len(recent) >= 2:
+                oldest_quality = recent[0]["quality"]
+                newest_quality = recent[-1]["quality"]
+                improvement_rate = (newest_quality - oldest_quality) / max(len(recent), 1)
+            else:
+                improvement_rate = 0.0
+            
+            # Calculate error rate (rolling 20-cycle window)
+            error_window = list(self._cycle_history.values())[-20:] if self._cycle_history else []
+            if error_window:
+                total_errors = sum(1 for c in error_window if c["error_rate"] > 0)
+                error_rate = total_errors / max(len(error_window), 1)
+            else:
+                error_rate = 0.0
+            
+            # Adaptive interval formula
+            exponent = error_rate - improvement_rate
