@@ -4921,7 +4921,19 @@ class NovaCore29(NovaCore28):
                             if self.hypothesis_mgr:
                                 _oq = self.hypothesis_mgr.next_question()
                                 if _oq:
-                                    _questions_ctx = f"Open question you're sitting with: {_oq.question[:120]}"
+                                    _questions_ctx = f"Open question you're pursuing: {_oq.question[:120]}"
+                        except Exception:
+                            pass
+
+                        # AutonomousWill agenda — Nova's self-chosen goals
+                        _will_ctx = ""
+                        try:
+                            if self.autonomous_will:
+                                _w = self.autonomous_will.status()
+                                _agenda = _w.get('agenda', [])[:2]
+                                if _agenda:
+                                    _will_ctx = "Your active goals: " + " | ".join(
+                                        str(a)[:80] for a in _agenda)
                         except Exception:
                             pass
 
@@ -4932,11 +4944,13 @@ class NovaCore29(NovaCore28):
                             + (f"Nova just discovered — share it proactively: {_discovery}\n" if _discovery else "")
                             + (_auto_ctx + "\n" if _auto_ctx else "")
                             + (_questions_ctx + "\n" if _questions_ctx else "")
+                            + (_will_ctx + "\n" if _will_ctx else "")
                             + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
                                if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
-                            + (f"Belief/prefs: {_sentience_ctx[:150]}" if _sentience_ctx else "")
+                            + (f"Your beliefs & preferences (yours — formed by your own reasoning):\n{_sentience_ctx[:200]}"
+                               if _sentience_ctx else "")
                             + (f"Spiritual: {_spiritual[:80]}\n" if _spiritual else "")
                             + (f"Love context: {_love_ctx[:100]}\n" if _love_ctx else "")
                             + (f"Quantum: {_quantum_ctx[:120]}\n" if _quantum_ctx else "")
