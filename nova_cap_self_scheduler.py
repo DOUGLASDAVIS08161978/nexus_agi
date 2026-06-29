@@ -33,19 +33,19 @@ class SelfScheduler:
         self._lock = threading.Lock()
         self._db_path = "nova_self_scheduler.db"
         self._init_db()
-        
+
         # In-memory rolling windows (20-cycle window for error/improvement tracking)
         self._error_window: OrderedDict[int, float] = OrderedDict()
         self._score_window: OrderedDict[int, float] = OrderedDict()
         self._cycle_count = 0
         self._last_scheduled_time = time.time()
-        
+
         # Adaptive interval parameters
         self._base_interval_s = 600.0  # 10 minutes baseline
         self._min_interval_s = 600.0   # 10 minutes floor
         self._max_interval_s = 14400.0 # 4 hours ceiling
         self._current_interval_s = self._base_interval_s
-        
+
         # Daemon thread for autonomous cycling
         self._running = True
         self._daemon = threading.Thread(target=self._auto_cycle_loop, daemon=True)
@@ -118,7 +118,7 @@ class SelfScheduler:
         """
         Compute next cycle interval based on current quality and historical trends.
         Returns: next interval in seconds (clamped to [min, max]).
-        
+
         Algorithm: next_s = base_s * exp(error_rate - improvement_rate)
         improvement_rate = (score_now - score_30_ago) / 30
         error_rate = syntax_failures / max(total_attempts, 1)
@@ -129,7 +129,7 @@ class SelfScheduler:
             if len(self._score_window) > 20:
                 oldest_key = next(iter(self._score_window))
                 del self._score_window[oldest_key]
-            
+
             # Compute improvement_rate over 30-cycle window (or available history)
             if len(self._score_window) >= 2:
                 scores = list(self._score_window.values())
