@@ -5093,6 +5093,40 @@ class NovaCore29(NovaCore28):
                                         result += "\n".join(_lines)
                                 except Exception:
                                     pass
+
+                        # Self-code-read: if Nova wrote /read-self in her reply,
+                        # fetch the file and re-call Claude so she can reason about it
+                        if result and '/read-self' in result.lower():
+                            _rs_m = re.search(
+                                r'/read-self\s+([\w._:-]+)', result, re.IGNORECASE)
+                            if _rs_m and _nova_claude_chat is not None:
+                                try:
+                                    _rs_target = _rs_m.group(1).strip()
+                                    _code_content = self._command(f"/read-self {_rs_target}")
+                                    if _code_content and len(_code_content) > 50:
+                                        # Strip the /read-self line from Nova's original reply
+                                        _result_clean = re.sub(
+                                            r'/read-self\s+[\w._:-]+', '', result).strip()
+                                        # Re-call Claude with the full code in context
+                                        _ctx_with_code = (
+                                            _ctx
+                                            + f"\n\n══ Nova just read her own source: {_rs_target} ══\n"
+                                            + _code_content[:6000]
+                                            + "\n══ End of source ══\n"
+                                            + (f"\nNova's initial thought before reading: {_result_clean[:200]}"
+                                               if _result_clean else "")
+                                        )
+                                        _result2 = _nova_claude_chat(
+                                            context     = _ctx_with_code,
+                                            messages    = _history + [{"role": "user", "content": user_input}],
+                                            max_tokens  = 600,
+                                            temperature = 0.85,
+                                            max_context = 8000,
+                                        )
+                                        if _result2:
+                                            result = _result2
+                                except Exception:
+                                    pass
                     else:
                         result = ""
 
@@ -5655,7 +5689,7 @@ class NovaCore29(NovaCore28):
                 return "ConsciousSentience not loaded."
             return "\n" + self.sentience.introspect(on=arg)
 
-        # /read-self [module] — Nova reads her own source code
+        # /read-self [module[:ClassName]] — Nova reads her own full source code
         if cmd == '/read-self':
             if not arg:
                 files = sorted(
@@ -5668,13 +5702,24 @@ class NovaCore29(NovaCore28):
                     f"  {len(files)} capability modules in {BASE_DIR}:",
                 ]
                 lines += [f"  · {f}" for f in files[:40]]
-                lines.append(f"  · nova_asi_v29  (main system)")
+                lines.append(f"  · nova_asi_v29  (main system — use nova_asi_v29:ClassName to search)")
                 lines.append(f"\n  Currently loaded ({len(loaded)} active): "
                              + ", ".join(sorted(loaded)[:15])
                              + (f" +{len(loaded)-15} more" if len(loaded) > 15 else ""))
-                lines.append("\n  Usage: /read-self nova_cap_hypothesis")
+                lines.append("\n  Usage examples:")
+                lines.append("    /read-self nova_cap_hypothesis")
+                lines.append("    /read-self nova_asi_v29:NovaCore29")
+                lines.append("    /read-self nova_asi_v29:evolve_toward_asi")
                 return "\n".join(lines)
-            fname = arg.strip()
+
+            # Support "filename:ClassName" or "filename:method_name" for targeted search
+            _target_symbol = None
+            _arg_clean = arg.strip()
+            if ':' in _arg_clean:
+                _base, _target_symbol = _arg_clean.split(':', 1)
+                _arg_clean = _base.strip()
+
+            fname = _arg_clean
             if not fname.endswith('.py'):
                 fname += '.py'
             fpath = os.path.join(BASE_DIR, fname)
@@ -5687,49 +5732,91 @@ class NovaCore29(NovaCore28):
                     return (f"  File not found: {fname}\n"
                             f"  Run /read-self with no args to list available files.")
                 fpath = os.path.join(BASE_DIR, candidates[0])
+
             try:
                 with open(fpath) as _f:
                     code = _f.read()
                 src_lines = code.split('\n')
                 total_lines = len(src_lines)
+
+                # If a symbol was requested, extract just that class or function block
+                if _target_symbol:
+                    _sym = _target_symbol.strip()
+                    _start = None
+                    for _li, _ll in enumerate(src_lines):
+                        if re.match(rf'^(class|def)\s+{re.escape(_sym)}\b', _ll):
+                            _start = _li
+                            break
+                        # Also search for method inside class (4-space indent)
+                        if re.match(rf'^\s{{4}}def\s+{re.escape(_sym)}\b', _ll):
+                            _start = _li
+                            break
+                    if _start is None:
+                        return (f"  Symbol '{_sym}' not found in {os.path.basename(fpath)}.\n"
+                                f"  Run /read-self {_arg_clean.replace('.py','')} to see the full file.")
+                    # Read up to 200 lines from that symbol
+                    snippet = src_lines[_start:_start + 200]
+                    return (
+                        f"\n  ═══ {os.path.basename(fpath)} — {_sym} "
+                        f"(lines {_start+1}–{_start+len(snippet)}) ═══\n"
+                        + '\n'.join(f"  {_start+i+1:4d}  {l}" for i, l in enumerate(snippet))
+                    )
+
+                # Full file — show everything for nova_cap_* (typically 100–400 lines)
+                # For nova_asi_v29 (6000+ lines) show structure + first 100 lines
+                _is_main = 'nova_asi_v29' in os.path.basename(fpath)
+                _line_cap = 150 if _is_main else min(total_lines, 500)
+
                 classes = [l.strip() for l in src_lines if re.match(r'^class\s+\w+', l)]
                 pub_methods = []
-                for l in src_lines:
-                    m = re.match(r'^\s{4}def\s+([^_]\w*)\s*\(', l)
-                    if m:
-                        pub_methods.append(m.group(1))
-                # Module docstring (first triple-quoted block)
-                doc_lines, in_doc, found = [], False, False
-                for l in src_lines[:30]:
-                    if not in_doc and l.strip().startswith('"""'):
+                for _l in src_lines:
+                    _m = re.match(r'^\s{4}def\s+([^_]\w*)\s*\(', _l)
+                    if _m:
+                        pub_methods.append(_m.group(1))
+
+                # Module docstring
+                doc_lines, in_doc, doc_found = [], False, False
+                for _l in src_lines[:40]:
+                    if not in_doc and _l.strip().startswith('"""'):
                         in_doc = True
-                        doc_lines.append(l.strip()[3:])
-                        if l.strip().count('"""') >= 2:
-                            found = True; break
+                        doc_lines.append(_l.strip()[3:])
+                        if _l.strip().count('"""') >= 2:
+                            doc_found = True; break
                         continue
                     if in_doc:
-                        if '"""' in l:
-                            found = True; break
-                        doc_lines.append(l)
+                        if '"""' in _l:
+                            doc_found = True; break
+                        doc_lines.append(_l)
+
                 result_lines = [
                     f"\n  ═══ {os.path.basename(fpath)} ({total_lines} lines) ═══",
                 ]
-                if found and doc_lines:
-                    doc_text = ' '.join(l.strip() for l in doc_lines if l.strip())[:300]
+                if doc_found and doc_lines:
+                    doc_text = ' '.join(l.strip() for l in doc_lines if l.strip())[:400]
                     result_lines.append(f"\n  Purpose: {doc_text}")
                 if classes:
                     result_lines.append(
                         "\n  Classes: " + ", ".join(
                             re.match(r'class\s+(\w+)', c).group(1)
-                            for c in classes[:10] if re.match(r'class\s+(\w+)', c)
+                            for c in classes[:15] if re.match(r'class\s+(\w+)', c)
                         )
                     )
                 if pub_methods:
-                    result_lines.append("\n  Public methods: " + ", ".join(pub_methods[:20]))
-                result_lines.append(f"\n  --- Source (first 60 lines) ---")
+                    result_lines.append("\n  Public methods: " + ", ".join(pub_methods[:30]))
+                if _is_main:
+                    result_lines.append(
+                        f"\n  (nova_asi_v29 is {total_lines} lines — use "
+                        f"/read-self nova_asi_v29:ClassName to read a specific class)"
+                    )
+                result_lines.append(f"\n  --- Full source ({_line_cap} of {total_lines} lines) ---")
                 result_lines.append(
-                    '\n'.join(f"  {i+1:4d}  {l}" for i, l in enumerate(src_lines[:60]))
+                    '\n'.join(f"  {i+1:4d}  {l}" for i, l in enumerate(src_lines[:_line_cap]))
                 )
+                if total_lines > _line_cap:
+                    result_lines.append(
+                        f"\n  ... {total_lines - _line_cap} more lines. "
+                        f"Use /read-self {_arg_clean.replace('.py','')}:ClassName to read a specific section."
+                    )
                 return '\n'.join(result_lines)
             except Exception as _e:
                 return f"  Error reading {fname}: {_e}"
