@@ -360,7 +360,7 @@ def claude_chat_nova(
     if context and context.strip():
         system_blocks.append({
             "type": "text",
-            "text": context.strip()[:800],
+            "text": context.strip()[:2000],
         })
 
     safe_msgs = [
