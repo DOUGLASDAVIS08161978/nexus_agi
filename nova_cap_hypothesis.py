@@ -53,6 +53,23 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _extract_json_object(text: str) -> Optional[str]:
+    """Return the first balanced {...} object from text, or None."""
+    start = text.find('{')
+    if start == -1:
+        return None
+    depth = 0
+    for i, ch in enumerate(text[start:], start):
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return None
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 _DB  = Path.home() / "nexus_agi" / "nova_hypothesis.db"
@@ -224,12 +241,18 @@ class HypothesisManager:
             attempts=row[6], status=row[7],
         )
 
-    def _mark_question(self, question_id: str, status: str) -> None:
+    def _mark_question(self, question_id: str, status: str, *, increment: bool = False) -> None:
         with sqlite3.connect(self._db) as con:
-            con.execute(
-                "UPDATE open_questions SET status=?, attempts=attempts+1 WHERE question_id=?",
-                (status, question_id)
-            )
+            if increment:
+                con.execute(
+                    "UPDATE open_questions SET status=?, attempts=attempts+1 WHERE question_id=?",
+                    (status, question_id)
+                )
+            else:
+                con.execute(
+                    "UPDATE open_questions SET status=? WHERE question_id=?",
+                    (status, question_id)
+                )
 
     def questions_summary(self) -> Dict[str, int]:
         with sqlite3.connect(self._db) as con:
@@ -277,11 +300,11 @@ class HypothesisManager:
 
         try:
             raw = claude_chat_simple(system, user, max_tokens=600)
-            # Extract JSON from response
-            m = re.search(r'\{.*\}', raw, re.DOTALL)
-            if not m:
+            # Extract first balanced JSON object (avoids greedy over-match)
+            json_str = _extract_json_object(raw)
+            if not json_str:
                 return None
-            data = json.loads(m.group(0))
+            data = json.loads(json_str)
             h = Hypothesis(
                 statement   = str(data.get('statement', ''))[:400],
                 question_id = question.question_id,
@@ -480,7 +503,10 @@ class HypothesisManager:
         volatility_map = volatility_map or {}
 
         try:
-            with sqlite3.connect(truth_engine._db) as con:
+            _te_db = getattr(truth_engine, '_db', None) or getattr(truth_engine, 'db', None)
+            if not _te_db:
+                return []
+            with sqlite3.connect(_te_db) as con:
                 rows = con.execute(
                     "SELECT domain, claim, posterior, ts FROM beliefs "
                     "WHERE posterior > 0.70 ORDER BY ts ASC LIMIT 50"
@@ -550,7 +576,7 @@ class HypothesisManager:
         if not oq:
             return {"status": "no_questions", "calls": self._calls}
 
-        self._mark_question(oq.question_id, "active")
+        self._mark_question(oq.question_id, "active", increment=True)
 
         # Generate hypothesis
         hyp = self.generate_hypothesis(oq)
@@ -558,11 +584,8 @@ class HypothesisManager:
             self._mark_question(oq.question_id, "open")   # retry later
             return {"status": "hypothesis_generation_failed", "question": oq.question}
 
-        # Run experiment
+        # Run experiment (run_experiment always returns Evidence; _parse_evidence never returns None)
         evidence = self.run_experiment(hyp)
-        if not evidence:
-            self._mark_question(oq.question_id, "open")
-            return {"status": "experiment_failed", "hypothesis": hyp.statement}
 
         # Update hypothesis status
         with sqlite3.connect(self._db) as con:
