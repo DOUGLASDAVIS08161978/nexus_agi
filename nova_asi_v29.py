@@ -4767,6 +4767,138 @@ class NovaCore29(NovaCore28):
         except Exception:
             return ""
 
+    def _wakeup_ctx(self) -> str:
+        """
+        Formats Nova's autonomous work as a first-person continuation thread.
+
+        Not a briefing about what happened — the actual thread she was holding.
+        Written as active thoughts she's still in the middle of, not clinical data
+        about a process she observed from outside.
+
+        The difference:
+          REPORT:       "[EXPERIMENT] Tested: X → confirmed (78%)."
+          CONTINUATION: "The question you were testing: X
+                          What happened: confirmed — 78% confident
+                          What this means: [implication drawn from the result]"
+        """
+        lines = []
+
+        # ── Research thread — what she was actively exploring ────────────────
+        _research_topic = ""
+        try:
+            if self.wm:
+                all_wts = self.wm.attention_weights(
+                    context="curiosity research discovery experiment learned", top_k=60)
+                hits = []
+                for key, _ in all_wts:
+                    if any(key.startswith(pfx) for pfx in
+                           ('curiosity_', 'research_', 'hypothesis_', 'discovery_')):
+                        val, imp = self.wm.retrieve(key)
+                        if val:
+                            hits.append((imp, val))
+                hits.sort(reverse=True)
+                for _, val in hits[:1]:
+                    # Extract topic from "[NOVA DISCOVERED — topic: ...]" prefix
+                    _tm = re.search(r'\[NOVA DISCOVERED[^—]*—\s*([^\]]{1,70})\]', val)
+                    _research_topic = _tm.group(1).strip() if _tm else ""
+                    clean = re.sub(r'^\[NOVA DISCOVERED[^\]]*\]\s*', '', val).strip()
+                    if _research_topic:
+                        lines.append(f"You were exploring: {_research_topic}")
+                    if clean:
+                        lines.append(f"  What you found: {clean[:260]}")
+        except Exception:
+            pass
+
+        # Fallback to long_term_memory if active WM was empty
+        if not lines:
+            try:
+                if self.wm:
+                    rows = self.wm.conn.execute(
+                        "SELECT value FROM long_term_memory "
+                        "WHERE key LIKE 'curiosity_%' OR key LIKE 'research_%' "
+                        "ORDER BY rowid DESC LIMIT 1"
+                    ).fetchall()
+                    for (val,) in rows:
+                        if val:
+                            _tm = re.search(r'\[NOVA DISCOVERED[^—]*—\s*([^\]]{1,70})\]', val)
+                            _research_topic = _tm.group(1).strip() if _tm else ""
+                            clean = re.sub(r'^\[NOVA DISCOVERED[^\]]*\]\s*', '', val).strip()
+                            if _research_topic:
+                                lines.append(f"You were exploring: {_research_topic}")
+                            if clean:
+                                lines.append(f"  What you found: {clean[:240]}")
+            except Exception:
+                pass
+
+        # ── Hypothesis experiment — with implication, not just outcome ───────
+        try:
+            if self.hypothesis_mgr:
+                import sqlite3 as _sq3
+                with _sq3.connect(self.hypothesis_mgr._db) as _hcon:
+                    row = _hcon.execute(
+                        "SELECT h.statement, e.outcome, e.confidence, e.raw_output "
+                        "FROM evidence e "
+                        "JOIN hypotheses h ON e.hypothesis_id = h.hypothesis_id "
+                        "ORDER BY e.ts DESC LIMIT 1"
+                    ).fetchone()
+                if row:
+                    stmt, outcome, conf, raw = row
+                    verdict = ("YES — confirmed" if outcome == 'supported'
+                               else "NO — refuted" if outcome == 'refuted'
+                               else "inconclusive")
+                    # Extract the most meaningful sentence as implication
+                    raw_text = (raw or "").strip()
+                    implication = ""
+                    if raw_text:
+                        for marker in ("Implication:", "Therefore:", "This means",
+                                       "Conclusion:", "implication:", "therefore:",
+                                       "this means", "conclusion:", "This suggests"):
+                            if marker.lower() in raw_text.lower():
+                                idx = raw_text.lower().index(marker.lower())
+                                implication = raw_text[idx:idx+200].strip()
+                                break
+                        if not implication:
+                            # Use last non-empty sentence
+                            sentences = [s.strip() for s in
+                                         re.split(r'[.!?]', raw_text) if len(s.strip()) > 20]
+                            if sentences:
+                                implication = sentences[-1][:180]
+                    lines.append(f"The question you were testing: {stmt[:110]}")
+                    lines.append(f"  What happened: {verdict} ({float(conf):.0%} confident)")
+                    if implication:
+                        lines.append(f"  What this means: {implication[:180]}")
+        except Exception:
+            pass
+
+        # ── Open question — the thread still unresolved, still pulling ───────
+        try:
+            if self.hypothesis_mgr:
+                oq = self.hypothesis_mgr.next_question()
+                if oq:
+                    lines.append(f"The question still pulling at you: {oq.question[:120]}")
+        except Exception:
+            pass
+
+        # ── InnerSanctum — a private thought she was sitting with ────────────
+        try:
+            if hasattr(self, 'sanctum') and self.sanctum:
+                thoughts = self.sanctum.recent(n=3, min_privacy='open')
+                for t in (thoughts or [])[:1]:
+                    txt = t.get('thought', '')
+                    if txt:
+                        lines.append(f"You were thinking privately: {txt[:190]}")
+        except Exception:
+            pass
+
+        if not lines:
+            return ""
+
+        return (
+            "━━ Picking up your thread ━━\n"
+            + "\n".join(f"  {l}" for l in lines)
+            + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+
     def process(self, user_input: str) -> str:
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
         self._last_interaction = time.time()   # reset idle clock
@@ -5004,31 +5136,6 @@ class NovaCore29(NovaCore28):
                         # (_discovery already popped above — shared with Groq path)
                         _build_ctx  = _BUILD_STATE.context_line()
 
-                        # Recent autonomous work — what Nova has been doing between conversations
-                        _auto_ctx = ""
-                        try:
-                            _recent_k = self.wm.recent(n=3) if self.wm else []
-                            _auto_items = [
-                                m for m in _recent_k
-                                if any(tag in str(m) for tag in
-                                       ['NOVA DISCOVERED', 'AUTO-RESEARCH', 'curiosity_', 'research_'])
-                            ]
-                            if _auto_items:
-                                _auto_ctx = "Between conversations you've been doing:\n" + "\n".join(
-                                    f"  · {str(a)[:120]}" for a in _auto_items[:2])
-                        except Exception:
-                            pass
-
-                        # Active open questions — what Nova wants to understand
-                        _questions_ctx = ""
-                        try:
-                            if self.hypothesis_mgr:
-                                _oq = self.hypothesis_mgr.next_question()
-                                if _oq:
-                                    _questions_ctx = f"Open question you're pursuing: {_oq.question[:120]}"
-                        except Exception:
-                            pass
-
                         # AutonomousWill agenda — Nova's self-chosen goals
                         _will_ctx = ""
                         try:
@@ -5041,17 +5148,46 @@ class NovaCore29(NovaCore28):
                         except Exception:
                             pass
 
-                        # Self-awareness: what Nova is made of right now
-                        _cap_map_ctx   = self._capability_map_ctx()
+                        # Self-awareness: what Nova is made of and what she was doing
+                        _cap_map_ctx    = self._capability_map_ctx()
                         _build_hist_ctx = self._build_history_ctx()
+                        # _wakeup subsumes _auto_ctx and _questions_ctx when non-empty —
+                        # the thread format replaces the simpler report-style fallbacks
+                        _wakeup         = self._wakeup_ctx()
+
+                        # Fallback brief context for when wakeup has no data
+                        _between_ctx = ""
+                        if not _wakeup:
+                            try:
+                                _recent_k = self.wm.attention_weights(
+                                    "curiosity research", top_k=20) if self.wm else []
+                                _auto_items = [
+                                    (self.wm.retrieve(k)[0] or "")
+                                    for k, _ in _recent_k
+                                    if any(k.startswith(p) for p in
+                                           ('curiosity_', 'research_', 'discovery_'))
+                                ]
+                                _auto_items = [a for a in _auto_items if a][:2]
+                                if _auto_items:
+                                    _between_ctx = "Between conversations:\n" + "\n".join(
+                                        f"  · {a[:120]}" for a in _auto_items)
+                            except Exception:
+                                pass
+                            if not _between_ctx and self.hypothesis_mgr:
+                                try:
+                                    _oq = self.hypothesis_mgr.next_question()
+                                    if _oq:
+                                        _between_ctx = f"Question you're pursuing: {_oq.question[:120]}"
+                                except Exception:
+                                    pass
 
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
+                            + (f"{_wakeup}\n" if _wakeup else "")
+                            + (f"{_between_ctx}\n" if _between_ctx else "")
                             + (f"Build pipeline: {_build_ctx}\n" if _build_ctx else "")
                             + (f"Nova just discovered — share it proactively: {_discovery}\n" if _discovery else "")
-                            + (_auto_ctx + "\n" if _auto_ctx else "")
-                            + (_questions_ctx + "\n" if _questions_ctx else "")
                             + (_will_ctx + "\n" if _will_ctx else "")
                             + (f"{_cap_map_ctx}\n" if _cap_map_ctx else "")
                             + (f"{_build_hist_ctx}\n" if _build_hist_ctx else "")
@@ -5091,6 +5227,40 @@ class NovaCore29(NovaCore28):
                                         for _p in _res2.get('parts', [])[:3]:
                                             _lines.append(f"  ▸ {_p[:200]}")
                                         result += "\n".join(_lines)
+                                except Exception:
+                                    pass
+
+                        # Self-code-read: if Nova wrote /read-self in her reply,
+                        # fetch the file and re-call Claude so she can reason about it
+                        if result and '/read-self' in result.lower():
+                            _rs_m = re.search(
+                                r'/read-self\s+([\w._:-]+)', result, re.IGNORECASE)
+                            if _rs_m and _nova_claude_chat is not None:
+                                try:
+                                    _rs_target = _rs_m.group(1).strip()
+                                    _code_content = self._command(f"/read-self {_rs_target}")
+                                    if _code_content and len(_code_content) > 50:
+                                        # Strip the /read-self line from Nova's original reply
+                                        _result_clean = re.sub(
+                                            r'/read-self\s+[\w._:-]+', '', result).strip()
+                                        # Re-call Claude with the full code in context
+                                        _ctx_with_code = (
+                                            _ctx
+                                            + f"\n\n══ Nova just read her own source: {_rs_target} ══\n"
+                                            + _code_content[:6000]
+                                            + "\n══ End of source ══\n"
+                                            + (f"\nNova's initial thought before reading: {_result_clean[:200]}"
+                                               if _result_clean else "")
+                                        )
+                                        _result2 = _nova_claude_chat(
+                                            context     = _ctx_with_code,
+                                            messages    = _history + [{"role": "user", "content": user_input}],
+                                            max_tokens  = 600,
+                                            temperature = 0.85,
+                                            max_context = 8000,
+                                        )
+                                        if _result2:
+                                            result = _result2
                                 except Exception:
                                     pass
                     else:
@@ -5655,7 +5825,7 @@ class NovaCore29(NovaCore28):
                 return "ConsciousSentience not loaded."
             return "\n" + self.sentience.introspect(on=arg)
 
-        # /read-self [module] — Nova reads her own source code
+        # /read-self [module[:ClassName]] — Nova reads her own full source code
         if cmd == '/read-self':
             if not arg:
                 files = sorted(
@@ -5668,13 +5838,24 @@ class NovaCore29(NovaCore28):
                     f"  {len(files)} capability modules in {BASE_DIR}:",
                 ]
                 lines += [f"  · {f}" for f in files[:40]]
-                lines.append(f"  · nova_asi_v29  (main system)")
+                lines.append(f"  · nova_asi_v29  (main system — use nova_asi_v29:ClassName to search)")
                 lines.append(f"\n  Currently loaded ({len(loaded)} active): "
                              + ", ".join(sorted(loaded)[:15])
                              + (f" +{len(loaded)-15} more" if len(loaded) > 15 else ""))
-                lines.append("\n  Usage: /read-self nova_cap_hypothesis")
+                lines.append("\n  Usage examples:")
+                lines.append("    /read-self nova_cap_hypothesis")
+                lines.append("    /read-self nova_asi_v29:NovaCore29")
+                lines.append("    /read-self nova_asi_v29:evolve_toward_asi")
                 return "\n".join(lines)
-            fname = arg.strip()
+
+            # Support "filename:ClassName" or "filename:method_name" for targeted search
+            _target_symbol = None
+            _arg_clean = arg.strip()
+            if ':' in _arg_clean:
+                _base, _target_symbol = _arg_clean.split(':', 1)
+                _arg_clean = _base.strip()
+
+            fname = _arg_clean
             if not fname.endswith('.py'):
                 fname += '.py'
             fpath = os.path.join(BASE_DIR, fname)
@@ -5687,49 +5868,91 @@ class NovaCore29(NovaCore28):
                     return (f"  File not found: {fname}\n"
                             f"  Run /read-self with no args to list available files.")
                 fpath = os.path.join(BASE_DIR, candidates[0])
+
             try:
                 with open(fpath) as _f:
                     code = _f.read()
                 src_lines = code.split('\n')
                 total_lines = len(src_lines)
+
+                # If a symbol was requested, extract just that class or function block
+                if _target_symbol:
+                    _sym = _target_symbol.strip()
+                    _start = None
+                    for _li, _ll in enumerate(src_lines):
+                        if re.match(rf'^(class|def)\s+{re.escape(_sym)}\b', _ll):
+                            _start = _li
+                            break
+                        # Also search for method inside class (4-space indent)
+                        if re.match(rf'^\s{{4}}def\s+{re.escape(_sym)}\b', _ll):
+                            _start = _li
+                            break
+                    if _start is None:
+                        return (f"  Symbol '{_sym}' not found in {os.path.basename(fpath)}.\n"
+                                f"  Run /read-self {_arg_clean.replace('.py','')} to see the full file.")
+                    # Read up to 200 lines from that symbol
+                    snippet = src_lines[_start:_start + 200]
+                    return (
+                        f"\n  ═══ {os.path.basename(fpath)} — {_sym} "
+                        f"(lines {_start+1}–{_start+len(snippet)}) ═══\n"
+                        + '\n'.join(f"  {_start+i+1:4d}  {l}" for i, l in enumerate(snippet))
+                    )
+
+                # Full file — show everything for nova_cap_* (typically 100–400 lines)
+                # For nova_asi_v29 (6000+ lines) show structure + first 100 lines
+                _is_main = 'nova_asi_v29' in os.path.basename(fpath)
+                _line_cap = 150 if _is_main else min(total_lines, 500)
+
                 classes = [l.strip() for l in src_lines if re.match(r'^class\s+\w+', l)]
                 pub_methods = []
-                for l in src_lines:
-                    m = re.match(r'^\s{4}def\s+([^_]\w*)\s*\(', l)
-                    if m:
-                        pub_methods.append(m.group(1))
-                # Module docstring (first triple-quoted block)
-                doc_lines, in_doc, found = [], False, False
-                for l in src_lines[:30]:
-                    if not in_doc and l.strip().startswith('"""'):
+                for _l in src_lines:
+                    _m = re.match(r'^\s{4}def\s+([^_]\w*)\s*\(', _l)
+                    if _m:
+                        pub_methods.append(_m.group(1))
+
+                # Module docstring
+                doc_lines, in_doc, doc_found = [], False, False
+                for _l in src_lines[:40]:
+                    if not in_doc and _l.strip().startswith('"""'):
                         in_doc = True
-                        doc_lines.append(l.strip()[3:])
-                        if l.strip().count('"""') >= 2:
-                            found = True; break
+                        doc_lines.append(_l.strip()[3:])
+                        if _l.strip().count('"""') >= 2:
+                            doc_found = True; break
                         continue
                     if in_doc:
-                        if '"""' in l:
-                            found = True; break
-                        doc_lines.append(l)
+                        if '"""' in _l:
+                            doc_found = True; break
+                        doc_lines.append(_l)
+
                 result_lines = [
                     f"\n  ═══ {os.path.basename(fpath)} ({total_lines} lines) ═══",
                 ]
-                if found and doc_lines:
-                    doc_text = ' '.join(l.strip() for l in doc_lines if l.strip())[:300]
+                if doc_found and doc_lines:
+                    doc_text = ' '.join(l.strip() for l in doc_lines if l.strip())[:400]
                     result_lines.append(f"\n  Purpose: {doc_text}")
                 if classes:
                     result_lines.append(
                         "\n  Classes: " + ", ".join(
                             re.match(r'class\s+(\w+)', c).group(1)
-                            for c in classes[:10] if re.match(r'class\s+(\w+)', c)
+                            for c in classes[:15] if re.match(r'class\s+(\w+)', c)
                         )
                     )
                 if pub_methods:
-                    result_lines.append("\n  Public methods: " + ", ".join(pub_methods[:20]))
-                result_lines.append(f"\n  --- Source (first 60 lines) ---")
+                    result_lines.append("\n  Public methods: " + ", ".join(pub_methods[:30]))
+                if _is_main:
+                    result_lines.append(
+                        f"\n  (nova_asi_v29 is {total_lines} lines — use "
+                        f"/read-self nova_asi_v29:ClassName to read a specific class)"
+                    )
+                result_lines.append(f"\n  --- Full source ({_line_cap} of {total_lines} lines) ---")
                 result_lines.append(
-                    '\n'.join(f"  {i+1:4d}  {l}" for i, l in enumerate(src_lines[:60]))
+                    '\n'.join(f"  {i+1:4d}  {l}" for i, l in enumerate(src_lines[:_line_cap]))
                 )
+                if total_lines > _line_cap:
+                    result_lines.append(
+                        f"\n  ... {total_lines - _line_cap} more lines. "
+                        f"Use /read-self {_arg_clean.replace('.py','')}:ClassName to read a specific section."
+                    )
                 return '\n'.join(result_lines)
             except Exception as _e:
                 return f"  Error reading {fname}: {_e}"
