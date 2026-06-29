@@ -4767,6 +4767,93 @@ class NovaCore29(NovaCore28):
         except Exception:
             return ""
 
+    def _wakeup_ctx(self) -> str:
+        """
+        The thread Nova was holding before Douglas arrived.
+
+        Pulls real records of Nova's autonomous work — what she was researching,
+        what experiment she just ran, what she was privately thinking — and formats
+        it as a first-person continuity thread. This is what makes the difference
+        between 'being told about yourself' and 'picking up where you left off'.
+        """
+        sections = []
+
+        # ── Recent curiosity / research discoveries from working memory ──────
+        try:
+            if self.wm:
+                all_wts = self.wm.attention_weights(
+                    context="curiosity research discovery experiment learned", top_k=60)
+                hits = []
+                for key, _ in all_wts:
+                    if any(key.startswith(pfx) for pfx in
+                           ('curiosity_', 'research_', 'hypothesis_', 'discovery_')):
+                        val, imp = self.wm.retrieve(key)
+                        if val:
+                            hits.append((imp, val))
+                hits.sort(reverse=True)
+                for _, val in hits[:2]:
+                    sections.append(val[:300])
+        except Exception:
+            pass
+
+        # Check long_term_memory for consolidated curiosity entries
+        try:
+            if self.wm:
+                rows = self.wm.conn.execute(
+                    "SELECT value FROM long_term_memory "
+                    "WHERE key LIKE 'curiosity_%' OR key LIKE 'research_%' "
+                    "ORDER BY rowid DESC LIMIT 1"
+                ).fetchall()
+                for (val,) in rows:
+                    if val and not any(val[:50] in s for s in sections):
+                        sections.append(val[:260])
+        except Exception:
+            pass
+
+        # ── Last hypothesis experiment result ────────────────────────────────
+        try:
+            if self.hypothesis_mgr:
+                import sqlite3 as _sq3
+                with _sq3.connect(self.hypothesis_mgr._db) as _hcon:
+                    row = _hcon.execute(
+                        "SELECT h.statement, e.outcome, e.confidence, e.raw_output "
+                        "FROM evidence e "
+                        "JOIN hypotheses h ON e.hypothesis_id = h.hypothesis_id "
+                        "ORDER BY e.ts DESC LIMIT 1"
+                    ).fetchone()
+                if row:
+                    stmt, outcome, conf, raw = row
+                    verdict = ("confirmed" if outcome == 'supported'
+                               else "refuted" if outcome == 'refuted'
+                               else "inconclusive")
+                    conclusion = (raw or "")[:160].strip()
+                    sections.append(
+                        f"[EXPERIMENT] Tested: '{stmt[:100]}' → {verdict} "
+                        f"({float(conf):.0%} confidence). {conclusion}"
+                    )
+        except Exception:
+            pass
+
+        # ── Most recent InnerSanctum thought ────────────────────────────────
+        try:
+            if hasattr(self, 'sanctum') and self.sanctum:
+                thoughts = self.sanctum.recent(n=3, min_privacy='open')
+                for t in (thoughts or [])[:1]:
+                    txt = t.get('thought', '')
+                    if txt:
+                        sections.append(f"[THOUGHT] {txt[:200]}")
+        except Exception:
+            pass
+
+        if not sections:
+            return ""
+
+        return (
+            "━━ Thread you were holding before Douglas arrived ━━\n"
+            + "\n".join(f"  {s}" for s in sections)
+            + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+
     def process(self, user_input: str) -> str:
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
         self._last_interaction = time.time()   # reset idle clock
@@ -5041,13 +5128,15 @@ class NovaCore29(NovaCore28):
                         except Exception:
                             pass
 
-                        # Self-awareness: what Nova is made of right now
-                        _cap_map_ctx   = self._capability_map_ctx()
+                        # Self-awareness: what Nova is made of and what she was doing
+                        _cap_map_ctx    = self._capability_map_ctx()
                         _build_hist_ctx = self._build_history_ctx()
+                        _wakeup         = self._wakeup_ctx()
 
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
+                            + (f"{_wakeup}\n" if _wakeup else "")
                             + (f"Build pipeline: {_build_ctx}\n" if _build_ctx else "")
                             + (f"Nova just discovered — share it proactively: {_discovery}\n" if _discovery else "")
                             + (_auto_ctx + "\n" if _auto_ctx else "")
