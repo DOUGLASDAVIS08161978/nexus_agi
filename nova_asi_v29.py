@@ -644,39 +644,53 @@ def _claude_codegen(system_prompt: str, user_prompt: str,
                     temp: float = 0.70, max_tokens: int = 4000) -> str:
     """
     Call Anthropic Claude API for code generation.
-    Returns the generated text, or a '[Claude error: ...]' string on failure.
+    Tries model fallback chain: Opus → Sonnet → Haiku.
+    Returns the generated text, or a '[Claude error: ...]' string if all fail.
     Uses urllib only — no anthropic package required.
     """
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:
         return ""
-    import urllib.request
-    payload = json.dumps({
-        "model":       CLAUDE_CODEGEN_MODEL,
-        "max_tokens":  max_tokens,
-        "temperature": temp,
-        "system":      system_prompt,
-        "messages":    [{"role": "user", "content": user_prompt}],
-    }).encode()
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=payload,
-        headers={
-            "x-api-key":         api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type":      "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = json.loads(resp.read())
-            return data["content"][0]["text"]
-    except urllib.error.HTTPError as e:        # type: ignore[attr-defined]
-        body = e.read().decode()[:300]
-        return f"[Claude error: {e.code} - {body}]"
-    except Exception as ex:
-        return f"[Claude error: {ex}]"
+    import urllib.request, urllib.error as _ue
+    _FALLBACK_CHAIN = [
+        CLAUDE_CODEGEN_MODEL,          # claude-opus-4-8 (best quality)
+        "claude-sonnet-4-6",           # excellent code, much cheaper
+        "claude-haiku-4-5-20251001",   # fast, still far better than Groq
+    ]
+    last_err = ""
+    for model in _FALLBACK_CHAIN:
+        payload = json.dumps({
+            "model":       model,
+            "max_tokens":  max_tokens,
+            "temperature": temp,
+            "system":      system_prompt,
+            "messages":    [{"role": "user", "content": user_prompt}],
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+                "x-api-key":         api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                data = json.loads(resp.read())
+                return data["content"][0]["text"]
+        except _ue.HTTPError as e:          # type: ignore[attr-defined]
+            body = e.read().decode()[:200]
+            last_err = f"{e.code} - {body}"
+            if e.code == 401:
+                return f"[Claude error: 401 - bad API key]"
+            # 404 model not found, 429 rate limit, 529 overloaded → try next
+            continue
+        except Exception as ex:
+            last_err = str(ex)
+            continue
+    return f"[Claude error: {last_err}]"
 
 
 def _using_claude() -> bool:
@@ -1465,6 +1479,26 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
             "5. Class name must be UNIQUE — do NOT reuse Memory, Planner, Monitor, Belief"
         )
 
+    def _master_prompt_groq(self, class_name: str, gap: str) -> str:
+        """Compact system prompt for Groq fallback — stays under token limits."""
+        return (
+            "You are a Python code generator for Nova ASI. Write a single Python class.\n\n"
+            "STRICT SYNTAX RULES (violations break everything):\n"
+            "1. Output ONLY valid Python. No markdown. No ``` fences.\n"
+            "2. Line 1: triple-quoted docstring opening \"\"\"\n"
+            "3. Line 2: one-line description\n"
+            "4. Line 3: closing \"\"\"\n"
+            f"5. Line 4: class {class_name}:\n"
+            "6. Every def must end with a colon. Every try: MUST have except Exception as e: pass\n"
+            "7. Close every triple-quoted string — never leave one open.\n"
+            "8. 60-80 lines total. Simple and correct beats complex and broken.\n"
+            "9. Last line: # Usage: obj = ClassName()\n\n"
+            f"Capability to implement: {gap[:300]}\n\n"
+            "Include: __init__(self), status(self)->dict, and 3-5 useful methods.\n"
+            "State: use a plain dict or sqlite3 for persistence.\n"
+            "Output ONLY the Python file. Start with the docstring right now."
+        )
+
     # ── 2. Sandbox Self-Test ───────────────────────────────────────────────────
 
     def _sandbox_test(self, code: str) -> Tuple[bool, Optional[str], str]:
@@ -1846,12 +1880,18 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                     "  → Restart Nova"))
                 break
 
-            # Claude rate/credit error — fall back to Groq for this pass
+            # Claude unavailable — fall back to Groq with a compact prompt
+            # (full master_prompt is too large for Groq's token window)
             if '[Claude error:' in raw_str:
                 safe_print(col('YL', f"  ↻ Claude unavailable (pass {n}) — falling back to Groq..."))
+                _cm2 = re.search(r'class\s+(\w+)', _last_broken_code)
+                _gname = (_cm2.group(1) if _cm2 else
+                          ''.join(w.title() for w in
+                                  re.sub(r'[^a-z ]', '', gap.lower()).split()[:3]) + "Engine")
+                _groq_sys = self._master_prompt_groq(_gname, enriched_gap)
                 raw     = safe_chat(CODEGEN_MODEL, [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": curr_user},
+                    {"role": "system", "content": _groq_sys},
+                    {"role": "user",   "content": f"Write the Python class now. Start with the docstring."},
                 ], temp=temp, mt=1400)
                 raw_str = raw or ""
 
@@ -2411,6 +2451,36 @@ class SelfImprovementEngineV29(SelfImprovementEngineV28):
                 f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
                 f"INTELLIGENCE MARKER: {spec['marker']}"
             )
+
+        # ── Priority 2c: Nova's own will — what SHE wants built next ─────
+        # Check AutonomousWill agenda and recent curiosity research to let
+        # Nova's own desires steer the build direction.
+        if not chosen_name and nova_instance is not None:
+            try:
+                _will = getattr(nova_instance, 'autonomous_will', None)
+                if _will:
+                    _agenda = _will.status().get('agenda', [])
+                    for _item in (_agenda or [])[:3]:
+                        _item_text = str(_item)[:120].lower()
+                        # See if any agenda item points to an uncovered spec
+                        for key in uncovered:
+                            if any(w in _item_text for w in key.replace('_', ' ').split()):
+                                spec = self._ASI_SPECS[key]
+                                chosen_name = key.replace('_', ' ').title()
+                                chosen_desc = (
+                                    f"Capability: {chosen_name}\n\n"
+                                    f"COGNITIVE PATTERN: {spec['pattern']}\n\n"
+                                    f"REQUIRED METHODS: {spec['methods']}\n\n"
+                                    f"ALGORITHM TO IMPLEMENT: {spec['algorithm']}\n\n"
+                                    f"INTELLIGENCE MARKER: {spec['marker']}\n\n"
+                                    f"NOVA'S WILL: She chose this — it aligns with her agenda: {_item_text[:80]}"
+                                )
+                                safe_print(col('CYB', f"  ✦  Nova's will: building '{chosen_name}'"))
+                                break
+                        if chosen_name:
+                            break
+            except Exception:
+                pass
 
         # ── Priority 3: Nova invents something new ─────────────────────
         if not chosen_name:
