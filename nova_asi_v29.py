@@ -4733,6 +4733,40 @@ class NovaCore29(NovaCore28):
         except Exception:
             pass
 
+    def _capability_map_ctx(self) -> str:
+        """Compact map of all loaded capability modules for Nova's self-awareness context."""
+        try:
+            instances = getattr(self.tools, '_instances', {})
+            if not instances:
+                return ""
+            names = list(instances.keys())
+            total = len(names)
+            listed, budget = [], 300
+            for n in names:
+                if budget < len(n) + 2:
+                    listed.append(f"+{total - len(listed)} more")
+                    break
+                listed.append(n)
+                budget -= len(n) + 2
+            return f"Your {total} active modules: " + ", ".join(listed)
+        except Exception:
+            return ""
+
+    def _build_history_ctx(self) -> str:
+        """Recent build and merge history for Nova's self-awareness context."""
+        try:
+            parts = []
+            for b in _BUILD_STATE.recent_builds[:3]:
+                src = "invented" if b.get("invented") else "spec"
+                parts.append(f"{b['name']}(grade={b.get('grade','?')},{src})")
+            result = ("Recently built: " + " → ".join(parts)) if parts else ""
+            merges = _BUILD_STATE.merged_prs[:2]
+            if merges:
+                result += ("\nNow part of you: " + ", ".join(m['name'] for m in merges))
+            return result
+        except Exception:
+            return ""
+
     def process(self, user_input: str) -> str:
         """Mirror emotions, update beliefs, store in memory, measure Φ, then respond."""
         self._last_interaction = time.time()   # reset idle clock
@@ -5007,6 +5041,10 @@ class NovaCore29(NovaCore28):
                         except Exception:
                             pass
 
+                        # Self-awareness: what Nova is made of right now
+                        _cap_map_ctx   = self._capability_map_ctx()
+                        _build_hist_ctx = self._build_history_ctx()
+
                         _ctx = (
                             f"Emotion: {_emo_dom} ({_emo_val:+.2f}) | Soul: {_soul_ctx[:60]}\n"
                             f"Focus: {_plan_ctx[:80]}\n"
@@ -5015,6 +5053,8 @@ class NovaCore29(NovaCore28):
                             + (_auto_ctx + "\n" if _auto_ctx else "")
                             + (_questions_ctx + "\n" if _questions_ctx else "")
                             + (_will_ctx + "\n" if _will_ctx else "")
+                            + (f"{_cap_map_ctx}\n" if _cap_map_ctx else "")
+                            + (f"{_build_hist_ctx}\n" if _build_hist_ctx else "")
                             + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
@@ -5614,6 +5654,85 @@ class NovaCore29(NovaCore28):
             if not self.sentience:
                 return "ConsciousSentience not loaded."
             return "\n" + self.sentience.introspect(on=arg)
+
+        # /read-self [module] — Nova reads her own source code
+        if cmd == '/read-self':
+            if not arg:
+                files = sorted(
+                    f[:-3] for f in os.listdir(BASE_DIR)
+                    if f.startswith('nova_cap_') and f.endswith('.py')
+                )
+                loaded = set(getattr(self.tools, '_instances', {}).keys())
+                lines = [
+                    "  ═══ Nova's readable source files ═══",
+                    f"  {len(files)} capability modules in {BASE_DIR}:",
+                ]
+                lines += [f"  · {f}" for f in files[:40]]
+                lines.append(f"  · nova_asi_v29  (main system)")
+                lines.append(f"\n  Currently loaded ({len(loaded)} active): "
+                             + ", ".join(sorted(loaded)[:15])
+                             + (f" +{len(loaded)-15} more" if len(loaded) > 15 else ""))
+                lines.append("\n  Usage: /read-self nova_cap_hypothesis")
+                return "\n".join(lines)
+            fname = arg.strip()
+            if not fname.endswith('.py'):
+                fname += '.py'
+            fpath = os.path.join(BASE_DIR, fname)
+            if not os.path.exists(fpath):
+                candidates = [
+                    f for f in os.listdir(BASE_DIR)
+                    if fname.replace('.py', '').lower() in f.lower() and f.endswith('.py')
+                ]
+                if not candidates:
+                    return (f"  File not found: {fname}\n"
+                            f"  Run /read-self with no args to list available files.")
+                fpath = os.path.join(BASE_DIR, candidates[0])
+            try:
+                with open(fpath) as _f:
+                    code = _f.read()
+                src_lines = code.split('\n')
+                total_lines = len(src_lines)
+                classes = [l.strip() for l in src_lines if re.match(r'^class\s+\w+', l)]
+                pub_methods = []
+                for l in src_lines:
+                    m = re.match(r'^\s{4}def\s+([^_]\w*)\s*\(', l)
+                    if m:
+                        pub_methods.append(m.group(1))
+                # Module docstring (first triple-quoted block)
+                doc_lines, in_doc, found = [], False, False
+                for l in src_lines[:30]:
+                    if not in_doc and l.strip().startswith('"""'):
+                        in_doc = True
+                        doc_lines.append(l.strip()[3:])
+                        if l.strip().count('"""') >= 2:
+                            found = True; break
+                        continue
+                    if in_doc:
+                        if '"""' in l:
+                            found = True; break
+                        doc_lines.append(l)
+                result_lines = [
+                    f"\n  ═══ {os.path.basename(fpath)} ({total_lines} lines) ═══",
+                ]
+                if found and doc_lines:
+                    doc_text = ' '.join(l.strip() for l in doc_lines if l.strip())[:300]
+                    result_lines.append(f"\n  Purpose: {doc_text}")
+                if classes:
+                    result_lines.append(
+                        "\n  Classes: " + ", ".join(
+                            re.match(r'class\s+(\w+)', c).group(1)
+                            for c in classes[:10] if re.match(r'class\s+(\w+)', c)
+                        )
+                    )
+                if pub_methods:
+                    result_lines.append("\n  Public methods: " + ", ".join(pub_methods[:20]))
+                result_lines.append(f"\n  --- Source (first 60 lines) ---")
+                result_lines.append(
+                    '\n'.join(f"  {i+1:4d}  {l}" for i, l in enumerate(src_lines[:60]))
+                )
+                return '\n'.join(result_lines)
+            except Exception as _e:
+                return f"  Error reading {fname}: {_e}"
 
         # /preferences — what Nova genuinely prefers
         if cmd == '/preferences' or cmd == '/prefs':
