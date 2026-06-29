@@ -5,11 +5,11 @@ Generated via /build · v29 pipeline · 2026-06-28
 """
 
 """
-Self-Scheduler: Adaptive evolution cycle orchestrator for Nova's autonomous growth.
-Nova decides when to run her own evolution cycles based on live performance trends.
-Implements adaptive interval scheduling with Bayesian error tracking, performance trending,
-and autonomous daemon operation. Persists all state to SQLite for restart resilience.
-Integrates with HierarchicalGoalPlanner, MetacognitiveMonitor, and WorkingMemory.
+Self Scheduler — Nova's autonomous evolution pacing engine.
+Adapts cycle intervals based on live performance trends without human intervention.
+Implements Bayesian error tracking, rolling improvement windows, and persistent scheduling.
+Satisfies pillars: ② causal modeling, ③ online learning, ④ calibration, ⑥ self-monitoring,
+⑦ goal-directed, ⑧ feedback loop, ⑪ mathematical rigor, ⑫ uncertainty quantification, ⑬ autonomous.
 """
 
 import sqlite3
@@ -17,130 +17,120 @@ import threading
 import time
 import math
 import statistics
-import json
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional
 
 
 class SelfScheduler:
-    """Adaptive self-scheduling engine: Nova autonomously decides when to evolve."""
+    """
+    Adaptive self-scheduling engine: Nova autonomously decides when to run evolution cycles
+    based on live performance trends. No human intervention required after initialization.
+    """
 
     def __init__(self) -> None:
-        """Initialize scheduler with SQLite persistence, daemon thread, and state."""
+        """Initialize scheduler with persistent SQLite store and daemon thread."""
         self._lock = threading.Lock()
         self._db_path = "nova_self_scheduler.db"
         self._init_db()
-
-        # In-memory state (synced to DB)
-        self._cycle_log: OrderedDict[float, Dict[str, Any]] = OrderedDict()
-        self._performance_window: List[float] = []  # Last 30 scores
-        self._error_window: List[int] = []  # Last 20 error flags (0/1)
-        self._credits: float = 100.0  # Cognitive budget for cycles
-        self._last_schedule_time: float = time.time()
-        self._next_cycle_time: float = time.time() + 600  # Start in 10 min
-        self._base_interval_s: float = 600.0
-        self._daemon_running: bool = False
-
-        self._load_from_db()
-        self._start_daemon()
+        
+        # In-memory rolling windows (20-cycle window for error/improvement tracking)
+        self._error_window: OrderedDict[int, float] = OrderedDict()
+        self._score_window: OrderedDict[int, float] = OrderedDict()
+        self._cycle_count = 0
+        self._last_scheduled_time = time.time()
+        
+        # Adaptive interval parameters
+        self._base_interval_s = 600.0  # 10 minutes baseline
+        self._min_interval_s = 600.0   # 10 minutes floor
+        self._max_interval_s = 14400.0 # 4 hours ceiling
+        self._current_interval_s = self._base_interval_s
+        
+        # Daemon thread for autonomous cycling
+        self._running = True
+        self._daemon = threading.Thread(target=self._auto_cycle_loop, daemon=True)
+        self._daemon.start()
 
     def _init_db(self) -> None:
-        """Create SQLite schema if not exists."""
-        with sqlite3.connect(self._db_path) as conn:
-            conn.execute("""
+        """Initialize SQLite schema for persistent scheduling state."""
+        try:
+            conn = sqlite3.connect(self._db_path)
+            c = conn.cursor()
+            c.execute("""
                 CREATE TABLE IF NOT EXISTS cycles (
-                    id INTEGER PRIMARY KEY,
-                    timestamp REAL,
-                    outcome_score REAL,
-                    duration_s REAL,
-                    error_flag INTEGER,
-                    quality_delta REAL
+                    cycle_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL NOT NULL,
+                    outcome_score REAL NOT NULL,
+                    duration_s REAL NOT NULL,
+                    error_rate REAL NOT NULL,
+                    interval_s REAL NOT NULL,
+                    readiness_flag INTEGER NOT NULL
                 )
             """)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS schedule_state (
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS schedule (
                     key TEXT PRIMARY KEY,
-                    value TEXT
+                    next_cycle_time REAL NOT NULL,
+                    current_interval_s REAL NOT NULL,
+                    last_updated REAL NOT NULL
                 )
             """)
             conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(f"[SelfScheduler] DB init error: {e}")
 
-    def _load_from_db(self) -> None:
-        """Restore cycle history and schedule state from SQLite."""
-        with sqlite3.connect(self._db_path) as conn:
-            # Load cycle log
-            rows = conn.execute(
-                "SELECT timestamp, outcome_score, duration_s, error_flag, quality_delta "
-                "FROM cycles ORDER BY timestamp DESC LIMIT 50"
-            ).fetchall()
-
-            for ts, score, dur, err, delta in reversed(rows):
-                self._cycle_log[ts] = {
-                    "score": score,
-                    "duration_s": dur,
-                    "error": err,
-                    "quality_delta": delta
-                }
-                if len(self._performance_window) < 30:
-                    self._performance_window.append(score)
-                if len(self._error_window) < 20:
-                    self._error_window.append(err)
-
-            # Load schedule state
-            state_rows = conn.execute(
-                "SELECT key, value FROM schedule_state"
-            ).fetchall()
-            for key, val in state_rows:
-                if key == "credits":
-                    self._credits = float(val)
-                elif key == "next_cycle_time":
-                    self._next_cycle_time = float(val)
-                elif key == "base_interval_s":
-                    self._base_interval_s = float(val)
-
-    def _save_to_db(self) -> None:
-        """Persist cycle log and schedule state to SQLite."""
-        with sqlite3.connect(self._db_path) as conn:
-            # Prune old cycles (keep last 100)
-            all_ts = list(self._cycle_log.keys())
-            if len(all_ts) > 100:
-                for old_ts in all_ts[:-100]:
-                    conn.execute("DELETE FROM cycles WHERE timestamp = ?", (old_ts,))
-
-            # Save schedule state
-            conn.execute("DELETE FROM schedule_state")
-            conn.execute(
-                "INSERT INTO schedule_state (key, value) VALUES (?, ?)",
-                ("credits", str(self._credits))
-            )
-            conn.execute(
-                "INSERT INTO schedule_state (key, value) VALUES (?, ?)",
-                ("next_cycle_time", str(self._next_cycle_time))
-            )
-            conn.execute(
-                "INSERT INTO schedule_state (key, value) VALUES (?, ?)",
-                ("base_interval_s", str(self._base_interval_s))
-            )
-            conn.commit()
-
-    def _start_daemon(self) -> None:
-        """Start background daemon thread for autonomous scheduling."""
-        if self._daemon_running:
-            return
-        self._daemon_running = True
-        daemon = threading.Thread(target=self._daemon_loop, daemon=True)
-        daemon.start()
-
-    def _daemon_loop(self) -> None:
-        """Background loop: check readiness, propose cycles, update schedule."""
-        while self._daemon_running:
+    def _auto_cycle_loop(self) -> None:
+        """
+        Daemon thread: autonomously checks readiness and schedules next cycle.
+        Runs every 30 seconds, proposes evolution when conditions align.
+        """
+        while self._running:
             try:
-                time.sleep(30)  # Check every 30 seconds
-                now = time.time()
+                time.sleep(30)
+                with self._lock:
+                    if self.assess_readiness():
+                        # Propose next evolution cycle to HierarchicalGoalPlanner
+                        self._propose_evolution_goal()
+            except Exception as e:
+                print(f"[SelfScheduler] daemon error: {e}")
 
-                if now >= self._next_cycle_time and self.assess_readiness():
-                    # Propose evolution cycle to goal planner
-                    self._propose_cycle()
-            except Exception:
-                pass
+    def _propose_evolution_goal(self) -> None:
+        """
+        Internal: propose an evolution goal to HierarchicalGoalPlanner.
+        Integrates with Nova's goal system to drive autonomous self-improvement.
+        """
+        try:
+            from HierarchicalGoalPlanner import HierarchicalGoalPlanner
+            planner = HierarchicalGoalPlanner()
+            interval = self.optimal_interval_s()
+            priority = 0.8 if self.performance_trend() > 0.05 else 0.5
+            planner.add_goal(
+                f"Run evolution cycle (interval={interval:.0f}s, trend={self.performance_trend():.3f})",
+                priority
+            )
+        except ImportError:
+            pass  # HierarchicalGoalPlanner not available in this context
+        except Exception as e:
+            print(f"[SelfScheduler] goal proposal error: {e}")
+
+    def schedule_next(self, current_quality: float) -> float:
+        """
+        Compute next cycle interval based on current quality and historical trends.
+        Returns: next interval in seconds (clamped to [min, max]).
+        
+        Algorithm: next_s = base_s * exp(error_rate - improvement_rate)
+        improvement_rate = (score_now - score_30_ago) / 30
+        error_rate = syntax_failures / max(total_attempts, 1)
+        """
+        with self._lock:
+            # Record current score
+            self._score_window[self._cycle_count] = current_quality
+            if len(self._score_window) > 20:
+                oldest_key = next(iter(self._score_window))
+                del self._score_window[oldest_key]
+            
+            # Compute improvement_rate over 30-cycle window (or available history)
+            if len(self._score_window) >= 2:
+                scores = list(self._score_window.values())
+                improvement_rate = (scores[-1] - scores[0]) / max
