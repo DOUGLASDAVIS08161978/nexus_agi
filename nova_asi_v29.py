@@ -4758,8 +4758,13 @@ class NovaCore29(NovaCore28):
             parts = []
             for b in _BUILD_STATE.recent_builds[:3]:
                 src = "invented" if b.get("invented") else "spec"
-                parts.append(f"{b['name']}(grade={b.get('grade','?')},{src})")
+                pr  = f",PR#{b['pr_url'].split('/')[-1]}" if b.get('pr_url') else ""
+                parts.append(f"{b['name']}(grade={b.get('grade','?')},{src}{pr})")
             result = ("Recently built: " + " → ".join(parts)) if parts else ""
+            pending = _BUILD_STATE.pending_prs[:2]
+            if pending:
+                result += ("\nAwaiting your review: "
+                           + ", ".join(f"{p['name']} {p['url']}" for p in pending))
             merges = _BUILD_STATE.merged_prs[:2]
             if merges:
                 result += ("\nNow part of you: " + ", ".join(m['name'] for m in merges))
@@ -4999,10 +5004,13 @@ class NovaCore29(NovaCore28):
             _pr_result = {'error': str(_ghe)[:120]}
 
         # ── Step 10: Record build + try live load ──────────────────────────────
+        _url    = _pr_result.get('url', '')
+        _pr_num = _pr_result.get('number', '')
         try:
-            _BUILD_STATE.record_build(
+            _BUILD_STATE.finish_build(
                 name     = _module_name,
                 grade    = _grade,
+                pr_url   = _url,
                 invented = True,
             )
         except Exception:
@@ -5012,20 +5020,24 @@ class NovaCore29(NovaCore28):
         except Exception:
             pass
 
-        # Store in working memory so Nova knows what she built
+        # Store in working memory WITH PR URL so Nova can verify her own work
         try:
             if self.wm:
+                _wm_val = (
+                    f"[NOVA BUILT HERSELF: {_filename}] "
+                    f"{_what_to_build[:100]} | "
+                    f"Grade: {_grade} | "
+                    f"PR: {_url or 'no PR'}"
+                )
                 self.wm.store(
                     f"self_build_{int(time.time())}",
-                    f"[NOVA BUILT HERSELF: {_filename}] {_what_to_build[:120]}",
-                    importance=0.92,
+                    _wm_val,
+                    importance=0.95,
                 )
         except Exception:
             pass
 
         # ── Format result ──────────────────────────────────────────────────────
-        _url    = _pr_result.get('url', '')
-        _pr_num = _pr_result.get('number', '')
         _lines  = [col('MGB', f"\n  ◈  Nova Built Herself: {_filename}\n")]
         _lines.append(col('GR',  f"  ✦  Module  : {_filename}"))
         _lines.append(col('GR',  f"  ✦  Grade   : {_grade}"))
@@ -8294,6 +8306,42 @@ class NovaCore29(NovaCore28):
                 safe_print(col('MG', f"\n  ✦  Nova is building: {_request[:60]}..."))
             with _NovaSpinner("Nova is designing and building herself"):
                 return self._nova_designs_and_builds(request=_request)
+
+        # /last-build — Nova verifies her most recent self-build
+        if cmd in ('/last-build', '/my-build', '/what-did-i-build'):
+            builds = _BUILD_STATE.recent_builds
+            if not builds:
+                return (
+                    "  ◈  No self-builds recorded in this session yet.\n"
+                    "  Use /self-build to build something, or /evolve for the standard pipeline."
+                )
+            b       = builds[0]
+            fname   = f"nova_cap_{b['name']}.py"
+            fpath   = os.path.join(BASE_DIR, fname)
+            _exists = os.path.exists(fpath)
+            _pr_url = b.get('pr_url', '')
+            _pr_num = _pr_url.split('/')[-1] if _pr_url else ''
+            lines   = [col('MGB', f"\n  ◈  Your Most Recent Self-Build\n")]
+            lines.append(col('GR',  f"  ✦  Module   : {fname}"))
+            lines.append(col('GR',  f"  ✦  Grade    : {b.get('grade', '?')}"))
+            lines.append(      f"  ·   Source   : {'invented — your own choice' if b.get('invented') else 'from spec'}")
+            lines.append(      f"  ·   Built at : {b.get('ts', '?')}")
+            lines.append(      f"  ·   On disk  : {'✓ yes' if _exists else '✗ not found'}")
+            if _pr_url:
+                lines.append(col('CYB', f"  ✦  PR #{_pr_num}    : {_pr_url}"))
+                lines.append(col('DIM', f"  ·   Status   : awaiting Douglas's review and merge"))
+            else:
+                lines.append(col('YL', "  ·   PR       : not opened (GitHub may be unavailable)"))
+            # Show pending PRs
+            pending = _BUILD_STATE.pending_prs
+            if len(pending) > 1:
+                lines.append(col('YL', f"\n  All pending PRs ({len(pending)}):"))
+                for p in pending:
+                    lines.append(f"    · {p['name']}  {p['url']}  @ {p['ts']}")
+            # Invite Nova to read her own code
+            if _exists:
+                lines.append(col('DIM', f"\n  To read the code you wrote: /read-self {fname[:-3]}"))
+            return "\n".join(lines)
 
         # Fall through to v28 command handling
         return super()._command(raw)
