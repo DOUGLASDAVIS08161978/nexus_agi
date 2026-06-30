@@ -4950,16 +4950,46 @@ class NovaCore29(NovaCore28):
         if not _code:
             return "Code generation failed — both Claude and Groq returned nothing."
 
-        # Strip markdown fences if the model wrapped anyway
-        _code = re.sub(r'^```(?:python)?\s*\n?', '', _code.strip())
-        _code = re.sub(r'\n?```\s*$', '',          _code.strip())
+        def _clean_and_patch(raw: str) -> str:
+            """Apply the same cleaning pipeline /evolve uses."""
+            c = self.improver._clean(raw)
+            c = self.improver._auto_patch_syntax(c)
+            c = self.improver._auto_patch_missing_methods(c)
+            return c
 
-        # ── Step 4: Syntax validation ──────────────────────────────────────────
-        try:
-            import ast as _ast
-            _ast.parse(_code)
-        except SyntaxError as _se:
-            return f"Nova's code has a syntax error: {_se} — try /self-build again"
+        _code = _clean_and_patch(_code)
+
+        # ── Step 4: Syntax validation — retry once with Groq repair prompt ─────
+        import ast as _ast
+        _syntax_ok = False
+        for _attempt in range(2):
+            try:
+                _ast.parse(_code)
+                _syntax_ok = True
+                break
+            except SyntaxError as _se:
+                if _attempt == 0:
+                    # One repair pass: feed the error back to Groq
+                    safe_print(col('YL',
+                        f"  ↻  Syntax error (attempt 1): {str(_se)[:60]} — repairing..."))
+                    _repair_sys = (
+                        "You are a Python syntax repair bot. Fix ALL syntax errors. "
+                        "Output ONLY valid Python. No markdown. No explanation."
+                    )
+                    _repair_user = (
+                        f"Fix this Python code — syntax error: {_se}\n\n"
+                        f"CODE TO FIX:\n{_code[:3000]}"
+                    )
+                    _fixed = safe_chat(CODEGEN_MODEL, [
+                        {"role": "system", "content": _repair_sys},
+                        {"role": "user",   "content": _repair_user},
+                    ], temp=0.2, mt=1600) or ""
+                    if _fixed:
+                        _code = _clean_and_patch(_fixed)
+                else:
+                    return f"Nova's code still has a syntax error after repair: {_se}"
+        if not _syntax_ok:
+            return "Syntax repair failed — try /self-build again"
 
         # ── Step 5: Sandbox test ───────────────────────────────────────────────
         _passed, _class_name, _test_msg = self.improver._sandbox_test(_code)
