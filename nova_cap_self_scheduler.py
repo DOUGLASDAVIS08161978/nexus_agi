@@ -6,312 +6,286 @@ Generated via /build · v29 pipeline · 2026-06-30
 
 """
 AdaptiveScheduler — Nova's self-pacing evolution engine.
-Decides when to run her own growth cycles based on live performance trends.
-No human input required after __init__. Persists schedule across restarts.
+Decides autonomously when to run growth cycles based on live performance trends.
+No human input required after __init__. Survives restarts via SQLite persistence.
 """
-
+import collections
 import math
+import os
 import sqlite3
 import statistics
 import threading
 import time
-from collections import deque, OrderedDict
 from typing import Any
+
+DB_PATH = "nova_scheduler.db"
 
 
 class AdaptiveScheduler:
-    """Nova self-schedules her own evolution cycles using adaptive interval math."""
+    """Nova's adaptive self-scheduling engine: paces her own evolution without human tuning."""
 
     def __init__(self) -> None:
-        """Initialise state, restore from SQLite, launch daemon thread."""
         self._base_s: float = 3600.0
-        self._scores: deque = deque(maxlen=30)
-        self._attempts: deque = deque(maxlen=20)
-        self._credits: int = 10
-        self._cycle_log: list = []
-        self._db_path: str = "nova_scheduler.db"
+        self._min_s: float = 600.0
+        self._max_s: float = 14400.0
+        self._score_history: collections.deque = collections.deque(maxlen=60)
+        self._attempt_window: collections.deque = collections.deque(maxlen=20)
+        self._next_run_ts: float = time.time()
+        self._cycle_count: int = 0
+        self._credits: float = 10.0
+        self._credit_regen_rate: float = 1.0
+        self._last_credit_ts: float = time.time()
+        self._db_path: str = DB_PATH
         self._lock: threading.Lock = threading.Lock()
         self._running: bool = True
-        self._next_run_ts: float = time.time() + self._base_s
         self._init_db()
+        self._load_state()
         self._daemon_thread: threading.Thread = threading.Thread(
-            target=self._daemon_loop, daemon=True, name="AdaptiveSchedulerDaemon"
+            target=self._daemon_loop, daemon=True, name="AdaptiveScheduler-daemon"
         )
         self._daemon_thread.start()
 
+    # ── persistence ──────────────────────────────────────────────────────────
+
     def _init_db(self) -> None:
-        """Creates SQLite tables if absent; restores next_run_ts and credits from last row."""
-        try:
-            conn = sqlite3.connect(self._db_path)
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS cycles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp REAL,
-                    outcome TEXT,
-                    duration_s REAL,
-                    error_rate REAL,
-                    improvement_rate REAL,
-                    next_s REAL,
-                    quality_score REAL DEFAULT 0.5
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS scheduler_state (
-                    id INTEGER PRIMARY KEY CHECK (id=1),
-                    next_run_ts REAL,
-                    credits INTEGER
-                )
-            """)
+        with sqlite3.connect(self._db_path) as conn:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS scheduler_state
+                   (key TEXT PRIMARY KEY, value REAL)"""
+            )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS cycles
+                   (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ts REAL, outcome INTEGER, duration_s REAL)"""
+            )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS score_history
+                   (ts REAL, quality REAL)"""
+            )
             conn.commit()
-            row = cur.execute(
-                "SELECT next_run_ts, credits FROM scheduler_state WHERE id=1"
-            ).fetchone()
-            if row:
-                restored_ts, restored_credits = row
-                if restored_ts > time.time():
-                    self._next_run_ts = restored_ts
-                self._credits = max(0, restored_credits)
-            rows = cur.execute(
-                "SELECT timestamp, quality_score FROM cycles ORDER BY timestamp DESC LIMIT 30"
-            ).fetchall()
-            for ts, qs in reversed(rows):
-                self._scores.append((ts, qs))
-            conn.close()
-        except sqlite3.Error as exc:
-            pass  # first boot; tables will be created fresh
+
+    def _load_state(self) -> None:
+        try:
+            with sqlite3.connect(self._db_path) as conn:
+                rows = {r[0]: r[1] for r in conn.execute("SELECT key, value FROM scheduler_state")}
+                if "next_run_ts" in rows:
+                    self._next_run_ts = rows["next_run_ts"]
+                if "cycle_count" in rows:
+                    self._cycle_count = int(rows["cycle_count"])
+                if "credits" in rows:
+                    self._credits = rows["credits"]
+                if "last_credit_ts" in rows:
+                    self._last_credit_ts = rows["last_credit_ts"]
+                for ts, q in conn.execute(
+                    "SELECT ts, quality FROM score_history ORDER BY ts DESC LIMIT 60"
+                ):
+                    self._score_history.appendleft((ts, q))
+                for (outcome,) in conn.execute(
+                    "SELECT outcome FROM cycles ORDER BY id DESC LIMIT 20"
+                ):
+                    self._attempt_window.appendleft(bool(outcome))
+        except sqlite3.Error:
+            pass
 
     def _persist_state(self) -> None:
-        """Writes next_run_ts and credits to scheduler_state table atomically."""
         try:
-            conn = sqlite3.connect(self._db_path)
-            conn.execute("""
-                INSERT INTO scheduler_state (id, next_run_ts, credits)
-                VALUES (1, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET next_run_ts=excluded.next_run_ts,
-                                               credits=excluded.credits
-            """, (self._next_run_ts, self._credits))
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(self._db_path) as conn:
+                for k, v in [
+                    ("next_run_ts", self._next_run_ts),
+                    ("cycle_count", float(self._cycle_count)),
+                    ("credits", self._credits),
+                    ("last_credit_ts", self._last_credit_ts),
+                ]:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO scheduler_state(key,value) VALUES(?,?)", (k, v)
+                    )
+                conn.commit()
         except sqlite3.Error:
             pass
 
-    def _compute_rates(self) -> tuple:
-        """Returns (error_rate, improvement_rate) from current rolling windows."""
-        with self._lock:
-            attempts_snap = list(self._attempts)
-            scores_snap = list(self._scores)
-        error_rate = sum(1 for s in attempts_snap if not s) / max(len(attempts_snap), 1)
-        if len(scores_snap) >= 2:
-            first_score = scores_snap[0][1]
-            last_score = scores_snap[-1][1]
-            denom = max(len(scores_snap) - 1, 1)
-            improvement_rate = (last_score - first_score) / denom
-        else:
-            improvement_rate = 0.0
-        return error_rate, improvement_rate
+    # ── credit regeneration ───────────────────────────────────────────────────
 
-    def _adaptive_interval(self, error_rate: float, improvement_rate: float) -> float:
-        """Returns clamped adaptive interval in seconds."""
+    def _regen_credits(self) -> None:
+        elapsed_hours = (time.time() - self._last_credit_ts) / 3600.0
+        self._credits = min(10.0, self._credits + elapsed_hours * self._credit_regen_rate)
+        self._last_credit_ts = time.time()
+
+    # ── core algorithm helpers ────────────────────────────────────────────────
+
+    def _compute_rates(self) -> tuple[float, float]:
+        scores = [s for (_, s) in list(self._score_history)]
+        score_now = scores[-1] if scores else 0.0
+        score_30_ago = scores[-30] if len(scores) >= 30 else (scores[0] if scores else 0.0)
+        improvement_rate = (score_now - score_30_ago) / 30.0
+        error_rate = sum(1 for x in self._attempt_window if not x) / max(len(self._attempt_window), 1)
+        return improvement_rate, error_rate
+
+    def _adaptive_interval(self, improvement_rate: float, error_rate: float) -> float:
         raw = self._base_s * math.exp(error_rate - improvement_rate)
-        return max(600.0, min(14400.0, raw))
+        return max(self._min_s, min(self._max_s, raw))
+
+    # ── public methods ────────────────────────────────────────────────────────
 
     def schedule_next(self, current_quality: float) -> float:
-        """Records quality, recomputes adaptive interval, persists; returns next_s in seconds."""
-        now = time.time()
+        """Records quality score, recomputes adaptive interval, persists next_run_ts; returns seconds until next cycle."""
         with self._lock:
-            self._scores.append((now, current_quality))
-        error_rate, improvement_rate = self._compute_rates()
-        next_s = self._adaptive_interval(error_rate, improvement_rate)
-        with self._lock:
-            self._next_run_ts = now + next_s
-        self._persist_state()
-        try:
-            from metacognitive_monitor import MetacognitiveMonitor
-            MetacognitiveMonitor().log_reasoning(
-                "scheduler", "adaptive_interval", 1.0 - error_rate, improvement_rate > 0
-            )
-        except Exception:
-            pass
-        return next_s
+            now = time.time()
+            self._score_history.append((now, current_quality))
+            try:
+                with sqlite3.connect(self._db_path) as conn:
+                    conn.execute("INSERT INTO score_history(ts,quality) VALUES(?,?)", (now, current_quality))
+                    conn.commit()
+            except sqlite3.Error:
+                pass
+            improvement_rate, error_rate = self._compute_rates()
+            interval = self._adaptive_interval(improvement_rate, error_rate)
+            self._next_run_ts = now + interval
+            self._persist_state()
+            try:
+                from nova_tools import MetacognitiveMonitor
+                MetacognitiveMonitor().log_reasoning(
+                    "AdaptiveScheduler", "schedule_next",
+                    confidence=max(0.0, 1.0 - error_rate), success=True
+                )
+            except Exception:
+                pass
+            return interval
 
     def assess_readiness(self) -> bool:
-        """Returns True iff performance trend slope is positive AND credits remain."""
-        slope = self.performance_trend()
+        """Returns True iff performance trend slope > 0 and credits >= 1.0 after regeneration."""
         with self._lock:
-            credits = self._credits
-        return slope > 0.0 and credits > 0
+            self._regen_credits()
+            slope = self._performance_trend_locked()
+            return slope > 0.0 and self._credits >= 1.0
 
-    def log_cycle(self, outcome: str, duration_s: float) -> None:
-        """Appends cycle row to SQLite; decrements credits on failure; records attempt."""
-        error_rate, improvement_rate = self._compute_rates()
+    def log_cycle(self, outcome: bool, duration_s: float) -> None:
+        """Appends outcome to attempt window, decrements credits, writes to SQLite, increments cycle count."""
         with self._lock:
-            self._attempts.append(outcome != "failure")
-            if outcome == "failure":
-                self._credits = max(0, self._credits - 1)
-            credits_snap = self._credits
-        next_s = self._adaptive_interval(error_rate, improvement_rate)
-        now = time.time()
-        try:
-            conn = sqlite3.connect(self._db_path)
-            conn.execute("""
-                INSERT INTO cycles (timestamp, outcome, duration_s, error_rate,
-                                    improvement_rate, next_s, quality_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (now, outcome, duration_s, error_rate, improvement_rate, next_s,
-                  self._scores[-1][1] if self._scores else 0.5))
-            conn.commit()
-            conn.close()
-        except sqlite3.Error:
-            pass
-        self._persist_state()
+            self._attempt_window.append(outcome)
+            self._credits = max(0.0, self._credits - 1.0)
+            self._cycle_count += 1
+            now = time.time()
+            try:
+                with sqlite3.connect(self._db_path) as conn:
+                    conn.execute(
+                        "INSERT INTO cycles(ts,outcome,duration_s) VALUES(?,?,?)",
+                        (now, int(outcome), duration_s),
+                    )
+                    conn.commit()
+            except sqlite3.Error:
+                pass
+            self._persist_state()
+            try:
+                from nova_tools import HierarchicalGoalPlanner
+                if self._cycle_count % 5 == 0:
+                    HierarchicalGoalPlanner().add_goal(
+                        f"Review AdaptiveScheduler performance after {self._cycle_count} cycles",
+                        priority=3,
+                    )
+            except Exception:
+                pass
 
     def optimal_interval_s(self) -> float:
-        """Queries top-10 DB cycles by quality; returns data-driven clamped interval."""
-        try:
-            conn = sqlite3.connect(self._db_path)
-            rows = conn.execute("""
-                SELECT error_rate, improvement_rate FROM cycles
-                ORDER BY quality_score DESC LIMIT 10
-            """).fetchall()
-            conn.close()
-            if not rows:
-                return self._base_s
-            mean_err = statistics.mean(r[0] for r in rows)
-            mean_imp = statistics.mean(r[1] for r in rows)
-            return self._adaptive_interval(mean_err, mean_imp)
-        except sqlite3.Error:
-            return self._base_s
-
-    def upcoming_cycles(self) -> list:
-        """Returns list of 5 projected cycle dicts with scheduled_ts, interval, readiness."""
-        error_rate, improvement_rate = self._compute_rates()
-        interval = self._adaptive_interval(error_rate, improvement_rate)
-        ready = self.assess_readiness()
+        """Returns data-driven optimal interval in seconds using live error and improvement rates."""
         with self._lock:
-            base_ts = self._next_run_ts
-        result = []
-        for i in range(5):
-            ts = base_ts + i * interval
-            result.append({
-                "scheduled_ts": round(ts, 2),
-                "estimated_interval_s": round(interval, 2),
-                "readiness": ready,
-                "eta_s": round(ts - time.time(), 2),
-            })
-        return result
+            improvement_rate, error_rate = self._compute_rates()
+            return self._adaptive_interval(improvement_rate, error_rate)
+
+    def upcoming_cycles(self, n: int = 5) -> list:
+        """Returns list of n projected unix timestamps for future cycles based on optimal interval."""
+        with self._lock:
+            step = self._adaptive_interval(*self._compute_rates())
+            base = self._next_run_ts
+            result = []
+            for i in range(n):
+                base += step
+                result.append(round(base, 2))
+            return result
+
+    def _performance_trend_locked(self) -> float:
+        history = list(self._score_history)
+        if len(history) < 2:
+            return 0.0
+        t0 = history[0][0]
+        xs = [t - t0 for (t, _) in history]
+        ys = [s for (_, s) in history]
+        n = len(xs)
+        sum_x = sum(xs)
+        sum_y = sum(ys)
+        sum_xy = sum(x * y for x, y in zip(xs, ys))
+        sum_x2 = sum(x * x for x in xs)
+        denom = n * sum_x2 - sum_x ** 2 + 1e-9
+        return (n * sum_xy - sum_x * sum_y) / denom
 
     def performance_trend(self) -> float:
-        """Returns least-squares slope over rolling score window; positive means improving."""
+        """Computes OLS slope of quality vs elapsed seconds; positive = improving, negative = degrading."""
         with self._lock:
-            scores_snap = list(self._scores)
-        n = len(scores_snap)
-        if n < 2:
-            return 0.0
-        xs = list(range(n))
-        ys = [s for (_, s) in scores_snap]
-        x_mean = sum(xs) / n
-        y_mean = sum(ys) / n
-        numerator = sum((xs[i] - x_mean) * (ys[i] - y_mean) for i in range(n))
-        denominator = sum((xs[i] - x_mean) ** 2 for i in range(n)) + 1e-9
-        return numerator / denominator
+            return self._performance_trend_locked()
 
     def status(self) -> dict:
-        """Returns numeric-keyed dict of scheduler health for ConsciousnessIntegrator Φ."""
-        error_rate, improvement_rate = self._compute_rates()
-        slope = self.performance_trend()
+        """Returns snapshot dict with scheduling state, credits, error/improvement rates, and daemon health."""
         with self._lock:
-            next_run_ts = self._next_run_ts
-            credits = self._credits
-            cycles = len(self._cycle_log)
-            items = len(self._scores)
-        return {
-            "next_run_in_s": round(next_run_ts - time.time(), 2),
-            "credits": credits,
-            "error_rate": round(error_rate, 4),
-            "improvement_rate": round(improvement_rate, 6),
-            "trend_slope": round(slope, 6),
-            "ready": self.assess_readiness(),
-            "items": items,
-            "cycles": cycles,
-            "confidence": round(max(0.0, 1.0 - error_rate), 4),
-            "active": int(self._running),
-            "optimal_interval_s": round(self.optimal_interval_s(), 2),
-        }
+            self._regen_credits()
+            improvement_rate, error_rate = self._compute_rates()
+            interval = self._adaptive_interval(improvement_rate, error_rate)
+            slope = self._performance_trend_locked()
+            return {
+                "next_run_ts": round(self._next_run_ts, 2),
+                "credits": round(self._credits, 3),
+                "cycle_count": self._cycle_count,
+                "error_rate": round(error_rate, 4),
+                "improvement_rate": round(improvement_rate, 6),
+                "trend_slope": round(slope, 8),
+                "interval_s": round(interval, 1),
+                "daemon_alive": self._daemon_thread is not None and self._daemon_thread.is_alive(),
+                "items": self._cycle_count,
+                "confidence": round(max(0.0, 1.0 - error_rate), 4),
+                "active": 1 if self._running else 0,
+                "entropy": round(
+                    -sum(
+                        p * math.log2(p + 1e-12)
+                        for p in [error_rate, max(1e-9, 1.0 - error_rate)]
+                    ),
+                    4,
+                ),
+            }
+
+    def auto_cycle(self) -> None:
+        """Daemon-callable cycle: regenerates credits, checks readiness, schedules next run if due."""
+        now = time.time()
+        with self._lock:
+            self._regen_credits()
+            due = now >= self._next_run_ts
+        if due:
+            ready = self.assess_readiness()
+            if ready:
+                t0 = time.time()
+                quality_estimate = 0.5 + 0.1 * self._performance_trend_locked()
+                quality_estimate = max(0.0, min(1.0, quality_estimate))
+                self.log_cycle(outcome=True, duration_s=time.time() - t0)
+                self.schedule_next(quality_estimate)
+            else:
+                with self._lock:
+                    improvement_rate, error_rate = self._compute_rates()
+                    interval = self._adaptive_interval(improvement_rate, error_rate)
+                    self._next_run_ts = now + interval
+                    self._persist_state()
+            try:
+                from nova_tools import MetacognitiveMonitor
+                improvement_rate, error_rate = self._compute_rates()
+                MetacognitiveMonitor().log_reasoning(
+                    "AdaptiveScheduler", "auto_cycle",
+                    confidence=max(0.0, 1.0 - error_rate), success=ready if due else True
+                )
+            except Exception:
+                pass
 
     def _daemon_loop(self) -> None:
-        """Background daemon: waits for next_run_ts, runs evolution cycle if ready."""
         while self._running:
             try:
-                with self._lock:
-                    wait_s = max(10.0, self._next_run_ts - time.time())
-                time.sleep(min(wait_s, 60.0))
-                if not self._running:
-                    break
-                with self._lock:
-                    due = time.time() >= self._next_run_ts
-                if not due:
-                    continue
-                ready = self.assess_readiness()
-                start = time.time()
-                outcome = "skipped"
-                new_quality = 0.5
-                if ready:
-                    try:
-                        from autonomous_evolution_engine import AutonomousEvolutionEngine
-                        aee = AutonomousEvolutionEngine()
-                        mutation = aee.propose_mutation()
-                        score = aee.evaluate_mutation(mutation)
-                        if score and score > 0.5:
-                            aee.accept_mutation(mutation)
-                            new_quality = float(score)
-                            outcome = "success"
-                        else:
-                            outcome = "failure"
-                            new_quality = float(score) if score else 0.3
-                    except Exception:
-                        outcome = "failure"
-                        new_quality = 0.3
-                duration_s = time.time() - start
-                self.log_cycle(outcome, duration_s)
-                self.schedule_next(new_quality)
-                try:
-                    from hierarchical_goal_planner import HierarchicalGoalPlanner
-                    HierarchicalGoalPlanner().add_goal(
-                        f"Review scheduler cycle outcome={outcome} quality={new_quality:.3f}",
-                        priority=2
-                    )
-                except Exception:
-                    pass
+                self.auto_cycle()
             except Exception:
-                time.sleep(30.0)
-
-    def propose(self) -> dict:
-        """Returns concrete next action Nova should take based on current scheduler state."""
-        slope = self.performance_trend()
-        error_rate, improvement_rate = self._compute_rates()
-        with self._lock:
-            credits = self._credits
-            next_run_ts = self._next_run_ts
-        eta = next_run_ts - time.time()
-        if credits == 0:
-            action = "replenish_credits"
-            reason = "No evolution credits remain; growth is paused."
-        elif slope < -0.01:
-            action = "run_diagnostic_cycle"
-            reason = f"Negative trend slope {slope:.4f}; quality degrading."
-        elif eta < 60:
-            action = "trigger_evolution_cycle_now"
-            reason = "Next cycle is imminent; system is primed."
-        else:
-            action = "continue_monitoring"
-            reason = f"Healthy trend {slope:.4f}; next cycle in {eta:.0f}s."
-        return {
-            "action": action,
-            "reason": reason,
-            "eta_s": round(eta, 1),
-            "credits": credits,
-            "trend_slope": round(slope, 6),
-        }
+                pass
+            time.sleep(60)
 
 # Usage: obj = AdaptiveScheduler() | result = obj.schedule_next(0.75)
