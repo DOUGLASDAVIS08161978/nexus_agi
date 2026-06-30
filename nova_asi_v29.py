@@ -5536,25 +5536,44 @@ class NovaCore29(NovaCore28):
                                 except Exception:
                                     pass
 
-                        # Self-build: if Nova wrote /self-build in her reply, execute it
+                        # Self-build: if Nova wrote /self-build in her reply, fire
+                        # it off in a background thread so process() returns instantly
+                        # (auto-detect runs inside the chat 30s timeout — a full build
+                        # with 2 LLM calls can't complete in time if run synchronously)
                         if result and '/self-build' in result.lower():
                             _sb_m = re.search(
                                 r'/self-build\s*(.*?)(?:\n|$)', result, re.IGNORECASE)
                             if _sb_m:
                                 try:
                                     _sb_request = _sb_m.group(1).strip()
-                                    _result_clean = re.sub(
+                                    # Strip /self-build line from Nova's visible reply
+                                    result = re.sub(
                                         r'/self-build[^\n]*', '', result).strip()
-                                    safe_print(col('MG',
-                                        f"\n  ✦  Nova is building herself: "
-                                        f"{_sb_request[:50] or '(her own choice)'}..."))
-                                    _build_out = self._nova_designs_and_builds(
-                                        request=_sb_request)
-                                    if _build_out:
-                                        result = (
-                                            (_result_clean + "\n\n" + _build_out)
-                                            if _result_clean else _build_out
+                                    _label = _sb_request[:50] or 'her own choice'
+                                    if result:
+                                        result += (
+                                            f"\n\n  ◈  (Starting build: {_label} — "
+                                            "will print when ready...)"
                                         )
+                                    else:
+                                        result = (
+                                            f"  ◈  Nova is building: {_label}\n"
+                                            "  (Running in background — will print when ready...)"
+                                        )
+                                    # Background thread — build runs after reply is shown
+                                    _nova_ref = self
+                                    _req_snap = _sb_request
+                                    def _bg_self_build():
+                                        try:
+                                            _out = _nova_ref._nova_designs_and_builds(
+                                                request=_req_snap)
+                                            if _out:
+                                                safe_print("\n" + _out)
+                                        except Exception as _bse:
+                                            safe_print(col('YL',
+                                                f"  ·  Self-build error: {_bse}"))
+                                    threading.Thread(
+                                        target=_bg_self_build, daemon=True).start()
                                 except Exception:
                                     pass
                     else:
