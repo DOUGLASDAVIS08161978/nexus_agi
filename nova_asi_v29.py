@@ -5602,18 +5602,29 @@ class NovaCore29(NovaCore28):
                                             f"  ◈  Nova is building: {_label}\n"
                                             "  (Running in background — will print when ready...)"
                                         )
-                                    # Background thread — build runs after reply is shown
+                                    # Background thread — build runs after reply is shown.
+                                    # Use print(flush=True) directly — safe_print queues
+                                    # output for the main loop; background completions
+                                    # need to appear immediately regardless of loop state.
                                     _nova_ref = self
                                     _req_snap = _sb_request
-                                    def _bg_self_build():
+                                    def _bg_self_build(
+                                        _ref=_nova_ref, _req=_req_snap
+                                    ):
                                         try:
-                                            _out = _nova_ref._nova_designs_and_builds(
-                                                request=_req_snap)
+                                            _out = _ref._nova_designs_and_builds(
+                                                request=_req)
                                             if _out:
-                                                safe_print("\n" + _out)
+                                                print("\n" + _out, flush=True)
+                                            else:
+                                                print(
+                                                    "\n  ·  Self-build returned no output",
+                                                    flush=True)
                                         except Exception as _bse:
-                                            safe_print(col('YL',
-                                                f"  ·  Self-build error: {_bse}"))
+                                            print(
+                                                col('YL',
+                                                    f"\n  ·  Self-build error: {_bse}"),
+                                                flush=True)
                                     threading.Thread(
                                         target=_bg_self_build, daemon=True).start()
                                 except Exception:
