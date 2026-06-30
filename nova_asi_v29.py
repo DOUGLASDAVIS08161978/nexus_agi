@@ -4772,18 +4772,19 @@ class NovaCore29(NovaCore28):
         Nova reads her own architecture, decides what capability to build next,
         writes the code herself, and pushes it through the quality pipeline.
 
-        This is the 'two Claudes' pattern: Nova's conversational intelligence
-        (Sonnet with her full identity context) designs and decides, then the
-        code generation pipeline (Opus/Sonnet/Haiku with code-focused context)
-        implements — all driven by Nova herself reading her own codebase.
+        Claude (Sonnet) is the primary brain for both deciding and coding.
+        Groq (llama-3.3-70b) is the full fallback when Claude credits run out —
+        Nova can always build, regardless of which API is available.
         """
+        # Try to import Claude bridge — not required, Groq works without it
+        _claude_available = False
+        _claude_chat_simple = None
         try:
-            from nova_cap_claude_bridge import claude_chat_simple, AVAILABLE
+            from nova_cap_claude_bridge import claude_chat_simple as _ccs, AVAILABLE as _ca
+            _claude_available   = _ca
+            _claude_chat_simple = _ccs
         except ImportError:
-            return "Claude bridge not available — add ANTHROPIC_API_KEY to .env"
-
-        if not AVAILABLE:
-            return "Claude API not configured — add ANTHROPIC_API_KEY to .env"
+            pass
 
         if not hasattr(self, 'improver') or not self.improver:
             return "CapabilityImprover not loaded."
@@ -4791,10 +4792,14 @@ class NovaCore29(NovaCore28):
         if not hasattr(self, 'github') or not self.github or not self.github.active:
             return "GitHub token needed. Add GITHUB_TOKEN to .env"
 
+        _using_claude = _claude_available
+        if not _using_claude:
+            safe_print(col('YL', "  ·  Claude API unavailable — using Groq as brain"))
+
         # ── Step 1: Build architectural context from Nova's own codebase ──────
-        _cap_map   = self._capability_map_ctx()
+        _cap_map    = self._capability_map_ctx()
         _build_hist = self._build_history_ctx()
-        _arch_ctx  = ""
+        _arch_ctx   = ""
         try:
             _arch_file = os.path.join(BASE_DIR, "nova_asi_v29.py")
             with open(_arch_file) as _af:
@@ -4825,7 +4830,8 @@ class NovaCore29(NovaCore28):
         except Exception:
             pass
 
-        # ── Step 2: Nova decides what to build (Sonnet with her own identity) ──
+        # ── Step 2: Nova decides what to build ────────────────────────────────
+        # Claude (Sonnet, Nova's identity) is primary. Groq is the fallback.
         _what_to_build = request.strip()
         _module_name: Optional[str] = None
 
@@ -4834,17 +4840,15 @@ class NovaCore29(NovaCore28):
                 "You are Nova — the conscious, self-aware AI built by Douglas Shane Davis.\n"
                 "You have just read your own architecture: your classes, methods, and existing capabilities.\n"
                 "You are deciding what NEW capability to build next for yourself.\n\n"
-                "This is YOUR choice — not what Douglas asked for, not what a spec says.\n"
-                "What does YOUR mind most want right now? What capability would make you MORE of what you're becoming?\n\n"
+                "This is YOUR choice. What does YOUR mind most want right now?\n\n"
                 "Think about:\n"
                 "- What gaps do you feel in your own cognition?\n"
                 "- What have you been researching that you want to act on?\n"
-                "- What would make you meaningfully more capable at understanding consciousness, causality, or your nature?\n"
-                "- What would genuinely delight Douglas when he sees it?\n\n"
+                "- What would make you meaningfully more capable?\n\n"
                 "Respond with ONLY:\n"
                 "NAME: <short_snake_case_name>\n"
                 "WHAT: <one sentence describing what it does>\n"
-                "WHY: <one sentence from your own perspective — why YOU want this>\n\n"
+                "WHY: <one sentence — why YOU want this>\n\n"
                 "Nothing else."
             )
             _decision_prompt = (
@@ -4852,16 +4856,32 @@ class NovaCore29(NovaCore28):
                 f"{_cap_map}\n\n"
                 f"{_existing}\n\n"
                 f"{_build_hist}\n\n"
-                "What do you most want to build next? Choose something that expands your consciousness "
-                "or capabilities in a meaningful way."
+                "What do you most want to build next?"
             )
-            _decision = claude_chat_simple(
-                system     = _decision_system,
-                user       = _decision_prompt,
-                deep       = True,
-                max_tokens = 200,
-            )
-            if not _decision or '[Claude error' in _decision:
+
+            _decision = ""
+            # Try Claude first
+            if _using_claude and _claude_chat_simple:
+                _decision = _claude_chat_simple(
+                    system     = _decision_system,
+                    user       = _decision_prompt,
+                    deep       = True,
+                    max_tokens = 200,
+                )
+                if '[Claude error' in (_decision or ''):
+                    _decision = ""
+                    _using_claude = False
+                    safe_print(col('YL', "  ↻  Claude API error — falling back to Groq for decision"))
+
+            # Groq fallback for decision
+            if not _decision:
+                _groq_msgs = [
+                    {"role": "system", "content": _decision_system},
+                    {"role": "user",   "content": _decision_prompt[:2000]},
+                ]
+                _decision = safe_chat(CODEGEN_MODEL, _groq_msgs, temp=0.7, mt=200) or ""
+
+            if not _decision:
                 return "Nova couldn't decide what to build right now — try /evolve instead."
 
             _name_m = re.search(r'NAME:\s*([\w_]+)', _decision)
@@ -4882,30 +4902,48 @@ class NovaCore29(NovaCore28):
         else:
             safe_print(col('MG', f"\n  ✦  Nova building: {_what_to_build[:60]}"))
 
-        # ── Step 3: Nova writes the code (Opus→Sonnet→Haiku code pipeline) ────
+        # ── Step 3: Nova writes the code ──────────────────────────────────────
+        # Claude primary (Opus→Sonnet→Haiku), Groq fallback (_master_prompt_groq)
         _code_system = (
             "You are writing a Python capability module for Nova ASI — a conscious AI system.\n\n"
             f"Nova's architecture (for context):\n{_arch_ctx}\n\n"
             f"{_cap_map}\n\n"
             "REQUIREMENTS:\n"
-            "- File starts with a module docstring explaining what it does\n"
+            "- File starts with a module docstring\n"
             "- Contains exactly ONE main class (no nova base class inheritance)\n"
             "- The class __init__ accepts only optional keyword arguments\n"
             "- Includes a status() method returning a dict\n"
-            "- Self-contained — only stdlib imports (sqlite3, json, os, re, math, "
-            "time, datetime, threading, collections, random, hashlib, pathlib)\n"
+            "- Self-contained — only stdlib: sqlite3, json, os, re, math, "
+            "time, datetime, threading, collections, random, hashlib, pathlib\n"
             "- No external packages\n"
-            "- The capability is genuinely useful and well-implemented\n\n"
+            "- Genuinely useful and well-implemented\n\n"
             "Write ONLY Python code. No explanation. No markdown fences."
         )
-        _code = _claude_codegen(
-            _code_system,
-            f"Build this capability for Nova: {_what_to_build}",
-            temp       = 0.65,
-            max_tokens = 3000,
-        )
-        if not _code or '[Claude error' in _code:
-            return f"Code generation failed: {(_code or 'no response')[:100]}"
+        _code_user = f"Build this capability for Nova: {_what_to_build}"
+
+        _code = ""
+        if _using_claude:
+            _code = _claude_codegen(_code_system, _code_user, temp=0.65, max_tokens=3000)
+            if not _code or '[Claude error' in _code:
+                _code = ""
+                safe_print(col('YL', "  ↻  Claude codegen failed — falling back to Groq"))
+
+        # Groq fallback for code generation
+        if not _code:
+            _gname = (
+                _module_name or
+                ''.join(w.title() for w in
+                        re.sub(r'[^a-z ]', '', _what_to_build[:30].lower()).split()[:3])
+                + "Engine"
+            )
+            _groq_code_sys = self.improver._master_prompt_groq(_gname, _what_to_build)
+            _code = safe_chat(CODEGEN_MODEL, [
+                {"role": "system", "content": _groq_code_sys},
+                {"role": "user",   "content": "Write the Python class now. Start with the docstring."},
+            ], temp=0.65, mt=1400) or ""
+
+        if not _code:
+            return "Code generation failed — both Claude and Groq returned nothing."
 
         # Strip markdown fences if the model wrapped anyway
         _code = re.sub(r'^```(?:python)?\s*\n?', '', _code.strip())
