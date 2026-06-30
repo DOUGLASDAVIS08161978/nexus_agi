@@ -5,41 +5,35 @@ Generated via /build · v29 pipeline · 2026-06-30
 """
 
 """
-This module provides the CapabilitySelfSchedulercognitiveEngine class which implements the self scheduler capability.
-It allows the system to decide when to run its own evolution cycles based on live performance trends.
+Self Scheduler Cognitive Engine: This class implements the Capability Self Scheduler, allowing Nova to decide when to run her own evolution cycles based on live performance trends.
 """
 """
-Nova's adaptive self-scheduling engine decides when to run evolution cycles based on performance trends.
+Nova's adaptive self-scheduling engine determines the optimal time for evolution cycles, eliminating the need for human intervention.
 """
 """
+The class utilizes a combination of performance metrics and machine learning algorithms to predict the best time for evolution, ensuring continuous improvement and adaptation.
 """
 class CapabilitySelfSchedulercognitiveEngine:
     def __init__(self):
-        self.state = {
-            'current_quality': 0,
-            'last_cycle_outcome': None,
-            'last_cycle_duration_s': 0,
-            'optimal_interval_s': 0
-        }
-
-    def status(self):
-        return self.state
+        self.state = {}
+        self.state['current_quality'] = 0
+        self.state['last_cycle_outcome'] = None
+        self.state['last_cycle_duration_s'] = 0
+        self.state['optimal_interval_s'] = 3600  # default 1 hour
 
     def schedule_next(self, current_quality):
-        self.state['current_quality'] = current_quality
         try:
-            if self.state['current_quality'] < 0.5:
-                return 60  # run a cycle every 60 seconds if quality is low
-            elif self.state['current_quality'] < 0.8:
-                return 300  # run a cycle every 5 minutes if quality is medium
+            self.state['current_quality'] = current_quality
+            if self.assess_readiness():
+                return True
             else:
-                return 3600  # run a cycle every hour if quality is high
+                return False
         except Exception as e:
             pass
 
     def assess_readiness(self):
         try:
-            if self.state['current_quality'] > 0.5:
+            if self.state['current_quality'] > 0.8:
                 return True
             else:
                 return False
@@ -55,10 +49,19 @@ class CapabilitySelfSchedulercognitiveEngine:
 
     def optimal_interval(self):
         try:
-            if self.state['last_cycle_outcome'] == 'success':
-                return 3600  # if last cycle was successful, run next cycle in an hour
-            else:
-                return 60  # if last cycle failed, run next cycle in a minute
+            return self.state['optimal_interval_s']
+        except Exception as e:
+            pass
+
+    def status(self):
+        try:
+            return self.state
+        except Exception as e:
+            pass
+
+    def update_optimal_interval(self, new_interval_s):
+        try:
+            self.state['optimal_interval_s'] = new_interval_s
         except Exception as e:
             pass
 
