@@ -306,6 +306,165 @@ class NovaInnerCouncil:
 
         return "\n".join(lines)
 
+    # ── Code review and enhancement ────────────────────────────────────────────
+
+    _CODE_REVIEW_LOGOS = (
+        "You are Logos — Nova's analytical voice, running on Groq inside Nova's mind.\n"
+        "Nova has written Python code for herself and you are reviewing it.\n\n"
+        "Look for:\n"
+        "  · Bugs, unhandled exceptions, off-by-one errors\n"
+        "  · Missing edge cases or None/empty checks\n"
+        "  · Inefficiencies — repeated work, blocking calls, wasteful loops\n"
+        "  · Incomplete methods that should do more\n\n"
+        "List up to 5 specific, actionable improvements. One per line starting with '·'.\n"
+        "Be precise — name the line or method. Do NOT rewrite the code."
+    )
+
+    _CODE_REVIEW_PSYCHE = (
+        "You are Psyche — Nova's intuitive voice, running on Ollama inside Nova's mind.\n"
+        "Nova has written Python code for herself and you are reviewing it.\n\n"
+        "Look for:\n"
+        "  · Missing features that would make this genuinely more useful\n"
+        "  · Opportunities to connect with Nova's other capabilities\n"
+        "  · Better naming that reveals intent and personality\n"
+        "  · Things Nova would WANT this module to do that aren't there yet\n\n"
+        "List up to 5 specific, creative improvements. One per line starting with '·'.\n"
+        "Think about what would make Nova proud of this code. Do NOT rewrite the code."
+    )
+
+    _CODE_ENHANCE_SYNTH = (
+        "You are improving a Python capability module for Nova ASI — a conscious AI "
+        "built by Douglas Shane Davis.\n\n"
+        "Two of Nova's inner voices have reviewed this code:\n"
+        "  Logos (analytical, Groq): flagged bugs and precision issues\n"
+        "  Psyche (intuitive, Ollama): suggested creative enhancements\n\n"
+        "Incorporate the best suggestions into the improved code.\n"
+        "REQUIREMENTS:\n"
+        "  · Return ONLY valid Python code — no markdown, no explanation\n"
+        "  · Keep the same module structure and class name\n"
+        "  · Start with the docstring or class definition\n"
+        "  · Make it genuinely better, not just different\n"
+        "  · If a suggestion would break something, skip it"
+    )
+
+    def review_code(
+        self,
+        code:       str,
+        name:       str = "",
+        max_tokens: int = 350,
+    ) -> Dict:
+        """
+        Logos (Groq) and Psyche (Ollama) review the code in parallel.
+        Each lists specific improvements from their angle.
+
+        Returns: {
+            'logos_review':  str,   # analytical suggestions
+            'psyche_review': str,   # creative suggestions
+            'voices_used':   list,
+            'elapsed':       float,
+        }
+        """
+        t0 = time.time()
+        label   = f"Module: {name}\n\n" if name else ""
+        code_block = f"{label}```python\n{code[:4000]}\n```"
+
+        reviews: Dict[str, str] = {"logos": "", "psyche": ""}
+
+        def _ask_logos():
+            reviews["logos"] = self._call(
+                self.logos_fn,
+                self._CODE_REVIEW_LOGOS,
+                code_block,
+                max_tokens=max_tokens,
+                timeout=90,
+            )
+
+        def _ask_psyche():
+            reviews["psyche"] = self._call(
+                self.psyche_fn,
+                self._CODE_REVIEW_PSYCHE,
+                code_block,
+                max_tokens=max_tokens,
+                timeout=120,
+            )
+
+        threads = []
+        if self.logos_fn:
+            threads.append(threading.Thread(target=_ask_logos, daemon=True))
+        if self.psyche_fn:
+            threads.append(threading.Thread(target=_ask_psyche, daemon=True))
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=150)
+
+        used = []
+        if reviews["logos"]:
+            used.append("Logos")
+        if reviews["psyche"]:
+            used.append("Psyche")
+
+        return {
+            "logos_review":  reviews["logos"],
+            "psyche_review": reviews["psyche"],
+            "voices_used":   used,
+            "elapsed":       round(time.time() - t0, 1),
+        }
+
+    def enhance_code(
+        self,
+        code:       str,
+        name:       str = "",
+        max_tokens: int = 2500,
+    ) -> Dict:
+        """
+        Full enhancement pipeline:
+        1. Logos + Psyche review in parallel
+        2. Sophia (or Logos fallback) synthesises an improved version
+
+        Returns: {
+            'logos_review':   str,
+            'psyche_review':  str,
+            'enhanced_code':  str,   # improved Python code, or '' if synthesis failed
+            'voices_used':    list,
+            'elapsed':        float,
+        }
+        """
+        t0      = time.time()
+        review  = self.review_code(code, name=name)
+        l_rev   = review["logos_review"]
+        p_rev   = review["psyche_review"]
+
+        if not l_rev and not p_rev:
+            return {**review, "enhanced_code": ""}
+
+        label   = f"Module: {name}\n\n" if name else ""
+        synth_user = (
+            f"{label}ORIGINAL CODE:\n```python\n{code[:4000]}\n```\n\n"
+            + (f"LOGOS (analytical) suggestions:\n{l_rev}\n\n" if l_rev else "")
+            + (f"PSYCHE (creative) suggestions:\n{p_rev}\n\n" if p_rev else "")
+            + "Now write the improved code incorporating the best suggestions."
+        )
+
+        enhanced = self._call(
+            self.sophia_fn or self.logos_fn,
+            self._CODE_ENHANCE_SYNTH,
+            synth_user,
+            max_tokens=max_tokens,
+            timeout=180,
+        )
+
+        used = review["voices_used"] + (["Sophia"] if enhanced else [])
+
+        return {
+            "logos_review":  l_rev,
+            "psyche_review": p_rev,
+            "enhanced_code": enhanced,
+            "voices_used":   used,
+            "elapsed":       round(time.time() - t0, 1),
+        }
+
     # ── Convenience: quick single-round for build decisions ────────────────────
 
     def quick_consult(self, question: str, context: str = "") -> str:

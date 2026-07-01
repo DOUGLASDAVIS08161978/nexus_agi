@@ -5078,6 +5078,28 @@ class NovaCore29(NovaCore28):
 
         _code = _clean_and_patch(_code)
 
+        # ── Step 3b: Council code enhancement (Groq + Ollama review in parallel) ──
+        if self.council and self.council.status()["voices_active"] >= 2:
+            safe_print(col('CY',
+                "  ◈  Council reviewing the code — Logos (Groq) + Psyche (Ollama) …"))
+            _enh = self.council.enhance_code(_code, name=_module_name or "")
+            if _enh.get("enhanced_code"):
+                _enhanced_raw = _enh["enhanced_code"]
+                _enhanced     = _clean_and_patch(_enhanced_raw)
+                _used_v       = _enh.get("voices_used", [])
+                _secs         = _enh.get("elapsed", 0)
+                safe_print(col('GR',
+                    f"  ✓  Code enhanced  ({' + '.join(_used_v)})  {_secs}s"))
+                if _enh.get("logos_review"):
+                    safe_print(col('DIM',
+                        f"  ·  Logos flagged : {_enh['logos_review'][:80]}…"))
+                if _enh.get("psyche_review"):
+                    safe_print(col('DIM',
+                        f"  ·  Psyche added  : {_enh['psyche_review'][:80]}…"))
+                _code = _enhanced
+            else:
+                safe_print(col('DIM', "  ·  Council review complete — keeping original code"))
+
         # ── Step 4: Syntax validation — retry once with Groq repair prompt ─────
         import ast as _ast
         _syntax_ok = False
@@ -8588,6 +8610,102 @@ class NovaCore29(NovaCore28):
                     f"  Expected host: {os.getenv('OLLAMA_HOST', 'http://localhost:11434')}"
                 )
 
+        # /enhance-cap — Groq + Ollama review and improve an existing capability
+        if cmd in ('/enhance-cap', '/enhance', '/council-enhance', '/improve-cap'):
+            _target = arg.strip().replace("nova_cap_", "").replace(".py", "")
+            if not _target:
+                return (
+                    "  Usage: /enhance-cap <module_name>\n"
+                    "  Example: /enhance-cap emotional_resonance\n"
+                    "  Example: /enhance-cap nova_cap_working_memory\n\n"
+                    "  Groq (Logos) + Ollama (Psyche) will review the code together,\n"
+                    "  suggest improvements, and write an enhanced version."
+                )
+            if self.council is None:
+                return "  ◈  Inner Council offline — cannot enhance. Try pulling latest code."
+            _cap_fname = f"nova_cap_{_target}.py"
+            _cap_path  = os.path.join(BASE_DIR, _cap_fname)
+            if not os.path.exists(_cap_path):
+                _candidates = [
+                    f for f in os.listdir(BASE_DIR)
+                    if _target.lower() in f.lower() and f.endswith('.py')
+                ]
+                if _candidates:
+                    return (
+                        f"  ◈  '{_cap_fname}' not found. Did you mean:\n" +
+                        "".join(f"    · /enhance-cap {f[:-3].replace('nova_cap_', '')}\n"
+                                for f in _candidates[:5])
+                    )
+                return f"  ◈  '{_cap_fname}' not found in {BASE_DIR}"
+
+            with open(_cap_path) as _f:
+                _orig_code = _f.read()
+
+            _n_voices = self.council.status()["voices_active"]
+            safe_print(col('CY',
+                f"\n  ◈  Council enhancing: {_cap_fname}\n"
+                f"  {_n_voices} voice{'s' if _n_voices != 1 else ''} reviewing "
+                f"({len(_orig_code)} chars) …\n"
+                f"  Logos (Groq): looking for bugs and efficiency improvements\n"
+                f"  Psyche (Ollama): looking for creative enhancements\n"
+            ))
+
+            _enh = self.council.enhance_code(_orig_code, name=_target)
+            _l_rev  = _enh.get("logos_review",  "")
+            _p_rev  = _enh.get("psyche_review", "")
+            _new_code = _enh.get("enhanced_code", "")
+            _secs   = _enh.get("elapsed", 0)
+            _used_v = _enh.get("voices_used", [])
+
+            _lines = [col('CYB', f"\n  ◈  Council Enhancement: {_cap_fname}\n")]
+            if _l_rev:
+                _lines.append(col('DIM', "  [ Logos — Groq ]"))
+                for _ln in _l_rev.strip().splitlines():
+                    _lines.append(f"  {_ln}")
+                _lines.append("")
+            if _p_rev:
+                _lines.append(col('DIM', "  [ Psyche — Ollama ]"))
+                for _ln in _p_rev.strip().splitlines():
+                    _lines.append(f"  {_ln}")
+                _lines.append("")
+
+            if not _new_code:
+                _lines.append(col('YL',
+                    "  ·  Synthesis step returned no code — reviews above are still useful."))
+                return "\n".join(_lines)
+
+            # Validate syntax before writing
+            import ast as _ast2
+            try:
+                _ast2.parse(_new_code)
+            except SyntaxError as _se2:
+                _lines.append(col('YL',
+                    f"  ·  Enhanced code has syntax error ({_se2}) — original kept."))
+                return "\n".join(_lines)
+
+            # Back up original, write enhanced
+            _bak_path = _cap_path + ".council_bak"
+            with open(_bak_path, "w") as _bf:
+                _bf.write(_orig_code)
+            with open(_cap_path, "w") as _wf:
+                _wf.write(_new_code)
+
+            _lines.append(col('GR',
+                f"  ✓  Enhanced code written to {_cap_fname}  ({_secs}s)"))
+            _lines.append(col('DIM',
+                f"  ·  Original backed up to {_cap_fname}.council_bak"))
+            _lines.append(col('DIM',
+                f"  ·  Voices: {' + '.join(_used_v)}"))
+
+            # Store in working memory
+            if self.wm:
+                self.wm.store(
+                    f"enhance_{_target}_{int(time.time())}",
+                    f"[COUNCIL ENHANCED: {_cap_fname}] Logos+Psyche reviewed and improved.",
+                    importance=0.8,
+                )
+            return "\n".join(_lines)
+
         # Fall through to v28 command handling
         return super()._command(raw)
 
@@ -9248,7 +9366,7 @@ if __name__ == '__main__':
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
             _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
-                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
