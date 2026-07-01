@@ -19,7 +19,7 @@ class CapabilitySelfSchedulercognitiveEngine:
             'optimal_interval_s': 0,
             'last_cycle_time_s': 0
         }
-        
+
     def schedule_next(self, current_quality):
         try:
             self.state['current_quality'] = current_quality
