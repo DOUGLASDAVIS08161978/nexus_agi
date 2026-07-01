@@ -646,27 +646,40 @@ class NovaInnerCouncil:
         )
 
         # Try sophia → logos → psyche in order; skip rate-limited or empty responses
-        patch_text = ""
-        for _synth_fn in [self.sophia_fn, self.logos_fn, self.psyche_fn]:
+        patch_text   = ""
+        synth_debug: List[str] = []
+        _voice_names = ["Sophia·Claude", "Logos·Groq", "Psyche·Ollama"]
+        for _synth_fn, _vname in zip(
+            [self.sophia_fn, self.logos_fn, self.psyche_fn], _voice_names
+        ):
             if not _synth_fn:
+                synth_debug.append(f"{_vname}: not wired")
                 continue
+            # 300s: gives Ollama (240s internal) time to actually finish
             _resp = self._call(
                 _synth_fn,
                 self._CODE_ENHANCE_SYNTH,
                 synth_user,
                 max_tokens = max_tokens,
-                timeout    = 180,
+                timeout    = 300,
             )
-            # Reject rate-limit / API error strings — try next voice
-            if _resp and "rate limit" not in _resp.lower():
-                _is_api_err = (
-                    _resp.startswith("[Groq error") or
-                    _resp.startswith("[Claude error") or
-                    _resp.startswith("[Ollama error")
-                )
-                if not _is_api_err:
-                    patch_text = _resp
-                    break
+            if not _resp:
+                synth_debug.append(f"{_vname}: empty / timeout")
+                continue
+            if "rate limit" in _resp.lower():
+                synth_debug.append(f"{_vname}: rate-limited")
+                continue
+            _is_api_err = (
+                _resp.startswith("[Groq error") or
+                _resp.startswith("[Claude error") or
+                _resp.startswith("[Ollama error")
+            )
+            if _is_api_err:
+                synth_debug.append(f"{_vname}: API error — {_resp[:80]}")
+                continue
+            synth_debug.append(f"{_vname}: ok ({len(_resp)} chars)")
+            patch_text = _resp
+            break
 
         enhanced   = self._apply_patches(code, patch_text) if patch_text else ""
         used       = review["voices_used"] + (["Sophia"] if patch_text else [])
@@ -675,6 +688,7 @@ class NovaInnerCouncil:
             "logos_review":  l_rev,
             "psyche_review": p_rev,
             "enhanced_code": enhanced,
+            "synth_debug":   synth_debug,
             "patch_text":    patch_text,
             "voices_used":   used,
             "elapsed":       round(time.time() - t0, 1),

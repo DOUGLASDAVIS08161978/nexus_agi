@@ -9006,7 +9006,9 @@ class NovaCore29(NovaCore28):
                         _lines.append(f"  {_pl}")
                 else:
                     _lines.append(col('YL',
-                        "  ·  No patches generated — reviews above are still useful."))
+                        "  ·  No patches generated — synthesis voices:"))
+                    for _dbg in _enh.get("synth_debug", []):
+                        _lines.append(col('DIM', f"      {_dbg}"))
                 return "\n".join(_lines)
 
             # Validate syntax — if full patch fails, try applying patches one-by-one
