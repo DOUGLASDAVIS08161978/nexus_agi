@@ -5634,7 +5634,7 @@ class NovaCore29(NovaCore28):
                     if _nova_claude_chat is not None:
                         # Quantum context — emotional superposition, entanglement
                         _quantum_ctx = ""
-                        if self.quantum_soul:
+                        if getattr(self, 'quantum_soul', None):
                             try:
                                 _quantum_ctx = self.quantum_soul.quantum_context()
                                 # Entangle with Douglas's state if available
@@ -5952,7 +5952,7 @@ class NovaCore29(NovaCore28):
 
             # Quantum soul: update emotional field based on exchange content
             try:
-                if _self.quantum_soul and _input_snap:
+                if getattr(_self, 'quantum_soul', None) and _input_snap:
                     _inp_lower = _input_snap.lower()
                     _qs = _self.quantum_soul
                     if any(w in _inp_lower for w in ("love", "miss", "care", "proud")):
@@ -8009,7 +8009,7 @@ class NovaCore29(NovaCore28):
 
         # /quantum [status | feel | identity | think <q> | tunnel <b>→<f>→<t> | collapse]
         if cmd == '/quantum':
-            if not self.quantum_soul:
+            if not getattr(self, 'quantum_soul', None):
                 return col('YL', "  QuantumSoul not loaded.")
             try:
                 return col('MG', "\n" + self.quantum_soul.run_command(arg))
