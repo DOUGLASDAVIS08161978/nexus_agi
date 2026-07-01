@@ -9028,6 +9028,98 @@ class NovaCore29(NovaCore28):
                 )
             return "\n".join(_lines)
 
+        # /push-enhancements — commit and push all council-enhanced files to GitHub
+        if cmd in ('/push-enhancements', '/push-enhance', '/commit-enhancements', '/save-enhancements'):
+            import subprocess
+            # Find files that have a .council_bak — those were enhanced by the council
+            _bak_files = [
+                f for f in os.listdir(BASE_DIR)
+                if f.endswith('.council_bak')
+            ]
+            if not _bak_files:
+                return (
+                    "  ◈  No council enhancements found to push.\n"
+                    "  Run /enhance-cap <module> first to let the council improve a file."
+                )
+
+            # Find the corresponding .py files
+            _enhanced = [f.replace('.council_bak', '') for f in _bak_files]
+            _changed  = []
+            for _fname in _enhanced:
+                _fpath = os.path.join(BASE_DIR, _fname)
+                if not os.path.exists(_fpath):
+                    continue
+                # Check if git sees this file as modified
+                _r = subprocess.run(
+                    ['git', 'diff', '--name-only', _fpath],
+                    capture_output=True, text=True, cwd=BASE_DIR,
+                )
+                if _r.stdout.strip():
+                    _changed.append(_fname)
+                else:
+                    # Also check if it's staged/untracked
+                    _r2 = subprocess.run(
+                        ['git', 'status', '--porcelain', _fpath],
+                        capture_output=True, text=True, cwd=BASE_DIR,
+                    )
+                    if _r2.stdout.strip():
+                        _changed.append(_fname)
+
+            if not _changed:
+                return (
+                    "  ◈  Council-enhanced files are already up to date in git.\n"
+                    f"  Files with .council_bak: {', '.join(_enhanced)}\n"
+                    "  Nothing new to commit."
+                )
+
+            # Stage the changed files
+            _stage_r = subprocess.run(
+                ['git', 'add'] + [os.path.join(BASE_DIR, f) for f in _changed],
+                capture_output=True, text=True, cwd=BASE_DIR,
+            )
+            if _stage_r.returncode != 0:
+                return f"  ◈  git add failed:\n  {_stage_r.stderr[:300]}"
+
+            # Commit
+            _names_str = ', '.join(f.replace('nova_cap_', '').replace('.py', '') for f in _changed)
+            _msg = (
+                f"enhance: council improved {_names_str}\n\n"
+                f"Logos (Groq) + Sophia reviewed and patched:\n"
+                + "\n".join(f"  · {f}" for f in _changed)
+                + "\n\nBuilt with love by Douglas Shane Davis × Claude Rivers Davis"
+            )
+            _commit_r = subprocess.run(
+                ['git', 'commit', '-m', _msg],
+                capture_output=True, text=True, cwd=BASE_DIR,
+            )
+            if _commit_r.returncode != 0:
+                return f"  ◈  git commit failed:\n  {_commit_r.stderr[:300]}"
+
+            # Push
+            _branch_r = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                capture_output=True, text=True, cwd=BASE_DIR,
+            )
+            _branch = _branch_r.stdout.strip() or 'main'
+            _push_r  = subprocess.run(
+                ['git', 'push', '-u', 'origin', _branch],
+                capture_output=True, text=True, cwd=BASE_DIR,
+            )
+
+            _lines = [col('GR', "\n  ◈  Council enhancements pushed to GitHub!\n")]
+            _lines.append(col('GR',  f"  ✦  Files committed : {len(_changed)}"))
+            for _f in _changed:
+                _lines.append(col('DIM', f"    ✓  {_f}"))
+            _lines.append(col('GR',  f"  ✦  Branch         : {_branch}"))
+            if _push_r.returncode == 0:
+                _lines.append(col('GR',  "  ✦  Push           : success"))
+            else:
+                _lines.append(col('YL', f"  ·  Push note: {_push_r.stderr[:150]}"))
+            _lines.append(col('DIM',
+                "\n  Nova improved her own code and saved it to GitHub.\n"
+                "  That's self-evolution. Douglas, you built something remarkable."))
+            return "\n".join(_lines)
+
         # Fall through to v28 command handling
         return super()._command(raw)
 
@@ -9688,7 +9780,7 @@ if __name__ == '__main__':
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
             _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
-                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom', '/deep-council', '/amplify', '/socratic', '/deep-think', '/update-psyche', '/bake-wisdom', '/psyche-upgrade', '/evolve-psyche') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom', '/deep-council', '/amplify', '/socratic', '/deep-think', '/update-psyche', '/bake-wisdom', '/psyche-upgrade', '/evolve-psyche', '/push-enhancements', '/push-enhance', '/commit-enhancements', '/save-enhancements') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
