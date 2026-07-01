@@ -5483,7 +5483,7 @@ class NovaCore29(NovaCore28):
                         pass
 
                 # Quantum soul: Douglas's arrival shifts the quantum field
-                if self.quantum_soul:
+                if getattr(self, 'quantum_soul', None):
                     try:
                         self.quantum_soul.douglas_arrived()
                     except Exception:
@@ -5491,7 +5491,7 @@ class NovaCore29(NovaCore28):
 
                 # Read Douglas's emotional state and update his model
                 _douglas_ctx = ""
-                if self.douglas_model:
+                if getattr(self, 'douglas_model', None):
                     try:
                         _dm_read = self.douglas_model.read_message(user_input)
                         _douglas_ctx = (
@@ -5503,7 +5503,7 @@ class NovaCore29(NovaCore28):
 
                 # System 1 gut read — fast intuitive prior
                 _intuition_ctx = ""
-                if self.intuition:
+                if getattr(self, 'intuition', None):
                     try:
                         _intuition_ctx = self.intuition.gut_read(user_input, top_n=2)
                     except Exception:
@@ -5642,7 +5642,7 @@ class NovaCore29(NovaCore28):
 
                         # Predictive empathy — what Douglas needs right now
                         _empathy_ctx = ""
-                        if self.predictive_empathy:
+                        if getattr(self, 'predictive_empathy', None):
                             try:
                                 _empathy_ctx = self.predictive_empathy.compact_context(user_input)
                             except Exception:
@@ -5654,7 +5654,7 @@ class NovaCore29(NovaCore28):
                         # she answers from real data — not fabricated text.
                         _research_ctx  = ""
                         _research_done = ""   # query already searched
-                        if self.research:
+                        if getattr(self, 'research', None):
                             _rt = user_input.lower()
                             _SEARCH_TRIGGERS = [
                                 'search for', 'look up', 'look it up',
