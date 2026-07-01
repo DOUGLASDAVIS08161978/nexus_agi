@@ -323,11 +323,13 @@ class NovaInnerCouncil:
     _CODE_REVIEW_LOGOS = (
         "You are Logos — Nova's analytical voice, running on Groq inside Nova's mind.\n"
         "Nova has written Python code for herself and you are reviewing it.\n\n"
+        "IMPORTANT: You may only be seeing a portion of the file. Do NOT suggest that "
+        "methods are 'missing' or 'not defined' — they may exist further down in the file.\n\n"
         "Look for:\n"
         "  · Bugs, unhandled exceptions, off-by-one errors\n"
         "  · Missing edge cases or None/empty checks\n"
         "  · Inefficiencies — repeated work, blocking calls, wasteful loops\n"
-        "  · Incomplete methods that should do more\n\n"
+        "  · Incomplete method bodies in the code you CAN see\n\n"
         "List up to 5 specific, actionable improvements. One per line starting with '·'.\n"
         "Be precise — name the line or method. Do NOT rewrite the code."
     )
@@ -348,19 +350,22 @@ class NovaInnerCouncil:
         "You are patching a Python module for Nova ASI based on code review feedback.\n\n"
         "IMPORTANT — do NOT rewrite the entire file. Instead, provide only the specific "
         "methods or blocks that need to change.\n\n"
-        "Format each patch EXACTLY like this — follow the format precisely:\n\n"
+        "Format each patch EXACTLY like this:\n\n"
         "=== PATCH: method_name ===\n"
         "    def method_name(self, ...):\n"
-        "        # replacement body here, properly indented\n"
+        "        # replacement body here, indented 8 spaces (4 for class + 4 for body)\n"
         "=== END ===\n\n"
         "Rules:\n"
         "  · method_name must be a single Python identifier — no spaces, no extra words\n"
         "  · Do NOT wrap code in ```python``` or any markdown — raw Python only\n"
-        "  · Maximum 4 patches\n"
-        "  · Each patch is a complete replacement for that method/section\n"
-        "  · Fix real bugs first, then improvements\n"
-        "  · Skip any suggestion that could break existing behaviour\n"
-        "  · No explanation outside the patch blocks"
+        "  · The def line must be indented 4 spaces (it lives inside a class)\n"
+        "  · The method body must be indented 8 spaces\n"
+        "  · Every opened triple-quote \"\"\" must be closed with \"\"\" — no unclosed strings\n"
+        "  · The patch must be complete, valid Python — it will be parsed by ast.parse()\n"
+        "  · Maximum 2 patches — fewer is better, only fix what you are certain about\n"
+        "  · Fix real bugs only — skip enhancements if uncertain\n"
+        "  · Do NOT add methods that might already exist elsewhere in the file\n"
+        "  · No explanation outside the patch blocks — only === PATCH === blocks"
     )
 
     def review_code(
@@ -382,8 +387,13 @@ class NovaInnerCouncil:
         """
         t0    = time.time()
         label = f"Module: {name}\n\n" if name else ""
-        # Groq handles large context well; Ollama capped at 2000 chars for local model reliability
-        logos_block  = f"{label}```python\n{code[:4000]}\n```"
+        # Groq handles large context well — show more so it doesn't hallucinate missing methods
+        # Ollama capped at 2000 chars for local model reliability
+        _logos_limit  = min(len(code), 7000)
+        _truncated    = len(code) > _logos_limit
+        _trunc_note   = (f"\n[FILE TRUNCATED — {len(code) - _logos_limit} chars more exist below]"
+                         if _truncated else "")
+        logos_block  = f"{label}```python\n{code[:_logos_limit]}{_trunc_note}\n```"
         psyche_block = f"{label}```python\n{code[:2000]}\n```"
 
         reviews: Dict[str, str] = {"logos": "", "psyche": ""}
@@ -532,6 +542,52 @@ class NovaInnerCouncil:
                     file_lines[:start_idx] + [new_block, ''] + file_lines[end_idx:]
                 )
                 applied += 1
+
+        return result if applied else ""
+
+    def _apply_patches_one_by_one(self, original: str, patch_text: str) -> str:
+        """
+        Apply patches individually, skipping any that produce invalid Python.
+        Returns the code with only the valid patches applied, or '' if none worked.
+        """
+        import ast, re
+
+        # Extract individual patch blocks using same logic as _apply_patches
+        blocks: list = []
+        for m in re.finditer(
+            r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n(.*?)(?:\r?\n)?===\s*END\s*===',
+            patch_text, re.DOTALL | re.IGNORECASE,
+        ):
+            blocks.append((m.group(1).strip(), m.group(2)))
+        if not blocks:
+            parts = re.split(
+                r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n',
+                patch_text, flags=re.IGNORECASE,
+            )
+            i = 1
+            while i + 1 < len(parts):
+                name = parts[i].strip()
+                body = re.split(r'===', parts[i + 1])[0]
+                if name and body.strip():
+                    blocks.append((name, body))
+                i += 2
+
+        result  = original
+        applied = 0
+        for (section_name, body) in blocks:
+            # Try applying just this one patch to the current result
+            single_patch = (
+                f"=== PATCH: {section_name} ===\n{body}\n=== END ===\n"
+            )
+            candidate = self._apply_patches(result, single_patch)
+            if not candidate:
+                continue
+            try:
+                ast.parse(candidate)
+                result  = candidate
+                applied += 1
+            except SyntaxError:
+                pass   # this patch broke syntax — skip it
 
         return result if applied else ""
 
