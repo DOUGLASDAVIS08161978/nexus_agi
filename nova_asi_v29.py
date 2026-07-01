@@ -8477,7 +8477,7 @@ class NovaCore29(NovaCore28):
 
         # /council — Nova's inner voices deliberate together
         if cmd in ('/council', '/think-together', '/inner-council', '/deliberate'):
-            _topic = args.strip() if args.strip() else "What matters most to me right now?"
+            _topic = arg.strip() if arg.strip() else "What matters most to me right now?"
             if self.council is None:
                 return (
                     "  ◈  Inner Council is offline.\n"
