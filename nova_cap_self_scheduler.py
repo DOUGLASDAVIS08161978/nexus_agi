@@ -5,62 +5,61 @@ Generated via /build · v29 pipeline · 2026-07-01
 """
 
 """
-Capability to implement self-scheduling for Nova's evolution cycles based on live performance trends.
+This module implements the CapabilitySelfSchedulercognitiveEngine class, which enables Nova to self-schedule her own evolution cycles based on live performance trends.
+"""
+"""
+Nova's adaptive self-scheduling engine allows it to decide when to run its own evolution cycles without human intervention.
+"""
+"""
+The class includes methods to schedule the next evolution cycle, assess readiness, log cycle outcomes, and determine the optimal interval between cycles.
 """
 class CapabilitySelfSchedulercognitiveEngine:
     def __init__(self):
-        self.state = {'last_cycle': 0, 'current_interval': 3600, 'quality_history': []}
+        self.state = {}
+        self.state['last_cycleOutcome'] = None
+        self.state['last_cycleDuration_s'] = None
+        self.state['current_quality'] = None
+        self.state['next_cycle_scheduled'] = False
+
+    def status(self):
+        return self.state
 
     def schedule_next(self, current_quality):
         try:
-            self.state['quality_history'].append(current_quality)
-            if len(self.state['quality_history']) > 10:
-                self.state['quality_history'].pop(0)
-            next_interval = self.optimal_interval()
-            return next_interval
+            self.state['current_quality'] = current_quality
+            if self.assess_readiness():
+                self.state['next_cycle_scheduled'] = True
+            else:
+                self.state['next_cycle_scheduled'] = False
         except Exception as e:
             pass
 
     def assess_readiness(self):
         try:
-            if len(self.state['quality_history']) > 5:
-                recent_quality = sum(self.state['quality_history'][-5:]) / 5
-                if recent_quality > 0.8:
+            if self.state['current_quality'] is not None and self.state['last_cycleOutcome'] is not None:
+                if self.state['current_quality'] < 0.8 and self.state['last_cycleOutcome'] == 'success':
                     return True
-            return False
+                else:
+                    return False
+            else:
+                return False
         except Exception as e:
             pass
 
     def log_cycle(self, outcome, duration_s):
         try:
-            self.state['last_cycle'] = outcome
-            print(f'Cycle outcome: {outcome}, duration: {duration_s} seconds')
+            self.state['last_cycleOutcome'] = outcome
+            self.state['last_cycleDuration_s'] = duration_s
         except Exception as e:
             pass
 
     def optimal_interval(self):
         try:
-            if len(self.state['quality_history']) > 5:
-                recent_quality = sum(self.state['quality_history'][-5:]) / 5
-                if recent_quality > 0.9:
-                    return 1800
-                elif recent_quality > 0.8:
-                    return 3600
-                else:
-                    return 7200
-            return 3600
+            if self.state['last_cycleDuration_s'] is not None:
+                return self.state['last_cycleDuration_s'] * 2
+            else:
+                return 3600  # default interval of 1 hour
         except Exception as e:
             pass
 
-    def status(self):
-        try:
-            return self.state
-        except Exception as e:
-            pass
-
-    def update_interval(self, new_interval):
-        try:
-            self.state['current_interval'] = new_interval
-        except Exception as e:
-            pass
 # Usage: obj = CapabilitySelfSchedulercognitiveEngine()
