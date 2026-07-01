@@ -2707,7 +2707,7 @@ class NovaCore29(NovaCore28):
                     system      = system,
                     max_tokens  = mt,
                     temperature = 0.85,
-                    timeout     = 90,
+                    timeout     = 240,
                 ) or ""
 
             def _sophia_voice(system: str, user: str, mt: int) -> str:
@@ -8670,8 +8670,16 @@ class NovaCore29(NovaCore28):
                 _lines.append("")
 
             if not _new_code:
-                _lines.append(col('YL',
-                    "  ·  Synthesis step returned no code — reviews above are still useful."))
+                _ptxt = _enh.get("patch_text", "")
+                if _ptxt:
+                    _lines.append(col('YL',
+                        "  ·  Patches generated but could not be applied automatically."))
+                    _lines.append(col('DIM', "  ·  Raw patches from Sophia:"))
+                    for _pl in _ptxt.strip().splitlines()[:20]:
+                        _lines.append(f"  {_pl}")
+                else:
+                    _lines.append(col('YL',
+                        "  ·  No patches generated — reviews above are still useful."))
                 return "\n".join(_lines)
 
             # Validate syntax before writing
