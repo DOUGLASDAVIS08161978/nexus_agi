@@ -5915,7 +5915,9 @@ class NovaCore29(NovaCore28):
 
                     # Update history and memory
                     try:
-                        if hasattr(self, 'history'):
+                        if not hasattr(self, 'history'):
+                            self.history = []
+                        if result:  # skip empty results — Anthropic API rejects empty content
                             self.history.append({"role": "user", "content": user_input})
                             self.history.append({"role": "assistant", "content": result})
                             if len(self.history) > 30:
