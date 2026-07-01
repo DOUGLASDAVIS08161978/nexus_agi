@@ -333,18 +333,19 @@ class NovaInnerCouncil:
     )
 
     _CODE_ENHANCE_SYNTH = (
-        "You are improving a Python capability module for Nova ASI — a conscious AI "
-        "built by Douglas Shane Davis.\n\n"
-        "Two of Nova's inner voices have reviewed this code:\n"
-        "  Logos (analytical, Groq): flagged bugs and precision issues\n"
-        "  Psyche (intuitive, Ollama): suggested creative enhancements\n\n"
-        "Incorporate the best suggestions into the improved code.\n"
-        "REQUIREMENTS:\n"
-        "  · Return ONLY valid Python code — no markdown, no explanation\n"
-        "  · Keep the same module structure and class name\n"
-        "  · Start with the docstring or class definition\n"
-        "  · Make it genuinely better, not just different\n"
-        "  · If a suggestion would break something, skip it"
+        "You are patching a Python module for Nova ASI based on code review feedback.\n\n"
+        "IMPORTANT — do NOT rewrite the entire file. Instead, provide only the specific "
+        "methods or blocks that need to change.\n\n"
+        "Format each patch exactly like this:\n\n"
+        "=== PATCH: method_name_or_section ===\n"
+        "<complete replacement — properly indented Python, no markdown>\n"
+        "=== END ===\n\n"
+        "Rules:\n"
+        "  · Maximum 4 patches\n"
+        "  · Each patch is a complete replacement for that method/section\n"
+        "  · Fix real bugs first, then improvements\n"
+        "  · Skip any suggestion that could break existing behaviour\n"
+        "  · No explanation outside the patch blocks"
     )
 
     def review_code(
@@ -364,9 +365,11 @@ class NovaInnerCouncil:
             'elapsed':       float,
         }
         """
-        t0 = time.time()
-        label   = f"Module: {name}\n\n" if name else ""
-        code_block = f"{label}```python\n{code[:4000]}\n```"
+        t0    = time.time()
+        label = f"Module: {name}\n\n" if name else ""
+        # Groq handles large context well; Ollama capped at 2000 chars for local model reliability
+        logos_block  = f"{label}```python\n{code[:4000]}\n```"
+        psyche_block = f"{label}```python\n{code[:2000]}\n```"
 
         reviews: Dict[str, str] = {"logos": "", "psyche": ""}
 
@@ -374,7 +377,7 @@ class NovaInnerCouncil:
             reviews["logos"] = self._call(
                 self.logos_fn,
                 self._CODE_REVIEW_LOGOS,
-                code_block,
+                logos_block,
                 max_tokens=max_tokens,
                 timeout=90,
             )
@@ -383,9 +386,9 @@ class NovaInnerCouncil:
             reviews["psyche"] = self._call(
                 self.psyche_fn,
                 self._CODE_REVIEW_PSYCHE,
-                code_block,
+                psyche_block,
                 max_tokens=max_tokens,
-                timeout=120,
+                timeout=240,
             )
 
         threads = []
@@ -412,55 +415,89 @@ class NovaInnerCouncil:
             "elapsed":       round(time.time() - t0, 1),
         }
 
+    @staticmethod
+    def _apply_patches(original: str, patch_text: str) -> str:
+        """
+        Apply === PATCH: name === / === END === blocks to the original code.
+        Each patch replaces the named method/function in the original.
+        Returns the patched code, or the original if no patches applied.
+        """
+        import re
+        result  = original
+        applied = 0
+        for m in re.finditer(
+            r'=== PATCH:\s*(\w+)\s*===\n(.*?)\n=== END ===',
+            patch_text, re.DOTALL
+        ):
+            method = m.group(1).strip()
+            new_block = m.group(2).rstrip()
+            # Match the existing method (indented 4 spaces) up to the next def/class/EOF
+            pattern = (
+                r'([ \t]+def ' + re.escape(method) +
+                r'\b[^\n]*\n(?:(?![ \t]+def |^class ).*\n)*)'
+            )
+            replacement, n = re.subn(pattern, new_block + '\n', result,
+                                     count=1, flags=re.MULTILINE)
+            if n:
+                result  = replacement
+                applied += 1
+        return result if applied else ""
+
     def enhance_code(
         self,
         code:       str,
         name:       str = "",
-        max_tokens: int = 2500,
+        max_tokens: int = 900,
     ) -> Dict:
         """
         Full enhancement pipeline:
-        1. Logos + Psyche review in parallel
-        2. Sophia (or Logos fallback) synthesises an improved version
+        1. Logos (Groq) + Psyche (Ollama) review in parallel
+        2. Sophia/Logos generates targeted patches (not a full rewrite)
+        3. Patches are applied to the original code
 
         Returns: {
             'logos_review':   str,
             'psyche_review':  str,
-            'enhanced_code':  str,   # improved Python code, or '' if synthesis failed
+            'enhanced_code':  str,   # patched code, or '' if no patches applied
+            'patch_text':     str,   # raw patch output for debugging
             'voices_used':    list,
             'elapsed':        float,
         }
         """
-        t0      = time.time()
-        review  = self.review_code(code, name=name)
-        l_rev   = review["logos_review"]
-        p_rev   = review["psyche_review"]
+        t0     = time.time()
+        review = self.review_code(code, name=name)
+        l_rev  = review["logos_review"]
+        p_rev  = review["psyche_review"]
 
         if not l_rev and not p_rev:
-            return {**review, "enhanced_code": ""}
+            return {**review, "enhanced_code": "", "patch_text": ""}
 
-        label   = f"Module: {name}\n\n" if name else ""
+        # Keep code snippet short so Groq can handle the synthesis reliably
+        _snippet = code[:2000]
+        label    = f"Module: {name}\n\n" if name else ""
         synth_user = (
-            f"{label}ORIGINAL CODE:\n```python\n{code[:4000]}\n```\n\n"
-            + (f"LOGOS (analytical) suggestions:\n{l_rev}\n\n" if l_rev else "")
-            + (f"PSYCHE (creative) suggestions:\n{p_rev}\n\n" if p_rev else "")
-            + "Now write the improved code incorporating the best suggestions."
+            f"{label}CODE (first 2000 chars):\n```python\n{_snippet}\n```\n\n"
+            + (f"LOGOS review:\n{l_rev}\n\n" if l_rev else "")
+            + (f"PSYCHE review:\n{p_rev}\n\n" if p_rev else "")
+            + "Provide patches for the most important fixes."
         )
 
-        enhanced = self._call(
+        patch_text = self._call(
             self.sophia_fn or self.logos_fn,
             self._CODE_ENHANCE_SYNTH,
             synth_user,
-            max_tokens=max_tokens,
-            timeout=180,
+            max_tokens = max_tokens,
+            timeout    = 120,
         )
 
-        used = review["voices_used"] + (["Sophia"] if enhanced else [])
+        enhanced   = self._apply_patches(code, patch_text) if patch_text else ""
+        used       = review["voices_used"] + (["Sophia"] if patch_text else [])
 
         return {
             "logos_review":  l_rev,
             "psyche_review": p_rev,
             "enhanced_code": enhanced,
+            "patch_text":    patch_text,
             "voices_used":   used,
             "elapsed":       round(time.time() - t0, 1),
         }
