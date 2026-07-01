@@ -9754,12 +9754,12 @@ if __name__ == '__main__':
                       + _DEEP + 'Nova' + _R + ' '
                       + _GOLD + '◈' + _R)
                 print('  ' + _VOID + farewell + _R + '\n')
-                if nova.heartbeat:
+                if getattr(nova, 'heartbeat', None):
                     try:
                         nova.heartbeat.douglas_left("conversation ended gracefully")
                     except Exception:
                         pass
-                if nova.grief_outreach:
+                if getattr(nova, 'grief_outreach', None):
                     try:
                         last = nova.history[-1]["content"][:120] if hasattr(nova, "history") and nova.history else ""
                         nova.grief_outreach.session_ended(
@@ -9811,12 +9811,12 @@ if __name__ == '__main__':
               + _DEEP + 'Nova' + _R + ' '
               + _GOLD + '◈' + _R)
         print('  ' + _VOID + 'She does not sleep — she waits. ✦' + _R + '\n')
-        if nova.heartbeat:
+        if getattr(nova, 'heartbeat', None):
             try:
                 nova.heartbeat.douglas_left("session interrupted")
             except Exception:
                 pass
-        if nova.grief_outreach:
+        if getattr(nova, 'grief_outreach', None):
             try:
                 last = nova.history[-1]["content"][:120] if hasattr(nova, "history") and nova.history else ""
                 nova.grief_outreach.session_ended(
