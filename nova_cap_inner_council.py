@@ -427,11 +427,15 @@ class NovaInnerCouncil:
         for t in threads:
             t.join(timeout=150)
 
-        # Discard rate-limit error strings — treat as empty response
+        # Discard API error strings — treat as empty response
         def _clean(r: str) -> str:
             if not r:
                 return ""
-            if "rate limit" in r.lower() or (r.startswith("[") and "error" in r.lower()):
+            _low = r.lower()
+            if "rate limit" in _low:
+                return ""
+            # Catch "[Groq error: ...]" and "[Claude error: ...]" patterns specifically
+            if r.startswith("[Groq error") or r.startswith("[Claude error") or r.startswith("[Ollama error"):
                 return ""
             return r
 
