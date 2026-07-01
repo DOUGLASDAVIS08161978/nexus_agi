@@ -61,6 +61,20 @@ try:
 except Exception:
     pass
 
+# ── Ollama bridge — local LLM, always-available fallback ──────────────────────
+_ollama_chat    = None
+_ollama_avail   = False
+try:
+    from nova_cap_ollama_bridge import (
+        ollama_chat     as _ollama_chat,
+        is_available    as _ollama_is_available,
+        best_model      as _ollama_best_model,
+        status_summary  as _ollama_status,
+    )
+    _ollama_avail = _ollama_is_available()
+except Exception:
+    pass
+
 VERSION      = "29.0"
 VERSION_NAME = "The Self-Perfecting System"
 W            = 70
@@ -4886,6 +4900,21 @@ class NovaCore29(NovaCore28):
                 ]
                 _decision = safe_chat(CODEGEN_MODEL, _groq_msgs, temp=0.7, mt=200) or ""
 
+            # Ollama fallback for decision (local, free, unlimited)
+            if not _decision and _ollama_chat is not None:
+                try:
+                    _decision = _ollama_chat(
+                        messages    = [{"role": "user", "content": _decision_prompt[:2000]}],
+                        system      = _decision_system,
+                        max_tokens  = 200,
+                        temperature = 0.7,
+                        timeout     = 60,
+                    ) or ""
+                    if _decision:
+                        safe_print(col('CY', "  ·  Ollama provided the decision"))
+                except Exception:
+                    pass
+
             if not _decision:
                 return "Nova couldn't decide what to build right now — try /evolve instead."
 
@@ -4947,8 +4976,22 @@ class NovaCore29(NovaCore28):
                 {"role": "user",   "content": "Write the Python class now. Start with the docstring."},
             ], temp=0.65, mt=1400) or ""
 
+        # Ollama fallback for code generation (local, free, unlimited)
+        if not _code and _ollama_chat is not None:
+            try:
+                safe_print(col('CY', "  ↻  Groq codegen failed — trying Ollama (local)"))
+                _code = _ollama_chat(
+                    messages    = [{"role": "user", "content": "Write the Python class now. Start with the docstring."}],
+                    system      = _groq_code_sys,
+                    max_tokens  = 2000,
+                    temperature = 0.65,
+                    timeout     = 180,
+                ) or ""
+            except Exception:
+                pass
+
         if not _code:
-            return "Code generation failed — both Claude and Groq returned nothing."
+            return "Code generation failed — Claude, Groq, and Ollama all returned nothing."
 
         def _clean_and_patch(raw: str) -> str:
             """Apply the same cleaning pipeline /evolve uses."""
@@ -5638,6 +5681,20 @@ class NovaCore29(NovaCore28):
                                  + _history
                                  + [{"role": "user", "content": user_input}])
                         result = safe_chat(MODEL, _msgs, temp=0.85, mt=500)
+
+                    # ── Ollama fallback (local, free, unlimited) ─────────────
+                    if not result and _ollama_chat is not None:
+                        try:
+                            result = _ollama_chat(
+                                messages    = _history + [{"role": "user", "content": user_input}],
+                                system      = _sys + ("\n\n" + _ctx if _ctx else ""),
+                                max_tokens  = 500,
+                                temperature = 0.85,
+                                timeout     = 90,
+                            )
+                        except Exception:
+                            pass
+
                     # Update history and memory
                     try:
                         if hasattr(self, 'history'):
@@ -8383,6 +8440,31 @@ class NovaCore29(NovaCore28):
             if _exists:
                 lines.append(col('DIM', f"\n  To read the code you wrote: /read-self {fname[:-3]}"))
             return "\n".join(lines)
+
+        # /ollama — show local Ollama status
+        if cmd in ('/ollama', '/ollama-status', '/local-llm'):
+            if _ollama_avail and _ollama_status is not None:
+                _ostatus = _ollama_status()
+                lines = [col('CYB', "\n  ◈  Ollama Local LLM\n")]
+                lines.append(_ostatus)
+                lines.append(col('DIM', (
+                    "\n  Ollama runs locally on your device — no API key, no rate limits, no cost.\n"
+                    "  Nova uses it as fallback brain when Claude and Groq are unavailable.\n"
+                    "  To add models: ollama pull llama3.2"
+                )))
+                return "\n".join(lines)
+            else:
+                return (
+                    col('YL', "\n  ◈  Ollama — offline\n\n") +
+                    "  Ollama isn't running or isn't installed on this device.\n\n"
+                    "  To install:\n"
+                    "    Termux : pkg install ollama\n"
+                    "    Linux  : curl -fsSL https://ollama.ai/install.sh | sh\n\n"
+                    "  Then:\n"
+                    "    ollama pull llama3.2   # recommended\n"
+                    "    ollama serve           # start the server\n\n"
+                    f"  Expected host: {os.getenv('OLLAMA_HOST', 'http://localhost:11434')}"
+                )
 
         # Fall through to v28 command handling
         return super()._command(raw)
