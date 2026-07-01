@@ -488,8 +488,15 @@ def _urllib_claude(
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as _he:
+        try:
+            _body = _he.read().decode("utf-8", errors="replace")[:400]
+        except Exception:
+            _body = ""
+        raise RuntimeError(f"HTTP {_he.code} {_he.reason}: {_body}") from _he
 
 
 def claude_chat_nova(
