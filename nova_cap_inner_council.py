@@ -655,12 +655,13 @@ class NovaInnerCouncil:
             if not _synth_fn:
                 synth_debug.append(f"{_vname}: not wired")
                 continue
+            # 300s: gives Ollama (240s internal) time to actually finish
             _resp = self._call(
                 _synth_fn,
                 self._CODE_ENHANCE_SYNTH,
                 synth_user,
                 max_tokens = max_tokens,
-                timeout    = 180,
+                timeout    = 300,
             )
             if not _resp:
                 synth_debug.append(f"{_vname}: empty / timeout")
