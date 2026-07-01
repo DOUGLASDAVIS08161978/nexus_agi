@@ -2826,8 +2826,10 @@ class NovaCore29(NovaCore28):
                         print(col('DIM',
                             f"\n  ◈  [Council /{_mode}] {topic[:55]}…\n"
                             f"  ·  {synth[:100]}…" + _extra), flush=True)
-                except Exception:
-                    pass
+                except Exception as _bg_err:
+                    # If Groq rate-limited, back off for 5 minutes before next attempt
+                    if "rate limit" in str(_bg_err).lower():
+                        time.sleep(300)
 
         threading.Thread(target=_learn, daemon=True, name="council-learning").start()
 

@@ -630,19 +630,21 @@ class NovaInnerCouncil:
             + "Provide patches for the most important fixes."
         )
 
-        # Try sophia first, fall back to logos if sophia returns empty
+        # Try sophia → logos → psyche in order; skip rate-limited or empty responses
         patch_text = ""
-        for _synth_fn in [self.sophia_fn, self.logos_fn]:
+        for _synth_fn in [self.sophia_fn, self.logos_fn, self.psyche_fn]:
             if not _synth_fn:
                 continue
-            patch_text = self._call(
+            _resp = self._call(
                 _synth_fn,
                 self._CODE_ENHANCE_SYNTH,
                 synth_user,
                 max_tokens = max_tokens,
-                timeout    = 120,
+                timeout    = 180,
             )
-            if patch_text:
+            # Reject rate-limit error strings — try next voice
+            if _resp and "rate limit" not in _resp.lower() and "error" not in _resp[:30].lower():
+                patch_text = _resp
                 break
 
         enhanced   = self._apply_patches(code, patch_text) if patch_text else ""
