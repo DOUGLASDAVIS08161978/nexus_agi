@@ -427,6 +427,17 @@ class NovaInnerCouncil:
         for t in threads:
             t.join(timeout=150)
 
+        # Discard rate-limit error strings — treat as empty response
+        def _clean(r: str) -> str:
+            if not r:
+                return ""
+            if "rate limit" in r.lower() or (r.startswith("[") and "error" in r.lower()):
+                return ""
+            return r
+
+        reviews["logos"]  = _clean(reviews["logos"])
+        reviews["psyche"] = _clean(reviews["psyche"])
+
         used = []
         if reviews["logos"]:
             used.append("Logos")

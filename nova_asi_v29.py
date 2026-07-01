@@ -2769,7 +2769,7 @@ class NovaCore29(NovaCore28):
 
         def _learn():
             while True:
-                time.sleep(1500)   # 25 minutes
+                time.sleep(2700)   # 45 minutes — gives Groq quota room for manual commands
                 if self.council is None or self.council_mem is None:
                     continue
                 try:
