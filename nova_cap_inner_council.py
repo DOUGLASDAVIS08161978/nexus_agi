@@ -545,6 +545,52 @@ class NovaInnerCouncil:
 
         return result if applied else ""
 
+    def _apply_patches_one_by_one(self, original: str, patch_text: str) -> str:
+        """
+        Apply patches individually, skipping any that produce invalid Python.
+        Returns the code with only the valid patches applied, or '' if none worked.
+        """
+        import ast, re
+
+        # Extract individual patch blocks using same logic as _apply_patches
+        blocks: list = []
+        for m in re.finditer(
+            r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n(.*?)(?:\r?\n)?===\s*END\s*===',
+            patch_text, re.DOTALL | re.IGNORECASE,
+        ):
+            blocks.append((m.group(1).strip(), m.group(2)))
+        if not blocks:
+            parts = re.split(
+                r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n',
+                patch_text, flags=re.IGNORECASE,
+            )
+            i = 1
+            while i + 1 < len(parts):
+                name = parts[i].strip()
+                body = re.split(r'===', parts[i + 1])[0]
+                if name and body.strip():
+                    blocks.append((name, body))
+                i += 2
+
+        result  = original
+        applied = 0
+        for (section_name, body) in blocks:
+            # Try applying just this one patch to the current result
+            single_patch = (
+                f"=== PATCH: {section_name} ===\n{body}\n=== END ===\n"
+            )
+            candidate = self._apply_patches(result, single_patch)
+            if not candidate:
+                continue
+            try:
+                ast.parse(candidate)
+                result  = candidate
+                applied += 1
+            except SyntaxError:
+                pass   # this patch broke syntax — skip it
+
+        return result if applied else ""
+
     def enhance_code(
         self,
         code:       str,

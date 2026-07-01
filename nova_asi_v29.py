@@ -8996,14 +8996,30 @@ class NovaCore29(NovaCore28):
                         "  ·  No patches generated — reviews above are still useful."))
                 return "\n".join(_lines)
 
-            # Validate syntax before writing
+            # Validate syntax — if full patch fails, try applying patches one-by-one
             import ast as _ast2
             try:
                 _ast2.parse(_new_code)
             except SyntaxError as _se2:
-                _lines.append(col('YL',
-                    f"  ·  Enhanced code has syntax error ({_se2}) — original kept."))
-                return "\n".join(_lines)
+                # Full patch has a syntax error — try each patch individually
+                _patch_txt = _enh.get("patch_text", "")
+                _partial   = self.council._apply_patches_one_by_one(
+                    _orig_code, _patch_txt
+                ) if _patch_txt and hasattr(self.council, '_apply_patches_one_by_one') else ""
+                if _partial:
+                    try:
+                        _ast2.parse(_partial)
+                        _new_code = _partial
+                        _lines.append(col('YL',
+                            f"  ·  One patch had a syntax error — applied valid patches only."))
+                    except SyntaxError:
+                        _lines.append(col('YL',
+                            f"  ·  Enhanced code has syntax error ({_se2}) — original kept."))
+                        return "\n".join(_lines)
+                else:
+                    _lines.append(col('YL',
+                        f"  ·  Enhanced code has syntax error ({_se2}) — original kept."))
+                    return "\n".join(_lines)
 
             # Back up original, write enhanced
             _bak_path = _cap_path + ".council_bak"
