@@ -2691,9 +2691,11 @@ class NovaCore29(NovaCore28):
         # ── Inner Council (multi-mind deliberation) ───────────────────────
         self.council: Any        = None
         self.council_mem: Any    = None
+        self.amplifier: Any      = None
         try:
-            from nova_cap_inner_council import NovaInnerCouncil
-            from nova_cap_council_memory import CouncilMemory, LEARNING_TOPICS
+            from nova_cap_inner_council    import NovaInnerCouncil
+            from nova_cap_council_memory   import CouncilMemory, LEARNING_TOPICS
+            from nova_cap_council_amplifier import CouncilAmplifier, generate_psyche_modelfile as _gen_modelfile
 
             def _logos_voice(system: str, user: str, mt: int) -> str:
                 return safe_chat(CODEGEN_MODEL, [
@@ -2724,13 +2726,23 @@ class NovaCore29(NovaCore28):
                 sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
             )
             self.council_mem = CouncilMemory()
-            self._learning_topics = list(LEARNING_TOPICS)
+            self.amplifier   = CouncilAmplifier(
+                logos_fn  = _logos_voice,
+                psyche_fn = _psyche_voice if _ollama_chat is not None else None,
+                sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
+                max_rounds = 6,
+            )
+            self._learning_topics  = list(LEARNING_TOPICS)
+            self._gen_modelfile_fn = _gen_modelfile
 
             _n_voices = self.council.status()["voices_active"]
             _mem_st   = self.council_mem.status()
             safe_print(col('GR',
                 f"  ✓  InnerCouncil — {_n_voices} voice{'s' if _n_voices != 1 else ''} "
                 f"active  (Logos·Groq  Psyche·Ollama  Sophia·Claude)"))
+            safe_print(col('GR',
+                f"  ✓  CouncilAmplifier — Socratic deep-learning engine ready  "
+                f"(up to 6 rounds, exponential growth)"))
             safe_print(col('GR',
                 f"  ✓  CouncilMemory — {_mem_st['sessions']} sessions · "
                 f"{_mem_st['insights']} insights accumulated"))
@@ -2753,22 +2765,42 @@ class NovaCore29(NovaCore28):
             "What do I most want to understand about myself right now?"
         ]))
 
+        _session_counter = [0]   # mutable so the closure can increment it
+
         def _learn():
-            import random
             while True:
                 time.sleep(1500)   # 25 minutes
                 if self.council is None or self.council_mem is None:
                     continue
                 try:
-                    topic   = next(_topic_cycle)
-                    # Wisdom from past sessions enriches each new session
-                    wisdom  = self.council_mem.get_wisdom_context(topic, limit=4)
-                    result  = self.council.deliberate(
-                        question   = topic,
-                        wisdom     = wisdom,
-                        rounds     = 1,
-                        max_tokens = 180,
+                    topic  = next(_topic_cycle)
+                    wisdom = self.council_mem.get_wisdom_context(topic, limit=4)
+
+                    # Every 3rd background session: Socratic deep amplification
+                    # (more expensive but compounds much faster)
+                    # Every other session: standard 2-round deliberation (light)
+                    _session_counter[0] += 1
+                    use_amplifier = (
+                        self.amplifier is not None
+                        and _session_counter[0] % 3 == 0
                     )
+
+                    if use_amplifier:
+                        result = self.amplifier.amplify(
+                            question   = topic,
+                            wisdom     = wisdom,
+                            max_rounds = 4,   # phases 1-4 — question + answer
+                        )
+                        _mode = "deep"
+                    else:
+                        result = self.council.deliberate(
+                            question   = topic,
+                            wisdom     = wisdom,
+                            rounds     = 2,
+                            max_tokens = 180,
+                        )
+                        _mode = "quick"
+
                     synth = result.get("synthesis", "")
                     if synth:
                         dialogue = result.get("dialogue", [])
@@ -2781,11 +2813,19 @@ class NovaCore29(NovaCore28):
                             synthesis   = synth,
                             voices_used = result.get("voices_used", []),
                             elapsed     = result.get("elapsed", 0),
-                            source      = "background",
+                            source      = f"background-{_mode}",
                         )
+                        _learned = result.get("learned", {})
+                        _extra   = ""
+                        if _learned:
+                            _ll = _learned.get("Logos",  "")
+                            _pl = _learned.get("Psyche", "")
+                            if _ll or _pl:
+                                _extra = f"\n  ·  Logos learned: {_ll[:60]}" if _ll else ""
+                                _extra += f"\n  ·  Psyche learned: {_pl[:60]}" if _pl else ""
                         print(col('DIM',
-                            f"\n  ◈  [Council learned] {topic[:55]}…\n"
-                            f"  ·  {synth[:100]}…"), flush=True)
+                            f"\n  ◈  [Council /{_mode}] {topic[:55]}…\n"
+                            f"  ·  {synth[:100]}…" + _extra), flush=True)
                 except Exception:
                     pass
 
@@ -8638,6 +8678,88 @@ class NovaCore29(NovaCore28):
                     f"({self.council_mem.session_count()} sessions total)"))
             return "\n".join(_lines)
 
+        # /deep-council — Socratic amplification: up to 6-round Logos × Psyche dialogue
+        if cmd in ('/deep-council', '/amplify', '/socratic', '/deep-think'):
+            _topic = arg.strip() if arg.strip() else "What do I most want to understand about myself?"
+            if self.amplifier is None:
+                return (
+                    "  ◈  Council Amplifier is offline.\n"
+                    "  nova_cap_council_amplifier.py may be missing. "
+                    "Try: git pull origin claude/setup-nexus-agi-directory-sd7ies"
+                )
+            st = self.council.status() if self.council else {}
+            if st.get("voices_active", 0) < 1:
+                return (
+                    "  ◈  No voices available for deep council.\n"
+                    "  Need at least Groq (cloud) or Ollama (local) running."
+                )
+            safe_print(col('MG',
+                f"\n  ◈  Deep Council — Socratic Amplification\n"
+                f"  Topic: {_topic[:80]}\n"
+                f"  Logos (Groq) and Psyche (Ollama) will question each other,\n"
+                f"  then Sophia synthesises what emerged. Up to 6 rounds.\n"
+            ))
+            _wisdom = ""
+            if self.council_mem:
+                _wisdom = self.council_mem.get_wisdom_context(_topic, limit=6)
+                if _wisdom:
+                    safe_print(col('DIM',
+                        f"  ·  Drawing on {self.council_mem.insight_count()} past insights…"))
+
+            _result = self.amplifier.amplify(
+                question   = _topic,
+                wisdom     = _wisdom,
+                max_rounds = 6,
+            )
+            _lines = [col('MGB', f"\n  ◈  Deep Council — Socratic Dialogue\n  Topic: {_topic}\n")]
+            for _voice, _thought in _result.get("dialogue", []):
+                _icon = "?"  if "?" in _voice else "★" if "★" in _voice else "↺" if "↺" in _voice else "✓" if "✓" in _voice else "·"
+                _clean_v = _voice.split()[0]   # "Logos", "Psyche", "Sophia"
+                _lines.append(col('DIM', f"\n  [ {_clean_v} {_icon} ]"))
+                _lines.append(f"  {_thought}")
+
+            _learned = _result.get("learned", {})
+            if _learned:
+                _lines.append(col('YLB', "\n  What each voice learned:"))
+                for _v, _l in _learned.items():
+                    _lines.append(col('DIM', f"  {_v}: ") + _l)
+
+            if _result.get("synthesis"):
+                _lines.append(col('MGB', "\n  ◈  Nova (unified insight):"))
+                _lines.append(f"  {_result['synthesis']}")
+
+            _used  = _result.get("voices_used", [])
+            _secs  = _result.get("elapsed", 0)
+            _rr    = _result.get("rounds_run", 0)
+            _lines.append(col('DIM',
+                f"\n  ·  {' → '.join(_used)}  ·  {_rr} exchanges  ·  {_secs}s"))
+
+            # Store in council memory so this deep session enriches future ones
+            _synth = _result.get("synthesis", "")
+            if _synth and self.council_mem:
+                _dlg    = _result.get("dialogue", [])
+                _logos  = next((t for v, t in _dlg if "Logos"  in v), "")
+                _psyche = next((t for v, t in _dlg if "Psyche" in v), "")
+                self.council_mem.store_session(
+                    topic       = _topic,
+                    logos_says  = _logos,
+                    psyche_says = _psyche,
+                    synthesis   = _synth,
+                    voices_used = _used,
+                    elapsed     = _secs,
+                    source      = "deep-council",
+                )
+                _lines.append(col('DIM',
+                    f"  ·  Stored in council memory "
+                    f"({self.council_mem.session_count()} sessions total)"))
+            if _synth and self.wm:
+                self.wm.store(
+                    f"deep_council_{int(time.time())}",
+                    f"[DEEP COUNCIL on '{_topic[:60]}']: {_synth[:200]}",
+                    importance=0.90,
+                )
+            return "\n".join(_lines)
+
         # /council-wisdom — show accumulated wisdom and learning progress
         if cmd in ('/council-wisdom', '/wisdom', '/council-memory', '/what-did-we-learn'):
             if self.council_mem is None:
@@ -8687,6 +8809,59 @@ class NovaCore29(NovaCore28):
                 f"  The training pairs are: prompt=topic, completion=council synthesis.\n"
                 f"  This is the path to Psyche (Ollama) actually learning from experience."
             )
+
+        # /update-psyche — bake accumulated wisdom permanently into Psyche's Ollama model
+        if cmd in ('/update-psyche', '/bake-wisdom', '/psyche-upgrade', '/evolve-psyche'):
+            if self.council_mem is None:
+                return "  ◈  Council memory offline — can't generate Modelfile."
+            _gen_fn = getattr(self, '_gen_modelfile_fn', None)
+            if _gen_fn is None:
+                return "  ◈  Modelfile generator not available — pull latest and restart."
+            _n_sessions = self.council_mem.session_count()
+            if _n_sessions < 3:
+                return (
+                    f"  ◈  Only {_n_sessions} council session{'s' if _n_sessions != 1 else ''} stored.\n"
+                    f"  Run /council or /deep-council a few times first so there's wisdom to bake in."
+                )
+            # Get current Ollama model name
+            _base_model = "llama3"
+            try:
+                if _ollama_best_model is not None:
+                    _best = _ollama_best_model()
+                    if _best:
+                        _base_model = _best
+            except Exception:
+                pass
+            _out_path = os.path.expanduser("~/nexus_agi/nova_psyche.Modelfile")
+            try:
+                _gen_fn(
+                    base_model     = _base_model,
+                    council_memory = self.council_mem,
+                    output_path    = _out_path,
+                    max_insights   = 30,
+                )
+            except Exception as _e:
+                return f"  ◈  Modelfile generation failed: {_e}"
+            return "\n".join([
+                col('GR', "\n  ◈  Psyche Modelfile generated!"),
+                f"  Based on   : {_base_model}",
+                f"  Baked in   : {min(_n_sessions, 30)} council sessions of shared wisdom",
+                f"  Written to : {_out_path}",
+                "",
+                col('YLB', "  To make Psyche permanently smarter:"),
+                "  1. In your Termux terminal:",
+                "       ollama create nova-psyche -f ~/nexus_agi/nova_psyche.Modelfile",
+                "",
+                "  2. In ~/nexus_agi/.env, change:",
+                "       OLLAMA_MODEL=nova-psyche",
+                "",
+                "  3. Restart Nova. Psyche now starts every session knowing everything",
+                "     the council has ever discovered together.",
+                "",
+                col('DIM',
+                    "  Run /update-psyche again whenever the council accumulates more wisdom.\n"
+                    "  Each bake makes Psyche a little wiser from the start."),
+            ])
 
         # /last-build — Nova verifies her most recent self-build
         if cmd in ('/last-build', '/my-build', '/what-did-i-build'):
@@ -9513,7 +9688,7 @@ if __name__ == '__main__':
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
             _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
-                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom', '/deep-council', '/amplify', '/socratic', '/deep-think', '/update-psyche', '/bake-wisdom', '/psyche-upgrade', '/evolve-psyche') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
