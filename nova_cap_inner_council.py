@@ -437,51 +437,109 @@ class NovaInnerCouncil:
         Each patch replaces the named method/function in the original.
         Returns the patched code, or the original if no patches applied.
 
-        Handles two common model misbehaviours:
-          · Multi-word headers: "=== PATCH: _init_db method ===" — extracts first identifier
-          · Markdown fences:    ```python ... ``` wrapping the patch body
+        Robust against common model misbehaviours:
+          · Multi-word headers ("=== PATCH: _init_db method ===") — uses first identifier
+          · Markdown fences (```python ... ```) — stripped wherever they appear
+          · Missing === END === — falls back to splitting on next PATCH header
+          · Backslashes in patch body — uses string replace, not re.subn
+          · Indented fences ("    ```python") — stripped by line content, not position
         """
         import re
+
+        # ── Step 1: extract (section_name, body) pairs ────────────────────────
+        blocks: list = []
+
+        # Primary: look for properly terminated blocks (flexible spacing/case)
+        for m in re.finditer(
+            r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n(.*?)(?:\r?\n)?===\s*END\s*===',
+            patch_text, re.DOTALL | re.IGNORECASE,
+        ):
+            blocks.append((m.group(1).strip(), m.group(2)))
+
+        # Fallback: split on PATCH headers when === END === is absent / truncated
+        if not blocks:
+            parts = re.split(
+                r'===\s*PATCH\s*:\s*(.+?)\s*===[ \t]*\r?\n',
+                patch_text, flags=re.IGNORECASE,
+            )
+            i = 1
+            while i + 1 < len(parts):
+                name = parts[i].strip()
+                body = parts[i + 1]
+                body = re.split(r'===', body)[0]   # stop at any === delimiter
+                if name and body.strip():
+                    blocks.append((name, body))
+                i += 2
+
+        if not blocks:
+            return ""
+
+        # ── Step 2: apply each block ───────────────────────────────────────────
         result  = original
         applied = 0
-        for m in re.finditer(
-            r'=== PATCH:\s*(.+?)\s*===\n(.*?)\n=== END ===',
-            patch_text, re.DOTALL
-        ):
-            # Extract the first valid Python identifier from the section name.
-            # Handles "method_name", "_init_db method", "_restore method ===" etc.
-            section_name = m.group(1).strip()
-            id_match     = re.match(r'[\w]+', section_name)
+
+        for section_name, new_block in blocks:
+            # Extract first valid Python identifier from the section name
+            id_match = re.match(r'[\w]+', section_name)
             if not id_match:
                 continue
             method = id_match.group(0)
 
-            new_block = m.group(2)
-            # Strip markdown code fences the model may have added despite instructions
-            new_block = re.sub(r'^```(?:python)?\s*\n?', '', new_block)
-            new_block = re.sub(r'\n?```\s*$',            '', new_block)
-            new_block = new_block.strip('\n').rstrip()
+            # Strip ALL markdown fence lines (handles indented fences too)
+            fence_re = re.compile(r'^\s*```(?:python|py)?\s*$', re.MULTILINE)
+            new_block = fence_re.sub('', new_block)
+            new_block = new_block.strip('\r\n').rstrip()
 
             if not new_block:
                 continue
 
-            # Match the existing method (any indentation) up to the next def/class/EOF
+            # ── Approach A: regex find + manual string replacement ─────────────
+            # Manual replace avoids re.subn interpreting backslashes in new_block
             pattern = (
-                r'([ \t]+def ' + re.escape(method) +
-                r'\b[^\n]*\n(?:(?![ \t]+def |^class ).*\n)*)'
+                r'[ \t]+def ' + re.escape(method) +
+                r'\b[^\n]*\n(?:(?![ \t]+def |^class ).*\n)*'
             )
-            replacement, n = re.subn(pattern, new_block + '\n', result,
-                                     count=1, flags=re.MULTILINE)
-            if n:
-                result  = replacement
+            found = re.search(pattern, result, re.MULTILINE)
+            if found:
+                result  = result[:found.start()] + new_block + '\n' + result[found.end():]
                 applied += 1
+                continue
+
+            # ── Approach B: line-by-line fallback ─────────────────────────────
+            file_lines = result.split('\n')
+            start_idx  = None
+            indent_len = 0
+            for i, line in enumerate(file_lines):
+                stripped = line.lstrip()
+                if (stripped.startswith(f'def {method}(')
+                        or stripped.startswith(f'def {method} ')
+                        or stripped == f'def {method}:'):
+                    start_idx  = i
+                    indent_len = len(line) - len(stripped)
+                    break
+
+            if start_idx is not None:
+                end_idx = len(file_lines)
+                for i in range(start_idx + 1, len(file_lines)):
+                    line = file_lines[i]
+                    if not line.strip():
+                        continue
+                    curr_indent = len(line) - len(line.lstrip())
+                    if curr_indent <= indent_len:
+                        end_idx = i
+                        break
+                result = '\n'.join(
+                    file_lines[:start_idx] + [new_block, ''] + file_lines[end_idx:]
+                )
+                applied += 1
+
         return result if applied else ""
 
     def enhance_code(
         self,
         code:       str,
         name:       str = "",
-        max_tokens: int = 900,
+        max_tokens: int = 1400,
     ) -> Dict:
         """
         Full enhancement pipeline:
