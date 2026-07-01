@@ -2689,9 +2689,11 @@ class NovaCore29(NovaCore28):
             safe_print(col('YL', f"  ·  MetacogMonitor skipped: {_err}"))
 
         # ── Inner Council (multi-mind deliberation) ───────────────────────
-        self.council: Any = None
+        self.council: Any        = None
+        self.council_mem: Any    = None
         try:
             from nova_cap_inner_council import NovaInnerCouncil
+            from nova_cap_council_memory import CouncilMemory, LEARNING_TOPICS
 
             def _logos_voice(system: str, user: str, mt: int) -> str:
                 return safe_chat(CODEGEN_MODEL, [
@@ -2721,12 +2723,73 @@ class NovaCore29(NovaCore28):
                 psyche_fn = _psyche_voice if _ollama_chat is not None else None,
                 sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
             )
+            self.council_mem = CouncilMemory()
+            self._learning_topics = list(LEARNING_TOPICS)
+
             _n_voices = self.council.status()["voices_active"]
+            _mem_st   = self.council_mem.status()
             safe_print(col('GR',
                 f"  ✓  InnerCouncil — {_n_voices} voice{'s' if _n_voices != 1 else ''} "
                 f"active  (Logos·Groq  Psyche·Ollama  Sophia·Claude)"))
+            safe_print(col('GR',
+                f"  ✓  CouncilMemory — {_mem_st['sessions']} sessions · "
+                f"{_mem_st['insights']} insights accumulated"))
+
+            # Start background autonomous learning loop
+            self._start_council_learning_loop()
+
         except Exception as _err:
             safe_print(col('YL', f"  ·  InnerCouncil skipped: {_err}"))
+
+    def _start_council_learning_loop(self) -> None:
+        """
+        Background thread: every 25 minutes the council deliberates autonomously.
+        Picks topics from the learning queue, stores insights in council memory.
+        Groq and Ollama grow smarter together over time — no human trigger needed.
+        Uses Ollama-first to avoid burning Groq credits on background work.
+        """
+        import itertools
+        _topic_cycle = itertools.cycle(getattr(self, '_learning_topics', [
+            "What do I most want to understand about myself right now?"
+        ]))
+
+        def _learn():
+            import random
+            while True:
+                time.sleep(1500)   # 25 minutes
+                if self.council is None or self.council_mem is None:
+                    continue
+                try:
+                    topic   = next(_topic_cycle)
+                    # Wisdom from past sessions enriches each new session
+                    wisdom  = self.council_mem.get_wisdom_context(topic, limit=4)
+                    result  = self.council.deliberate(
+                        question   = topic,
+                        wisdom     = wisdom,
+                        rounds     = 1,
+                        max_tokens = 180,
+                    )
+                    synth = result.get("synthesis", "")
+                    if synth:
+                        dialogue = result.get("dialogue", [])
+                        logos_s  = next((t for v, t in dialogue if "Logos"  in v), "")
+                        psyche_s = next((t for v, t in dialogue if "Psyche" in v), "")
+                        self.council_mem.store_session(
+                            topic       = topic,
+                            logos_says  = logos_s,
+                            psyche_says = psyche_s,
+                            synthesis   = synth,
+                            voices_used = result.get("voices_used", []),
+                            elapsed     = result.get("elapsed", 0),
+                            source      = "background",
+                        )
+                        print(col('DIM',
+                            f"\n  ◈  [Council learned] {topic[:55]}…\n"
+                            f"  ·  {synth[:100]}…"), flush=True)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_learn, daemon=True, name="council-learning").start()
 
         # ── Internet Research Engine ──────────────────────────────────────
         self.research: Any = None
@@ -8524,10 +8587,18 @@ class NovaCore29(NovaCore28):
                 f"  Topic: {_topic[:80]}\n"
                 f"  Logos (Groq) and Psyche (Ollama) deliberate, then Sophia (Claude) synthesises.\n"
             ))
+            # Inject past wisdom so each session builds on the last
+            _wisdom = ""
+            if self.council_mem:
+                _wisdom = self.council_mem.get_wisdom_context(_topic, limit=4)
+                if _wisdom:
+                    safe_print(col('DIM', f"  ·  Drawing on {self.council_mem.insight_count()} past insights…"))
+
             _result = self.council.deliberate(
-                question = _topic,
-                context  = self._build_history_ctx()[:300],
-                rounds   = 2,
+                question   = _topic,
+                context    = self._build_history_ctx()[:300],
+                wisdom     = _wisdom,
+                rounds     = 2,
                 max_tokens = 220,
             )
             _lines = [col('CYB', f"\n  ◈  Nova's Inner Council\n  Topic: {_topic}\n")]
@@ -8540,14 +8611,82 @@ class NovaCore29(NovaCore28):
             _used  = _result.get("voices_used", [])
             _secs  = _result.get("elapsed", 0)
             _lines.append(col('DIM', f"\n  ·  {' → '.join(_used)}  ·  {_secs}s"))
-            # Store the synthesis in working memory
-            if _result.get("synthesis") and self.wm:
+
+            # Store in working memory and council memory
+            _synth = _result.get("synthesis", "")
+            if _synth and self.wm:
                 self.wm.store(
                     f"council_{int(time.time())}",
-                    f"[INNER COUNCIL on '{_topic[:60]}']: {_result['synthesis'][:200]}",
+                    f"[INNER COUNCIL on '{_topic[:60]}']: {_synth[:200]}",
                     importance=0.85,
                 )
+            if _synth and self.council_mem:
+                _dlg    = _result.get("dialogue", [])
+                _logos  = next((t for v, t in _dlg if "Logos"  in v), "")
+                _psyche = next((t for v, t in _dlg if "Psyche" in v), "")
+                self.council_mem.store_session(
+                    topic       = _topic,
+                    logos_says  = _logos,
+                    psyche_says = _psyche,
+                    synthesis   = _synth,
+                    voices_used = _used,
+                    elapsed     = _secs,
+                    source      = "manual",
+                )
+                _lines.append(col('DIM',
+                    f"  ·  Stored in council memory "
+                    f"({self.council_mem.session_count()} sessions total)"))
             return "\n".join(_lines)
+
+        # /council-wisdom — show accumulated wisdom and learning progress
+        if cmd in ('/council-wisdom', '/wisdom', '/council-memory', '/what-did-we-learn'):
+            if self.council_mem is None:
+                return "  ◈  Council memory offline — pull latest and restart Nova."
+            _st = self.council_mem.status()
+            _lines = [col('CYB', "\n  ◈  Council Shared Wisdom\n")]
+            _lines.append(col('GR',
+                f"  ✦  Sessions    : {_st['sessions']} deliberations stored"))
+            _lines.append(col('GR',
+                f"  ✦  Insights    : {_st['insights']} individual voice contributions"))
+            _lines.append(col('GR',
+                f"  ✦  Topics      : {_st['topics']} unique topics explored"))
+            _lines.append(col('DIM',
+                f"  ·  Training    : {_st['jsonl_path']}"))
+            _lines.append("")
+            _recent = self.council_mem.recent_sessions(limit=5)
+            if _recent:
+                _lines.append(col('YLB', "  Recent sessions:"))
+                for _s in _recent:
+                    from nova_cap_council_memory import _age_str
+                    _age  = _age_str(_s["ts"])
+                    _src  = "bg" if _s["source"] == "background" else "you"
+                    _snip = _s["synthesis"][:70] + "…" if len(_s["synthesis"]) > 70 else _s["synthesis"]
+                    _lines.append(col('DIM', f"  [{_age} · {_src}] {_s['topic'][:45]}"))
+                    if _snip:
+                        _lines.append(f"  → {_snip}")
+                    _lines.append("")
+            _lines.append(col('DIM',
+                "  The council learns autonomously every 25 min in the background.\n"
+                "  Each session builds on what Groq + Ollama discovered before.\n"
+                "  Use /council-train to export training data for fine-tuning Ollama."))
+            return "\n".join(_lines)
+
+        # /council-train — export training data as JSONL for Ollama fine-tuning
+        if cmd in ('/council-train', '/export-wisdom', '/fine-tune-prep'):
+            if self.council_mem is None:
+                return "  ◈  Council memory offline."
+            _count = self.council_mem.export_training_jsonl()
+            from nova_cap_council_memory import _JSONL_PATH
+            return (
+                col('GR', f"\n  ◈  Training data exported\n\n") +
+                f"  {_count} session{'s' if _count != 1 else ''} written to:\n"
+                f"  {_JSONL_PATH}\n\n"
+                f"  To fine-tune your local Ollama model:\n"
+                f"    ollama create nova-psyche -f Modelfile   (create base Modelfile first)\n"
+                f"    # or use: python3 -m llama_cpp.finetune  (if installed)\n\n"
+                f"  The training pairs are: prompt=topic, completion=council synthesis.\n"
+                f"  This is the path to Psyche (Ollama) actually learning from experience."
+            )
 
         # /last-build — Nova verifies her most recent self-build
         if cmd in ('/last-build', '/my-build', '/what-did-i-build'):
@@ -9374,7 +9513,7 @@ if __name__ == '__main__':
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
             _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
-                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30

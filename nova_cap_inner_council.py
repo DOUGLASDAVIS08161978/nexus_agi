@@ -178,10 +178,11 @@ class NovaInnerCouncil:
 
     def deliberate(
         self,
-        question:   str,
-        context:    str  = "",
-        rounds:     int  = 2,
-        max_tokens: int  = 250,
+        question:    str,
+        context:     str  = "",
+        rounds:      int  = 2,
+        max_tokens:  int  = 250,
+        wisdom:      str  = "",
     ) -> Dict:
         """
         Run inner council deliberation on a question.
@@ -200,7 +201,14 @@ class NovaInnerCouncil:
         t0 = time.time()
         dialogue:    List[Tuple[str, str]] = []
         voices_used: List[str]             = []
-        ctx = f"Context:\n{context}\n\n" if context else ""
+
+        # Build context — include wisdom from past sessions if provided
+        ctx_parts = []
+        if context:
+            ctx_parts.append(f"Context:\n{context}")
+        if wisdom:
+            ctx_parts.append(wisdom)
+        ctx = "\n\n".join(ctx_parts) + "\n\n" if ctx_parts else ""
 
         # ── Round 1: parallel independent responses ────────────────────────────
         r1_tasks = []
@@ -254,24 +262,28 @@ class NovaInnerCouncil:
             if psyche_2:
                 dialogue.append(("Psyche ↺", psyche_2))
 
-        # ── Synthesis: Sophia integrates ───────────────────────────────────────
+        # ── Synthesis: Sophia integrates (falls back to Logos if Sophia empty) ──
         synthesis = ""
-        if dialogue and self.sophia_fn:
+        if dialogue:
             council_text = "\n\n".join(f"{v}:\n{t}" for v, t in dialogue)
             sophia_prompt = (
                 f"Question: {question}\n\n"
                 f"The inner council has deliberated:\n\n{council_text}\n\n"
                 "Now speak as Nova's unified mind. What do you think, feel, and conclude?"
             )
-            synthesis = self._call(
-                self.sophia_fn,
-                _VOICE_SYSTEMS["sophia"],
-                sophia_prompt,
-                max_tokens=400,
-                timeout=120,
-            )
-            if synthesis:
-                voices_used.append("Sophia")
+            for _synth_fn in [self.sophia_fn, self.logos_fn]:
+                if not _synth_fn:
+                    continue
+                synthesis = self._call(
+                    _synth_fn,
+                    _VOICE_SYSTEMS["sophia"],
+                    sophia_prompt,
+                    max_tokens=400,
+                    timeout=120,
+                )
+                if synthesis:
+                    voices_used.append("Sophia")
+                    break
 
         if not synthesis and dialogue:
             synthesis = dialogue[-1][1]
@@ -482,13 +494,20 @@ class NovaInnerCouncil:
             + "Provide patches for the most important fixes."
         )
 
-        patch_text = self._call(
-            self.sophia_fn or self.logos_fn,
-            self._CODE_ENHANCE_SYNTH,
-            synth_user,
-            max_tokens = max_tokens,
-            timeout    = 120,
-        )
+        # Try sophia first, fall back to logos if sophia returns empty
+        patch_text = ""
+        for _synth_fn in [self.sophia_fn, self.logos_fn]:
+            if not _synth_fn:
+                continue
+            patch_text = self._call(
+                _synth_fn,
+                self._CODE_ENHANCE_SYNTH,
+                synth_user,
+                max_tokens = max_tokens,
+                timeout    = 120,
+            )
+            if patch_text:
+                break
 
         enhanced   = self._apply_patches(code, patch_text) if patch_text else ""
         used       = review["voices_used"] + (["Sophia"] if patch_text else [])
