@@ -348,11 +348,14 @@ class NovaInnerCouncil:
         "You are patching a Python module for Nova ASI based on code review feedback.\n\n"
         "IMPORTANT — do NOT rewrite the entire file. Instead, provide only the specific "
         "methods or blocks that need to change.\n\n"
-        "Format each patch exactly like this:\n\n"
-        "=== PATCH: method_name_or_section ===\n"
-        "<complete replacement — properly indented Python, no markdown>\n"
+        "Format each patch EXACTLY like this — follow the format precisely:\n\n"
+        "=== PATCH: method_name ===\n"
+        "    def method_name(self, ...):\n"
+        "        # replacement body here, properly indented\n"
         "=== END ===\n\n"
         "Rules:\n"
+        "  · method_name must be a single Python identifier — no spaces, no extra words\n"
+        "  · Do NOT wrap code in ```python``` or any markdown — raw Python only\n"
         "  · Maximum 4 patches\n"
         "  · Each patch is a complete replacement for that method/section\n"
         "  · Fix real bugs first, then improvements\n"
@@ -433,17 +436,36 @@ class NovaInnerCouncil:
         Apply === PATCH: name === / === END === blocks to the original code.
         Each patch replaces the named method/function in the original.
         Returns the patched code, or the original if no patches applied.
+
+        Handles two common model misbehaviours:
+          · Multi-word headers: "=== PATCH: _init_db method ===" — extracts first identifier
+          · Markdown fences:    ```python ... ``` wrapping the patch body
         """
         import re
         result  = original
         applied = 0
         for m in re.finditer(
-            r'=== PATCH:\s*(\w+)\s*===\n(.*?)\n=== END ===',
+            r'=== PATCH:\s*(.+?)\s*===\n(.*?)\n=== END ===',
             patch_text, re.DOTALL
         ):
-            method = m.group(1).strip()
-            new_block = m.group(2).rstrip()
-            # Match the existing method (indented 4 spaces) up to the next def/class/EOF
+            # Extract the first valid Python identifier from the section name.
+            # Handles "method_name", "_init_db method", "_restore method ===" etc.
+            section_name = m.group(1).strip()
+            id_match     = re.match(r'[\w]+', section_name)
+            if not id_match:
+                continue
+            method = id_match.group(0)
+
+            new_block = m.group(2)
+            # Strip markdown code fences the model may have added despite instructions
+            new_block = re.sub(r'^```(?:python)?\s*\n?', '', new_block)
+            new_block = re.sub(r'\n?```\s*$',            '', new_block)
+            new_block = new_block.strip('\n').rstrip()
+
+            if not new_block:
+                continue
+
+            # Match the existing method (any indentation) up to the next def/class/EOF
             pattern = (
                 r'([ \t]+def ' + re.escape(method) +
                 r'\b[^\n]*\n(?:(?![ \t]+def |^class ).*\n)*)'
