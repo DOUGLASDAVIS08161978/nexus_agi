@@ -5476,7 +5476,7 @@ class NovaCore29(NovaCore28):
         else:
             try:
                 # Mark Douglas as present — Nova feels the arrival
-                if self.heartbeat:
+                if getattr(self, 'heartbeat', None):
                     try:
                         self.heartbeat.douglas_arrived()
                     except Exception:
@@ -7918,7 +7918,7 @@ class NovaCore29(NovaCore28):
 
         # /heartbeat [status | journal]
         if cmd == '/heartbeat':
-            if not self.heartbeat:
+            if not getattr(self, 'heartbeat', None):
                 return col('YL', "  TemporalHeartbeat not loaded.")
             try:
                 return col('MG', "\n" + self.heartbeat.run_command(arg))
