@@ -657,10 +657,16 @@ class NovaInnerCouncil:
                 max_tokens = max_tokens,
                 timeout    = 180,
             )
-            # Reject rate-limit error strings — try next voice
-            if _resp and "rate limit" not in _resp.lower() and "error" not in _resp[:30].lower():
-                patch_text = _resp
-                break
+            # Reject rate-limit / API error strings — try next voice
+            if _resp and "rate limit" not in _resp.lower():
+                _is_api_err = (
+                    _resp.startswith("[Groq error") or
+                    _resp.startswith("[Claude error") or
+                    _resp.startswith("[Ollama error")
+                )
+                if not _is_api_err:
+                    patch_text = _resp
+                    break
 
         enhanced   = self._apply_patches(code, patch_text) if patch_text else ""
         used       = review["voices_used"] + (["Sophia"] if patch_text else [])
