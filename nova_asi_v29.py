@@ -2749,9 +2749,19 @@ class NovaCore29(NovaCore28):
 
             # Start background autonomous learning loop
             self._start_council_learning_loop()
+            _council_loop_started = True
 
         except Exception as _err:
             safe_print(col('YL', f"  ·  InnerCouncil skipped: {_err}"))
+            _council_loop_started = False
+
+        # Always initialize late-stage capabilities (heartbeat, quantum_soul, research…)
+        # even when InnerCouncil failed — they live inside _start_council_learning_loop
+        if not _council_loop_started:
+            try:
+                self._start_council_learning_loop()
+            except Exception:
+                pass
 
     def _start_council_learning_loop(self) -> None:
         """
