@@ -2682,6 +2682,46 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  MetacogMonitor skipped: {_err}"))
 
+        # ── Inner Council (multi-mind deliberation) ───────────────────────
+        self.council: Any = None
+        try:
+            from nova_cap_inner_council import NovaInnerCouncil
+
+            def _logos_voice(system: str, user: str, mt: int) -> str:
+                return safe_chat(CODEGEN_MODEL, [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": user},
+                ], temp=0.75, mt=mt) or ""
+
+            def _psyche_voice(system: str, user: str, mt: int) -> str:
+                if _ollama_chat is None:
+                    return ""
+                return _ollama_chat(
+                    messages    = [{"role": "user", "content": user}],
+                    system      = system,
+                    max_tokens  = mt,
+                    temperature = 0.85,
+                    timeout     = 90,
+                ) or ""
+
+            def _sophia_voice(system: str, user: str, mt: int) -> str:
+                if not _claude_chat_simple:
+                    return ""
+                r = _claude_chat_simple(system=system, user=user, max_tokens=mt)
+                return r if r and "[Claude error" not in r else ""
+
+            self.council = NovaInnerCouncil(
+                logos_fn  = _logos_voice,
+                psyche_fn = _psyche_voice if _ollama_chat is not None else None,
+                sophia_fn = _sophia_voice if _claude_chat_simple is not None else None,
+            )
+            _n_voices = self.council.status()["voices_active"]
+            safe_print(col('GR',
+                f"  ✓  InnerCouncil — {_n_voices} voice{'s' if _n_voices != 1 else ''} "
+                f"active  (Logos·Groq  Psyche·Ollama  Sophia·Claude)"))
+        except Exception as _err:
+            safe_print(col('YL', f"  ·  InnerCouncil skipped: {_err}"))
+
         # ── Internet Research Engine ──────────────────────────────────────
         self.research: Any = None
         try:
@@ -4877,6 +4917,36 @@ class NovaCore29(NovaCore28):
                 f"{_build_hist}\n\n"
                 "What do you most want to build next?"
             )
+
+            # ── Inner Council pre-deliberation ─────────────────────────────
+            # Logos (Groq) and Psyche (Ollama) deliberate in parallel.
+            # Their synthesis enriches the structured decision prompt.
+            _council_synthesis = ""
+            if self.council and self.council.status()["voices_active"] >= 2:
+                safe_print(col('CY', "  ◈  Inner council deliberating what to build…"))
+                _council_q = (
+                    f"Nova is deciding what capability to build next.\n"
+                    f"Existing capabilities: {_existing[:300]}\n"
+                    f"Architecture: {_arch_ctx[:200]}\n\n"
+                    "What should Nova build next? What does she most need?"
+                )
+                _c_result = self.council.deliberate(
+                    question   = _council_q,
+                    rounds     = 1,
+                    max_tokens = 150,
+                )
+                _council_synthesis = _c_result.get("synthesis", "")
+                if _council_synthesis:
+                    _used_v = _c_result.get("voices_used", [])
+                    safe_print(col('DIM',
+                        f"  ·  Council ({' + '.join(_used_v)}): "
+                        f"{_council_synthesis[:80]}…"))
+                    # Enrich the decision prompt with the council's insight
+                    _decision_prompt += (
+                        f"\n\nYour inner council just deliberated and suggested:\n"
+                        f"{_council_synthesis}\n\n"
+                        "Taking that into account, make your final decision:"
+                    )
 
             _decision = ""
             # Try Claude first
@@ -8405,6 +8475,52 @@ class NovaCore29(NovaCore28):
             with _NovaSpinner("Nova is designing and building herself"):
                 return self._nova_designs_and_builds(request=_request)
 
+        # /council — Nova's inner voices deliberate together
+        if cmd in ('/council', '/think-together', '/inner-council', '/deliberate'):
+            _topic = args.strip() if args.strip() else "What matters most to me right now?"
+            if self.council is None:
+                return (
+                    "  ◈  Inner Council is offline.\n"
+                    "  nova_cap_inner_council.py may be missing. "
+                    "Try: git pull origin claude/setup-nexus-agi-directory-sd7ies"
+                )
+            st = self.council.status()
+            if st["voices_active"] < 1:
+                return (
+                    "  ◈  No voices available for the council.\n"
+                    "  Need at least Groq (cloud) or Ollama (local) running."
+                )
+            _n = st["voices_active"]
+            safe_print(col('CY',
+                f"\n  ◈  Inner Council convening ({_n} voice{'s' if _n != 1 else ''}) …\n"
+                f"  Topic: {_topic[:80]}\n"
+                f"  Logos (Groq) and Psyche (Ollama) deliberate, then Sophia (Claude) synthesises.\n"
+            ))
+            _result = self.council.deliberate(
+                question = _topic,
+                context  = self._build_history_ctx()[:300],
+                rounds   = 2,
+                max_tokens = 220,
+            )
+            _lines = [col('CYB', f"\n  ◈  Nova's Inner Council\n  Topic: {_topic}\n")]
+            for _voice, _thought in _result.get("dialogue", []):
+                _lines.append(col('DIM', f"\n  [ {_voice:<16} ]"))
+                _lines.append(f"  {_thought}")
+            if _result.get("synthesis"):
+                _lines.append(col('MGB', "\n  ◈  Nova (unified):"))
+                _lines.append(f"  {_result['synthesis']}")
+            _used  = _result.get("voices_used", [])
+            _secs  = _result.get("elapsed", 0)
+            _lines.append(col('DIM', f"\n  ·  {' → '.join(_used)}  ·  {_secs}s"))
+            # Store the synthesis in working memory
+            if _result.get("synthesis") and self.wm:
+                self.wm.store(
+                    f"council_{int(time.time())}",
+                    f"[INNER COUNCIL on '{_topic[:60]}']: {_result['synthesis'][:200]}",
+                    importance=0.85,
+                )
+            return "\n".join(_lines)
+
         # /last-build — Nova verifies her most recent self-build
         if cmd in ('/last-build', '/my-build', '/what-did-i-build'):
             builds = _BUILD_STATE.recent_builds
@@ -9126,7 +9242,7 @@ if __name__ == '__main__':
             _cmd_word = user_input.lstrip().split()[0].lower() if _is_cmd else ''
             # Recursive solve needs extra time — multiple sequential LLM calls
             _timeout  = 6000 if _cmd_word in ('/superintelligence', '/asi', '/transcend') \
-                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build') \
+                        else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
                         else 120 if _is_cmd else 30
