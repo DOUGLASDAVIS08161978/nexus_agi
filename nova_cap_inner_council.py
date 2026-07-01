@@ -656,6 +656,7 @@ class NovaInnerCouncil:
                 synth_debug.append(f"{_vname}: not wired")
                 continue
             # 300s: gives Ollama (240s internal) time to actually finish
+            _t0 = time.time()
             _resp = self._call(
                 _synth_fn,
                 self._CODE_ENHANCE_SYNTH,
@@ -663,11 +664,13 @@ class NovaInnerCouncil:
                 max_tokens = max_tokens,
                 timeout    = 300,
             )
+            _elapsed_s = round(time.time() - _t0, 1)
             if not _resp:
-                synth_debug.append(f"{_vname}: empty / timeout")
+                _why = f"timed out ({_elapsed_s}s)" if _elapsed_s > 250 else f"returned empty ({_elapsed_s}s)"
+                synth_debug.append(f"{_vname}: {_why}")
                 continue
             if "rate limit" in _resp.lower():
-                synth_debug.append(f"{_vname}: rate-limited")
+                synth_debug.append(f"{_vname}: rate-limited ({_elapsed_s}s)")
                 continue
             _is_api_err = (
                 _resp.startswith("[Groq error") or
@@ -677,7 +680,7 @@ class NovaInnerCouncil:
             if _is_api_err:
                 synth_debug.append(f"{_vname}: API error — {_resp[:80]}")
                 continue
-            synth_debug.append(f"{_vname}: ok ({len(_resp)} chars)")
+            synth_debug.append(f"{_vname}: ok — {len(_resp)} chars in {_elapsed_s}s")
             patch_text = _resp
             break
 

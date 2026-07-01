@@ -2718,7 +2718,11 @@ class NovaCore29(NovaCore28):
                 if not _module_claude_simple:
                     return ""
                 r = _module_claude_simple(system=system, user=user, max_tokens=mt)
-                return r if r and "[Claude error" not in r else ""
+                if not r:
+                    return "[Claude error: empty response]"
+                if "[Claude error" in r:
+                    return r  # pass through so synth_debug can show the real error
+                return r
 
             self.council = NovaInnerCouncil(
                 logos_fn  = _logos_voice,
