@@ -9058,11 +9058,20 @@ class NovaCore29(NovaCore28):
 
             # Store in working memory
             if self.wm:
-                self.wm.store(
-                    f"enhance_{_target}_{int(time.time())}",
-                    f"[COUNCIL ENHANCED: {_cap_fname}] Logos+Psyche reviewed and improved.",
-                    importance=0.8,
-                )
+                try:
+                    self.wm.store(
+                        f"enhance_{_target}_{int(time.time())}",
+                        f"[COUNCIL ENHANCED: {_cap_fname}] Logos+Psyche reviewed and improved.",
+                        importance=0.8,
+                    )
+                except TypeError:
+                    try:
+                        self.wm.store(
+                            f"enhance_{_target}_{int(time.time())}",
+                            f"[COUNCIL ENHANCED: {_cap_fname}] Logos+Psyche reviewed and improved.",
+                        )
+                    except Exception:
+                        pass
             return "\n".join(_lines)
 
         # /push-enhancements — commit and push all council-enhanced files to GitHub
