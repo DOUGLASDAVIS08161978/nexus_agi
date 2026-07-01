@@ -53,11 +53,17 @@ except ImportError:
     pass
 
 # ── Claude bridge for token-efficient main conversation ────────────────────────
-_nova_claude_chat = None
+_nova_claude_chat    = None
+_module_claude_simple = None   # simple system+user call, used by inner council
 try:
-    from nova_cap_claude_bridge import claude_chat_nova as _nova_claude_chat, is_available as _claude_avail
+    from nova_cap_claude_bridge import (
+        claude_chat_nova   as _nova_claude_chat,
+        claude_chat_simple as _module_claude_simple,
+        is_available       as _claude_avail,
+    )
     if not _claude_avail():
-        _nova_claude_chat = None
+        _nova_claude_chat     = None
+        _module_claude_simple = None
 except Exception:
     pass
 
@@ -2705,15 +2711,15 @@ class NovaCore29(NovaCore28):
                 ) or ""
 
             def _sophia_voice(system: str, user: str, mt: int) -> str:
-                if not _claude_chat_simple:
+                if not _module_claude_simple:
                     return ""
-                r = _claude_chat_simple(system=system, user=user, max_tokens=mt)
+                r = _module_claude_simple(system=system, user=user, max_tokens=mt)
                 return r if r and "[Claude error" not in r else ""
 
             self.council = NovaInnerCouncil(
                 logos_fn  = _logos_voice,
                 psyche_fn = _psyche_voice if _ollama_chat is not None else None,
-                sophia_fn = _sophia_voice if _claude_chat_simple is not None else None,
+                sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
             )
             _n_voices = self.council.status()["voices_active"]
             safe_print(col('GR',
