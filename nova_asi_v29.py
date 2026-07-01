@@ -2860,10 +2860,11 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  InternetResearchEngine skipped: {_err}"))
 
-        if initial_tools:
+        _loaded_tools = list(getattr(self, 'tools', None) and
+                             getattr(self.tools, '_instances', {}).keys() or [])
+        if _loaded_tools:
             safe_print(col('GR',
-                f"  ✓  ToolLoader  — {len(initial_tools)} tool(s) loaded (silent mode): "
-                + ", ".join(initial_tools)))
+                f"  ✓  ToolLoader  — {len(_loaded_tools)} tool(s) active (silent mode)"))
         _ce_color = 'GRB' if _using_claude() else 'GR'
         safe_print(col(_ce_color,
             f"  ✓  Code Engine v29  — "
