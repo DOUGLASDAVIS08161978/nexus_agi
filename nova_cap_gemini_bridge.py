@@ -33,8 +33,9 @@ AVAILABLE  = bool(GEMINI_KEY)
 
 _BASE_URL = (
     "https://generativelanguage.googleapis.com"
-    "/v1beta/models/{model}:generateContent?key={key}"
+    "/v1beta/models/{model}:generateContent"
 )
+# AQ. format keys must be sent as x-goog-api-key header, not ?key= query param
 
 # ── Rate limiter — free tier: 15 RPM ─────────────────────────────────────────
 # Keep a rolling window of recent call timestamps; if we're at 12 calls in the
@@ -67,11 +68,14 @@ def _post(payload: dict, timeout: int = 60) -> str:
     import urllib.request, urllib.error
 
     data = json.dumps(payload).encode()
-    url  = _BASE_URL.format(model=MODEL, key=GEMINI_KEY)
+    url  = _BASE_URL.format(model=MODEL)
     req  = urllib.request.Request(
         url,
         data    = data,
-        headers = {"content-type": "application/json"},
+        headers = {
+            "content-type":   "application/json",
+            "x-goog-api-key": GEMINI_KEY,   # AQ. keys require header auth
+        },
         method  = "POST",
     )
 
