@@ -2783,7 +2783,7 @@ class NovaCore29(NovaCore28):
 
         def _learn():
             while True:
-                time.sleep(2700)   # 45 minutes — gives Groq quota room for manual commands
+                time.sleep(10800)  # 3 hours — was 45 min, was depleting Groq quota for manual commands
                 if self.council is None or self.council_mem is None:
                     continue
                 try:
@@ -4445,7 +4445,7 @@ class NovaCore29(NovaCore28):
             while True:
                 cycle += 1
                 try:
-                    if cycle % 45 == 0:
+                    if cycle % 480 == 0:  # 8 hours — was 45 min, was burning all API quota
                         if hasattr(self, 'github') and self.github and self.github.active:
                             # Pick worst blind spot as evolution target
                             gap_hint = None
