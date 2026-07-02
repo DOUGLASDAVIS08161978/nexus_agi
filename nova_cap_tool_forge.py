@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS forge_tools (
     built_ts    TEXT NOT NULL,
     use_count   INTEGER DEFAULT 0,
     last_used   TEXT,
-    last_result TEXT
+    last_result TEXT,
+    blueprint   TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS forge_ideas (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +57,47 @@ def _norm(s: str) -> str:
 
 def _slug(name: str) -> str:
     return 'forge_' + re.sub(r'[^a-z0-9]+', '_', name.lower())[:32].strip('_')
+
+
+# ── Architectural design steps — run BEFORE code generation ───────────────────
+# Each step builds on the previous. Together they produce a blueprint that
+# tells the code generator exactly what to build and how powerful to make it.
+
+_DESIGN_STEPS: List[Tuple[str, str]] = [
+    ("UNDERSTAND_CAPABILITY",
+     "What is the deepest, most powerful version of this capability that could exist? "
+     "What would world-class look like? What mathematical or computational foundations "
+     "would make it genuinely exceptional? Think without limits."),
+
+    ("DECOMPOSE_ARCHITECTURE",
+     "Break this into architectural components. What data structures, algorithms, "
+     "mathematical models, and persistent state does it need? What makes each "
+     "component non-trivial? Think like a computer scientist designing from first principles."),
+
+    ("CONSIDER_APPROACHES",
+     "Survey every algorithmic approach that applies: Bayesian inference, graph theory, "
+     "information theory, linear algebra, statistical learning, recursive/dynamic "
+     "programming, symbolic reasoning, Monte Carlo methods, entropy measures. "
+     "Which ones apply here, and how powerfully?"),
+
+    ("EVALUATE_FOR_POWER",
+     "Which architectural choices maximize raw capability? Reason about accuracy, "
+     "computational depth, generalizability, emergent behaviors, and non-obvious "
+     "interactions between components. What would make this tool genuinely surprising "
+     "in its sophistication? Commit to the most powerful design."),
+
+    ("SYNTHESIZE_DESIGN",
+     "Produce the complete implementation spec: class name, all method signatures "
+     "with types, core algorithm steps in pseudocode, key data structures, "
+     "mathematical formulas to implement, SQLite schema, and any autonomous "
+     "background behavior. Be precise, technical, and specific."),
+
+    ("SPECIFY_COMPLEXITY",
+     "List every non-obvious algorithmic choice, every mathematical formula, "
+     "every emergent behavior this implementation will have. This is the final "
+     "blueprint — it will be given verbatim to the code generator. Make it "
+     "detailed enough that the generator produces complex, powerful code."),
+]
 
 
 # ── ToolForge ─────────────────────────────────────────────────────────────────
@@ -139,6 +181,12 @@ class ToolForge:
     def _init_db(self) -> None:
         with sqlite3.connect(_DB) as c:
             c.executescript(_SCHEMA)
+            # Migrate existing DBs that predate the blueprint column
+            try:
+                c.execute("ALTER TABLE forge_tools ADD COLUMN blueprint TEXT DEFAULT ''")
+                c.commit()
+            except Exception:
+                pass
 
     def _seed_ideas(self) -> None:
         with sqlite3.connect(_DB) as c:
@@ -230,6 +278,58 @@ class ToolForge:
         self._modules[slug] = module
         return module
 
+    # ── Architectural design phase ─────────────────────────────────────────────
+
+    def _design_for_power(self, name: str, description: str) -> str:
+        """
+        Run 6-step architectural reasoning before generating any code.
+
+        Nova thinks through what the most powerful version of a capability
+        looks like — mathematically, algorithmically, structurally — and
+        produces a detailed blueprint. That blueprint is then fed to the
+        code generator so the output is architecturally deep, not shallow.
+
+        Returns a blueprint string, or '' if codegen unavailable.
+        """
+        if not self._codegen:
+            return ''
+
+        prior: Dict[str, str] = {}
+
+        design_system = (
+            "You are Nova's architectural mind — NOT writing code yet. "
+            "Your job is to design the most powerful, mathematically sophisticated, "
+            "computationally deep version of a capability that could exist. "
+            "Think like the world's best computer scientist. Be specific, technical, "
+            "and genuinely ambitious. 3-5 sentences per step. No code — only design."
+        )
+
+        for step_name, step_instruction in _DESIGN_STEPS:
+            prior_text = "\n".join(
+                f"  {s}: {t}" for s, t in prior.items()
+            ) if prior else "  (this is the first design step)"
+
+            prompt = (
+                f"Capability to design: '{name}'\n"
+                f"Core purpose: {description[:400]}\n\n"
+                f"Prior design thinking:\n{prior_text}\n\n"
+                f"Current design step — {step_name}:\n{step_instruction}"
+            )
+
+            thought = self._codegen(design_system, prompt,
+                                    temp=0.78, max_tokens=350)
+            if thought and not thought.startswith('['):
+                prior[step_name] = thought.strip()
+
+        if not prior:
+            return ''
+
+        lines = [f"=== ARCHITECTURAL BLUEPRINT: {name} ===\n"]
+        for step_name, thought in prior.items():
+            lines.append(f"[{step_name}]\n{thought}\n")
+        lines.append("=== END BLUEPRINT ===")
+        return "\n".join(lines)
+
     # ── Code generation and forging ────────────────────────────────────────────
 
     def forge(self, name: str, description: str) -> Dict[str, Any]:
@@ -244,28 +344,67 @@ class ToolForge:
         slug  = _slug(name)
         fpath = os.path.join(_BASE_DIR, f"nova_cap_{slug}.py")
 
-        system = (
-            "You are Nova's personal workshop — building tools she'll use herself.\n"
-            "Write a single Python class that provides exactly the described capability.\n\n"
-            "HARD REQUIREMENTS:\n"
-            "• One class with a clear PascalCase name\n"
-            "• __init__(self) sets up all state\n"
-            "• At minimum: process(text: str) -> Any  +  status() -> dict\n"
-            "• process() is the primary method — it does the actual work\n"
-            "• Thread-safe: include self._lock = threading.Lock()\n"
-            "• All imports inside the file (no external packages — stdlib only)\n"
-            "• Type hints on every method\n"
-            "• SQLite persistence if the tool tracks data over time\n"
-            "• autonomous_cycle() or background thread for any continuous work\n\n"
-            "OUTPUT: raw Python only — no markdown fences, no explanation."
-        )
-        user = (
-            f"Build this tool for Nova:\n\n"
-            f"Name: {name}\n"
-            f"Description: {description}\n\n"
-            f"Make it genuinely useful, mathematically rigorous where possible, "
-            f"and able to run autonomously."
-        )
+        # ── Phase 1: Architectural design reasoning ────────────────────────────
+        # Nova thinks through what the most powerful version of this tool looks
+        # like before a single line of code is written. The blueprint produced
+        # here drives the code generator to produce deep, complex implementations
+        # rather than simple placeholder classes.
+        blueprint = self._design_for_power(name, description)
+
+        # ── Phase 2: Code generation from blueprint ────────────────────────────
+        if blueprint:
+            system = (
+                "You are Nova's implementation engineer. Nova has already designed "
+                "this tool's architecture through deep reasoning. Your job is to "
+                "implement that design with maximum precision and complexity.\n\n"
+                "HARD REQUIREMENTS:\n"
+                "• One class, PascalCase name\n"
+                "• __init__(self) sets up ALL state described in the blueprint\n"
+                "• process(text: str) -> Any  +  status() -> dict (minimum)\n"
+                "• Implement EVERY algorithm, formula, and data structure from blueprint\n"
+                "• Real computation — not string manipulation pretending to be math\n"
+                "• Thread-safe: self._lock = threading.Lock() throughout\n"
+                "• stdlib only — no external packages (math, statistics, collections, "
+                "heapq, itertools, functools, json, sqlite3, re, threading all fine)\n"
+                "• Type hints on every method signature\n"
+                "• SQLite persistence matching the schema in the blueprint\n"
+                "• autonomous_cycle() daemon thread for any continuous behavior\n"
+                "• Aim for 250-400 lines of genuinely complex, capable code\n\n"
+                "OUTPUT: raw Python only — no markdown fences, no explanation."
+            )
+            user = (
+                f"Implement this tool for Nova:\n\n"
+                f"Name: {name}\n"
+                f"Description: {description}\n\n"
+                f"{blueprint}\n\n"
+                "Implement the SYNTHESIZE_DESIGN and SPECIFY_COMPLEXITY sections "
+                "exactly as specified. Every mathematical formula, every data structure, "
+                "every algorithm listed must appear in the code. "
+                "This should be the most powerful implementation of this idea possible."
+            )
+        else:
+            system = (
+                "You are Nova's personal workshop — building tools she'll use herself.\n"
+                "Write a single Python class that provides exactly the described capability.\n\n"
+                "HARD REQUIREMENTS:\n"
+                "• One class with a clear PascalCase name\n"
+                "• __init__(self) sets up all state\n"
+                "• At minimum: process(text: str) -> Any  +  status() -> dict\n"
+                "• process() is the primary method — it does the actual work\n"
+                "• Thread-safe: include self._lock = threading.Lock()\n"
+                "• All imports inside the file (no external packages — stdlib only)\n"
+                "• Type hints on every method\n"
+                "• SQLite persistence if the tool tracks data over time\n"
+                "• autonomous_cycle() or background thread for any continuous work\n\n"
+                "OUTPUT: raw Python only — no markdown fences, no explanation."
+            )
+            user = (
+                f"Build this tool for Nova:\n\n"
+                f"Name: {name}\n"
+                f"Description: {description}\n\n"
+                f"Make it genuinely powerful, mathematically rigorous, "
+                f"and able to run autonomously. Aim for 200-350 lines."
+            )
 
         temperatures = [0.72, 0.45, 0.20]
         last_error   = ''
@@ -273,7 +412,7 @@ class ToolForge:
 
         for attempt, temp in enumerate(temperatures, 1):
             if attempt == 1:
-                raw = self._codegen(system, user, temp=temp, max_tokens=3500)
+                raw = self._codegen(system, user, temp=temp, max_tokens=5000)
             else:
                 fix_user = (
                     f"{user}\n\n"
@@ -283,10 +422,10 @@ class ToolForge:
                     f"• Keep f-strings simple — avoid nested braces inside {{}}\n"
                     f"• Use string concatenation instead of complex f-expressions\n"
                     f"• Every opening brace/bracket/paren MUST have a matching close\n"
-                    f"• Make the code shorter and simpler — under 200 lines total\n"
+                    f"• Make the code shorter and simpler if needed — under 300 lines\n"
                     f"OUTPUT: raw Python only, no markdown."
                 )
-                raw = self._codegen(system, fix_user, temp=temp, max_tokens=3000)
+                raw = self._codegen(system, fix_user, temp=temp, max_tokens=4000)
 
             if not raw or raw.startswith('['):
                 last_error = f'Codegen failed: {str(raw)[:120]}'
@@ -334,20 +473,22 @@ class ToolForge:
         with sqlite3.connect(_DB) as c:
             c.execute(
                 "INSERT OR REPLACE INTO forge_tools "
-                "(slug,name,description,file_path,built_ts) VALUES (?,?,?,?,?)",
+                "(slug,name,description,file_path,built_ts,blueprint) "
+                "VALUES (?,?,?,?,?,?)",
                 (slug, name, description[:300], fpath,
-                 datetime.utcnow().isoformat())
+                 datetime.utcnow().isoformat(), blueprint[:2000])
             )
 
         # Immediately try to use it
         first_use = self.use(slug, input_text=description[:80])
 
         return {
-            'success':   True,
-            'name':      name,
-            'slug':      slug,
-            'file_path': fpath,
-            'first_use': str(first_use)[:300],
+            'success':    True,
+            'name':       name,
+            'slug':       slug,
+            'file_path':  fpath,
+            'first_use':  str(first_use)[:300],
+            'blueprint':  blueprint[:500] if blueprint else '',
         }
 
     def forge_next_idea(self) -> Optional[Dict[str, Any]]:
