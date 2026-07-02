@@ -5817,12 +5817,15 @@ class NovaCore29(NovaCore28):
                         # Try Gemini first (free, no credits needed)
                         result = ""
                         if _nova_gemini_chat is not None:
-                            result = _nova_gemini_chat(
+                            _g = _nova_gemini_chat(
                                 context     = _ctx,
                                 messages    = _msg_chain,
                                 max_tokens  = 400,
                                 temperature = 0.85,
                             ) or ""
+                            # Only use Gemini result if it's not an error string
+                            if _g and not _g.startswith("[Gemini error"):
+                                result = _g
                         # Fall back to Claude if Gemini failed or unavailable
                         if not result and _nova_claude_chat is not None:
                             result = _nova_claude_chat(
