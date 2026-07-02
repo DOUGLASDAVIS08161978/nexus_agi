@@ -36,6 +36,24 @@ _BASE_URL = (
     "/v1beta/models/{model}:generateContent?key={key}"
 )
 
+# ── Rate limiter — free tier: 15 RPM ─────────────────────────────────────────
+# Keep a rolling window of recent call timestamps; if we're at 12 calls in the
+# last 60s (staying safely under 15), sleep until the window clears.
+_rl_lock       = threading.Lock()
+_rl_timestamps: list = []
+_RPM_LIMIT     = 12   # conservative: 12 of the 15 RPM budget
+
+def _rate_limit_wait() -> None:
+    with _rl_lock:
+        now = time.time()
+        _rl_timestamps[:] = [t for t in _rl_timestamps if now - t < 60]
+        if len(_rl_timestamps) >= _RPM_LIMIT:
+            wait = 61 - (now - _rl_timestamps[0])
+            if wait > 0:
+                time.sleep(wait)
+            _rl_timestamps[:] = [t for t in _rl_timestamps if time.time() - t < 60]
+        _rl_timestamps.append(time.time())
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 _lock        = threading.Lock()
 _calls       = 0
@@ -57,6 +75,7 @@ def _post(payload: dict, timeout: int = 60) -> str:
         method  = "POST",
     )
 
+    _rate_limit_wait()  # stay under 15 RPM free tier
     _delays = (2, 4, 8)
     for _attempt, _delay in enumerate((*_delays, None)):
         try:
