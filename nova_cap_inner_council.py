@@ -648,9 +648,10 @@ class NovaInnerCouncil:
         # Try sophia → logos → psyche in order; skip rate-limited or empty responses
         patch_text   = ""
         synth_debug: List[str] = []
-        _voice_names = ["Sophia·Gemini", "Logos·Groq", "Psyche·Ollama"]
+        # Synthesis order: Groq first (reliable free), then Gemini, then Ollama
+        _voice_names = ["Logos·Groq", "Sophia·Gemini", "Psyche·Ollama"]
         for _synth_fn, _vname in zip(
-            [self.sophia_fn, self.logos_fn, self.psyche_fn], _voice_names
+            [self.logos_fn, self.sophia_fn, self.psyche_fn], _voice_names
         ):
             if not _synth_fn:
                 synth_debug.append(f"{_vname}: not wired")
