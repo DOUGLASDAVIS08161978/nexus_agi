@@ -648,7 +648,7 @@ class NovaInnerCouncil:
         # Try sophia → logos → psyche in order; skip rate-limited or empty responses
         patch_text   = ""
         synth_debug: List[str] = []
-        _voice_names = ["Sophia·Claude", "Logos·Groq", "Psyche·Ollama"]
+        _voice_names = ["Sophia·Gemini", "Logos·Groq", "Psyche·Ollama"]
         for _synth_fn, _vname in zip(
             [self.sophia_fn, self.logos_fn, self.psyche_fn], _voice_names
         ):
