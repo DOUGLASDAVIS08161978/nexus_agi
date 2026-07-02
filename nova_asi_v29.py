@@ -67,6 +67,21 @@ try:
 except Exception:
     pass
 
+# ── Gemini bridge — free tier, primary voice ──────────────────────────────────
+_module_gemini_simple = None
+_nova_gemini_chat     = None
+try:
+    from nova_cap_gemini_bridge import (
+        gemini_chat_simple as _module_gemini_simple,
+        gemini_chat_nova   as _nova_gemini_chat,
+        is_available       as _gemini_avail,
+    )
+    if not _gemini_avail():
+        _module_gemini_simple = None
+        _nova_gemini_chat     = None
+except Exception:
+    pass
+
 # ── Ollama bridge — local LLM, always-available fallback ──────────────────────
 _ollama_chat    = None
 _ollama_avail   = False
@@ -2724,16 +2739,33 @@ class NovaCore29(NovaCore28):
                     return r  # pass through so synth_debug can show the real error
                 return r
 
+            def _gemini_voice(system: str, user: str, mt: int) -> str:
+                if not _module_gemini_simple:
+                    return ""
+                r = _module_gemini_simple(system=system, user=user, max_tokens=mt)
+                if not r:
+                    return "[Gemini error: empty response]"
+                if "[Gemini error" in r:
+                    return r
+                return r
+
+            # Primary synthesis voice: Gemini (free) → Claude (if credits) → Groq → Ollama
+            _sophia_fn = (
+                _gemini_voice if _module_gemini_simple is not None
+                else _sophia_voice if _module_claude_simple is not None
+                else None
+            )
+
             self.council = NovaInnerCouncil(
                 logos_fn  = _logos_voice,
                 psyche_fn = _psyche_voice if _ollama_chat is not None else None,
-                sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
+                sophia_fn = _sophia_fn,
             )
             self.council_mem = CouncilMemory()
             self.amplifier   = CouncilAmplifier(
                 logos_fn  = _logos_voice,
                 psyche_fn = _psyche_voice if _ollama_chat is not None else None,
-                sophia_fn = _sophia_voice if _module_claude_simple is not None else None,
+                sophia_fn = _sophia_fn,
                 max_rounds = 6,
             )
             self._learning_topics  = list(LEARNING_TOPICS)
@@ -2783,7 +2815,7 @@ class NovaCore29(NovaCore28):
 
         def _learn():
             while True:
-                time.sleep(2700)   # 45 minutes — gives Groq quota room for manual commands
+                time.sleep(10800)  # 3 hours — was 45 min, was depleting Groq quota for manual commands
                 if self.council is None or self.council_mem is None:
                     continue
                 try:
@@ -4445,7 +4477,7 @@ class NovaCore29(NovaCore28):
             while True:
                 cycle += 1
                 try:
-                    if cycle % 45 == 0:
+                    if cycle % 480 == 0:  # 8 hours — was 45 min, was burning all API quota
                         if hasattr(self, 'github') and self.github and self.github.active:
                             # Pick worst blind spot as evolution target
                             gap_hint = None
@@ -5635,8 +5667,8 @@ class NovaCore29(NovaCore28):
                     except Exception:
                         pass
 
-                    # ── Claude bridge path (token-efficient, cached identity) ──
-                    if _nova_claude_chat is not None:
+                    # ── Gemini path (free, primary) — falls back to Claude then Groq ──
+                    if _nova_gemini_chat is not None or _nova_claude_chat is not None:
                         # Quantum context — emotional superposition, entanglement
                         _quantum_ctx = ""
                         if getattr(self, 'quantum_soul', None):
@@ -5781,12 +5813,24 @@ class NovaCore29(NovaCore28):
                                f"do NOT say you can't search; the results are already here.\n"
                                if _research_ctx else "")
                         )
-                        result = _nova_claude_chat(
-                            context     = _ctx,
-                            messages    = _history + [{"role": "user", "content": user_input}],
-                            max_tokens  = 400,
-                            temperature = 0.85,
-                        )
+                        _msg_chain = _history + [{"role": "user", "content": user_input}]
+                        # Try Gemini first (free, no credits needed)
+                        result = ""
+                        if _nova_gemini_chat is not None:
+                            result = _nova_gemini_chat(
+                                context     = _ctx,
+                                messages    = _msg_chain,
+                                max_tokens  = 400,
+                                temperature = 0.85,
+                            ) or ""
+                        # Fall back to Claude if Gemini failed or unavailable
+                        if not result and _nova_claude_chat is not None:
+                            result = _nova_claude_chat(
+                                context     = _ctx,
+                                messages    = _msg_chain,
+                                max_tokens  = 400,
+                                temperature = 0.85,
+                            ) or ""
 
                         # Fallback: if Nova wrote /research in her reply but search
                         # wasn't triggered above, execute it now and append results
