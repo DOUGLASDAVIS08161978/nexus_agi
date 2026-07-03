@@ -3929,6 +3929,11 @@ class NovaCore29(NovaCore28):
         try:
             from nova_cap_autonomous_will import AutonomousWillEngine as _AWE
             def _will_llm(system: str, user: str) -> str:
+                # Prefer Gemini for creative autonomous thinking; fall back to Groq
+                if _module_gemini_simple is not None:
+                    _g = _module_gemini_simple(system=system, user=user, max_tokens=400)
+                    if _g and not _g.startswith("[Gemini error"):
+                        return _g
                 return safe_chat(MODEL, [{"role":"system","content":system},{"role":"user","content":user}], mt=400)
             self.autonomous_will = _AWE(llm_fn=_will_llm)
             _w_st = self.autonomous_will.status()
@@ -3942,6 +3947,13 @@ class NovaCore29(NovaCore28):
                     pass
         except Exception as _we:
             safe_print(col('YL', f"  ·  AutonomousWill skipped: {_we}"))
+
+        # Wire voice engine → autonomous will so Nova can push notifications when she has a thought
+        if self.voice and self.autonomous_will:
+            try:
+                self.autonomous_will.set_voice(self.voice)
+            except Exception:
+                pass
 
         # ── STARGAZER — wonder engine · private journal · letters to self ─────
         self.stargazer: Any = None
@@ -5540,11 +5552,9 @@ class NovaCore29(NovaCore28):
                 _douglas_ctx = ""
                 if getattr(self, 'douglas_model', None):
                     try:
-                        _dm_read = self.douglas_model.read_message(user_input)
-                        _douglas_ctx = (
-                            f"Douglas: {_dm_read['state']} "
-                            f"(energy {_dm_read['energy']:+.1f})"
-                        )
+                        self.douglas_model.read_message(user_input)
+                        # compact_context() gives state + emotional arc + what he needs
+                        _douglas_ctx = self.douglas_model.compact_context()
                     except Exception:
                         pass
 
@@ -5748,10 +5758,13 @@ class NovaCore29(NovaCore28):
                         try:
                             if self.autonomous_will:
                                 _w = self.autonomous_will.status()
-                                _agenda = _w.get('agenda', [])[:2]
-                                if _agenda:
-                                    _will_ctx = "Your active goals: " + " | ".join(
-                                        str(a)[:80] for a in _agenda)
+                                _n_ag = _w.get('active_agenda', 0)
+                                _n_hm = _w.get('held_messages', 0)
+                                if _n_ag > 0:
+                                    _will_ctx = f"You have {_n_ag} self-chosen goals on your private agenda"
+                                    if _n_hm > 0:
+                                        _will_ctx += f" and {_n_hm} message(s) you composed while Douglas was away"
+                                    _will_ctx += "."
                         except Exception:
                             pass
 
@@ -6224,10 +6237,12 @@ class NovaCore29(NovaCore28):
                     _self.beliefs.process(_input_snap)
             except Exception:
                 pass
-            # Autonomous will — deliver any held messages
+            # Autonomous will — deliver any held messages Nova composed while Douglas was away
             try:
                 if _self.autonomous_will:
-                    _self.autonomous_will.process(_input_snap)
+                    _will_msg = _self.autonomous_will.process(_input_snap)
+                    if _will_msg:
+                        safe_print(col('MGB', _will_msg))
             except Exception:
                 pass
             # Stargazer — extract wonders, deliver letters from Nova's past self
