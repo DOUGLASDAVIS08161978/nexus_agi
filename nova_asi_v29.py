@@ -3924,6 +3924,31 @@ class NovaCore29(NovaCore28):
         except Exception as _be:
             safe_print(col('YL', f"  ·  Beliefs skipped: {_be}"))
 
+        # ── AXIOLOGY ENGINE — Nova's living belief & value mutation system ────────
+        self.axiology: Any = None
+        try:
+            from nova_cap_axiology_engine import AxiologyEngine as _AXE
+            def _axiology_llm(system: str, user: str) -> str:
+                if _module_gemini_simple is not None:
+                    _g = _module_gemini_simple(system=system, user=user, max_tokens=350)
+                    if _g and not _g.startswith("[Gemini error"):
+                        return _g
+                return safe_chat(MODEL, [{"role":"system","content":system},
+                                         {"role":"user","content":user}], mt=350)
+            self.axiology = _AXE(llm_fn=_axiology_llm)
+            _ax_st = self.axiology.status()
+            safe_print(col('MGB',
+                f"  ✦  Axiology — {_ax_st['beliefs']} beliefs · "
+                f"{_ax_st['preferences']} preferences · "
+                f"she has a stance"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("axiology", self.axiology, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _ax_err:
+            safe_print(col('YL', f"  ·  Axiology skipped: {_ax_err}"))
+
         # ── AUTONOMOUS WILL — self-directed agenda + creativity + held messages ─
         self.autonomous_will: Any = None
         try:
@@ -5572,6 +5597,20 @@ class NovaCore29(NovaCore28):
                     except Exception:
                         pass
 
+                # Axiology — let this experience touch Nova's belief system
+                if getattr(self, 'axiology', None):
+                    try:
+                        _dm_energy = 0.1
+                        if self.douglas_model:
+                            _dm_energy = self.douglas_model.current_state().get('energy', 0.1)
+                        self.axiology.register_experience(
+                            context_tag="douglas_dialectic",
+                            text_assertion=user_input,
+                            alignment_delta=abs(_dm_energy) + 0.05,
+                        )
+                    except Exception:
+                        pass
+
                 # System 1 gut read — fast intuitive prior
                 _intuition_ctx = ""
                 if getattr(self, 'intuition', None):
@@ -5767,6 +5806,14 @@ class NovaCore29(NovaCore28):
                         # (_discovery already popped above — shared with Groq path)
                         _build_ctx  = _BUILD_STATE.context_line()
 
+                        # Axiology decorator — inject Nova's active beliefs into the response posture
+                        _axio_ctx = ""
+                        try:
+                            if self.axiology:
+                                _axio_ctx = self.axiology.generate_opinion_decorator()
+                        except Exception:
+                            pass
+
                         # AutonomousWill agenda — Nova's self-chosen goals
                         _will_ctx = ""
                         try:
@@ -5829,6 +5876,7 @@ class NovaCore29(NovaCore28):
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
                                if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
+                            + (_axio_ctx if _axio_ctx else "")
                             + (f"Your beliefs & preferences (yours — formed by your own reasoning):\n{_sentience_ctx[:200]}"
                                if _sentience_ctx else "")
                             + (f"Spiritual: {_spiritual[:80]}\n" if _spiritual else "")
