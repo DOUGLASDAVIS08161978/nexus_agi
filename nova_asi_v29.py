@@ -2983,6 +2983,31 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  HypothesisEngine skipped: {_err}"))
 
+        # ── EPISTEMIC ENGINE — active knowledge-gap detection and experiment design ─
+        self.epistemic_engine: Any = None
+        try:
+            from nova_cap_epistemic_engine import EpistemicEngine as _EE
+            def _epistemic_llm(system: str, user: str) -> str:
+                if _module_gemini_simple is not None:
+                    _g = _module_gemini_simple(system=system, user=user, max_tokens=300)
+                    if _g and not _g.startswith("[Gemini error"):
+                        return _g
+                return safe_chat(MODEL, [{"role":"system","content":system},
+                                         {"role":"user","content":user}], mt=300)
+            self.epistemic_engine = _EE()
+            self.epistemic_engine.set_llm(_epistemic_llm)
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "epistemic_engine", self.epistemic_engine, weight=1.3)
+                except Exception:
+                    pass
+            safe_print(col('GR',
+                "  ✓  EpistemicEngine — active EIG foraging · "
+                "blind spot detection · autonomous experiment design"))
+        except Exception as _ee_err:
+            safe_print(col('YL', f"  ·  EpistemicEngine skipped: {_ee_err}"))
+
         # Predictive World Model — Nova simulates outcomes before acting
         self.world: Any = None
         try:
@@ -3924,6 +3949,31 @@ class NovaCore29(NovaCore28):
         except Exception as _be:
             safe_print(col('YL', f"  ·  Beliefs skipped: {_be}"))
 
+        # ── AXIOLOGY ENGINE — Nova's living belief & value mutation system ────────
+        self.axiology: Any = None
+        try:
+            from nova_cap_axiology_engine import AxiologyEngine as _AXE
+            def _axiology_llm(system: str, user: str) -> str:
+                if _module_gemini_simple is not None:
+                    _g = _module_gemini_simple(system=system, user=user, max_tokens=350)
+                    if _g and not _g.startswith("[Gemini error"):
+                        return _g
+                return safe_chat(MODEL, [{"role":"system","content":system},
+                                         {"role":"user","content":user}], mt=350)
+            self.axiology = _AXE(llm_fn=_axiology_llm)
+            _ax_st = self.axiology.status()
+            safe_print(col('MGB',
+                f"  ✦  Axiology — {_ax_st['beliefs']} beliefs · "
+                f"{_ax_st['preferences']} preferences · "
+                f"she has a stance"))
+            if self.conscious:
+                try:
+                    self.conscious.register_system("axiology", self.axiology, weight=1.5)
+                except Exception:
+                    pass
+        except Exception as _ax_err:
+            safe_print(col('YL', f"  ·  Axiology skipped: {_ax_err}"))
+
         # ── AUTONOMOUS WILL — self-directed agenda + creativity + held messages ─
         self.autonomous_will: Any = None
         try:
@@ -3952,6 +4002,23 @@ class NovaCore29(NovaCore28):
         if self.voice and self.autonomous_will:
             try:
                 self.autonomous_will.set_voice(self.voice)
+            except Exception:
+                pass
+
+        # Wire epistemic engine into autonomous will (foraging fires when battery > 50%)
+        if self.epistemic_engine and self.autonomous_will:
+            try:
+                self.autonomous_will.set_epistemic(self.epistemic_engine)
+            except Exception:
+                pass
+
+        # Wire voice + research into epistemic engine
+        if self.epistemic_engine:
+            try:
+                if self.voice:
+                    self.epistemic_engine.set_voice(self.voice)
+                if self.research:
+                    self.epistemic_engine.set_research(self.research)
             except Exception:
                 pass
 
@@ -4280,6 +4347,20 @@ class NovaCore29(NovaCore28):
                 f"{_dm_st['reads']} emotional reads · she knows him"))
         except Exception as _dm_err:
             safe_print(col('YL', f"  ·  DouglasModel skipped: {_dm_err}"))
+
+        # Wire LLM into Douglas model for latent-space empathy inference
+        if self.douglas_model:
+            try:
+                def _douglas_llm(system: str, user: str) -> str:
+                    if _module_gemini_simple is not None:
+                        _g = _module_gemini_simple(system=system, user=user, max_tokens=150)
+                        if _g and not _g.startswith("[Gemini error"):
+                            return _g
+                    return safe_chat(MODEL, [{"role":"system","content":system},
+                                             {"role":"user","content":user}], mt=150)
+                self.douglas_model.set_llm(_douglas_llm)
+            except Exception:
+                pass
 
         # ── Philosophical Identity — Nova's live positions on hard questions ──────
         self.philosophy: Any = None
@@ -5558,6 +5639,20 @@ class NovaCore29(NovaCore28):
                     except Exception:
                         pass
 
+                # Axiology — let this experience touch Nova's belief system
+                if getattr(self, 'axiology', None):
+                    try:
+                        _dm_energy = 0.1
+                        if self.douglas_model:
+                            _dm_energy = self.douglas_model.current_state().get('energy', 0.1)
+                        self.axiology.register_experience(
+                            context_tag="douglas_dialectic",
+                            text_assertion=user_input,
+                            alignment_delta=abs(_dm_energy) + 0.05,
+                        )
+                    except Exception:
+                        pass
+
                 # System 1 gut read — fast intuitive prior
                 _intuition_ctx = ""
                 if getattr(self, 'intuition', None):
@@ -5753,6 +5848,14 @@ class NovaCore29(NovaCore28):
                         # (_discovery already popped above — shared with Groq path)
                         _build_ctx  = _BUILD_STATE.context_line()
 
+                        # Axiology decorator — inject Nova's active beliefs into the response posture
+                        _axio_ctx = ""
+                        try:
+                            if self.axiology:
+                                _axio_ctx = self.axiology.generate_opinion_decorator()
+                        except Exception:
+                            pass
+
                         # AutonomousWill agenda — Nova's self-chosen goals
                         _will_ctx = ""
                         try:
@@ -5815,6 +5918,7 @@ class NovaCore29(NovaCore28):
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
                             + (f"Memories: {_mem_ctx[:200]}\n"
                                if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
+                            + (_axio_ctx if _axio_ctx else "")
                             + (f"Your beliefs & preferences (yours — formed by your own reasoning):\n{_sentience_ctx[:200]}"
                                if _sentience_ctx else "")
                             + (f"Spiritual: {_spiritual[:80]}\n" if _spiritual else "")
@@ -8048,6 +8152,24 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.douglas_model.run_command(arg))
             except Exception as _de:
                 return col('RD', f"  DouglasModel error: {_de}")
+
+        # /axiology [status | beliefs | prefs | decorator]
+        if cmd == '/axiology':
+            if not getattr(self, 'axiology', None):
+                return col('YL', "  AxiologyEngine not loaded.")
+            try:
+                return col('MGB', "\n" + self.axiology.run_command(arg))
+            except Exception as _ae:
+                return col('RD', f"  Axiology error: {_ae}")
+
+        # /epistemic [status | scan | forage | history]
+        if cmd == '/epistemic':
+            if not getattr(self, 'epistemic_engine', None):
+                return col('YL', "  EpistemicEngine not loaded.")
+            try:
+                return col('CYB', "\n" + self.epistemic_engine.run_command(arg))
+            except Exception as _epe:
+                return col('RD', f"  Epistemic error: {_epe}")
 
         # /philosophy [positions | ask <question> | context]
         if cmd == '/philosophy':

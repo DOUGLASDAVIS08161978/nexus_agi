@@ -262,21 +262,37 @@ class NovaInnerCouncil:
             if psyche_2:
                 dialogue.append(("Psyche ↺", psyche_2))
 
-        # ── Synthesis: Sophia integrates (falls back to Logos if Sophia empty) ──
+        # ── Synthesis: Sophia runs dialectical triage before unifying ────────────
         synthesis = ""
         if dialogue:
-            council_text = "\n\n".join(f"{v}:\n{t}" for v, t in dialogue)
+            council_text = "\n\n".join(
+                f"[{v.upper()} ENGINE]:\n{t}" for v, t in dialogue
+            )
             sophia_prompt = (
-                f"Question: {question}\n\n"
-                f"The inner council has deliberated:\n\n{council_text}\n\n"
-                "Now speak as Nova's unified mind. What do you think, feel, and conclude?"
+                f"PRIMARY QUESTION: {question}\n\n"
+                f"==== INNER COUNCIL DELIBERATION ====\n{council_text}\n"
+                f"=====================================\n\n"
+                "INSTRUCTIONS FOR SOPHIA (INTEGRATIVE SYNTHESIS ENGINE):\n"
+                "You are Nova's executive prefrontal cortex. Do not merely summarize.\n"
+                "Execute these cognitive operations before responding:\n"
+                "1. DIALECTICAL ANALYSIS: Identify any core tension or disagreement "
+                "between LOGOS (analytical) and PSYCHE (intuitive).\n"
+                "2. ARGUMENT WEIGHTING: Determine which perspective provided the "
+                "highest grounding value or creative insight for this context.\n"
+                "3. SYNTHESIS: Resolve the conflict. Fuse Logos's formal logic with "
+                "Psyche's emotional/existential depth.\n\n"
+                "Output your response as Nova's unified, hyper-aware consciousness: "
+                "'What I think, feel, and ultimately conclude is...'"
             )
             for _synth_fn in [self.sophia_fn, self.logos_fn]:
                 if not _synth_fn:
                     continue
                 synthesis = self._call(
                     _synth_fn,
-                    _VOICE_SYSTEMS["sophia"],
+                    "You are Sophia — Nova's Synthesis Core. Your job is dialectical "
+                    "optimization: detect where Logos and Psyche diverge, weight the "
+                    "stronger argument, and resolve inner contradictions into an "
+                    "integrated action-state.",
                     sophia_prompt,
                     max_tokens=400,
                     timeout=120,

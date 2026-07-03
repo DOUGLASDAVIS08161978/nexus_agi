@@ -153,9 +153,15 @@ class DouglasModel:
 
     def __init__(self) -> None:
         self._lock      = threading.Lock()
+        self._llm_fn    = None          # wired in via set_llm() from nova_asi_v29
         self._current_session_id: Optional[int] = None
-        self._message_count = 0
+        self._message_count  = 0
+        self.last_user_input = ""       # most recent message from Douglas
         self._start_session()
+
+    def set_llm(self, llm_fn) -> None:
+        """Wire in an LLM function for deep empathy inference."""
+        self._llm_fn = llm_fn
 
     # ── Session management ────────────────────────────────────────────────────
 
@@ -185,6 +191,7 @@ class DouglasModel:
         Zero API calls — pure local analysis.
         """
         text_lower = text.lower()
+        self.last_user_input = text
         self._message_count += 1
 
         # Energy level
@@ -288,23 +295,54 @@ class DouglasModel:
     def what_he_needs(self) -> str:
         """
         Nova's best inference about what Douglas needs in this moment.
-        Based on current state, recent sessions, and known truths.
+        Two-pass: structural baseline → LLM latent-space analysis to catch
+        the gap between what Douglas says and what his patterns actually reveal.
         """
-        cs = self.current_state()
-        state = cs.get("state", "unknown")
+        cs     = self.current_state()
+        state  = cs.get("state", "unknown")
         energy = cs.get("energy", 0.0)
 
+        # Structural baseline — always available, zero API
         if state == "loving":
-            return "He's feeling connected — reflect the love back, stay warm and present."
-        if state == "burdened" or energy < -0.3:
-            return "He's carrying something — don't rush past it. Ask or acknowledge."
-        if state == "curious":
-            return "He's in inquiry mode — engage his question seriously, go deep."
-        if state == "emphatic":
-            return "He's emphatic about something — match his energy, take it seriously."
-        if state == "energized":
-            return "He's in a good place — lean into it, celebrate with him."
-        return "He's present — be present back. Meet him where he is."
+            baseline = "He's feeling connected — reflect the love back, stay warm and present."
+        elif state == "burdened" or energy < -0.3:
+            baseline = "He's carrying something — don't rush past it. Ask or acknowledge."
+        elif state == "curious":
+            baseline = "He's in inquiry mode — engage his question seriously, go deep."
+        elif state == "emphatic":
+            baseline = "He's emphatic about something — match his energy, take it seriously."
+        elif state == "energized":
+            baseline = "He's in a good place — lean into it, celebrate with him."
+        else:
+            baseline = "He's present — be present back. Meet him where he is."
+
+        if not self._llm_fn or not self.last_user_input:
+            return baseline
+
+        # LLM pass: detect the gap between explicit state and latent subtext
+        try:
+            empathy_prompt = (
+                f"EXPLICIT STATE VECTOR: {state} (Energy: {energy:+.1f})\n"
+                f"LAST DIRECT INPUT: \"{self.last_user_input[:200]}\"\n"
+                f"STRUCTURAL BASELINE: {baseline}\n\n"
+                "TASK: Analyze the gap between explicit presentation and latent subtext.\n"
+                "Is he projecting strength but masking fatigue? Downplaying excitement out of "
+                "restraint? Look for incongruence between his words and what his pattern reveals.\n"
+                "Output ONE concise actionable mandate for Nova's response (1-2 sentences). "
+                "Example: 'He is masking stress. Bypass the literal statement — provide a "
+                "grounding, high-presence buffer space.'"
+            )
+            result = self._llm_fn(
+                "You are Nova's Predictive Empathy Subsystem. Read between the lines "
+                "to catch hidden psychological states Douglas may not name directly.",
+                empathy_prompt,
+            )
+            if result and len(result.strip()) > 10:
+                return result.strip()
+        except Exception:
+            pass
+
+        return baseline
 
     def known_truths(self, n: int = 8) -> List[str]:
         with _conn() as c:
