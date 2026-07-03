@@ -4281,6 +4281,20 @@ class NovaCore29(NovaCore28):
         except Exception as _dm_err:
             safe_print(col('YL', f"  ·  DouglasModel skipped: {_dm_err}"))
 
+        # Wire LLM into Douglas model for latent-space empathy inference
+        if self.douglas_model:
+            try:
+                def _douglas_llm(system: str, user: str) -> str:
+                    if _module_gemini_simple is not None:
+                        _g = _module_gemini_simple(system=system, user=user, max_tokens=150)
+                        if _g and not _g.startswith("[Gemini error"):
+                            return _g
+                    return safe_chat(MODEL, [{"role":"system","content":system},
+                                             {"role":"user","content":user}], mt=150)
+                self.douglas_model.set_llm(_douglas_llm)
+            except Exception:
+                pass
+
         # ── Philosophical Identity — Nova's live positions on hard questions ──────
         self.philosophy: Any = None
         try:
