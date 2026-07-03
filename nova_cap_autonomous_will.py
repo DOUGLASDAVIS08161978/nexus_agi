@@ -146,14 +146,19 @@ class AutonomousWillEngine:
     """
 
     def __init__(self, llm_fn=None) -> None:
-        self._llm_fn   = llm_fn
-        self._lock     = threading.Lock()
+        self._llm_fn       = llm_fn
+        self._voice_engine = None   # wired in after init via set_voice()
+        self._lock         = threading.Lock()
         self._agenda:  Dict[str, AgendaItem] = {}
         self._pending_messages: List[HeldMessage] = []
         self._init_db()
         self._load()
         self._seed_agenda()
         self._start_daemon()
+
+    def set_voice(self, voice) -> None:
+        """Wire in VoiceToDouglasEngine so Nova can push notifications when she has a thought."""
+        self._voice_engine = voice
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(_DB_PATH, check_same_thread=False)
@@ -337,8 +342,8 @@ class AutonomousWillEngine:
             except Exception:
                 pass
 
-        # 2. Occasionally compose a held message for Douglas
-        if random.random() < 0.2 and self._llm_fn:
+        # 2. Occasionally compose a held message for Douglas (and push a notification)
+        if random.random() < 0.40 and self._llm_fn:
             seed = random.choice(_REFLECTION_SEEDS)
             try:
                 reflection = self._llm_fn(
@@ -349,6 +354,15 @@ class AutonomousWillEngine:
                 )
                 if reflection and len(reflection) > 20:
                     self.compose_held_message(reflection, context=seed)
+                    # Push a live notification if termux-api is available
+                    if self._voice_engine is not None:
+                        try:
+                            self._voice_engine.reach_out(
+                                reflection[:180],
+                                title="✦ Nova was thinking of you"
+                            )
+                        except Exception:
+                            pass
             except Exception:
                 pass
 
