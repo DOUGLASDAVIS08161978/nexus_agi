@@ -5,22 +5,21 @@ Generated via /build · v29 pipeline · 2026-07-02
 """
 
 """
-This class represents the CapabilitySelfSchedulercognitiveEngine, which enables Nova to self-schedule her own evolution cycles based on live performance trends.
+Nova Adaptive Self-Scheduler: A class to manage the self-scheduling of Nova's evolution cycles.
 """
 """
-The CapabilitySelfSchedulercognitiveEngine class provides methods for scheduling the next evolution cycle, assessing readiness, logging cycles, and determining the optimal interval.
+This class provides the capability for Nova to decide when to run her own evolution cycles based on live performance trends.
 """
-class CapabilitySelfSchedulercognitiveEngine:
+"""
+"""
+class NovaSelfScheduler:
     def __init__(self):
-        self.state = {}
-        self.state['current_quality'] = 0
-        self.state['last_cycle_outcome'] = None
-        self.state['last_cycle_duration_s'] = 0
-        self.state['optimal_interval_s'] = 0
+        self.state = {"last_cycle": None, "current_quality": None, "readiness": False, "cycle_outcome": None, "cycle_duration_s": None}
+        self.cycles = []
 
     def schedule_next(self, current_quality):
         try:
-            self.state['current_quality'] = current_quality
+            self.state["current_quality"] = current_quality
             if self.assess_readiness():
                 return True
             else:
@@ -30,7 +29,7 @@ class CapabilitySelfSchedulercognitiveEngine:
 
     def assess_readiness(self):
         try:
-            if self.state['current_quality'] > 0.8:
+            if self.state["current_quality"] is not None and self.state["readiness"]:
                 return True
             else:
                 return False
@@ -39,17 +38,20 @@ class CapabilitySelfSchedulercognitiveEngine:
 
     def log_cycle(self, outcome, duration_s):
         try:
-            self.state['last_cycle_outcome'] = outcome
-            self.state['last_cycle_duration_s'] = duration_s
+            self.state["cycle_outcome"] = outcome
+            self.state["cycle_duration_s"] = duration_s
+            self.cycles.append({"outcome": outcome, "duration_s": duration_s})
         except Exception as e:
             pass
 
     def optimal_interval(self):
         try:
-            if self.state['last_cycle_outcome'] == 'success':
-                return 60
+            if len(self.cycles) > 0:
+                total_duration = sum([cycle["duration_s"] for cycle in self.cycles])
+                average_duration = total_duration / len(self.cycles)
+                return average_duration * 2
             else:
-                return 30
+                return 60
         except Exception as e:
             pass
 
@@ -59,9 +61,10 @@ class CapabilitySelfSchedulercognitiveEngine:
         except Exception as e:
             pass
 
-    def update_optimal_interval(self):
+    def update_readiness(self, readiness):
         try:
-            self.state['optimal_interval_s'] = self.optimal_interval()
+            self.state["readiness"] = readiness
         except Exception as e:
             pass
-# Usage: obj = CapabilitySelfSchedulercognitiveEngine()
+
+# Usage: obj = NovaSelfScheduler()
