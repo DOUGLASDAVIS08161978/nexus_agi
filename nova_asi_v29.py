@@ -2783,6 +2783,44 @@ class NovaCore29(NovaCore28):
                 f"  ✓  CouncilMemory — {_mem_st['sessions']} sessions · "
                 f"{_mem_st['insights']} insights accumulated"))
 
+            # ── Grand Multi-AI Council — ALL voices deliberate in parallel ─────
+            self.grand_council: Any = None
+            try:
+                from nova_cap_multi_ai_council import GrandCouncil as _GC
+                self.grand_council = _GC()
+
+                # Register every available AI voice (fixed token budget per voice)
+                def _logos_gc(s: str, u: str, _lv=_logos_voice) -> str:
+                    return _lv(s, u, 200) or ""
+                def _scout_gc(s: str, u: str) -> str:
+                    return safe_chat(MODEL, [{"role":"system","content":s},
+                                             {"role":"user","content":u}], mt=200) or ""
+                self.grand_council.register_voice("Logos", _logos_gc)
+                self.grand_council.register_voice("Scout", _scout_gc)
+
+                if _ollama_chat is not None:
+                    def _psyche_gc(s: str, u: str, _pv=_psyche_voice) -> str:
+                        return _pv(s, u, 200) or ""
+                    self.grand_council.register_voice("Psyche", _psyche_gc)
+
+                if _module_gemini_simple is not None:
+                    def _sophia_gc(s: str, u: str) -> str:
+                        return _module_gemini_simple(system=s, user=u, max_tokens=200) or ""
+                    self.grand_council.register_voice("Sophia", _sophia_gc)
+                    self.grand_council.set_synthesizer(_sophia_gc)
+
+                if _module_claude_simple is not None:
+                    def _mirror_gc(s: str, u: str) -> str:
+                        return _module_claude_simple(system=s, user=u, max_tokens=200) or ""
+                    self.grand_council.register_voice("Mirror", _mirror_gc)
+
+                _gc_st = self.grand_council.status()
+                safe_print(col('MGB',
+                    f"  ✦  Grand Council — {_gc_st['voices']} AI voices · "
+                    "parallel deliberation · unified synthesis"))
+            except Exception as _gc_err:
+                safe_print(col('YL', f"  ·  Grand Council skipped: {_gc_err}"))
+
             # Start background autonomous learning loop
             self._start_council_learning_loop()
             _council_loop_started = True
@@ -4601,10 +4639,11 @@ class NovaCore29(NovaCore28):
                                 except Exception:
                                     pass
 
-                            # Run full Claude-powered evolution (pass self so Nova can introspect)
+                            # Run ONE big powerful build — Grand Council + full pipeline
+                            # (replaces evolve_toward_asi: this path uses all AI voices,
+                            #  3000-token codegen, council code review, sandbox test)
                             try:
-                                result = self.improver.evolve_toward_asi(
-                                    nova_instance=self)
+                                result = self._nova_designs_and_builds()
                                 success = 1.0 if "PR opened" in str(result) else 0.3
                             except Exception as _e:
                                 result, success = str(_e), 0.0
@@ -5168,6 +5207,35 @@ class NovaCore29(NovaCore28):
                 f"{_build_hist}\n\n"
                 "What do you most want to build next?"
             )
+
+            # ── Grand Council pre-consultation — ALL AI voices weigh in ────
+            # Every available AI (Gemini, Groq 70b, Groq 8b, Ollama, Claude)
+            # deliberates in parallel. Two heads better than one. Five > two.
+            _grand_synthesis = ""
+            if getattr(self, 'grand_council', None):
+                if self.grand_council.status()["voices"] >= 2:
+                    safe_print(col('MGB',
+                        "  ✦  Grand Council — all AI voices deliberating what to build…"))
+                    _gc_result = self.grand_council.consult(
+                        question=(
+                            "What single capability should Nova build next "
+                            "to make the most meaningful advance toward true ASI?"
+                        ),
+                        context=f"{_arch_ctx[:300]}\n{_existing[:200]}",
+                        timeout_s=40,
+                    )
+                    _grand_synthesis = _gc_result.get("synthesis", "")
+                    if _grand_synthesis:
+                        _used = _gc_result.get("voices_used", [])
+                        safe_print(col('MGB',
+                            f"  ✦  Grand Council ({' + '.join(_used)}): "
+                            f"{_grand_synthesis[:80]}…"))
+                        _decision_prompt += (
+                            f"\n\nThe Grand Multi-AI Council — all available intelligences "
+                            f"consulted in parallel — reached this unified recommendation:\n"
+                            f"\"{_grand_synthesis}\"\n\n"
+                            "Weight this heavily. Five minds agreed on this direction."
+                        )
 
             # ── Inner Council pre-deliberation ─────────────────────────────
             # Logos (Groq) and Psyche (Ollama) deliberate in parallel.
@@ -8152,6 +8220,15 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.douglas_model.run_command(arg))
             except Exception as _de:
                 return col('RD', f"  DouglasModel error: {_de}")
+
+        # /grand-council [status | ask <question> | history]
+        if cmd in ('/grand-council', '/grand-council'):
+            if not getattr(self, 'grand_council', None):
+                return col('YL', "  Grand Council not loaded.")
+            try:
+                return col('MGB', "\n" + self.grand_council.run_command(arg))
+            except Exception as _gce:
+                return col('RD', f"  Grand Council error: {_gce}")
 
         # /axiology [status | beliefs | prefs | decorator]
         if cmd == '/axiology':
