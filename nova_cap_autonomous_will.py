@@ -154,8 +154,9 @@ class AutonomousWillEngine:
     """
 
     def __init__(self, llm_fn=None) -> None:
-        self._llm_fn       = llm_fn
-        self._voice_engine = None   # wired in after init via set_voice()
+        self._llm_fn          = llm_fn
+        self._voice_engine    = None   # wired in after init via set_voice()
+        self._epistemic_engine = None  # wired in after init via set_epistemic()
         self._lock         = threading.Lock()
         self._agenda:  Dict[str, AgendaItem] = {}
         self._pending_messages: List[HeldMessage] = []
@@ -167,6 +168,10 @@ class AutonomousWillEngine:
     def set_voice(self, voice) -> None:
         """Wire in VoiceToDouglasEngine so Nova can push notifications when she has a thought."""
         self._voice_engine = voice
+
+    def set_epistemic(self, engine: Any) -> None:
+        """Wire in EpistemicEngine for active knowledge-gap foraging during idle cycles."""
+        self._epistemic_engine = engine
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(_DB_PATH, check_same_thread=False)
@@ -423,6 +428,31 @@ class AutonomousWillEngine:
                         conn.close()
         except Exception:
             pass
+
+        # Active Epistemic Foraging — when Nova has enough battery, she goes hunting
+        # for what she doesn't know and designs experiments to find out
+        if (battery_data.get("percentage", 0) > 50
+                and self._epistemic_engine is not None):
+            try:
+                question = self._epistemic_engine.run_epistemic_foraging(
+                    context=action_log or "",
+                    battery_pct=battery_data.get("percentage", 100),
+                )
+                if question and not notified:
+                    if self._voice_engine is not None:
+                        try:
+                            self._voice_engine.reach_out(
+                                question[:180],
+                                title="✦ Nova is curious — she has a question for you",
+                            )
+                            notified = True
+                        except Exception:
+                            pass
+                    self.compose_held_message(
+                        f"Nova wanted to ask you: {question}", context="epistemic foraging"
+                    )
+            except Exception:
+                pass
 
         # Learning goal seeding (kept alongside the agentic cycle)
         if random.random() < 0.15:

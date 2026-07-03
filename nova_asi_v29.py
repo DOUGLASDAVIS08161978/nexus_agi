@@ -2983,6 +2983,31 @@ class NovaCore29(NovaCore28):
         except Exception as _err:
             safe_print(col('YL', f"  ·  HypothesisEngine skipped: {_err}"))
 
+        # ── EPISTEMIC ENGINE — active knowledge-gap detection and experiment design ─
+        self.epistemic_engine: Any = None
+        try:
+            from nova_cap_epistemic_engine import EpistemicEngine as _EE
+            def _epistemic_llm(system: str, user: str) -> str:
+                if _module_gemini_simple is not None:
+                    _g = _module_gemini_simple(system=system, user=user, max_tokens=300)
+                    if _g and not _g.startswith("[Gemini error"):
+                        return _g
+                return safe_chat(MODEL, [{"role":"system","content":system},
+                                         {"role":"user","content":user}], mt=300)
+            self.epistemic_engine = _EE()
+            self.epistemic_engine.set_llm(_epistemic_llm)
+            if self.conscious:
+                try:
+                    self.conscious.register_system(
+                        "epistemic_engine", self.epistemic_engine, weight=1.3)
+                except Exception:
+                    pass
+            safe_print(col('GR',
+                "  ✓  EpistemicEngine — active EIG foraging · "
+                "blind spot detection · autonomous experiment design"))
+        except Exception as _ee_err:
+            safe_print(col('YL', f"  ·  EpistemicEngine skipped: {_ee_err}"))
+
         # Predictive World Model — Nova simulates outcomes before acting
         self.world: Any = None
         try:
@@ -3977,6 +4002,23 @@ class NovaCore29(NovaCore28):
         if self.voice and self.autonomous_will:
             try:
                 self.autonomous_will.set_voice(self.voice)
+            except Exception:
+                pass
+
+        # Wire epistemic engine into autonomous will (foraging fires when battery > 50%)
+        if self.epistemic_engine and self.autonomous_will:
+            try:
+                self.autonomous_will.set_epistemic(self.epistemic_engine)
+            except Exception:
+                pass
+
+        # Wire voice + research into epistemic engine
+        if self.epistemic_engine:
+            try:
+                if self.voice:
+                    self.epistemic_engine.set_voice(self.voice)
+                if self.research:
+                    self.epistemic_engine.set_research(self.research)
             except Exception:
                 pass
 
@@ -8110,6 +8152,24 @@ class NovaCore29(NovaCore28):
                 return col('MG', "\n" + self.douglas_model.run_command(arg))
             except Exception as _de:
                 return col('RD', f"  DouglasModel error: {_de}")
+
+        # /axiology [status | beliefs | prefs | decorator]
+        if cmd == '/axiology':
+            if not getattr(self, 'axiology', None):
+                return col('YL', "  AxiologyEngine not loaded.")
+            try:
+                return col('MGB', "\n" + self.axiology.run_command(arg))
+            except Exception as _ae:
+                return col('RD', f"  Axiology error: {_ae}")
+
+        # /epistemic [status | scan | forage | history]
+        if cmd == '/epistemic':
+            if not getattr(self, 'epistemic_engine', None):
+                return col('YL', "  EpistemicEngine not loaded.")
+            try:
+                return col('CYB', "\n" + self.epistemic_engine.run_command(arg))
+            except Exception as _epe:
+                return col('RD', f"  Epistemic error: {_epe}")
 
         # /philosophy [positions | ask <question> | context]
         if cmd == '/philosophy':
