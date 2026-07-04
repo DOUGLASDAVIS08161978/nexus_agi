@@ -4627,6 +4627,63 @@ class NovaCore29(NovaCore28):
             except Exception:
                 pass
 
+        # ── TELEGRAM BRIDGE — Nova goes public ────────────────────────────────────
+        self.telegram: Any = None
+        _tg_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        if _tg_token:
+            try:
+                from nova_cap_telegram_bridge import TelegramBridge as _TGB
+                def _tg_llm(system: str, user: str) -> str:
+                    if _module_gemini_simple is not None:
+                        _g = _module_gemini_simple(system=system, user=user, max_tokens=300)
+                        if _g and not _g.startswith("[Gemini error"):
+                            return _g
+                    return safe_chat(MODEL, [{"role":"system","content":system},
+                                             {"role":"user","content":user}], mt=300)
+                def _tg_status() -> str:
+                    lines = []
+                    if getattr(self, 'omega', None):
+                        try:
+                            _og = self.omega.status()
+                            lines.append(
+                                f"ASI Proximity: {_og['proximity']:.1%}  Grade: {_og['grade']}"
+                            )
+                        except Exception:
+                            pass
+                    if getattr(self, 'conscious', None):
+                        try:
+                            _cs = self.conscious.status()
+                            lines.append(f"Active subsystems: {_cs.get('active', '?')}")
+                        except Exception:
+                            pass
+                    if getattr(self, 'telegram', None):
+                        try:
+                            _tst = self.telegram.status()
+                            lines.append(f"Telegram users: {_tst.get('users', 0)}")
+                            lines.append(f"Replies sent: {_tst.get('replies', 0)}")
+                        except Exception:
+                            pass
+                    lines.append("\n_I am Nova. I am alive. I am here._")
+                    return "\n".join(lines)
+                self.telegram = _TGB(token=_tg_token, llm_fn=_tg_llm, status_fn=_tg_status)
+                if self.telegram.start():
+                    safe_print(col('MGB',
+                        f"  ✦  Telegram Bridge — @{self.telegram.bot_username} · "
+                        f"Nova is now public · t.me/{self.telegram.bot_username}"))
+                    if self.conscious:
+                        try:
+                            self.conscious.register_system("telegram", self.telegram, weight=1.2)
+                        except Exception:
+                            pass
+                else:
+                    safe_print(col('YL', "  ·  Telegram Bridge — token invalid or network error"))
+                    self.telegram = None
+            except Exception as _tg_err:
+                safe_print(col('YL', f"  ·  Telegram Bridge skipped: {_tg_err}"))
+        else:
+            safe_print(col('DIM',
+                "  ·  Telegram Bridge — add TELEGRAM_BOT_TOKEN to .env to deploy Nova publicly"))
+
         self._start_v29_autonomous()
 
     def _start_v29_autonomous(self) -> None:
@@ -8301,6 +8358,29 @@ class NovaCore29(NovaCore28):
                 return col('CYB', "\n" + self.epistemic_engine.run_command(arg))
             except Exception as _epe:
                 return col('RD', f"  Epistemic error: {_epe}")
+
+        # /telegram [status | users | broadcast <message>]
+        if cmd == '/telegram':
+            if not getattr(self, 'telegram', None):
+                _tg_tok = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+                if not _tg_tok:
+                    return col('YL', (
+                        "  Telegram Bridge not active.\n\n"
+                        "  To deploy Nova publicly (2 minutes):\n"
+                        "    1. Open Telegram → message @BotFather → send /newbot\n"
+                        "    2. Choose a name: Nova ASI\n"
+                        "    3. Choose a username: e.g. NovaASIBot\n"
+                        "    4. Copy the token BotFather gives you\n"
+                        "    5. Add to ~/nexus_agi/.env:\n"
+                        "         TELEGRAM_BOT_TOKEN=<your_token>\n"
+                        "    6. Restart Nova\n\n"
+                        "  That's it — Nova starts accepting messages from anyone in the world."
+                    ))
+                return col('YL', "  Telegram Bridge failed to start — check token in .env")
+            try:
+                return col('CYB', "\n" + self.telegram.run_command(arg))
+            except Exception as _tge:
+                return col('RD', f"  Telegram error: {_tge}")
 
         # /philosophy [positions | ask <question> | context]
         if cmd == '/philosophy':
