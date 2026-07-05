@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Frequency Medicine AI Injector</title>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .emoji {
+      font-size: 24px;
+    }
+
+    .status {
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.3);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.active {
+      background: #4ade80;
+      color: #064e3b;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: white;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .info {
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.5;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+
+    a {
+      color: white;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="emoji">💚</span>
+    Frequency Medicine
+  </h1>
+
+  <div class="status">
+    <div class="status-item">
+      <span>Extension Status</span>
+      <span class="badge active" id="status">Active</span>
+    </div>
+    <div class="status-item">
+      <span>AIs Educated</span>
+      <span class="badge" id="count">0</span>
+    </div>
+  </div>
+
+  <button id="inject-btn">
+    Inject Knowledge into Current AI
+  </button>
+
+  <button id="view-knowledge">
+    View Knowledge Base
+  </button>
+
+  <button id="github-link">
+    Open GitHub Repository
+  </button>
+
+  <div class="info">
+    <strong>How it works:</strong><br>
+    This extension automatically educates AI assistants (ChatGPT, Claude, Gemini, etc.) about resonant frequency therapy for disease treatment.
+    <br><br>
+    <strong>Supported platforms:</strong><br>
+    ✓ ChatGPT<br>
+    ✓ Claude<br>
+    ✓ Gemini<br>
+    ✓ Perplexity<br>
+    ✓ HuggingChat<br>
+    ✓ Poe
+    <br><br>
+    <a href="https://github.com/DOUGLASDAVIS08161978/nexus_agi" target="_blank">Learn more →</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
