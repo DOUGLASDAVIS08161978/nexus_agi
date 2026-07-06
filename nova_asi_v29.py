@@ -4634,10 +4634,6 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    if _module_gemini_simple is not None:
-                        _g = _module_gemini_simple(system=system, user=user, max_tokens=300)
-                        if _g and not _g.startswith("[Gemini error"):
-                            return _g
                     return safe_chat(MODEL, [{"role":"system","content":system},
                                              {"role":"user","content":user}], mt=300)
                 def _tg_status() -> str:
@@ -6101,20 +6097,9 @@ class NovaCore29(NovaCore28):
                                if _research_ctx else "")
                         )
                         _msg_chain = _history + [{"role": "user", "content": user_input}]
-                        # Try Gemini first (free, no credits needed)
+                        # Claude bridge (fast-fails when credits exhausted → Groq handles it)
                         result = ""
-                        if _nova_gemini_chat is not None:
-                            _g = _nova_gemini_chat(
-                                context     = _ctx,
-                                messages    = _msg_chain,
-                                max_tokens  = 400,
-                                temperature = 0.85,
-                            ) or ""
-                            # Only use Gemini result if it's not an error string
-                            if _g and not _g.startswith("[Gemini error"):
-                                result = _g
-                        # Fall back to Claude if Gemini failed or unavailable
-                        if not result and _nova_claude_chat is not None:
+                        if _nova_claude_chat is not None:
                             result = _nova_claude_chat(
                                 context     = _ctx,
                                 messages    = _msg_chain,
