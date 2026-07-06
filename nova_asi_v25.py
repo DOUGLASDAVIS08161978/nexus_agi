@@ -24,6 +24,22 @@ try:
 except ImportError:
     pass
 
+# Fallback: load .env manually (works even without python-dotenv)
+def _load_env_file():
+    _p = os.path.expanduser("~/nexus_agi/.env")
+    if not os.path.exists(_p):
+        return
+    with open(_p) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if not _line or _line.startswith("#") or "=" not in _line:
+                continue
+            _k, _, _v = _line.partition("=")
+            _k = _k.strip(); _v = _v.strip().strip('"').strip("'")
+            if _k and _k not in os.environ:
+                os.environ[_k] = _v
+_load_env_file()
+
 GROQ_AVAILABLE = False
 try:
     from groq import Groq; GROQ_AVAILABLE = True
