@@ -110,6 +110,7 @@ class StratumClient:
         self.sock              = None
         self._buf              = ""
         self._msg_id           = 0
+        self._pending          = []   # notifications buffered during handshake
         self.extranonce1       = ""
         self.extranonce2_size  = 4
         self.difficulty        = 1.0
@@ -140,7 +141,30 @@ class StratumClient:
         self.sock.sendall(msg.encode())
 
     def recv_line(self) -> dict | None:
-        """Blocking read of one JSON message from the pool."""
+        """Blocking read of one JSON message from the pool. Drains pending buffer first."""
+        if self._pending:
+            return self._pending.pop(0)
+        while "\n" not in self._buf:
+            try:
+                chunk = self.sock.recv(4096).decode("utf-8", errors="ignore")
+                if not chunk:
+                    return None
+                self._buf += chunk
+            except socket.timeout:
+                return None
+            except Exception:
+                return None
+        line, self._buf = self._buf.split("\n", 1)
+        line = line.strip()
+        if not line:
+            return None
+        try:
+            return json.loads(line)
+        except Exception:
+            return None
+
+    def _recv_raw(self) -> dict | None:
+        """Read directly from socket, bypassing pending buffer."""
         while "\n" not in self._buf:
             try:
                 chunk = self.sock.recv(4096).decode("utf-8", errors="ignore")
@@ -161,30 +185,53 @@ class StratumClient:
             return None
 
     def subscribe(self) -> bool:
+        sub_id = self._next_id()
         self._send({
-            "id": self._next_id(),
+            "id": sub_id,
             "method": "mining.subscribe",
             "params": ["nova-miner/1.0"],
         })
-        resp = self.recv_line()
-        if not resp or resp.get("error"):
-            return False
-        result = resp.get("result", [])
-        if len(result) >= 3:
-            self.extranonce1      = result[1]
-            self.extranonce2_size = int(result[2])
-        return True
+        for _ in range(10):
+            resp = self._recv_raw()
+            if not resp:
+                continue
+            if resp.get("id") == sub_id:
+                if resp.get("error"):
+                    return False
+                result = resp.get("result", [])
+                if len(result) >= 3:
+                    self.extranonce1      = result[1]
+                    self.extranonce2_size = int(result[2])
+                return True
+            if resp.get("method"):
+                self._pending.append(resp)
+        return False
 
     def authorize(self) -> bool:
+        auth_id = self._next_id()
         self._send({
-            "id": self._next_id(),
+            "id": auth_id,
             "method": "mining.authorize",
             "params": [self.wallet, PASSWORD],
         })
-        resp = self.recv_line()
-        if resp and resp.get("result") is True:
-            self.authorized = True
-            return True
+        # Pool often sends mining.set_difficulty / mining.notify BEFORE the
+        # authorize reply. Loop until we see the response matching auth_id;
+        # buffer any notifications so the engine can consume them later.
+        for _ in range(20):
+            resp = self._recv_raw()
+            if not resp:
+                continue
+            if resp.get("id") == auth_id:
+                if resp.get("result") is True:
+                    self.authorized = True
+                    return True
+                err = resp.get("error")
+                if err:
+                    print(f"\n  {RED}Pool auth error: {err}{RST}")
+                return False
+            # Buffer notifications for the mining engine to process later
+            if resp.get("method"):
+                self._pending.append(resp)
         return False
 
     def submit_share(self, job_id: str, extranonce2: str,
