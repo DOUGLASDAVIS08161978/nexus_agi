@@ -10224,7 +10224,7 @@ if __name__ == '__main__':
                         else 600 if _cmd_word in ('/build', '/evolve', '/forge', '/self-build', '/build-self', '/nova-build', '/council', '/think-together', '/inner-council', '/deliberate', '/enhance-cap', '/enhance', '/council-enhance', '/improve-cap', '/council-train', '/export-wisdom', '/deep-council', '/amplify', '/socratic', '/deep-think', '/update-psyche', '/bake-wisdom', '/psyche-upgrade', '/evolve-psyche', '/push-enhancements', '/push-enhance', '/commit-enhancements', '/save-enhancements') \
                         else 300 if _cmd_word in ('/recurse', '/solve', '/deep-solve',
                                               '/cross-domain', '/crossdomain', '/think') \
-                        else 120 if _is_cmd else 30
+                        else 120 if _is_cmd else 90
             _spinner_msg = "Nova is working..." if _is_cmd else "Nova is thinking"
             with _NovaSpinner(_spinner_msg, len(user_input)):
                 _resp_box: list = [None]

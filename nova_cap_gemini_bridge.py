@@ -199,7 +199,7 @@ def gemini_chat_nova(
             "maxOutputTokens": max_tokens,
             "temperature":     temperature,
         },
-    }, timeout=90)
+    }, timeout=20)
 
 
 def is_available() -> bool:
