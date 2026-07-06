@@ -34,7 +34,7 @@ from datetime import datetime
 # ── Your wallet ───────────────────────────────────────────────────────────────
 # Set your Cash App Bitcoin address here, or set BTC_WALLET env var.
 # Open Cash App → Bitcoin → Receive → copy that address.
-PAYOUT_ADDRESS = os.environ.get("BTC_WALLET", "")
+PAYOUT_ADDRESS = os.environ.get("BTC_WALLET", "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass")
 
 BLOCK_REWARD = 3.125   # BTC — current reward after April 2024 halving
 API_BASE     = "https://mempool.space/api"
