@@ -113,26 +113,24 @@ def write_config() -> str:
 # ── Install check ─────────────────────────────────────────────────────────────
 
 def ensure_xmrig() -> str:
+    # 1. Local binary compiled from source (preferred)
+    local = os.path.join(BASE_DIR, "xmrig")
+    if os.path.isfile(local) and os.access(local, os.X_OK):
+        return local
+
+    # 2. System-wide install
     path = shutil.which("xmrig")
     if path:
         return path
 
-    print(f"  {CYN}XMRig not found — installing via pkg…{RST}")
-    try:
-        subprocess.run(["pkg", "install", "-y", "xmrig"], check=True)
-    except FileNotFoundError:
-        print(f"  {RED}pkg not found. Are you on Termux?{RST}")
-        print(f"  {DIM}Install manually: pkg install xmrig{RST}")
-        sys.exit(1)
-    except subprocess.CalledProcessError:
-        print(f"  {RED}pkg install failed. Try: pkg update && pkg install xmrig{RST}")
-        sys.exit(1)
-
-    path = shutil.which("xmrig")
-    if not path:
-        print(f"  {RED}xmrig still not found after install. Check Termux repos.{RST}")
-        sys.exit(1)
-    return path
+    # 3. Not found — guide user to build it
+    print(f"\n  {RED}XMRig not found.{RST}")
+    print(f"  XMRig is not in the Termux package repo — you need to build it.")
+    print(f"  It takes ~10-15 minutes but only needs to be done once.\n")
+    print(f"  Run this first:")
+    print(f"  {GOLD}  bash ~/nexus_agi/build_xmrig.sh{RST}\n")
+    print(f"  Then run this script again.")
+    sys.exit(1)
 
 
 # ── Estimated earnings ────────────────────────────────────────────────────────
