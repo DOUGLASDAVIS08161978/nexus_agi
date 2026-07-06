@@ -44,16 +44,15 @@ _rl_lock       = threading.Lock()
 _rl_timestamps: list = []
 _RPM_LIMIT     = 12   # conservative: 12 of the 15 RPM budget
 
-def _rate_limit_wait() -> None:
+def _rate_limit_wait() -> bool:
+    """Returns True if OK to proceed, False if rate-limited (caller should skip)."""
     with _rl_lock:
         now = time.time()
         _rl_timestamps[:] = [t for t in _rl_timestamps if now - t < 60]
         if len(_rl_timestamps) >= _RPM_LIMIT:
-            wait = 61 - (now - _rl_timestamps[0])
-            if wait > 0:
-                time.sleep(wait)
-            _rl_timestamps[:] = [t for t in _rl_timestamps if time.time() - t < 60]
+            return False  # rate limited — skip instead of sleeping 61s
         _rl_timestamps.append(time.time())
+        return True
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
 _lock        = threading.Lock()
@@ -79,7 +78,8 @@ def _post(payload: dict, timeout: int = 60) -> str:
         method  = "POST",
     )
 
-    _rate_limit_wait()  # stay under 15 RPM free tier
+    if not _rate_limit_wait():  # skip instead of blocking 61s on rate limit
+        return "[Gemini error: rate limited — skipping]"
     _delays = (2, 4, 8)
     for _attempt, _delay in enumerate((*_delays, None)):
         try:
