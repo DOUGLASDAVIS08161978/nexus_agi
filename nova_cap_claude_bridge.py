@@ -439,8 +439,7 @@ def claude_chat(
                 if delay is not None:
                     time.sleep(delay)
                     continue
-            if "credit" in err.lower() or "balance" in err.lower() or "402" in err or (
-                    "400" in err and "credit" in err.lower()):
+            if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
                 global _credit_exhausted
                 _credit_exhausted = True
             break
@@ -494,13 +493,16 @@ def _urllib_claude(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=12) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as _he:
         try:
             _body = _he.read().decode("utf-8", errors="replace")[:400]
         except Exception:
             _body = ""
+        # 400/402 = billing/credit issue — flag immediately so callers skip future calls
+        if _he.code in (400, 402):
+            raise RuntimeError(f"credit_error HTTP {_he.code}: {_body}") from _he
         raise RuntimeError(f"HTTP {_he.code} {_he.reason}: {_body}") from _he
 
 
@@ -585,8 +587,7 @@ def claude_chat_nova(
                 if delay is not None:
                     time.sleep(delay)
                     continue
-            if "credit" in err.lower() or "balance" in err.lower() or "402" in err or (
-                    "400" in err and "credit" in err.lower()):
+            if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
                 global _credit_exhausted
                 _credit_exhausted = True
                 import sys
