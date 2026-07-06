@@ -5,7 +5,7 @@
 set -e
 
 DEST="$HOME/nexus_agi/xmrig"
-SRC="/tmp/xmrig_build"
+SRC="${TMPDIR:-$HOME/../usr/tmp}/xmrig_build"
 
 echo ""
 echo "══════════════════════════════════════════════════"
