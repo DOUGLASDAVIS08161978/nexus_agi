@@ -114,14 +114,18 @@ def build_header(prev_hash_hex: str, bits_hex: str, timestamp: int, nonce: int) 
     prev      = bytes.fromhex(prev_hash_hex)[::-1]
     merkle    = bytes(32)                          # simplified — real miners include real txns
     ts        = struct.pack("<I", timestamp)
-    bits      = bytes.fromhex(bits_hex)[::-1]
+    bits_str  = f"{bits_hex:08x}" if isinstance(bits_hex, int) else str(bits_hex)
+    bits      = bytes.fromhex(bits_str)[::-1]
     nc        = struct.pack("<I", nonce)
     return version + prev + merkle + ts + bits + nc
 
 
-def bits_to_target(bits_hex: str) -> int:
+def bits_to_target(bits_hex) -> int:
     """Convert Bitcoin's compact 'bits' field to the full 256-bit integer target."""
-    bits     = int(bits_hex, 16)
+    if isinstance(bits_hex, int):
+        bits = bits_hex
+    else:
+        bits = int(str(bits_hex), 16)
     exponent = bits >> 24
     coeff    = bits & 0x7FFFFF
     return coeff * (2 ** (8 * (exponent - 3)))
