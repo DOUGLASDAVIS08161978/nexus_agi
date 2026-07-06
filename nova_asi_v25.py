@@ -163,29 +163,26 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
     if DEMO_MODE or not GROQ_KEY:
         last = next((m['content'] for m in reversed(msgs) if m['role']=='user'), '')
         return f"[DEMO — set GROQ_API_KEY] Input: {last[:60]}"
-    import requests as _req, time as _time
+    import urllib.request as _ureq, urllib.error as _uerr, time as _time
     _delays = (2, 4, 8)
+    _payload = json.dumps({
+        "model": model, "messages": msgs,
+        "temperature": min(temp, 1.0), "max_tokens": mt,
+    }).encode()
     for _attempt, _delay in enumerate((*_delays, None)):
         try:
-            resp = _req.post(
+            _req = _ureq.Request(
                 "https://api.groq.com/openai/v1/chat/completions",
+                data=_payload,
                 headers={"Authorization": f"Bearer {GROQ_KEY}",
                          "Content-Type": "application/json"},
-                json={"model": model, "messages": msgs,
-                      "temperature": min(temp, 1.0), "max_tokens": mt},
-                timeout=25,
+                method="POST",
             )
-            # Rate-limit: back off and retry
-            if resp.status_code == 429:
-                if _delay is None:
-                    return "[Groq error: rate limit — please slow down]"
-                _time.sleep(_delay)
-                continue
-            data = resp.json()
-            # API-level error (e.g. invalid request, auth failure)
+            with _ureq.urlopen(_req, timeout=25) as _r:
+                data = json.loads(_r.read().decode())
             if "error" in data:
                 _msg = data["error"].get("message", str(data["error"]))[:120]
-                if resp.status_code == 429 or "rate" in _msg.lower():
+                if "rate" in _msg.lower():
                     if _delay is None:
                         return f"[Groq rate limit: {_msg}]"
                     _time.sleep(_delay)
@@ -198,6 +195,18 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
             except Exception:
                 pass
             return content
+        except _uerr.HTTPError as _e:
+            if _e.code == 429:
+                if _delay is None:
+                    return "[Groq error: rate limit — please slow down]"
+                _time.sleep(_delay)
+                continue
+            try:
+                _edata = json.loads(_e.read().decode())
+                _msg = _edata.get("error", {}).get("message", str(_e))[:120]
+            except Exception:
+                _msg = str(_e)[:120]
+            return f"[Groq error: {_msg}]"
         except Exception as _e:
             if _delay is None:
                 return f"[Groq error: {str(_e)[:120]}]"
@@ -205,19 +214,22 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
     return "[Groq error: all retries exhausted]"
 
 def simple_search(query: str, max_results: int=5) -> List[dict]:
-    if not REQUESTS_AVAILABLE: return []
     try:
-        h={'User-Agent':'Mozilla/5.0 (compatible; NovaASI/20.0)'}
-        r=requests.get('https://html.duckduckgo.com/html/',params={'q':query},headers=h,timeout=10)
-        links=re.findall(r'<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',r.text,re.DOTALL)
-        snips=re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',r.text,re.DOTALL)
-        results=[]
-        for i,(url,title_raw) in enumerate(links[:max_results]):
-            title=re.sub(r'<[^>]+>','',title_raw).strip()
-            snippet=re.sub(r'<[^>]+>','',snips[i]).strip() if i<len(snips) else ''
-            results.append({'title':title,'body':snippet,'href':url})
+        import urllib.request as _ureq, urllib.parse as _uparse
+        _url = 'https://html.duckduckgo.com/html/?' + _uparse.urlencode({'q': query})
+        _req = _ureq.Request(_url, headers={'User-Agent': 'Mozilla/5.0 (compatible; NovaASI/20.0)'})
+        with _ureq.urlopen(_req, timeout=10) as _r:
+            _text = _r.read().decode('utf-8', errors='ignore')
+        links = re.findall(r'<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', _text, re.DOTALL)
+        snips = re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', _text, re.DOTALL)
+        results = []
+        for i, (_href, _title_raw) in enumerate(links[:max_results]):
+            title   = re.sub(r'<[^>]+>', '', _title_raw).strip()
+            snippet = re.sub(r'<[^>]+>', '', snips[i]).strip() if i < len(snips) else ''
+            results.append({'title': title, 'body': snippet, 'href': _href})
         return results
-    except: return []
+    except:
+        return []
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
