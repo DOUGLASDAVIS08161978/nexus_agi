@@ -85,6 +85,7 @@ def get_network_info() -> dict:
     block    = fetch(f"/block/{tip_hash}") if tip_hash else None
     hashrate = fetch("/v1/mining/hashrate/3d")
     fees     = fetch("/v1/fees/recommended")
+    prices   = fetch("/v1/prices")   # real-time BTC/USD price
     print(f"{GRN}connected{RST}")
     return {
         "height":   height,
@@ -92,6 +93,7 @@ def get_network_info() -> dict:
         "block":    block,
         "hashrate": hashrate,
         "fees":     fees,
+        "prices":   prices,
     }
 
 
@@ -206,12 +208,20 @@ def run():
     fees     = info.get("fees") or {}
     fee_rate = fees.get("fastestFee", 10) if isinstance(fees, dict) else 10
 
+    prices   = info.get("prices") or {}
+    btc_usd  = float(prices.get("USD", 0)) if isinstance(prices, dict) else 0
+    if not btc_usd:
+        btc_usd = 62_000.0   # fallback if API unavailable
+    price_live = bool(prices and isinstance(prices, dict) and prices.get("USD"))
+
     print(f"\n  {GRN}Live data from the real Bitcoin blockchain:{RST}")
     print(f"  Current block height : {BOLD}{height:,}{RST}")
     print(f"  Latest block hash    : {DIM}{str(tip_hash)[:32]}…{RST}")
     print(f"  Current difficulty   : {BOLD}{float(difficulty):>30,.0f}{RST}")
     if net_hashrate:
         print(f"  Network hashrate     : {BOLD}{fmt_hashrate(net_hashrate)}{RST}")
+    price_label = "live" if price_live else "estimate"
+    print(f"  BTC price (USD)      : {BOLD}${btc_usd:,.0f}{RST}  {DIM}({price_label}){RST}")
     print(f"  Recommended fee rate : {fee_rate} sat/vByte")
 
     # ── Step 2: What mining IS ─────────────────────────────────────────────────
@@ -295,24 +305,28 @@ def run():
         blocks_per_sec  = (my_hashrate / net_hashrate) / 600.0
         expected_secs   = 1.0 / blocks_per_sec if blocks_per_sec > 0 else float("inf")
         daily_btc       = (my_hashrate / net_hashrate) * BLOCK_REWARD * 144
-        daily_usd       = daily_btc * 100_000   # assuming $100k BTC
+        daily_usd       = daily_btc * btc_usd
+        block_usd       = BLOCK_REWARD * btc_usd
+        asic_daily_btc  = 140e12 / net_hashrate * BLOCK_REWARD * 144
+        asic_daily_usd  = asic_daily_btc * btc_usd
+        asic_solo_secs  = (net_hashrate / 140e12) * 600
 
         print(f"""
   At your hashrate of {fmt_hashrate(my_hashrate)}:
 
   Expected time to solo-mine 1 block : {BOLD}{fmt_time(expected_secs)}{RST}
-  Block reward if you found one      : {BOLD}{BLOCK_REWARD} BTC{RST}
+  Block reward if you found one      : {BOLD}{BLOCK_REWARD} BTC  (${block_usd:,.0f} USD){RST}
 
   ──────────────────────────────────────────────────────────
   POOL MINING (what real small miners do):
   Join a pool → combine hashpower → get your proportional share
   Your theoretical pool earnings     : {daily_btc:.10f} BTC/day
-                                     ≈ ${daily_usd:.6f} USD/day (at $100k/BTC)
+                                     ≈ ${daily_usd:.6f} USD/day
 
   Real ASIC miners (Antminer S21, ~140 TH/s, ~$3,000):
-  Expected solo time                 : {fmt_time(140e12 / net_hashrate / 600.0 * 86400)}  per block
-  Pool earnings                      : ~{140e12/net_hashrate*BLOCK_REWARD*144:.4f} BTC/day
-                                     ≈ ${140e12/net_hashrate*BLOCK_REWARD*144*100000:.2f} USD/day
+  Expected solo time                 : {fmt_time(asic_solo_secs)} per block
+  Pool earnings                      : ~{asic_daily_btc:.4f} BTC/day
+                                     ≈ ${asic_daily_usd:.2f} USD/day
   ──────────────────────────────────────────────────────────
 """)
 
@@ -328,7 +342,7 @@ def run():
     sim_nonce = random.randint(0, 4_294_967_295)
     sim_txid  = "".join(random.choice("0123456789abcdef") for _ in range(64))
     sim_height = (height + 1) if isinstance(height, int) else 870_001
-    btc_usd   = BLOCK_REWARD * 100_000
+    sim_reward_usd = BLOCK_REWARD * btc_usd
 
     print(f"""
   ✦ BLOCK DISCOVERED! (simulated announcement)
@@ -341,7 +355,7 @@ def run():
   ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   Coinbase TxID  : {sim_txid}
   Block reward   : {BLOCK_REWARD} BTC
-  Est. value     : ~${btc_usd:,.0f} USD
+  Est. value     : ~${sim_reward_usd:,.0f} USD  (at ${btc_usd:,.0f}/BTC live)
   Paid to wallet : {PAYOUT_ADDRESS}
   ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 
