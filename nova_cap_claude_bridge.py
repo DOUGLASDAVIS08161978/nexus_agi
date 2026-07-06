@@ -62,6 +62,7 @@ ANTHROPIC_KEY  = os.getenv("ANTHROPIC_API_KEY", "").strip()
 CLAUDE_MODEL   = os.getenv("NOVA_CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 CLAUDE_DEEP    = os.getenv("NOVA_CLAUDE_DEEP_MODEL", "claude-sonnet-4-6")
 AVAILABLE      = bool(ANTHROPIC_KEY)
+_credit_exhausted = False   # set True on first 402/credit error — skips network calls
 
 # ── Nova's cached identity block ───────────────────────────────────────────────
 # Intentionally detailed — this prompt is cached (ephemeral) so after the first
@@ -357,7 +358,7 @@ def claude_chat(
 
     Returns the assistant's response text, or "" on failure.
     """
-    if not AVAILABLE:
+    if not AVAILABLE or _credit_exhausted:
         return ""
 
     chosen_model  = model or (CLAUDE_DEEP if deep else CLAUDE_MODEL)
@@ -438,6 +439,10 @@ def claude_chat(
                 if delay is not None:
                     time.sleep(delay)
                     continue
+            if "credit" in err.lower() or "balance" in err.lower() or "402" in err or (
+                    "400" in err and "credit" in err.lower()):
+                global _credit_exhausted
+                _credit_exhausted = True
             break
 
     return ""
@@ -521,7 +526,7 @@ def claude_chat_nova(
 
     History: last 4 exchanges × 500 chars each — can never grow out of control.
     """
-    if not AVAILABLE:
+    if not AVAILABLE or _credit_exhausted:
         return ""
 
     system_blocks: List[Dict] = [
@@ -580,8 +585,16 @@ def claude_chat_nova(
                 if delay is not None:
                     time.sleep(delay)
                     continue
-            import sys
-            print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
+            if "credit" in err.lower() or "balance" in err.lower() or "402" in err or (
+                    "400" in err and "credit" in err.lower()):
+                global _credit_exhausted
+                _credit_exhausted = True
+                import sys
+                print("  [Claude bridge] Credit balance low — switching to Groq for this session.",
+                      file=sys.stderr)
+            else:
+                import sys
+                print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
             break
 
     return ""
