@@ -82,16 +82,17 @@ def build_header(version: str, prevhash: str, merkle_root: bytes,
                  ntime: str, nbits: str, nonce: int) -> bytes:
     """
     Assemble the 80-byte Bitcoin block header.
-    In Stratum v1 all fields are little-endian hex except prevhash
-    which uses word-swapped encoding that needs swap32 to fix.
+    Stratum sends version/ntime/nonce as LE hex (used directly).
+    prevhash uses word-swap encoding — fixed by swap32().
+    nbits is sent as big-endian compact value — reversed to LE for header.
     """
     return (
-        bytes.fromhex(version) +   # 4 bytes — version (LE from Stratum)
-        swap32(prevhash) +          # 32 bytes — previous block hash
-        merkle_root +               # 32 bytes — merkle root of transactions
-        bytes.fromhex(ntime) +      # 4 bytes  — timestamp (LE from Stratum)
-        bytes.fromhex(nbits) +      # 4 bytes  — compact difficulty (LE from Stratum)
-        struct.pack("<I", nonce)    # 4 bytes  — nonce (what we vary)
+        bytes.fromhex(version) +          # 4 bytes — version (LE from Stratum)
+        swap32(prevhash) +                 # 32 bytes — previous block hash
+        merkle_root +                      # 32 bytes — merkle root of transactions
+        bytes.fromhex(ntime) +             # 4 bytes  — timestamp (LE from Stratum)
+        bytes.fromhex(nbits)[::-1] +       # 4 bytes  — compact difficulty (BE→LE)
+        struct.pack("<I", nonce)           # 4 bytes  — nonce (what we vary)
     )
 
 
@@ -364,10 +365,12 @@ class MiningEngine:
             # 2. Network target (hard) — actual Bitcoin block found
             pool_target = DIFF1_TARGET // max(1, int(diff))
             try:
-                nbits_be  = bytes.fromhex(job["nbits"])[::-1]
-                exp       = nbits_be[0]
-                coeff     = int.from_bytes(nbits_be[1:4], "big")
-                net_target = coeff * (2 ** (8 * (exp - 3)))
+                # Stratum sends nbits as big-endian compact value (e.g. "1702b75f").
+                # Read first byte as exponent, next 3 as coefficient — no reversal.
+                nbits_bytes = bytes.fromhex(job["nbits"])
+                exp         = nbits_bytes[0]
+                coeff       = int.from_bytes(nbits_bytes[1:4], "big")
+                net_target  = coeff * (2 ** (8 * (exp - 3)))
             except Exception:
                 net_target = pool_target // 1000
 
