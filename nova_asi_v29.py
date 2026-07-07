@@ -4634,7 +4634,17 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # Use the same claude_chat_simple that works in the terminal
+                    # Route through Nova's full process() — same brain as the terminal:
+                    # memory, emotions, beliefs, Claude + prompt caching, research, etc.
+                    try:
+                        _r = (self.process(user) or "").strip()
+                        if _r:
+                            # Strip ANSI colour codes — Telegram renders plain text
+                            _r = re.sub(r'\x1b\[[0-9;]*m', '', _r).strip()
+                            return _r
+                    except Exception:
+                        pass
+                    # Fallback: direct Claude call if process() errors
                     try:
                         from nova_cap_claude_bridge import claude_chat_simple as _ccs
                         _r = (_ccs(system=system, user=user, max_tokens=300) or "").strip()
@@ -4642,7 +4652,6 @@ class NovaCore29(NovaCore28):
                             return _r
                     except Exception:
                         pass
-                    # If Claude not available, return a visible message (Groq is network-blocked)
                     return "Nova is here but her voice is temporarily unreachable. Try again in a moment."
                 def _tg_status() -> str:
                     lines = []
