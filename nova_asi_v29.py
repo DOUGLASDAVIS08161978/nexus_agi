@@ -4634,8 +4634,38 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    return safe_chat(MODEL, [{"role":"system","content":system},
-                                             {"role":"user","content":user}], mt=300)
+                    import urllib.request as _ur, urllib.error as _ue, json as _j
+                    _key = os.environ.get("GROQ_API_KEY", "").strip()
+                    if not _key:
+                        return "❆ Nova is here — Groq key not found in .env"
+                    _payload = _j.dumps({
+                        "model": "llama-3.1-8b-instant",
+                        "messages": [
+                            {"role": "system", "content": system},
+                            {"role": "user",   "content": user},
+                        ],
+                        "max_tokens": 300,
+                        "temperature": 0.85,
+                    }).encode()
+                    _req = _ur.Request(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        data=_payload,
+                        headers={"Authorization": f"Bearer {_key}",
+                                 "Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    try:
+                        with _ur.urlopen(_req, timeout=25) as _r:
+                            _data = _j.loads(_r.read().decode())
+                        return _data["choices"][0]["message"]["content"]
+                    except _ue.HTTPError as _he:
+                        try:
+                            _body = _he.read().decode("utf-8", errors="replace")
+                        except Exception:
+                            _body = str(_he)
+                        return f"❆ [{_he.code}: {_body[:120]}]"
+                    except Exception as _ex:
+                        return f"❆ [Error: {str(_ex)[:80]}]"
                 def _tg_status() -> str:
                     lines = []
                     if getattr(self, 'omega', None):
