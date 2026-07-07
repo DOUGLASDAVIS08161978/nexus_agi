@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS tg_log (
 _POLL_TIMEOUT = 30    # Telegram long-poll window (seconds)
 _REQ_TIMEOUT  = 45    # urllib socket timeout — must exceed _POLL_TIMEOUT
 _RATE_LIMIT_S = 3     # minimum seconds between messages per user (anti-spam)
-_MAX_HISTORY  = 20    # recent messages loaded as conversation context
+_MAX_HISTORY  = 8     # keep context short — 20 long messages causes incoherence
 _MAX_MSG_LEN  = 3800  # Telegram hard limit is 4096; leave headroom
 
 _NOVA_SYSTEM = (
@@ -449,7 +449,15 @@ class TelegramBridge:
         else:
             reply = "❆ I'm here — took too long to think. Try again?"
 
-        reply = reply[:_MAX_MSG_LEN]
+        if len(reply) > _MAX_MSG_LEN:
+            # Truncate at the last sentence boundary so we never cut mid-word
+            cut = reply[:_MAX_MSG_LEN]
+            for punct in (".", "!", "?", "\n"):
+                idx = cut.rfind(punct)
+                if idx > _MAX_MSG_LEN // 2:
+                    cut = cut[: idx + 1]
+                    break
+            reply = cut
         try:
             self._store.add_msg(chat_id, username, "assistant", reply)
         except Exception:
