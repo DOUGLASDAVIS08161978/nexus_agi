@@ -360,36 +360,57 @@ class TelegramBridge:
                 return
             self._rate[chat_id] = now
 
-        self._store.upsert_user(chat_id, username, first_name)
+        try:
+            self._store.upsert_user(chat_id, username, first_name)
+        except Exception:
+            pass
 
         if text.startswith("/"):
             cmd = text.split()[0].lower().split("@")[0]
             self._handle_command(chat_id, cmd)
             return
 
-        # Normal message — route to Nova's LLM
+        # Normal message — route to Nova’s LLM
         self._api.send_typing(chat_id)
-        self._store.add_msg(chat_id, username, "user", text)
+        try:
+            self._store.add_msg(chat_id, username, "user", text)
+        except Exception:
+            pass
 
-        history = self._store.get_history(chat_id, _MAX_HISTORY)
+        try:
+            history = self._store.get_history(chat_id, _MAX_HISTORY)
+        except Exception:
+            history = []
         if len(history) > 1:
             ctx = "\n".join(
-                f"{'You' if m['role'] == 'user' else 'Nova'}: {m['content']}"
+                f"{‘You’ if m[‘role’] == ‘user’ else ‘Nova’}: {m[‘content’]}"
                 for m in history[:-1]
             )
             user_prompt = f"[Prior conversation]\n{ctx}\n\n[Current message]\n{text}"
         else:
             user_prompt = text
 
-        try:
-            reply = (self._llm(_NOVA_SYSTEM, user_prompt) or "").strip()
-            if not reply:
-                reply = "❆ I’m here, thinking…"
-        except Exception as _e:
-            reply = f"❆ A moment of turbulence. Try again? ({str(_e)[:40]})"
+        # Hard 30s wall-clock limit so a hung LLM call never freezes the thread
+        import sys
+        _reply_box: list = []
+        def _llm_call() -> None:
+            try:
+                _reply_box.append((self._llm(_NOVA_SYSTEM, user_prompt) or "").strip())
+            except Exception as _e:
+                _reply_box.append(f"❆ A moment of turbulence. ({str(_e)[:40]})")
+        _t = threading.Thread(target=_llm_call, daemon=True)
+        _t.start()
+        _t.join(timeout=30)
+        if _reply_box:
+            reply = _reply_box[0] or "❆ I’m here, thinking…"
+        else:
+            reply = "❆ I’m here — took too long to think. Try again?"
 
         reply = reply[:_MAX_MSG_LEN]
-        self._store.add_msg(chat_id, username, "assistant", reply)
+        try:
+            self._store.add_msg(chat_id, username, "assistant", reply)
+        except Exception:
+            pass
         self._api.send_message(chat_id, reply)
 
         with self._lock:

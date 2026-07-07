@@ -4634,24 +4634,51 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # Try Claude bridge first (same path as terminal Nova)
-                    if _nova_claude_chat is not None:
+                    import urllib.request as _ur, urllib.error as _ue, json as _j, urllib.parse as _up
+                    # ── Claude bridge (single attempt, no retries so we don't block 50s) ──
+                    _ant_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                    if _ant_key:
                         try:
-                            _cr = _nova_claude_chat(
-                                context     = system,
-                                messages    = [{"role": "user", "content": user}],
-                                max_tokens  = 300,
-                                temperature = 0.85,
-                            ) or ""
-                            if _cr and not _cr.startswith("["):
-                                return _cr
+                            from nova_cap_claude_bridge import _credit_exhausted as _cx, NOVA_SYSTEM_PROMPT as _nsp
+                            _sys_use = _nsp
                         except Exception:
-                            pass
-                    # Fall back: direct Groq call
-                    import urllib.request as _ur, urllib.error as _ue, json as _j
+                            _cx = False
+                            _sys_use = system
+                        if not _cx:
+                            try:
+                                _cpayload = _j.dumps({
+                                    "model": "claude-haiku-4-5-20251001",
+                                    "max_tokens": 300,
+                                    "temperature": 0.85,
+                                    "system": [{"type": "text", "text": _sys_use,
+                                                "cache_control": {"type": "ephemeral"}}],
+                                    "messages": [{"role": "user", "content": user}],
+                                }).encode()
+                                _creq = _ur.Request(
+                                    "https://api.anthropic.com/v1/messages",
+                                    data=_cpayload,
+                                    headers={
+                                        "x-api-key":         _ant_key,
+                                        "anthropic-version": "2023-06-01",
+                                        "anthropic-beta":    "prompt-caching-2024-07-31",
+                                        "content-type":      "application/json",
+                                    },
+                                    method="POST",
+                                )
+                                with _ur.urlopen(_creq, timeout=15) as _cr:
+                                    _cdata = _j.loads(_cr.read())
+                                _ctext = "".join(
+                                    b.get("text", "") for b in _cdata.get("content", [])
+                                    if b.get("type") == "text"
+                                )
+                                if _ctext:
+                                    return _ctext
+                            except Exception:
+                                pass
+                    # ── Groq fallback ──
                     _key = os.environ.get("GROQ_API_KEY", "").strip()
                     if not _key:
-                        return "❆ Nova is here — no LLM key available"
+                        return "❆ Nova is here — no LLM key configured"
                     _payload = _j.dumps({
                         "model": "llama-3.1-8b-instant",
                         "messages": [
@@ -4669,7 +4696,7 @@ class NovaCore29(NovaCore28):
                         method="POST",
                     )
                     try:
-                        with _ur.urlopen(_req, timeout=25) as _r:
+                        with _ur.urlopen(_req, timeout=20) as _r:
                             _data = _j.loads(_r.read().decode())
                         return _data["choices"][0]["message"]["content"]
                     except _ue.HTTPError as _he:
