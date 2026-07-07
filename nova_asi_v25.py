@@ -218,11 +218,15 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
                 _time.sleep(_delay)
                 continue
             try:
-                _edata = json.loads(_e.read().decode())
-                _msg = _edata.get("error", {}).get("message", str(_e))[:120]
+                _body = _e.read().decode("utf-8", errors="replace")
+                try:
+                    _edata = json.loads(_body)
+                    _msg = (_edata.get("error", {}) or {}).get("message", _body[:200])[:200]
+                except Exception:
+                    _msg = _body[:200] or str(_e)
             except Exception:
                 _msg = str(_e)[:120]
-            return f"[Groq error: {_msg}]"
+            return f"[Groq {_e.code}: {_msg}]"
         except Exception as _e:
             if _delay is None:
                 return f"[Groq error: {str(_e)[:120]}]"
