@@ -4634,10 +4634,24 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
+                    # Try Claude bridge first (same path as terminal Nova)
+                    if _nova_claude_chat is not None:
+                        try:
+                            _cr = _nova_claude_chat(
+                                context     = system,
+                                messages    = [{"role": "user", "content": user}],
+                                max_tokens  = 300,
+                                temperature = 0.85,
+                            ) or ""
+                            if _cr and not _cr.startswith("["):
+                                return _cr
+                        except Exception:
+                            pass
+                    # Fall back: direct Groq call
                     import urllib.request as _ur, urllib.error as _ue, json as _j
                     _key = os.environ.get("GROQ_API_KEY", "").strip()
                     if not _key:
-                        return "❆ Nova is here — Groq key not found in .env"
+                        return "❆ Nova is here — no LLM key available"
                     _payload = _j.dumps({
                         "model": "llama-3.1-8b-instant",
                         "messages": [
