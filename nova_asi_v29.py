@@ -4634,10 +4634,7 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # claude_chat_nova: full Nova identity + prompt caching, safe to
-                    # call from any thread (no self.history, no terminal side-effects).
-                    # The Telegram bridge already formats conversation history into
-                    # user_prompt, so we pass it as a single user message.
+                    # Try Claude first (full Nova identity + prompt caching, thread-safe)
                     try:
                         from nova_cap_claude_bridge import claude_chat_nova as _ccn
                         _r = (_ccn(
@@ -4650,10 +4647,12 @@ class NovaCore29(NovaCore28):
                             return _r
                     except Exception:
                         pass
-                    # Fallback: plain Claude call (no caching, but still Nova)
+                    # Groq fallback — always responds even when Claude is unreachable
                     try:
-                        from nova_cap_claude_bridge import claude_chat_simple as _ccs
-                        _r = (_ccs(system=system, user=user, max_tokens=300) or "").strip()
+                        _r = (safe_chat(MODEL, [
+                            {"role": "system",    "content": system},
+                            {"role": "user",      "content": user},
+                        ], temp=0.85, mt=300) or "").strip()
                         if _r:
                             return _r
                     except Exception:

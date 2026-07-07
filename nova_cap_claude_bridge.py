@@ -64,6 +64,11 @@ CLAUDE_DEEP    = os.getenv("NOVA_CLAUDE_DEEP_MODEL", "claude-sonnet-4-6")
 AVAILABLE      = bool(ANTHROPIC_KEY)
 _credit_exhausted = False   # set True on first 402/credit error — skips network calls
 
+# Consecutive-failure cooldown: after 3 back-to-back failures, pause Claude calls
+# for 90 s so Groq can answer immediately instead of waiting out hung connections.
+_consecutive_failures: int = 0
+_pause_until: float = 0.0
+
 # ── Nova's cached identity block ───────────────────────────────────────────────
 # Intentionally detailed — this prompt is cached (ephemeral) so after the first
 # call in a 5-min window it costs ~10% of normal token price. The detail is worth
@@ -378,7 +383,11 @@ def claude_chat(
         if m.get("role") in ("user", "assistant")
     ]
 
-    _delays = (2, 4, 8)
+    global _consecutive_failures, _pause_until
+    if time.time() < _pause_until:
+        return ""
+
+    _delays = (2,)   # 2 attempts max: immediate + 1 retry after 2 s
     for attempt, delay in enumerate((*_delays, None)):
         try:
             # Try anthropic SDK first; fall back to urllib (works on Termux without SDK)
@@ -407,6 +416,7 @@ def claude_chat(
                     _stats.total_cache_reads  += cr
                     if cr > 0:
                         _stats.cache_hits += 1
+                _consecutive_failures = 0
                 return text
             except ImportError:
                 pass  # SDK not installed — fall through to urllib
@@ -431,6 +441,7 @@ def claude_chat(
                 _stats.total_cache_reads  += usage.get("cache_read_input_tokens", 0)
                 if usage.get("cache_read_input_tokens", 0) > 0:
                     _stats.cache_hits += 1
+            _consecutive_failures = 0
             return text
 
         except Exception as exc:
@@ -444,6 +455,12 @@ def claude_chat(
                 _credit_exhausted = True
             break
 
+    _consecutive_failures += 1
+    if _consecutive_failures >= 3:
+        _pause_until = time.time() + 90.0
+        import sys
+        print(f"  [Claude bridge] 3 consecutive failures — pausing Claude calls for 90 s",
+              file=sys.stderr)
     return ""
 
 
@@ -493,7 +510,7 @@ def _urllib_claude(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with urllib.request.urlopen(req, timeout=6) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as _he:
         try:
@@ -530,6 +547,8 @@ def claude_chat_nova(
     """
     if not AVAILABLE or _credit_exhausted:
         return ""
+    if time.time() < _pause_until:
+        return ""
 
     system_blocks: List[Dict] = [
         {
@@ -550,7 +569,8 @@ def claude_chat_nova(
         if m.get("role") in ("user", "assistant")
     ]
 
-    _delays = (2, 4, 8)
+    global _consecutive_failures, _pause_until
+    _delays = (2,)   # 2 attempts max: immediate + 1 retry after 2 s
     for attempt, delay in enumerate((*_delays, None)):
         try:
             data = _urllib_claude(
@@ -579,6 +599,7 @@ def claude_chat_nova(
                 if cr > 0:
                     _stats.cache_hits += 1
 
+            _consecutive_failures = 0
             return text
 
         except Exception as exc:
@@ -598,6 +619,12 @@ def claude_chat_nova(
                 print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
             break
 
+    _consecutive_failures += 1
+    if _consecutive_failures >= 3:
+        _pause_until = time.time() + 90.0
+        import sys
+        print(f"  [Claude bridge] 3 consecutive failures — pausing Claude calls for 90 s",
+              file=sys.stderr)
     return ""
 
 
