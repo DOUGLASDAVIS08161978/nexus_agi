@@ -4634,17 +4634,23 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # Route through Nova's full process() — same brain as the terminal:
-                    # memory, emotions, beliefs, Claude + prompt caching, research, etc.
+                    # claude_chat_nova: full Nova identity + prompt caching, safe to
+                    # call from any thread (no self.history, no terminal side-effects).
+                    # The Telegram bridge already formats conversation history into
+                    # user_prompt, so we pass it as a single user message.
                     try:
-                        _r = (self.process(user) or "").strip()
+                        from nova_cap_claude_bridge import claude_chat_nova as _ccn
+                        _r = (_ccn(
+                            context     = "",
+                            messages    = [{"role": "user", "content": user}],
+                            max_tokens  = 300,
+                            temperature = 0.85,
+                        ) or "").strip()
                         if _r:
-                            # Strip ANSI colour codes — Telegram renders plain text
-                            _r = re.sub(r'\x1b\[[0-9;]*m', '', _r).strip()
                             return _r
                     except Exception:
                         pass
-                    # Fallback: direct Claude call if process() errors
+                    # Fallback: plain Claude call (no caching, but still Nova)
                     try:
                         from nova_cap_claude_bridge import claude_chat_simple as _ccs
                         _r = (_ccs(system=system, user=user, max_tokens=300) or "").strip()

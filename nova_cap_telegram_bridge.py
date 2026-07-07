@@ -390,8 +390,7 @@ class TelegramBridge:
         else:
             user_prompt = text
 
-        # Hard 30s wall-clock limit so a hung LLM call never freezes the thread
-        import sys
+        # 60s wall-clock limit — Claude needs up to ~25s with retries
         _reply_box: list = []
         def _llm_call() -> None:
             try:
@@ -400,7 +399,7 @@ class TelegramBridge:
                 _reply_box.append(f"❆ A moment of turbulence. ({str(_e)[:40]})")
         _t = threading.Thread(target=_llm_call, daemon=True)
         _t.start()
-        _t.join(timeout=30)
+        _t.join(timeout=60)
         if _reply_box:
             reply = _reply_box[0] or "❆ I'm here, thinking…"
         else:
