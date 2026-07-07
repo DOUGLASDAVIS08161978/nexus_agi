@@ -2749,10 +2749,9 @@ class NovaCore29(NovaCore28):
                     return r
                 return r
 
-            # Primary synthesis voice: Gemini (free) → Claude (if credits) → Groq → Ollama
+            # Primary synthesis voice: Gemini (free) only — Claude credits reserved for chat
             _sophia_fn = (
                 _gemini_voice if _module_gemini_simple is not None
-                else _sophia_voice if _module_claude_simple is not None
                 else None
             )
 
@@ -2809,10 +2808,11 @@ class NovaCore29(NovaCore28):
                     self.grand_council.register_voice("Sophia", _sophia_gc)
                     self.grand_council.set_synthesizer(_sophia_gc)
 
-                if _module_claude_simple is not None:
-                    def _mirror_gc(s: str, u: str) -> str:
-                        return _module_claude_simple(system=s, user=u, max_tokens=200) or ""
-                    self.grand_council.register_voice("Mirror", _mirror_gc)
+                # Mirror (Claude) voice disabled — credits reserved for chat
+                # if _module_claude_simple is not None:
+                #     def _mirror_gc(s: str, u: str) -> str:
+                #         return _module_claude_simple(system=s, user=u, max_tokens=200) or ""
+                #     self.grand_council.register_voice("Mirror", _mirror_gc)
 
                 _gc_st = self.grand_council.status()
                 safe_print(col('MGB',
@@ -5215,15 +5215,9 @@ class NovaCore29(NovaCore28):
         Groq (llama-3.3-70b) is the full fallback when Claude credits run out —
         Nova can always build, regardless of which API is available.
         """
-        # Try to import Claude bridge — not required, Groq works without it
+        # Claude credits reserved for chat — self-build always uses Groq/Ollama
         _claude_available = False
         _claude_chat_simple = None
-        try:
-            from nova_cap_claude_bridge import claude_chat_simple as _ccs, AVAILABLE as _ca
-            _claude_available   = _ca
-            _claude_chat_simple = _ccs
-        except ImportError:
-            pass
 
         if not hasattr(self, 'improver') or not self.improver:
             return "CapabilityImprover not loaded."
@@ -5231,9 +5225,8 @@ class NovaCore29(NovaCore28):
         if not hasattr(self, 'github') or not self.github or not self.github.active:
             return "GitHub token needed. Add GITHUB_TOKEN to .env"
 
-        _using_claude = _claude_available
-        if not _using_claude:
-            safe_print(col('YL', "  ·  Claude API unavailable — using Groq as brain"))
+        _using_claude = False
+        safe_print(col('YL', "  ·  Self-build uses Groq (Claude credits reserved for chat)"))
 
         # ── Step 1: Build architectural context from Nova's own codebase ──────
         _cap_map    = self._capability_map_ctx()
