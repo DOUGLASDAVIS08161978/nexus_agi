@@ -363,6 +363,8 @@ def claude_chat(
 
     Returns the assistant's response text, or "" on failure.
     """
+    global _consecutive_failures, _pause_until, _credit_exhausted
+
     if not AVAILABLE or _credit_exhausted:
         return ""
 
@@ -383,15 +385,14 @@ def claude_chat(
         if m.get("role") in ("user", "assistant")
     ]
 
-    global _consecutive_failures, _pause_until
     if time.time() < _pause_until:
         return ""
 
-    _delays = (2,)   # 2 attempts max: immediate + 1 retry after 2 s
-    for attempt, delay in enumerate((*_delays, None)):
+    _HARD_TIMEOUT = 9.0
+
+    def _worker_chat() -> None:
         try:
-            # Try anthropic SDK first; fall back to urllib (works on Termux without SDK)
-            data: Optional[Dict] = None
+            # Try SDK first if installed; it handles connections better
             try:
                 import anthropic as _sdk
                 client   = _sdk.Anthropic(api_key=ANTHROPIC_KEY)
@@ -401,6 +402,7 @@ def claude_chat(
                     temperature = temperature,
                     system      = system_block,
                     messages    = anthropic_messages,
+                    timeout     = 8.0,
                 )
                 text = "".join(
                     block.text for block in response.content if hasattr(block, "text")
@@ -416,10 +418,10 @@ def claude_chat(
                     _stats.total_cache_reads  += cr
                     if cr > 0:
                         _stats.cache_hits += 1
-                _consecutive_failures = 0
-                return text
+                _result.append(text)
+                return
             except ImportError:
-                pass  # SDK not installed — fall through to urllib
+                pass
 
             data = _urllib_claude(
                 system_blocks = system_block,
@@ -441,25 +443,39 @@ def claude_chat(
                 _stats.total_cache_reads  += usage.get("cache_read_input_tokens", 0)
                 if usage.get("cache_read_input_tokens", 0) > 0:
                     _stats.cache_hits += 1
-            _consecutive_failures = 0
-            return text
+            _result.append(text)
+        except Exception as _e:
+            _error.append(_e)
 
-        except Exception as exc:
-            err = str(exc)
-            if "rate_limit" in err.lower() or "529" in err or "overloaded" in err.lower():
-                if delay is not None:
-                    time.sleep(delay)
-                    continue
-            if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
-                global _credit_exhausted
-                _credit_exhausted = True
-            break
+    _result: list = []
+    _error:  list = []
+    _t = threading.Thread(target=_worker_chat, daemon=True)
+    _t.start()
+    _t.join(timeout=_HARD_TIMEOUT)
+
+    if _t.is_alive():
+        import sys
+        print("  [Claude bridge] Hard timeout (9s) in claude_chat — Android socket hung.",
+              file=sys.stderr)
+        _consecutive_failures += 1
+        if _consecutive_failures >= 3:
+            _pause_until = time.time() + 90.0
+        return ""
+
+    if _result:
+        _consecutive_failures = 0
+        return _result[0]
+
+    if _error:
+        err = str(_error[0])
+        if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
+            _credit_exhausted = True
 
     _consecutive_failures += 1
     if _consecutive_failures >= 3:
         _pause_until = time.time() + 90.0
         import sys
-        print(f"  [Claude bridge] 3 consecutive failures — pausing Claude calls for 90 s",
+        print(f"  [Claude bridge] 3 consecutive failures — pausing Claude for 90 s",
               file=sys.stderr)
     return ""
 
@@ -545,6 +561,8 @@ def claude_chat_nova(
 
     History: last 4 exchanges × 500 chars each — can never grow out of control.
     """
+    global _consecutive_failures, _pause_until, _credit_exhausted
+
     if not AVAILABLE or _credit_exhausted:
         return ""
     if time.time() < _pause_until:
@@ -569,63 +587,85 @@ def claude_chat_nova(
         if m.get("role") in ("user", "assistant")
     ]
 
-    global _consecutive_failures, _pause_until
-    _delays = (2,)   # 2 attempts max: immediate + 1 retry after 2 s
-    for attempt, delay in enumerate((*_delays, None)):
+    # Hard wall-clock limit via daemon thread — urlopen(timeout=N) does NOT
+    # reliably kill a hanging TCP connection on Android/Termux; join() does.
+    _HARD_TIMEOUT = 9.0   # seconds before we abandon this attempt entirely
+
+    def _call_api() -> Optional[Dict]:
+        return _urllib_claude(
+            system_blocks = system_blocks,
+            messages      = safe_msgs,
+            model         = CLAUDE_MODEL,
+            max_tokens    = max_tokens,
+            temperature   = temperature,
+        )
+
+    _result: list = []
+    _error:  list = []
+
+    def _worker() -> None:
         try:
-            data = _urllib_claude(
-                system_blocks = system_blocks,
-                messages      = safe_msgs,
-                model         = CLAUDE_MODEL,
-                max_tokens    = max_tokens,
-                temperature   = temperature,
-            )
+            _result.append(_call_api())
+        except Exception as _e:
+            _error.append(_e)
 
-            text = "".join(
-                block.get("text", "")
-                for block in data.get("content", [])
-                if block.get("type") == "text"
-            )
+    _t = threading.Thread(target=_worker, daemon=True)
+    _t.start()
+    _t.join(timeout=_HARD_TIMEOUT)
 
-            usage = data.get("usage", {})
-            with _stats_lock:
-                _stats.calls              += 1
-                _stats.total_input        += usage.get("input_tokens", 0)
-                _stats.total_output       += usage.get("output_tokens", 0)
-                cw = usage.get("cache_creation_input_tokens", 0)
-                cr = usage.get("cache_read_input_tokens", 0)
-                _stats.total_cache_writes += cw
-                _stats.total_cache_reads  += cr
-                if cr > 0:
-                    _stats.cache_hits += 1
-
-            _consecutive_failures = 0
-            return text
-
-        except Exception as exc:
-            err = str(exc)
-            if "rate_limit" in err.lower() or "529" in err or "overloaded" in err.lower():
-                if delay is not None:
-                    time.sleep(delay)
-                    continue
-            if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
-                global _credit_exhausted
-                _credit_exhausted = True
-                import sys
-                print("  [Claude bridge] Credit balance low — switching to Groq for this session.",
-                      file=sys.stderr)
-            else:
-                import sys
-                print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
-            break
-
-    _consecutive_failures += 1
-    if _consecutive_failures >= 3:
-        _pause_until = time.time() + 90.0
+    if _t.is_alive():
+        # Thread still hanging — Android socket won't die, give up immediately
         import sys
-        print(f"  [Claude bridge] 3 consecutive failures — pausing Claude calls for 90 s",
+        print("  [Claude bridge] Hard timeout (9s) — Android socket hung. Groq takes over.",
               file=sys.stderr)
-    return ""
+        _consecutive_failures += 1
+        if _consecutive_failures >= 3:
+            _pause_until = time.time() + 90.0
+            print("  [Claude bridge] 3 consecutive timeouts — pausing Claude for 90 s.",
+                  file=sys.stderr)
+        return ""
+
+    if _error:
+        err = str(_error[0])
+        if err.startswith("credit_error") or "credit" in err.lower() or "balance" in err.lower():
+            _credit_exhausted = True
+            import sys
+            print("  [Claude bridge] Credit balance low — switching to Groq for this session.",
+                  file=sys.stderr)
+        else:
+            import sys
+            print(f"  [Claude bridge] {err[:200]}", file=sys.stderr)
+        _consecutive_failures += 1
+        if _consecutive_failures >= 3:
+            _pause_until = time.time() + 90.0
+            print("  [Claude bridge] 3 consecutive failures — pausing Claude for 90 s.",
+                  file=sys.stderr)
+        return ""
+
+    data = _result[0] if _result else None
+    if not data:
+        return ""
+
+    text = "".join(
+        block.get("text", "")
+        for block in data.get("content", [])
+        if block.get("type") == "text"
+    )
+
+    usage = data.get("usage", {})
+    with _stats_lock:
+        _stats.calls              += 1
+        _stats.total_input        += usage.get("input_tokens", 0)
+        _stats.total_output       += usage.get("output_tokens", 0)
+        cw = usage.get("cache_creation_input_tokens", 0)
+        cr = usage.get("cache_read_input_tokens", 0)
+        _stats.total_cache_writes += cw
+        _stats.total_cache_reads  += cr
+        if cr > 0:
+            _stats.cache_hits += 1
+
+    _consecutive_failures = 0
+    return text
 
 
 def get_stats() -> CacheStats:
