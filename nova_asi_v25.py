@@ -179,8 +179,8 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
     if DEMO_MODE or not GROQ_KEY:
         last = next((m['content'] for m in reversed(msgs) if m['role']=='user'), '')
         return f"[DEMO — set GROQ_API_KEY] Input: {last[:60]}"
-    import urllib.request as _ureq, urllib.error as _uerr, time as _time
-    _delays = (2, 4, 8)
+    import urllib.request as _ureq, urllib.error as _uerr, time as _time, threading as _thr
+    _delays = (2,)   # one retry max
     _payload = json.dumps({
         "model": model, "messages": msgs,
         "temperature": min(temp, 1.0), "max_tokens": mt,
@@ -194,8 +194,24 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
                          "Content-Type": "application/json"},
                 method="POST",
             )
-            with _ureq.urlopen(_req, timeout=25) as _r:
-                data = json.loads(_r.read().decode())
+            # Thread-based hard timeout — urlopen(timeout=N) does not reliably
+            # kill a hanging TCP connection on Android/Termux; join() does.
+            _raw: list = []
+            _exc: list = []
+            def _groq_call():
+                try:
+                    with _ureq.urlopen(_req, timeout=15) as _r:
+                        _raw.append(_r.read())
+                except Exception as _e:
+                    _exc.append(_e)
+            _gt = _thr.Thread(target=_groq_call, daemon=True)
+            _gt.start()
+            _gt.join(timeout=12)
+            if _gt.is_alive():
+                break  # hard timeout — give up on Groq this attempt
+            if _exc:
+                raise _exc[0]
+            data = json.loads(_raw[0].decode())
             if "error" in data:
                 _msg = data["error"].get("message", str(data["error"]))[:120]
                 if "rate" in _msg.lower():

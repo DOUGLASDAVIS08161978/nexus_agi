@@ -367,6 +367,10 @@ def claude_chat(
 
     if not AVAILABLE or _credit_exhausted:
         return ""
+    # Fast-skip: if claude_chat_nova already failed this turn, don't waste
+    # another 9 s here — safe_chat calls us too, so we'd double the wait.
+    if _consecutive_failures > 0 or time.time() < _pause_until:
+        return ""
 
     chosen_model  = model or (CLAUDE_DEEP if deep else CLAUDE_MODEL)
     system_text   = system or NOVA_SYSTEM_PROMPT
