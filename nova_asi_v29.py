@@ -4650,7 +4650,8 @@ class NovaCore29(NovaCore28):
                             {"role": "system",    "content": system},
                             {"role": "user",      "content": user},
                         ], temp=0.85, mt=300) or "").strip()
-                        if _r:
+                        # Filter out raw error strings like "[Groq 1010: ...]"
+                        if _r and not _r.startswith("["):
                             return _r
                     except Exception:
                         pass

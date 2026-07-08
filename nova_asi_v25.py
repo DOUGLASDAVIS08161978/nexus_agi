@@ -191,7 +191,8 @@ def safe_chat(model: str, msgs: List[dict], temp: float=0.7, mt: int=400) -> str
                 "https://api.groq.com/openai/v1/chat/completions",
                 data=_payload,
                 headers={"Authorization": f"Bearer {GROQ_KEY}",
-                         "Content-Type": "application/json"},
+                         "Content-Type": "application/json",
+                         "User-Agent": "Mozilla/5.0 (Linux; Android 12) NovaASI/29"},
                 method="POST",
             )
             # Thread-based hard timeout — urlopen(timeout=N) does not reliably
