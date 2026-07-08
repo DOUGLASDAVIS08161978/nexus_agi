@@ -4634,15 +4634,12 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # Try Claude first (full Nova identity + prompt caching, thread-safe)
+                    # claude_chat_simple uses the Telegram-specific system prompt (short,
+                    # cheap) and has consecutive-failure fast-skip built in — after 1
+                    # failure it returns "" instantly so Groq handles the next message <1s.
                     try:
-                        from nova_cap_claude_bridge import claude_chat_nova as _ccn
-                        _r = (_ccn(
-                            context     = "",
-                            messages    = [{"role": "user", "content": user}],
-                            max_tokens  = 300,
-                            temperature = 0.85,
-                        ) or "").strip()
+                        from nova_cap_claude_bridge import claude_chat_simple as _ccs
+                        _r = (_ccs(system=system, user=user, max_tokens=300) or "").strip()
                         if _r:
                             return _r
                     except Exception:
