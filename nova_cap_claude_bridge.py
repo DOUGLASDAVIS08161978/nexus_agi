@@ -498,12 +498,94 @@ def claude_chat_simple(system: str, user: str, deep: bool = False,
     )
 
 
+def claude_chat_simple_image(
+    system:     str,
+    user:       str,
+    image_b64:  str,
+    image_mime: str = "image/jpeg",
+    max_tokens: int = 400,
+) -> str:
+    """
+    Send an image + optional text caption to Claude for vision analysis.
+    Uses the same failure tracking as claude_chat_simple so a broken API
+    key fails fast on subsequent calls.
+    """
+    global _consecutive_failures, _pause_until, _credit_exhausted
+    if not AVAILABLE or _credit_exhausted:
+        return ""
+    if _consecutive_failures > 0 or time.time() < _pause_until:
+        return ""
+
+    _result: list = []
+    _error:  list = []
+
+    def _worker() -> None:
+        try:
+            _resp = _urllib_claude(
+                system_blocks = [{"type": "text", "text": system}],
+                messages      = [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type":   "image",
+                            "source": {
+                                "type":       "base64",
+                                "media_type": image_mime,
+                                "data":       image_b64,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": user or "What do you see in this image?",
+                        },
+                    ],
+                }],
+                model       = CLAUDE_MODEL,
+                max_tokens  = max_tokens,
+                temperature = 0.7,
+                timeout     = 20,
+            )
+            _result.append(_resp)
+        except Exception as _e:
+            _error.append(_e)
+
+    _t = threading.Thread(target=_worker, daemon=True)
+    _t.start()
+    _t.join(timeout=25.0)
+
+    if _t.is_alive():
+        _consecutive_failures += 1
+        if _consecutive_failures >= 3:
+            _pause_until = time.time() + 90.0
+        return ""
+
+    if _error:
+        _msg = str(_error[0])
+        if "credit_error" in _msg:
+            _credit_exhausted = True
+        _consecutive_failures += 1
+        if _consecutive_failures >= 3:
+            _pause_until = time.time() + 90.0
+        return ""
+
+    if not _result:
+        return ""
+
+    try:
+        _text = _result[0]["content"][0]["text"]
+        _consecutive_failures = 0
+        return _text
+    except Exception:
+        return ""
+
+
 def _urllib_claude(
     system_blocks: List[Dict],
     messages:      List[Dict[str, str]],
     model:         str,
     max_tokens:    int,
     temperature:   float,
+    timeout:       int = 6,
 ) -> Dict:
     """
     Raw urllib call to the Anthropic Messages API — no SDK required.
@@ -530,7 +612,7 @@ def _urllib_claude(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=6) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as _he:
         try:

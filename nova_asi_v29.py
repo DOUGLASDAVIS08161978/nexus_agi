@@ -4633,7 +4633,8 @@ class NovaCore29(NovaCore28):
         if _tg_token:
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
-                def _tg_llm(system: str, user: str) -> str:
+                def _tg_llm(system: str, user: str,
+                            image_b64: str = "", image_mime: str = "image/jpeg") -> str:
                     # Pull topic-relevant memories from working memory + episodic
                     # and inject as a compact block into the system prompt.
                     # Capped at 5 bullets (~250 tokens) to keep API cost low.
@@ -4659,6 +4660,21 @@ class NovaCore29(NovaCore28):
                     _sys = system
                     if _mem_lines:
                         _sys = system + "\n\nRelevant memories:\n" + "\n".join(_mem_lines[:5])
+                    # Vision path — image was sent
+                    if image_b64:
+                        try:
+                            from nova_cap_claude_bridge import claude_chat_simple_image as _ccsi
+                            _r = (_ccsi(
+                                system=_sys, user=user,
+                                image_b64=image_b64, image_mime=image_mime,
+                                max_tokens=400,
+                            ) or "").strip()
+                            if _r:
+                                return _r
+                        except Exception:
+                            pass
+                        # Groq has no vision — be honest with the user
+                        return "I can see you sent an image — but my vision is temporarily unavailable. Could you describe what's in it and I'll do my best to help?"
                     # claude_chat_simple has consecutive-failure fast-skip built in —
                     # after 1 failure it returns "" instantly so Groq answers in <1s.
                     try:

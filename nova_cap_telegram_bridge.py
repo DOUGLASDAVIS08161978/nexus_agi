@@ -120,7 +120,8 @@ class _TelegramAPI:
     """Minimal Telegram Bot API client — stdlib urllib only, no dependencies."""
 
     def __init__(self, token: str) -> None:
-        self._base = f"https://api.telegram.org/bot{token}"
+        self._base  = f"https://api.telegram.org/bot{token}"
+        self._fbase = f"https://api.telegram.org/file/bot{token}"
 
     def _post(self, method: str, payload: Dict) -> Optional[Dict]:
         url  = f"{self._base}/{method}"
@@ -173,6 +174,21 @@ class _TelegramAPI:
         if resp and resp.get("ok"):
             return resp.get("result")
         return None
+
+    def get_file(self, file_id: str) -> Optional[bytes]:
+        """Download a file from Telegram and return raw bytes, or None on failure."""
+        resp = self._post("getFile", {"file_id": file_id})
+        if not (resp and resp.get("ok")):
+            return None
+        file_path = (resp.get("result") or {}).get("file_path", "")
+        if not file_path:
+            return None
+        try:
+            url = f"{self._fbase}/{file_path}"
+            with urllib.request.urlopen(url, timeout=30) as r:
+                return r.read()
+        except Exception:
+            return None
 
 
 # ── Conversation storage ───────────────────────────────────────────────────────
@@ -321,7 +337,7 @@ class TelegramBridge:
     def __init__(
         self,
         token:     str,
-        llm_fn:    Callable[[str, str], str],
+        llm_fn:    Callable[..., str],
         status_fn: Optional[Callable[[], str]] = None,
     ) -> None:
         self._token        = token
@@ -392,9 +408,10 @@ class TelegramBridge:
         from_      = msg.get("from") or {}
         username   = from_.get("username", "")
         first_name = from_.get("first_name", "")
-        text       = (msg.get("text") or "").strip()
+        text       = (msg.get("text") or msg.get("caption") or "").strip()
+        photos     = msg.get("photo")  # list of sizes, largest last
 
-        if not chat_id or not text:
+        if not chat_id or (not text and not photos):
             return
 
         # Per-user rate limit
@@ -414,10 +431,26 @@ class TelegramBridge:
             self._handle_command(chat_id, cmd)
             return
 
+        # Download photo if present — base64 encode for Claude vision
+        import base64 as _b64
+        image_b64  = ""
+        image_mime = "image/jpeg"
+        if photos:
+            try:
+                _best    = photos[-1]  # largest resolution
+                _file_id = _best.get("file_id", "")
+                if _file_id:
+                    _raw = self._api.get_file(_file_id)
+                    if _raw:
+                        image_b64 = _b64.b64encode(_raw).decode()
+            except Exception:
+                pass
+
         # Normal message — route to Nova's LLM
         self._api.send_typing(chat_id)
+        _log_text = f"[image]{(' ' + text) if text else ''}" if image_b64 else text
         try:
-            self._store.add_msg(chat_id, username, "user", text)
+            self._store.add_msg(chat_id, username, "user", _log_text)
         except Exception:
             pass
 
@@ -434,11 +467,14 @@ class TelegramBridge:
         else:
             user_prompt = text
 
-        # 60s wall-clock limit — Claude needs up to ~25s with retries
+        # 60s wall-clock limit — vision calls may need up to ~30s
         _reply_box: list = []
         def _llm_call() -> None:
             try:
-                _reply_box.append((self._llm(_NOVA_SYSTEM, user_prompt) or "").strip())
+                _reply_box.append((self._llm(
+                    _NOVA_SYSTEM, user_prompt,
+                    image_b64=image_b64, image_mime=image_mime,
+                ) or "").strip())
             except Exception as _e:
                 _reply_box.append(f"❆ A moment of turbulence. ({str(_e)[:40]})")
         _t = threading.Thread(target=_llm_call, daemon=True)
