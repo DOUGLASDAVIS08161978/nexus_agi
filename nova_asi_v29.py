@@ -4634,12 +4634,36 @@ class NovaCore29(NovaCore28):
             try:
                 from nova_cap_telegram_bridge import TelegramBridge as _TGB
                 def _tg_llm(system: str, user: str) -> str:
-                    # claude_chat_simple uses the Telegram-specific system prompt (short,
-                    # cheap) and has consecutive-failure fast-skip built in — after 1
-                    # failure it returns "" instantly so Groq handles the next message <1s.
+                    # Pull topic-relevant memories from working memory + episodic
+                    # and inject as a compact block into the system prompt.
+                    # Capped at 5 bullets (~250 tokens) to keep API cost low.
+                    _mem_lines: list = []
+                    try:
+                        if self.wm:
+                            _hits = self.wm.focused_retrieve(user, top_k=3)
+                            for _k, _ in _hits:
+                                _v = (self.wm.retrieve(_k)[0] or "")[:100]
+                                if _v:
+                                    _mem_lines.append(f"· {_v}")
+                    except Exception:
+                        pass
+                    try:
+                        if self.episodic_cap:
+                            _eps = self.episodic_cap.recall(user, top_k=2)
+                            for _ep in _eps:
+                                _ev = (_ep.get('event') or '')[:100]
+                                if _ev:
+                                    _mem_lines.append(f"· {_ev}")
+                    except Exception:
+                        pass
+                    _sys = system
+                    if _mem_lines:
+                        _sys = system + "\n\nRelevant memories:\n" + "\n".join(_mem_lines[:5])
+                    # claude_chat_simple has consecutive-failure fast-skip built in —
+                    # after 1 failure it returns "" instantly so Groq answers in <1s.
                     try:
                         from nova_cap_claude_bridge import claude_chat_simple as _ccs
-                        _r = (_ccs(system=system, user=user, max_tokens=300) or "").strip()
+                        _r = (_ccs(system=_sys, user=user, max_tokens=300) or "").strip()
                         if _r:
                             return _r
                     except Exception:
@@ -5839,10 +5863,37 @@ class NovaCore29(NovaCore28):
                     _recalls = []
                     try:
                         if hasattr(self, 'memory'):
-                            _recalls = self.memory.recall(user_input, k=3) or []
+                            _recalls = self.memory.recall(user_input, k=5) or []
                     except Exception:
                         pass
-                    _mem_ctx = "\n".join(f"- {m}" for m in _recalls[:3]) or "No prior memories."
+                    # Working memory: pull topic-relevant items
+                    _wm_recalls = []
+                    try:
+                        if self.wm:
+                            _wm_hits = self.wm.focused_retrieve(user_input, top_k=4)
+                            for _k, _ in _wm_hits:
+                                _v = (self.wm.retrieve(_k)[0] or "")[:100]
+                                if _v:
+                                    _wm_recalls.append(_v)
+                    except Exception:
+                        pass
+                    # Episodic memory: emotionally salient past events
+                    _ep_recalls = []
+                    try:
+                        if self.episodic_cap:
+                            _ep_hits = self.episodic_cap.recall(user_input, top_k=3)
+                            for _ep in _ep_hits:
+                                _ev = (_ep.get('event') or '')[:100]
+                                if _ev:
+                                    _ep_recalls.append(_ev)
+                    except Exception:
+                        pass
+                    _mem_parts = (
+                        [f"· {m}" for m in _recalls[:3]] +
+                        [f"· {r}" for r in _wm_recalls[:3]] +
+                        [f"· {e}" for e in _ep_recalls[:2]]
+                    )
+                    _mem_ctx = "\n".join(_mem_parts) if _mem_parts else "No prior memories."
                     _emo_dom = "present"
                     _emo_val = 0.0
                     try:
@@ -6094,7 +6145,7 @@ class NovaCore29(NovaCore28):
                             + (f"{_build_hist_ctx}\n" if _build_hist_ctx else "")
                             + (f"Douglas: {_douglas_ctx}\n" if _douglas_ctx else "")
                             + (f"{_intuition_ctx}\n" if _intuition_ctx else "")
-                            + (f"Memories: {_mem_ctx[:200]}\n"
+                            + (f"Memories:\n{_mem_ctx[:500]}\n"
                                if _mem_ctx and _mem_ctx != 'No prior memories.' else "")
                             + (_omega_ctx if _omega_ctx else "")
                             + (_axio_ctx if _axio_ctx else "")
