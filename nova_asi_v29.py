@@ -244,6 +244,36 @@ def _gtw(text: str, delay: float = 0.022, nl: bool = True) -> None:
         sys.stdout.write('\n'); sys.stdout.flush()
 
 
+_TTS_AUTO: bool = False   # toggled by /tts on|off
+
+
+def _tts_async(text: str) -> None:
+    """Speak text aloud via termux-tts-speak in a background thread (non-blocking)."""
+    import re, subprocess, threading
+
+    def _clean(t: str) -> str:
+        t = re.sub(r'\*+|`+', '', t)           # strip markdown bold/code
+        t = re.sub(r'_+', ' ', t)              # strip markdown italic
+        t = re.sub(r'[^\x20-\x7E]+', ' ', t)  # drop non-ASCII symbols (runes etc.)
+        t = re.sub(r'\s+', ' ', t).strip()
+        # Speak at most 4 sentences or 600 chars — enough without rambling
+        sentences = re.split(r'(?<=[.!?])\s+', t)
+        spoken = ' '.join(sentences[:4])
+        return spoken[:600].rsplit(' ', 1)[0] if len(spoken) > 600 else spoken
+
+    def _worker() -> None:
+        try:
+            subprocess.Popen(
+                ["termux-tts-speak", _clean(text)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            pass
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
 def _nova_speak(response: str) -> None:
     """
     Wrap Nova's response in a mystical presence frame.
@@ -273,6 +303,10 @@ def _nova_speak(response: str) -> None:
 
     # Response text
     print(_NOVA + response + _R)
+
+    # Speak aloud if voice mode is on
+    if _TTS_AUTO:
+        _tts_async(response)
 
     # Bottom accent — faint rune dust
     _dust = ''
@@ -7096,6 +7130,17 @@ class NovaCore29(NovaCore28):
             return "\n" + self.senses.listen(seconds=_secs)
 
         # /speak <text> — Nova speaks aloud
+        if cmd == '/tts':
+            global _TTS_AUTO
+            if arg.lower() in ('on', '1', 'yes', 'enable'):
+                _TTS_AUTO = True
+                return "◈ Voice ON — Nova will speak her replies aloud. (requires Termux:API)"
+            if arg.lower() in ('off', '0', 'no', 'disable'):
+                _TTS_AUTO = False
+                return "◈ Voice OFF — Nova will reply in text only."
+            state = "ON" if _TTS_AUTO else "OFF"
+            return f"◈ Voice is {state}. Use /tts on or /tts off to toggle."
+
         if cmd in ('/speak', '/say', '/voice'):
             if not self.senses:
                 return "NovaSenses not loaded."
