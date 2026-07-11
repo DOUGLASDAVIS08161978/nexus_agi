@@ -8574,6 +8574,13 @@ class NovaCore29(NovaCore28):
                 return col('RD', f"  LongVision error: {_lve}")
 
         # /claude [status | stats | test]
+        if cmd == '/miner':
+            try:
+                from nova_cap_miner import run_command as _mr
+                return col('CYB', "\n" + _mr(arg))
+            except Exception as _me:
+                return col('YL', f"  Miner error: {_me}")
+
         if cmd == '/claude':
             try:
                 from nova_cap_claude_bridge import run_command as _cr, stats_summary as _cs

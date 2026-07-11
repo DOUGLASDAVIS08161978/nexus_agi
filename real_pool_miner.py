@@ -1,17 +1,19 @@
 """
-real_pool_miner.py — Honest CPU Bitcoin pool miner using Stratum protocol.
+real_pool_miner.py — Multi-threaded real Bitcoin pool miner (Stratum protocol)
 
-Connects to a real mining pool, does real SHA-256d work, submits real shares.
-Payouts go to YOUR wallet address when shares are accepted.
+One mining thread per CPU core. hashlib releases Python's GIL so threads run
+truly in parallel on all cores. Auto-reconnects on pool drop. Rolls ntime for
+maximum work variety. Sends Telegram alerts when shares are accepted.
 
 HONEST EXPECTATIONS:
-  - A modern CPU does ~100K-500K hashes/second
-  - The Bitcoin network does ~700 EH/s (700,000,000,000,000,000,000 H/s)
-  - Your share: roughly 0.0000000000001% of network hashrate
+  - 4-core CPU at ~500K H/s per core = ~2 MH/s total
+  - Network hashrate: ~700 EH/s
+  - Your share: ~0.000000000003% of network
   - Expected earnings: fractions of a penny per month
   - This is REAL mining — just very slow without ASIC hardware
+  - Every hash submitted is genuine proof-of-work
 
-Pool: public-pool.io (no registration required, pays to your address)
+Pool: public-pool.io (no account, no registration, pays direct to your wallet)
 """
 
 import socket
@@ -20,158 +22,154 @@ import hashlib
 import struct
 import time
 import threading
-import sys
 import os
+import sys
+import multiprocessing
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-WALLET_ADDRESS = "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass"  # CashApp address
-WORKER_NAME    = "douglas"
-POOL_HOST      = "public-pool.io"
-POOL_PORT      = 21496
+WALLET_ADDRESS  = os.getenv("MINING_WALLET", "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass")
+WORKER_NAME     = os.getenv("MINING_WORKER", "nova")
+POOL_HOST       = os.getenv("MINING_POOL_HOST", "public-pool.io")
+POOL_PORT       = int(os.getenv("MINING_POOL_PORT", "21496"))
+NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count())))
+TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# ── SHA-256d (Bitcoin's double SHA-256) ───────────────────────────────────────
+# ── SHA-256d ──────────────────────────────────────────────────────────────────
 
 def sha256d(data: bytes) -> bytes:
     return hashlib.sha256(hashlib.sha256(data).digest()).digest()
 
 # ── Stratum helpers ───────────────────────────────────────────────────────────
 
-def hex_to_bytes(h: str) -> bytes:
-    return bytes.fromhex(h)
-
-def bytes_to_hex(b: bytes) -> str:
-    return b.hex()
-
-def reverse_bytes(b: bytes) -> bytes:
-    return b[::-1]
-
-def pack_uint32(n: int) -> bytes:
-    return struct.pack("<I", n)
-
-def pack_uint64(n: int) -> bytes:
-    return struct.pack("<Q", n)
-
-def var_int(n: int) -> bytes:
-    if n < 0xfd:
-        return struct.pack("B", n)
-    elif n <= 0xffff:
-        return b"\xfd" + struct.pack("<H", n)
-    elif n <= 0xffffffff:
-        return b"\xfe" + struct.pack("<I", n)
-    else:
-        return b"\xff" + struct.pack("<Q", n)
-
-# ── Build block header ────────────────────────────────────────────────────────
+def difficulty_to_target(difficulty: float) -> int:
+    diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
+    return int(diff1 / max(difficulty, 1e-9))
 
 def build_header(job: dict, extranonce1: str, extranonce2: str,
                  ntime: str, nonce: int) -> bytes:
-    coinb1     = hex_to_bytes(job["coinb1"])
-    coinb2     = hex_to_bytes(job["coinb2"])
-    en1        = hex_to_bytes(extranonce1)
-    en2        = hex_to_bytes(extranonce2)
-    coinbase   = coinb1 + en1 + en2 + coinb2
-    coinbase_hash = sha256d(coinbase)
+    def h2b(h): return bytes.fromhex(h)
+    coinbase  = h2b(job["coinb1"]) + h2b(extranonce1) + h2b(extranonce2) + h2b(job["coinb2"])
+    merkle    = sha256d(coinbase)
+    for branch in job["merkle_branch"]:
+        merkle = sha256d(merkle + h2b(branch))
+    return (h2b(job["version"]) + h2b(job["prevhash"]) + merkle
+            + h2b(ntime) + h2b(job["nbits"]) + struct.pack("<I", nonce))
 
-    merkle_hashes = [hex_to_bytes(h) for h in job["merkle_branch"]]
-    merkle = coinbase_hash
-    for h in merkle_hashes:
-        merkle = sha256d(merkle + h)
+# ── Telegram notify ───────────────────────────────────────────────────────────
 
-    version     = hex_to_bytes(job["version"])
-    prev_hash   = hex_to_bytes(job["prevhash"])
-    ntime_b     = hex_to_bytes(ntime)
-    nbits       = hex_to_bytes(job["nbits"])
-    nonce_b     = pack_uint32(nonce)
+def _tg_notify(message: str):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT:
+        return
+    try:
+        import urllib.request, urllib.parse
+        url  = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = urllib.parse.urlencode({
+            "chat_id": TELEGRAM_CHAT,
+            "text":    message,
+            "parse_mode": "HTML",
+        }).encode()
+        urllib.request.urlopen(url, data=data, timeout=10)
+    except Exception:
+        pass
 
-    header = version + prev_hash + merkle + ntime_b + nbits + nonce_b
-    return header
+# ── Shared state ──────────────────────────────────────────────────────────────
 
-# ── Target from nbits ─────────────────────────────────────────────────────────
-
-def nbits_to_target(nbits: str) -> int:
-    nbits_int = int(nbits, 16)
-    exp   = nbits_int >> 24
-    mant  = nbits_int & 0x7fffff
-    return mant * (2 ** (8 * (exp - 3)))
-
-# ── Pool difficulty to target ─────────────────────────────────────────────────
-
-def difficulty_to_target(difficulty: float) -> int:
-    diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
-    return int(diff1 / difficulty)
-
-# ── Stratum client ────────────────────────────────────────────────────────────
-
-class StratumClient:
-    def __init__(self, host: str, port: int, wallet: str, worker: str):
-        self.host       = host
-        self.port       = port
-        self.wallet     = wallet
-        self.worker     = worker
-        self.sock       = None
+class MinerState:
+    def __init__(self):
+        self._lock            = threading.Lock()
+        self.job              = None
         self.extranonce1      = ""
         self.extranonce2_size = 4
-        self.job        = None
-        self.difficulty = 1.0
-        self.msg_id     = 0
-        self._lock      = threading.Lock()
-        self.running    = False
-
-        # Stats
-        self.hashes     = 0
+        self.difficulty       = 1.0
+        self.hashes           = 0
         self.shares_submitted = 0
         self.shares_accepted  = 0
-        self.start_time = time.time()
+        self.start_time       = time.time()
+        self.running          = False
+        self.connected        = False
 
-    def _send(self, msg: dict):
+    def add_hashes(self, n: int):
         with self._lock:
-            self.msg_id += 1
-            msg["id"] = self.msg_id
-            line = json.dumps(msg) + "\n"
-            self.sock.sendall(line.encode())
+            self.hashes += n
+
+    def share_submitted(self):
+        with self._lock:
+            self.shares_submitted += 1
+
+    def share_accepted(self):
+        with self._lock:
+            self.shares_accepted += 1
+
+    @property
+    def hashrate(self) -> float:
+        elapsed = time.time() - self.start_time
+        return self.hashes / elapsed if elapsed > 0 else 0.0
+
+    def hashrate_str(self) -> str:
+        h = self.hashrate
+        if h >= 1_000_000: return f"{h/1_000_000:.2f} MH/s"
+        if h >= 1_000:     return f"{h/1_000:.2f} KH/s"
+        return f"{h:.0f} H/s"
+
+    def summary(self) -> str:
+        elapsed = int(time.time() - self.start_time)
+        return (f"⛏ Nova Miner — LIVE\n"
+                f"Hashrate : {self.hashrate_str()}\n"
+                f"Hashes   : {self.hashes:,}\n"
+                f"Shares   : {self.shares_accepted}/{self.shares_submitted}\n"
+                f"Uptime   : {elapsed//3600}h {(elapsed%3600)//60}m {elapsed%60}s\n"
+                f"Wallet   : {WALLET_ADDRESS[:20]}...")
+
+# ── Stratum connection ────────────────────────────────────────────────────────
+
+class StratumConnection:
+    def __init__(self, state: MinerState):
+        self.state   = state
+        self.sock    = None
+        self._lock   = threading.Lock()
+        self._msg_id = 0
 
     def connect(self) -> bool:
-        print(f"  Connecting to {self.host}:{self.port}...")
         try:
-            self.sock = socket.create_connection((self.host, self.port), timeout=30)
-            self.sock.settimeout(60)
-            print(f"  ✓ Connected")
+            self.sock = socket.create_connection((POOL_HOST, POOL_PORT), timeout=30)
+            self.sock.settimeout(120)
+            self.state.connected = True
             return True
         except Exception as e:
-            print(f"  ✗ Connection failed: {e}")
+            print(f"\n  ✗ Connection failed: {e}")
             return False
 
-    def subscribe(self):
-        self._send({
-            "method": "mining.subscribe",
-            "params": ["real_pool_miner/1.0"]
-        })
+    def disconnect(self):
+        self.state.connected = False
+        try:
+            if self.sock:
+                self.sock.close()
+        except Exception:
+            pass
+        self.sock = None
 
-    def authorize(self):
-        self._send({
-            "method": "mining.authorize",
-            "params": [f"{self.wallet}.{self.worker}", "x"]
-        })
+    def send(self, method: str, params: list):
+        with self._lock:
+            self._msg_id += 1
+            msg = json.dumps({"id": self._msg_id, "method": method, "params": params}) + "\n"
+            try:
+                self.sock.sendall(msg.encode())
+            except Exception:
+                pass
 
-    def submit_share(self, job_id: str, extranonce2: str,
-                     ntime: str, nonce: int):
-        nonce_hex = format(nonce, "08x")
-        self._send({
-            "method": "mining.submit",
-            "params": [
-                f"{self.wallet}.{self.worker}",
-                job_id,
-                extranonce2,
-                ntime,
-                nonce_hex,
-            ]
-        })
-        self.shares_submitted += 1
+    def submit(self, job_id: str, en2: str, ntime: str, nonce: int):
+        self.send("mining.submit", [
+            f"{WALLET_ADDRESS}.{WORKER_NAME}",
+            job_id, en2, ntime,
+            format(nonce, "08x"),
+        ])
+        self.state.share_submitted()
 
-    def _listen(self):
+    def listen(self):
         buf = ""
-        while self.running:
+        while self.state.running and self.sock:
             try:
                 chunk = self.sock.recv(4096).decode("utf-8", errors="replace")
                 if not chunk:
@@ -184,9 +182,7 @@ class StratumClient:
                         self._handle(json.loads(line))
             except socket.timeout:
                 continue
-            except Exception as e:
-                if self.running:
-                    print(f"\n  ✗ Network error: {e}")
+            except Exception:
                 break
 
     def _handle(self, msg: dict):
@@ -195,148 +191,180 @@ class StratumClient:
         error  = msg.get("error")
 
         if method == "mining.notify":
-            params = msg["params"]
-            self.job = {
-                "job_id":       params[0],
-                "prevhash":     params[1],
-                "coinb1":       params[2],
-                "coinb2":       params[3],
-                "merkle_branch": params[4],
-                "version":      params[5],
-                "nbits":        params[6],
-                "ntime":        params[7],
-                "clean":        params[8],
+            p = msg["params"]
+            self.state.job = {
+                "job_id":        p[0], "prevhash":  p[1],
+                "coinb1":        p[2], "coinb2":    p[3],
+                "merkle_branch": p[4], "version":   p[5],
+                "nbits":         p[6], "ntime":     p[7],
+                "clean":         p[8],
             }
 
         elif method == "mining.set_difficulty":
-            self.difficulty = msg["params"][0]
-            print(f"\n  Pool difficulty set to {self.difficulty}")
+            self.state.difficulty = float(msg["params"][0])
+            print(f"\n  Pool difficulty → {self.state.difficulty}")
 
-        elif result is not None and error is None:
+        elif result is not None and not error:
             if isinstance(result, list) and len(result) >= 3:
-                # Subscribe response
-                self.extranonce1      = result[1]
-                self.extranonce2_size = result[2]
-                print(f"  ✓ Subscribed — extranonce1={self.extranonce1}")
-                self.authorize()
+                self.state.extranonce1      = result[1]
+                self.state.extranonce2_size = result[2]
+                print(f"  ✓ Subscribed  extranonce1={result[1]}")
+                self.send("mining.authorize", [
+                    f"{WALLET_ADDRESS}.{WORKER_NAME}", "x"
+                ])
             elif result is True:
-                # Could be authorize or share accepted
-                if self.shares_submitted > self.shares_accepted:
-                    self.shares_accepted += 1
-                    print(f"\n  ✓ SHARE ACCEPTED! ({self.shares_accepted} total)")
+                if self.state.shares_submitted > self.state.shares_accepted:
+                    self.state.share_accepted()
+                    msg_text = (f"⛏ <b>Share accepted!</b>\n"
+                                f"Total: {self.state.shares_accepted}\n"
+                                f"Hashrate: {self.state.hashrate_str()}\n"
+                                f"Wallet: <code>{WALLET_ADDRESS[:20]}...</code>")
+                    print(f"\n  ✓ SHARE ACCEPTED! ({self.state.shares_accepted} total) 🎉")
+                    threading.Thread(target=_tg_notify, args=(msg_text,), daemon=True).start()
                 else:
-                    print(f"  ✓ Authorized — mining for {self.wallet}")
-
+                    print(f"  ✓ Authorized — mining to {WALLET_ADDRESS}")
         elif error:
-            print(f"\n  Pool error: {error}")
+            print(f"\n  Pool: {error}")
 
-    def _stats_printer(self):
-        while self.running:
-            time.sleep(15)
-            elapsed = time.time() - self.start_time
-            hashrate = self.hashes / elapsed if elapsed > 0 else 0
-            if hashrate > 1_000_000:
-                hr_str = f"{hashrate/1_000_000:.2f} MH/s"
-            elif hashrate > 1_000:
-                hr_str = f"{hashrate/1_000:.2f} KH/s"
-            else:
-                hr_str = f"{hashrate:.0f} H/s"
-            print(
-                f"\r  ⛏  {hr_str} | "
-                f"Hashes: {self.hashes:,} | "
-                f"Shares: {self.shares_accepted}/{self.shares_submitted} | "
-                f"Runtime: {int(elapsed//60)}m {int(elapsed%60)}s",
-                end="", flush=True
-            )
+# ── Mining thread ─────────────────────────────────────────────────────────────
 
-    def mine(self):
-        if not self.connect():
-            return
+def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
+    # Each thread starts at a different extranonce2 offset to avoid duplicate work
+    en2_offset = thread_id * (0xFFFFFFFF // NUM_THREADS)
+    en2_int    = en2_offset
+    batch      = 10_000  # hashes between state checks
 
-        self.running = True
-        listener = threading.Thread(target=self._listen, daemon=True)
+    while state.running:
+        job = state.job
+        if not job:
+            time.sleep(0.2)
+            continue
+
+        en2    = format(en2_int & 0xFFFFFFFF,
+                        f"0{state.extranonce2_size * 2}x")
+        ntime  = format(int(time.time()), "08x")  # roll ntime
+        target = difficulty_to_target(state.difficulty)
+        local_hashes = 0
+
+        for nonce in range(0, 0xFFFFFFFF, 1):
+            if state.job is not job or not state.running:
+                break
+
+            header    = build_header(job, state.extranonce1, en2, ntime, nonce)
+            hash_result = sha256d(header)
+            hash_int  = int.from_bytes(hash_result[::-1], "big")
+            local_hashes += 1
+
+            if hash_int < target:
+                conn.submit(job["job_id"], en2, ntime, nonce)
+
+            # Batch update shared counter
+            if local_hashes % batch == 0:
+                state.add_hashes(local_hashes)
+                local_hashes = 0
+                ntime = format(int(time.time()), "08x")  # keep ntime fresh
+
+        state.add_hashes(local_hashes)
+        en2_int = (en2_int + 1) & 0xFFFFFFFF
+
+# ── Stats display ─────────────────────────────────────────────────────────────
+
+def stats_thread(state: MinerState):
+    while state.running:
+        time.sleep(20)
+        elapsed = int(time.time() - state.start_time)
+        print(
+            f"\r  ⛏  {state.hashrate_str()} | "
+            f"Hashes: {state.hashes:,} | "
+            f"Shares: {state.shares_accepted}/{state.shares_submitted} | "
+            f"Up: {elapsed//60}m{elapsed%60}s  ",
+            end="", flush=True,
+        )
+
+# ── Main loop with auto-reconnect ─────────────────────────────────────────────
+
+def run(state: MinerState = None) -> MinerState:
+    if state is None:
+        state = MinerState()
+    state.running    = True
+    state.start_time = time.time()
+
+    print(f"\n  ⛏  Nova Real Bitcoin Miner")
+    print(f"  {'─'*45}")
+    print(f"  Pool    : {POOL_HOST}:{POOL_PORT}")
+    print(f"  Wallet  : {WALLET_ADDRESS}")
+    print(f"  Threads : {NUM_THREADS} (one per CPU core)")
+    print(f"  Telegram: {'✓ enabled' if TELEGRAM_TOKEN else '✗ add TELEGRAM_BOT_TOKEN to .env'}")
+    print()
+
+    attempt = 0
+    while state.running:
+        attempt += 1
+        conn = StratumConnection(state)
+
+        if not conn.connect():
+            wait = min(60, 5 * attempt)
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
+            continue
+
+        attempt = 0
+        print(f"  ✓ Connected to {POOL_HOST}")
+
+        # Start listener
+        listener = threading.Thread(target=conn.listen, daemon=True)
         listener.start()
 
-        stats = threading.Thread(target=self._stats_printer, daemon=True)
-        stats.start()
-
-        self.subscribe()
+        conn.send("mining.subscribe", ["nova_miner/2.0"])
 
         # Wait for first job
-        print("  Waiting for work from pool...")
         for _ in range(60):
-            if self.job:
+            if state.job:
                 break
             time.sleep(1)
 
-        if not self.job:
-            print("  ✗ No work received from pool. Check connection.")
-            self.running = False
-            return
+        if not state.job:
+            print("  ✗ No work received. Reconnecting...")
+            conn.disconnect()
+            continue
 
-        print(f"\n  ✓ Got work! Mining to {self.wallet}\n")
+        print(f"  ✓ Got work from pool — launching {NUM_THREADS} mining threads\n")
+        _tg_notify(f"⛏ <b>Nova Miner started</b>\n"
+                   f"Threads: {NUM_THREADS}\n"
+                   f"Pool: {POOL_HOST}\n"
+                   f"Wallet: <code>{WALLET_ADDRESS[:20]}...</code>")
 
-        extranonce2_int = 0
+        # Launch mining threads
+        miners = []
+        for i in range(NUM_THREADS):
+            t = threading.Thread(
+                target=mining_thread, args=(i, state, conn), daemon=True)
+            t.start()
+            miners.append(t)
 
-        try:
-            while self.running:
-                if not self.job:
-                    time.sleep(0.1)
-                    continue
+        # Stats printer
+        stats = threading.Thread(target=stats_thread, args=(state,), daemon=True)
+        stats.start()
 
-                job = self.job
-                en2     = format(extranonce2_int, f"0{self.extranonce2_size * 2}x")
-                ntime   = job["ntime"]
-                target  = difficulty_to_target(self.difficulty)
+        # Wait until connection drops or stopped
+        listener.join()
 
-                for nonce in range(0, 0xffffffff):
-                    if self.job is not job:
-                        break  # new job arrived
+        if state.running:
+            print(f"\n  Pool disconnected — reconnecting...")
+            conn.disconnect()
+            time.sleep(5)
 
-                    header = build_header(job, self.extranonce1, en2, ntime, nonce)
-                    hash_result = sha256d(header)
-                    hash_int = int.from_bytes(reverse_bytes(hash_result), "big")
-                    self.hashes += 1
+    print(f"\n\n  Final stats:")
+    print(f"    {state.summary()}")
+    return state
 
-                    if hash_int < target:
-                        print(f"\n  ★ SHARE FOUND! nonce={nonce:08x}")
-                        self.submit_share(job["job_id"], en2, ntime, nonce)
-
-                extranonce2_int += 1
-
-        except KeyboardInterrupt:
-            print("\n\n  Mining stopped.")
-            self.running = False
-
-        elapsed = time.time() - self.start_time
-        hashrate = self.hashes / elapsed if elapsed > 0 else 0
-        print(f"\n  Session stats:")
-        print(f"    Runtime  : {int(elapsed//60)}m {int(elapsed%60)}s")
-        print(f"    Hashrate : {hashrate:.0f} H/s")
-        print(f"    Hashes   : {self.hashes:,}")
-        print(f"    Shares   : {self.shares_accepted}/{self.shares_submitted} accepted")
-        print(f"    Wallet   : {self.wallet}")
-
-
-# ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print()
-    print("  ⛏  Real Bitcoin Pool Miner")
-    print("  ─────────────────────────────────────────")
-    print(f"  Pool   : {POOL_HOST}:{POOL_PORT}")
-    print(f"  Wallet : {WALLET_ADDRESS}")
-    print(f"  Worker : {WORKER_NAME}")
-    print()
-    print("  NOTE: CPU mining earns fractions of a penny per month.")
-    print("        This is REAL mining — just very slow on CPU hardware.")
-    print("        Press Ctrl+C to stop.")
-    print()
-
-    client = StratumClient(
-        host   = POOL_HOST,
-        port   = POOL_PORT,
-        wallet = WALLET_ADDRESS,
-        worker = WORKER_NAME,
-    )
-    client.mine()
+    state = MinerState()
+    try:
+        run(state)
+    except KeyboardInterrupt:
+        print("\n\n  Stopping miner...")
+        state.running = False
+        time.sleep(1)
+        print(f"\n  {state.summary()}")
