@@ -53,8 +53,9 @@ POOL_PORT       = int(os.getenv("MINING_POOL_PORT", "21496"))
 NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count())))
 TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
-# Request lowest difficulty the pool will accept; override with MINING_SUGGEST_DIFF env var
-SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "0.001"))
+# Suggest difficulty that matches public-pool.io's actual vardiff assignment (~1.0).
+# Too-low suggestions cause mid-session difficulty bumps → "Difficulty too low" rejects.
+SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "1.0"))
 # Local soft-share target — checked every nonce, never submitted to pool.
 # At SOFT_DIFF=0.00001 and ~40 KH/s you see roughly 1 soft share per second.
 # Proves the miner is grinding even when real pool shares take hours.
