@@ -44,6 +44,10 @@ TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
 # Request lowest difficulty the pool will accept; override with MINING_SUGGEST_DIFF env var
 SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "0.001"))
+# Local soft-share target — checked every nonce, never submitted to pool.
+# At SOFT_DIFF=0.00001 and ~40 KH/s you see roughly 1 soft share per second.
+# Proves the miner is grinding even when real pool shares take hours.
+SOFT_DIFF       = float(os.getenv("MINING_SOFT_DIFF", "0.00001"))
 
 # ── SHA-256d ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +58,12 @@ def sha256d(data: bytes) -> bytes:
 
 def difficulty_to_target(difficulty: float) -> int:
     diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
-    return diff1 // max(int(difficulty), 1)
+    if difficulty >= 1.0:
+        return diff1 // max(int(difficulty), 1)
+    # Sub-1 difficulty: target = diff1 * (1/difficulty) — use integer multiply
+    # to avoid converting the 256-bit diff1 to a lossy float.
+    multiplier = max(1, round(1.0 / max(difficulty, 1e-15)))
+    return min(diff1 * multiplier, (1 << 256) - 1)
 
 def _swap32(b: bytes) -> bytes:
     # Stratum sends prevhash with each 4-byte word byte-swapped
@@ -95,6 +104,7 @@ class MinerState:
         self.extranonce2_size = 4
         self.difficulty       = 1.0
         self.hashes           = 0
+        self.soft_shares      = 0
         self.shares_submitted = 0
         self.shares_accepted  = 0
         self.start_time       = time.time()
@@ -104,6 +114,10 @@ class MinerState:
     def add_hashes(self, n: int):
         with self._lock:
             self.hashes += n
+
+    def add_soft(self, n: int):
+        with self._lock:
+            self.soft_shares += n
 
     def share_submitted(self):
         with self._lock:
@@ -263,7 +277,8 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             time.sleep(0.2)
             continue
 
-        target = difficulty_to_target(state.difficulty)
+        target      = difficulty_to_target(state.difficulty)
+        soft_target = difficulty_to_target(SOFT_DIFF)
         en2    = format(en2_int & 0xFFFFFFFF, f"0{state.extranonce2_size * 2}x")
         ntime  = format(int(time.time()), "08x")
 
@@ -289,6 +304,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
         second_block = bytearray(merkle[28:32] + ntime_b + nbits_b + b'\x00\x00\x00\x00')
 
         local_hashes = 0
+        local_soft   = 0
 
         for nonce in range(nonce_start, nonce_end):
             if state.job is not job or not state.running:
@@ -313,10 +329,14 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
 
             if hash_int < target:
                 conn.submit(job["job_id"], en2, ntime, nonce)
+            elif hash_int < soft_target:
+                local_soft += 1
 
             if local_hashes % batch == 0:
                 state.add_hashes(local_hashes)
+                state.add_soft(local_soft)
                 local_hashes = 0
+                local_soft   = 0
                 # Roll ntime without touching the midstate — ntime lives in block 2 only
                 new_ntime = format(int(time.time()), "08x")
                 if new_ntime != ntime:
@@ -325,6 +345,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                     second_block[4:8] = ntime_b
 
         state.add_hashes(local_hashes)
+        state.add_soft(local_soft)
         # Advance extranonce2 so next pass covers fresh work
         en2_int = (en2_int + NUM_THREADS) & 0xFFFFFFFF
 
@@ -346,14 +367,14 @@ def _eta_str(hashrate: float, difficulty: float) -> str:
 def stats_thread(state: MinerState):
     while state.running:
         time.sleep(20)
-        elapsed = int(time.time() - state.start_time)
-        hr      = state.hashrate
+        elapsed    = int(time.time() - state.start_time)
+        hr         = state.hashrate
+        soft_rate  = state.soft_shares / elapsed if elapsed > 0 else 0
         print(
             f"\r  ⛏  {state.hashrate_str()} | "
-            f"Hashes: {state.hashes:,} | "
-            f"Shares: {state.shares_accepted}/{state.shares_submitted} | "
-            f"Diff: {state.difficulty:.4g} | "
-            f"ETA/share: {_eta_str(hr, state.difficulty)} | "
+            f"Soft: {state.soft_shares:,} ({soft_rate:.1f}/s) | "
+            f"Pool: {state.shares_accepted}/{state.shares_submitted} "
+            f"(ETA {_eta_str(hr, state.difficulty)}) | "
             f"Up: {elapsed//60}m{elapsed%60}s  ",
             end="", flush=True,
         )
