@@ -289,7 +289,8 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             time.sleep(0.2)
             continue
 
-        target      = difficulty_to_target(state.difficulty)
+        cur_diff    = state.difficulty
+        target      = difficulty_to_target(cur_diff)
         soft_target = difficulty_to_target(SOFT_DIFF)
         en2    = format(en2_int & 0xFFFFFFFF, f"0{state.extranonce2_size * 2}x")
         ntime  = format(int(time.time()), "08x")
@@ -333,7 +334,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                     conn.submit(job["job_id"], en2, cur_ntime, winner)
 
                 nonce = batch_end
-                if state.job is not job:
+                if state.job is not job or state.difficulty != cur_diff:
                     break
         else:
             # ── Python midstate inner loop ──────────────────────────────────
@@ -376,7 +377,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                     state.add_soft(local_soft)
                     local_hashes = 0
                     local_soft   = 0
-                    if state.job is not job or not state.running:
+                    if state.job is not job or state.difficulty != cur_diff or not state.running:
                         break
                     new_ntime = format(int(time.time()), "08x")
                     if new_ntime != ntime:
