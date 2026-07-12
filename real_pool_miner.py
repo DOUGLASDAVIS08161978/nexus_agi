@@ -200,7 +200,7 @@ class StratumConnection:
         self.send("mining.submit", [
             f"{WALLET_ADDRESS}.{WORKER_NAME}",
             job_id, en2, ntime,
-            format(nonce, "08x"),
+            struct.pack("<I", nonce).hex(),
         ])
         self.state.share_submitted()
 
