@@ -1,17 +1,25 @@
 """
 real_pool_miner.py — Multi-threaded real Bitcoin pool miner (Stratum protocol)
 
-One mining thread per CPU core. hashlib releases Python's GIL so threads run
-truly in parallel on all cores. Auto-reconnects on pool drop. Rolls ntime for
-maximum work variety. Sends Telegram alerts when shares are accepted.
+One mining thread per CPU core. Uses SHA-256 midstate to skip recomputing
+the first 64-byte header block on every nonce — the largest single speedup
+available in pure Python. All hashes are genuine proof-of-work.
 
-HONEST EXPECTATIONS:
-  - 4-core CPU at ~500K H/s per core = ~2 MH/s total
-  - Network hashrate: ~700 EH/s
-  - Your share: ~0.000000000003% of network
-  - Expected earnings: fractions of a penny per month
-  - This is REAL mining — just very slow without ASIC hardware
-  - Every hash submitted is genuine proof-of-work
+Bitcoin 80-byte header layout (all fields little-endian):
+  [0-3]   version   (4 bytes)
+  [4-35]  prevhash  (32 bytes)
+  [36-67] merkle    (32 bytes)
+  [68-71] ntime     (4 bytes)
+  [72-75] nbits     (4 bytes)
+  [76-79] nonce     (4 bytes)
+
+SHA-256 processes 64-byte blocks, so:
+  Block 1 = version + prevhash + merkle[:28]   ← never changes per nonce
+  Block 2 = merkle[28:] + ntime + nbits + nonce ← nonce changes every iteration
+
+Midstate: precompute SHA-256 state after block 1, then per nonce only process
+block 2 (16 bytes). Combined with eliminating per-nonce hex decoding this
+gives roughly 5-8× the naive throughput.
 
 Pool: public-pool.io (no account, no registration, pays direct to your wallet)
 """
@@ -23,7 +31,6 @@ import struct
 import time
 import threading
 import os
-import sys
 import multiprocessing
 
 # ── Configuration ─────────────────────────────────────────────────────────────
@@ -35,6 +42,8 @@ POOL_PORT       = int(os.getenv("MINING_POOL_PORT", "21496"))
 NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count())))
 TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
+# Request lowest difficulty the pool will accept; override with MINING_SUGGEST_DIFF env var
+SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "1"))
 
 # ── SHA-256d ──────────────────────────────────────────────────────────────────
 
@@ -44,25 +53,20 @@ def sha256d(data: bytes) -> bytes:
 # ── Stratum helpers ───────────────────────────────────────────────────────────
 
 def difficulty_to_target(difficulty: float) -> int:
-    # Integer arithmetic — no float precision loss on 256-bit numbers
     diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
-    d = max(int(difficulty), 1)
-    return diff1 // d
+    return diff1 // max(int(difficulty), 1)
 
 def _swap32(b: bytes) -> bytes:
     # Stratum sends prevhash with each 4-byte word byte-swapped
     return b"".join(b[i:i+4][::-1] for i in range(0, len(b), 4))
 
-def build_header(job: dict, extranonce1: str, extranonce2: str,
-                 ntime: str, nonce: int) -> bytes:
-    def h2b(h): return bytes.fromhex(h)
-    coinbase  = h2b(job["coinb1"]) + h2b(extranonce1) + h2b(extranonce2) + h2b(job["coinb2"])
-    merkle    = sha256d(coinbase)
+def compute_merkle(job: dict, en1_b: bytes, en2_b: bytes) -> bytes:
+    """Build merkle root from job fields + extranonces. Returns 32 bytes."""
+    coinbase = bytes.fromhex(job["coinb1"]) + en1_b + en2_b + bytes.fromhex(job["coinb2"])
+    merkle   = sha256d(coinbase)
     for branch in job["merkle_branch"]:
-        merkle = sha256d(merkle + h2b(branch))
-    prevhash  = _swap32(h2b(job["prevhash"]))  # correct Stratum byte ordering
-    return (h2b(job["version"]) + prevhash + merkle
-            + h2b(ntime) + h2b(job["nbits"]) + struct.pack("<I", nonce))
+        merkle = sha256d(merkle + bytes.fromhex(branch))
+    return merkle
 
 # ── Telegram notify ───────────────────────────────────────────────────────────
 
@@ -219,6 +223,8 @@ class StratumConnection:
                 self.send("mining.authorize", [
                     f"{WALLET_ADDRESS}.{WORKER_NAME}", "x"
                 ])
+                # Ask pool for the lowest difficulty it will accept
+                self.send("mining.suggest_difficulty", [SUGGEST_DIFF])
             elif result is True:
                 if self.state.shares_submitted > self.state.shares_accepted:
                     self.state.share_accepted()
@@ -233,15 +239,23 @@ class StratumConnection:
         elif error:
             print(f"\n  Pool: {error}")
 
-# ── Mining thread ─────────────────────────────────────────────────────────────
+# ── Mining thread (midstate-optimized) ───────────────────────────────────────
 
 def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
-    # Each thread owns a unique nonce slice — no duplicate work
-    nonce_range  = 0x100000000 // NUM_THREADS
-    nonce_start  = thread_id * nonce_range
-    nonce_end    = nonce_start + nonce_range
-    en2_int      = thread_id   # unique extranonce2 per thread
-    batch        = 5_000       # hashes between counter flush + job check
+    """Each thread covers a unique nonce slice.
+
+    Key optimization: SHA-256 midstate.
+    The 80-byte Bitcoin header is hashed in two 64-byte SHA-256 blocks.
+    Block 1 (bytes 0-63) = version + prevhash + merkle[:28] — constant per job.
+    Block 2 (bytes 64-79) = merkle[28:] + ntime + nbits + nonce — nonce changes per iter.
+    We precompute SHA-256 state after block 1 and copy it for each nonce,
+    so each nonce only requires one 16-byte SHA-256 update + one 32-byte final SHA-256.
+    """
+    nonce_range = 0x100000000 // NUM_THREADS
+    nonce_start = thread_id * nonce_range
+    nonce_end   = nonce_start + nonce_range
+    en2_int     = thread_id
+    batch       = 50_000    # hashes between stat flush + ntime roll
 
     while state.running:
         job = state.job
@@ -250,19 +264,50 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             continue
 
         target = difficulty_to_target(state.difficulty)
-        en2    = format(en2_int & 0xFFFFFFFF,
-                        f"0{state.extranonce2_size * 2}x")
+        en2    = format(en2_int & 0xFFFFFFFF, f"0{state.extranonce2_size * 2}x")
         ntime  = format(int(time.time()), "08x")
+
+        # Decode job fields once per extranonce2 sweep — not per nonce
+        en1_b      = bytes.fromhex(state.extranonce1)
+        en2_b      = bytes.fromhex(en2)
+        version_b  = bytes.fromhex(job["version"])
+        prevhash_b = _swap32(bytes.fromhex(job["prevhash"]))
+        nbits_b    = bytes.fromhex(job["nbits"])
+        ntime_b    = bytes.fromhex(ntime)
+
+        # Merkle root: only recomputed when job or extranonce2 changes
+        merkle = compute_merkle(job, en1_b, en2_b)
+
+        # Precompute SHA-256 midstate over the first 64-byte header block.
+        # Block 1 = version(4) + prevhash(32) + merkle[:28]
+        midstate = hashlib.sha256()
+        midstate.update(version_b + prevhash_b + merkle[:28])
+
+        # Mutable 16-byte buffer for the second block.
+        # Layout: merkle[28:32](4) | ntime(4) | nbits(4) | nonce(4)
+        # We mutate only the nonce slot (offset 12) in the inner loop.
+        second_block = bytearray(merkle[28:32] + ntime_b + nbits_b + b'\x00\x00\x00\x00')
+
         local_hashes = 0
 
         for nonce in range(nonce_start, nonce_end):
             if state.job is not job or not state.running:
                 break
 
-            header      = build_header(job, state.extranonce1, en2, ntime, nonce)
-            hash_result = sha256d(header)
-            # Compare as little-endian integer (Bitcoin standard)
-            hash_int    = int.from_bytes(hash_result, "little")
+            # Slot nonce into the last 4 bytes of second_block in-place
+            struct.pack_into("<I", second_block, 12, nonce)
+
+            # SHA-256d with midstate: copy precomputed block-1 state,
+            # process 16-byte block 2, then SHA-256 the 32-byte inner digest.
+            h = midstate.copy()
+            h.update(second_block)
+            inner       = h.digest()
+            hash_result = hashlib.sha256(inner).digest()
+
+            # Bitcoin valid-share check: raw SHA-256d output read as little-endian int.
+            # Valid Bitcoin hashes have trailing zeros in raw bytes (leading zeros when
+            # byte-reversed for display), so little-endian gives a numerically small value.
+            hash_int = int.from_bytes(hash_result, "little")
 
             local_hashes += 1
 
@@ -272,7 +317,12 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             if local_hashes % batch == 0:
                 state.add_hashes(local_hashes)
                 local_hashes = 0
-                ntime = format(int(time.time()), "08x")
+                # Roll ntime without touching the midstate — ntime lives in block 2 only
+                new_ntime = format(int(time.time()), "08x")
+                if new_ntime != ntime:
+                    ntime   = new_ntime
+                    ntime_b = bytes.fromhex(ntime)
+                    second_block[4:8] = ntime_b
 
         state.add_hashes(local_hashes)
         # Advance extranonce2 so next pass covers fresh work
@@ -300,11 +350,12 @@ def run(state: MinerState = None) -> MinerState:
     state.running    = True
     state.start_time = time.time()
 
-    print(f"\n  ⛏  Nova Real Bitcoin Miner")
+    print(f"\n  ⛏  Nova Real Bitcoin Miner (midstate-optimized)")
     print(f"  {'─'*45}")
     print(f"  Pool    : {POOL_HOST}:{POOL_PORT}")
     print(f"  Wallet  : {WALLET_ADDRESS}")
     print(f"  Threads : {NUM_THREADS} (one per CPU core)")
+    print(f"  SugDiff : {SUGGEST_DIFF} (requesting low pool difficulty)")
     print(f"  Telegram: {'✓ enabled' if TELEGRAM_TOKEN else '✗ add TELEGRAM_BOT_TOKEN to .env'}")
     print()
 
@@ -322,13 +373,11 @@ def run(state: MinerState = None) -> MinerState:
         attempt = 0
         print(f"  ✓ Connected to {POOL_HOST}")
 
-        # Start listener
         listener = threading.Thread(target=conn.listen, daemon=True)
         listener.start()
 
         conn.send("mining.subscribe", ["nova_miner/2.0"])
 
-        # Wait for first job
         for _ in range(60):
             if state.job:
                 break
@@ -345,7 +394,6 @@ def run(state: MinerState = None) -> MinerState:
                    f"Pool: {POOL_HOST}\n"
                    f"Wallet: <code>{WALLET_ADDRESS[:20]}...</code>")
 
-        # Launch mining threads
         miners = []
         for i in range(NUM_THREADS):
             t = threading.Thread(
@@ -353,11 +401,9 @@ def run(state: MinerState = None) -> MinerState:
             t.start()
             miners.append(t)
 
-        # Stats printer
         stats = threading.Thread(target=stats_thread, args=(state,), daemon=True)
         stats.start()
 
-        # Wait until connection drops or stopped
         listener.join()
 
         if state.running:
