@@ -303,41 +303,43 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
         # We mutate only the nonce slot (offset 12) in the inner loop.
         second_block = bytearray(merkle[28:32] + ntime_b + nbits_b + b'\x00\x00\x00\x00')
 
+        # Bind hot-path functions as locals: skips global→module→method attribute
+        # lookup on every nonce iteration (measurable in tight CPython loops).
+        _copy      = midstate.copy
+        _sha256    = hashlib.sha256
+        _pack_into = struct.pack_into
+        _frombytes = int.from_bytes
+
         local_hashes = 0
         local_soft   = 0
+        countdown    = batch   # countdown avoids modulo per nonce
 
         for nonce in range(nonce_start, nonce_end):
-            if state.job is not job or not state.running:
-                break
+            _pack_into("<I", second_block, 12, nonce)
 
-            # Slot nonce into the last 4 bytes of second_block in-place
-            struct.pack_into("<I", second_block, 12, nonce)
-
-            # SHA-256d with midstate: copy precomputed block-1 state,
-            # process 16-byte block 2, then SHA-256 the 32-byte inner digest.
-            h = midstate.copy()
+            h           = _copy()
             h.update(second_block)
             inner       = h.digest()
-            hash_result = hashlib.sha256(inner).digest()
-
-            # Bitcoin valid-share check: raw SHA-256d output read as little-endian int.
-            # Valid Bitcoin hashes have trailing zeros in raw bytes (leading zeros when
-            # byte-reversed for display), so little-endian gives a numerically small value.
-            hash_int = int.from_bytes(hash_result, "little")
-
-            local_hashes += 1
+            hash_result = _sha256(inner).digest()
+            hash_int    = _frombytes(hash_result, "little")
 
             if hash_int < target:
                 conn.submit(job["job_id"], en2, ntime, nonce)
             elif hash_int < soft_target:
                 local_soft += 1
 
-            if local_hashes % batch == 0:
+            local_hashes += 1
+            countdown    -= 1
+            if not countdown:
+                countdown = batch
                 state.add_hashes(local_hashes)
                 state.add_soft(local_soft)
                 local_hashes = 0
                 local_soft   = 0
-                # Roll ntime without touching the midstate — ntime lives in block 2 only
+                # Job-change and stop checks moved here — off the per-nonce hot path
+                if state.job is not job or not state.running:
+                    break
+                # Roll ntime — only in block 2, midstate unchanged
                 new_ntime = format(int(time.time()), "08x")
                 if new_ntime != ntime:
                     ntime   = new_ntime
