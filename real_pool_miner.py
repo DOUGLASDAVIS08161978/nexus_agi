@@ -200,7 +200,7 @@ class StratumConnection:
         self.send("mining.submit", [
             f"{WALLET_ADDRESS}.{WORKER_NAME}",
             job_id, en2, ntime,
-            struct.pack("<I", nonce).hex(),
+            format(nonce, "08x"),
         ])
         self.state.share_submitted()
 
@@ -299,7 +299,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
         en1_b      = bytes.fromhex(state.extranonce1)
         en2_b      = bytes.fromhex(en2)
         version_b  = bytes.fromhex(job["version"])
-        prevhash_b = _swap32(bytes.fromhex(job["prevhash"]))
+        prevhash_b = bytes.fromhex(job["prevhash"])
         nbits_b    = bytes.fromhex(job["nbits"])
         ntime_b    = bytes.fromhex(ntime)
 
