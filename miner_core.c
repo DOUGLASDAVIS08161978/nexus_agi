@@ -322,5 +322,13 @@ static struct PyModuleDef module = {
 };
 
 PyMODINIT_FUNC PyInit_miner_core(void) {
-    return PyModule_Create(&module);
+    PyObject *m = PyModule_Create(&module);
+    if (m) {
+#ifdef USE_ARM_SHA2
+        PyModule_AddStringConstant(m, "path", "ARM_SHA2_hardware");
+#else
+        PyModule_AddStringConstant(m, "path", "generic_C");
+#endif
+    }
+    return m;
 }

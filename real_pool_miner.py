@@ -36,11 +36,13 @@ import multiprocessing
 try:
     import miner_core as _miner_core
     _USE_C_EXT = True
+    _EXT_PATH  = getattr(_miner_core, "path", "C-ext")
 except ImportError:
     _miner_core = None
     _USE_C_EXT  = False
+    _EXT_PATH   = "Python-midstate"
 
-_C_BATCH = 500_000  # nonces per C-extension call; controls ntime-roll frequency
+_C_BATCH = 1_000_000  # nonces per C call; larger = fewer GIL re-checks, better throughput
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -425,14 +427,14 @@ def run(state: MinerState = None) -> MinerState:
     state.running    = True
     state.start_time = time.time()
 
-    _ext = "C-native" if _USE_C_EXT else "Python-midstate"
-    print(f"\n  ⛏  Nova Real Bitcoin Miner ({_ext})")
+    print(f"\n  ⛏  Nova Real Bitcoin Miner v3")
     print(f"  {'─'*45}")
+    print(f"  Engine  : {_EXT_PATH}")
+    print(f"  Threads : {NUM_THREADS}")
     print(f"  Pool    : {POOL_HOST}:{POOL_PORT}")
     print(f"  Wallet  : {WALLET_ADDRESS}")
-    print(f"  Threads : {NUM_THREADS} (one per CPU core)")
-    print(f"  SugDiff : {SUGGEST_DIFF} (requesting low pool difficulty)")
-    print(f"  Telegram: {'✓ enabled' if TELEGRAM_TOKEN else '✗ add TELEGRAM_BOT_TOKEN to .env'}")
+    print(f"  SugDiff : {SUGGEST_DIFF}")
+    print(f"  Telegram: {'✓ enabled' if TELEGRAM_TOKEN else '✗ not configured'}")
     print()
 
     attempt = 0

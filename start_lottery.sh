@@ -1,5 +1,5 @@
 #!/bin/bash
 # Nova Miner — Solo lottery pool (public-pool.io)
-# Chance at full 3.125 BTC block reward — ALL 8 CORES DEDICATED
+# Chance at full 3.125 BTC block reward — all CPU cores dedicated
 cd "$(dirname "$0")"
-MINING_THREADS=8 python3 real_pool_miner.py
+python3 real_pool_miner.py
