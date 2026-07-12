@@ -33,6 +33,15 @@ import threading
 import os
 import multiprocessing
 
+try:
+    import miner_core as _miner_core
+    _USE_C_EXT = True
+except ImportError:
+    _miner_core = None
+    _USE_C_EXT  = False
+
+_C_BATCH = 500_000  # nonces per C-extension call; controls ntime-roll frequency
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 WALLET_ADDRESS  = os.getenv("MINING_WALLET", "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass")
@@ -293,61 +302,88 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
         # Merkle root: only recomputed when job or extranonce2 changes
         merkle = compute_merkle(job, en1_b, en2_b)
 
-        # Precompute SHA-256 midstate over the first 64-byte header block.
-        # Block 1 = version(4) + prevhash(32) + merkle[:28]
-        midstate = hashlib.sha256()
-        midstate.update(version_b + prevhash_b + merkle[:28])
+        # first_block = version(4) + prevhash(32) + merkle[:28] — constant per job
+        first_block = bytes(version_b + prevhash_b + merkle[:28])
 
-        # Mutable 16-byte buffer for the second block.
-        # Layout: merkle[28:32](4) | ntime(4) | nbits(4) | nonce(4)
-        # We mutate only the nonce slot (offset 12) in the inner loop.
-        second_block = bytearray(merkle[28:32] + ntime_b + nbits_b + b'\x00\x00\x00\x00')
+        if _USE_C_EXT:
+            # ── C extension inner loop ──────────────────────────────────────
+            # mine_range() runs the full SHA-256d loop in C — no Python
+            # interpreter overhead per nonce. Called in _C_BATCH-nonce slices
+            # so ntime rolls and job-change checks happen between batches.
+            target_le      = target.to_bytes(32, "little")
+            soft_target_le = soft_target.to_bytes(32, "little")
 
-        # Bind hot-path functions as locals: skips global→module→method attribute
-        # lookup on every nonce iteration (measurable in tight CPython loops).
-        _copy      = midstate.copy
-        _sha256    = hashlib.sha256
-        _pack_into = struct.pack_into
-        _frombytes = int.from_bytes
+            nonce = nonce_start
+            while state.running and nonce < nonce_end:
+                cur_ntime     = format(int(time.time()), "08x")
+                second_prefix = bytes(merkle[28:32] + bytes.fromhex(cur_ntime) + nbits_b)
+                batch_end     = min(nonce + _C_BATCH, nonce_end)
 
-        local_hashes = 0
-        local_soft   = 0
-        countdown    = batch   # countdown avoids modulo per nonce
+                winner, hashes_done, soft_found = _miner_core.mine_range(
+                    first_block, second_prefix, target_le, soft_target_le,
+                    nonce, batch_end)
 
-        for nonce in range(nonce_start, nonce_end):
-            _pack_into("<I", second_block, 12, nonce)
+                state.add_hashes(hashes_done)
+                state.add_soft(soft_found)
 
-            h           = _copy()
-            h.update(second_block)
-            inner       = h.digest()
-            hash_result = _sha256(inner).digest()
-            hash_int    = _frombytes(hash_result, "little")
+                if winner is not None:
+                    conn.submit(job["job_id"], en2, cur_ntime, winner)
 
-            if hash_int < target:
-                conn.submit(job["job_id"], en2, ntime, nonce)
-            elif hash_int < soft_target:
-                local_soft += 1
-
-            local_hashes += 1
-            countdown    -= 1
-            if not countdown:
-                countdown = batch
-                state.add_hashes(local_hashes)
-                state.add_soft(local_soft)
-                local_hashes = 0
-                local_soft   = 0
-                # Job-change and stop checks moved here — off the per-nonce hot path
-                if state.job is not job or not state.running:
+                nonce = batch_end
+                if state.job is not job:
                     break
-                # Roll ntime — only in block 2, midstate unchanged
-                new_ntime = format(int(time.time()), "08x")
-                if new_ntime != ntime:
-                    ntime   = new_ntime
-                    ntime_b = bytes.fromhex(ntime)
-                    second_block[4:8] = ntime_b
+        else:
+            # ── Python midstate inner loop ──────────────────────────────────
+            # Precompute SHA-256 midstate over the first 64-byte header block.
+            midstate = hashlib.sha256()
+            midstate.update(first_block)
 
-        state.add_hashes(local_hashes)
-        state.add_soft(local_soft)
+            # Mutable 16-byte buffer for the second block.
+            # Layout: merkle[28:32](4) | ntime(4) | nbits(4) | nonce(4)
+            second_block = bytearray(merkle[28:32] + ntime_b + nbits_b + b'\x00\x00\x00\x00')
+
+            _copy      = midstate.copy
+            _sha256    = hashlib.sha256
+            _pack_into = struct.pack_into
+            _frombytes = int.from_bytes
+
+            local_hashes = 0
+            local_soft   = 0
+            countdown    = batch
+
+            for nonce in range(nonce_start, nonce_end):
+                _pack_into("<I", second_block, 12, nonce)
+
+                h           = _copy()
+                h.update(second_block)
+                inner       = h.digest()
+                hash_result = _sha256(inner).digest()
+                hash_int    = _frombytes(hash_result, "little")
+
+                if hash_int < target:
+                    conn.submit(job["job_id"], en2, ntime, nonce)
+                elif hash_int < soft_target:
+                    local_soft += 1
+
+                local_hashes += 1
+                countdown    -= 1
+                if not countdown:
+                    countdown = batch
+                    state.add_hashes(local_hashes)
+                    state.add_soft(local_soft)
+                    local_hashes = 0
+                    local_soft   = 0
+                    if state.job is not job or not state.running:
+                        break
+                    new_ntime = format(int(time.time()), "08x")
+                    if new_ntime != ntime:
+                        ntime   = new_ntime
+                        ntime_b = bytes.fromhex(ntime)
+                        second_block[4:8] = ntime_b
+
+            state.add_hashes(local_hashes)
+            state.add_soft(local_soft)
+
         # Advance extranonce2 so next pass covers fresh work
         en2_int = (en2_int + NUM_THREADS) & 0xFFFFFFFF
 
@@ -389,7 +425,8 @@ def run(state: MinerState = None) -> MinerState:
     state.running    = True
     state.start_time = time.time()
 
-    print(f"\n  ⛏  Nova Real Bitcoin Miner (midstate-optimized)")
+    _ext = "C-native" if _USE_C_EXT else "Python-midstate"
+    print(f"\n  ⛏  Nova Real Bitcoin Miner ({_ext})")
     print(f"  {'─'*45}")
     print(f"  Pool    : {POOL_HOST}:{POOL_PORT}")
     print(f"  Wallet  : {WALLET_ADDRESS}")
