@@ -44,8 +44,14 @@ def sha256d(data: bytes) -> bytes:
 # ── Stratum helpers ───────────────────────────────────────────────────────────
 
 def difficulty_to_target(difficulty: float) -> int:
+    # Integer arithmetic — no float precision loss on 256-bit numbers
     diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
-    return int(diff1 / max(difficulty, 1e-9))
+    d = max(int(difficulty), 1)
+    return diff1 // d
+
+def _swap32(b: bytes) -> bytes:
+    # Stratum sends prevhash with each 4-byte word byte-swapped
+    return b"".join(b[i:i+4][::-1] for i in range(0, len(b), 4))
 
 def build_header(job: dict, extranonce1: str, extranonce2: str,
                  ntime: str, nonce: int) -> bytes:
@@ -54,7 +60,8 @@ def build_header(job: dict, extranonce1: str, extranonce2: str,
     merkle    = sha256d(coinbase)
     for branch in job["merkle_branch"]:
         merkle = sha256d(merkle + h2b(branch))
-    return (h2b(job["version"]) + h2b(job["prevhash"]) + merkle
+    prevhash  = _swap32(h2b(job["prevhash"]))  # correct Stratum byte ordering
+    return (h2b(job["version"]) + prevhash + merkle
             + h2b(ntime) + h2b(job["nbits"]) + struct.pack("<I", nonce))
 
 # ── Telegram notify ───────────────────────────────────────────────────────────
@@ -229,10 +236,12 @@ class StratumConnection:
 # ── Mining thread ─────────────────────────────────────────────────────────────
 
 def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
-    # Each thread starts at a different extranonce2 offset to avoid duplicate work
-    en2_offset = thread_id * (0xFFFFFFFF // NUM_THREADS)
-    en2_int    = en2_offset
-    batch      = 10_000  # hashes between state checks
+    # Each thread owns a unique nonce slice — no duplicate work
+    nonce_range  = 0x100000000 // NUM_THREADS
+    nonce_start  = thread_id * nonce_range
+    nonce_end    = nonce_start + nonce_range
+    en2_int      = thread_id   # unique extranonce2 per thread
+    batch        = 5_000       # hashes between counter flush + job check
 
     while state.running:
         job = state.job
@@ -240,32 +249,34 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             time.sleep(0.2)
             continue
 
+        target = difficulty_to_target(state.difficulty)
         en2    = format(en2_int & 0xFFFFFFFF,
                         f"0{state.extranonce2_size * 2}x")
-        ntime  = format(int(time.time()), "08x")  # roll ntime
-        target = difficulty_to_target(state.difficulty)
+        ntime  = format(int(time.time()), "08x")
         local_hashes = 0
 
-        for nonce in range(0, 0xFFFFFFFF, 1):
+        for nonce in range(nonce_start, nonce_end):
             if state.job is not job or not state.running:
                 break
 
-            header    = build_header(job, state.extranonce1, en2, ntime, nonce)
+            header      = build_header(job, state.extranonce1, en2, ntime, nonce)
             hash_result = sha256d(header)
-            hash_int  = int.from_bytes(hash_result[::-1], "big")
+            # Compare as little-endian integer (Bitcoin standard)
+            hash_int    = int.from_bytes(hash_result, "little")
+
             local_hashes += 1
 
             if hash_int < target:
                 conn.submit(job["job_id"], en2, ntime, nonce)
 
-            # Batch update shared counter
             if local_hashes % batch == 0:
                 state.add_hashes(local_hashes)
                 local_hashes = 0
-                ntime = format(int(time.time()), "08x")  # keep ntime fresh
+                ntime = format(int(time.time()), "08x")
 
         state.add_hashes(local_hashes)
-        en2_int = (en2_int + 1) & 0xFFFFFFFF
+        # Advance extranonce2 so next pass covers fresh work
+        en2_int = (en2_int + NUM_THREADS) & 0xFFFFFFFF
 
 # ── Stats display ─────────────────────────────────────────────────────────────
 
