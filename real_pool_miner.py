@@ -43,7 +43,7 @@ NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count(
 TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
 # Request lowest difficulty the pool will accept; override with MINING_SUGGEST_DIFF env var
-SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "1"))
+SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "0.001"))
 
 # ── SHA-256d ──────────────────────────────────────────────────────────────────
 
@@ -330,14 +330,30 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
 
 # ── Stats display ─────────────────────────────────────────────────────────────
 
+def _eta_str(hashrate: float, difficulty: float) -> str:
+    """Human-readable expected time to next share at current hashrate + difficulty."""
+    if hashrate <= 0:
+        return "∞"
+    # At difficulty D, expected hashes per share ≈ D * 2^32
+    expected = max(difficulty, 1e-12) * 4_294_967_296
+    secs = expected / hashrate
+    if secs < 90:
+        return f"{secs:.0f}s"
+    if secs < 5400:
+        return f"{secs/60:.1f}m"
+    return f"{secs/3600:.1f}h"
+
 def stats_thread(state: MinerState):
     while state.running:
         time.sleep(20)
         elapsed = int(time.time() - state.start_time)
+        hr      = state.hashrate
         print(
             f"\r  ⛏  {state.hashrate_str()} | "
             f"Hashes: {state.hashes:,} | "
             f"Shares: {state.shares_accepted}/{state.shares_submitted} | "
+            f"Diff: {state.difficulty:.4g} | "
+            f"ETA/share: {_eta_str(hr, state.difficulty)} | "
             f"Up: {elapsed//60}m{elapsed%60}s  ",
             end="", flush=True,
         )
