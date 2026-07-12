@@ -7,7 +7,7 @@
  *     despite launching 8 threads — the GIL serialized them all)
  *   - ARM SHA-256 hardware intrinsics path (vsha256h/vsha256h2/su0/su1):
  *     uses the phone's dedicated SHA-256 silicon when compiled with
- *     -march=native on ARM64 — roughly 4-8x faster than generic C SHA-256
+ *     -march=armv8-a+sha2 — roughly 4-8x faster than generic C SHA-256
  *   - Generic C fallback for non-ARM or older devices
  *
  * Combined effect of GIL fix + ARM SHA2 on 8-core ARM64: expected 16-30x
@@ -26,6 +26,10 @@
 
 #if defined(__aarch64__) && defined(__ARM_FEATURE_SHA2)
 #  include <arm_neon.h>
+#  include <sys/auxv.h>
+#  ifndef HWCAP_SHA2
+#    define HWCAP_SHA2 (1UL << 6)
+#  endif
 #  define USE_ARM_SHA2 1
 #endif
 
@@ -323,12 +327,20 @@ static struct PyModuleDef module = {
 
 PyMODINIT_FUNC PyInit_miner_core(void) {
     PyObject *m = PyModule_Create(&module);
-    if (m) {
+    if (!m) return NULL;
 #ifdef USE_ARM_SHA2
-        PyModule_AddStringConstant(m, "path", "ARM_SHA2_hardware");
-#else
-        PyModule_AddStringConstant(m, "path", "generic_C");
-#endif
+    /* Runtime guard: compiled for ARM SHA2, but verify the CPU actually has it.
+     * On rare devices without SHA2, return a clear error instead of a crash. */
+    if (!(getauxval(AT_HWCAP) & HWCAP_SHA2)) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "miner_core compiled with ARM SHA2 but this CPU does not support it. "
+            "Rebuild with: python3 setup.py build_ext --inplace");
+        Py_DECREF(m);
+        return NULL;
     }
+    PyModule_AddStringConstant(m, "path", "ARM_SHA2_hardware");
+#else
+    PyModule_AddStringConstant(m, "path", "generic_C");
+#endif
     return m;
 }

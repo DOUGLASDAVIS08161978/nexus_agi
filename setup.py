@@ -1,15 +1,28 @@
+import platform
 from setuptools import setup, Extension
 
-ext = Extension(
-    "miner_core",
-    sources=["miner_core.c"],
-    extra_compile_args=[
+machine = platform.machine()
+if machine in ("aarch64", "arm64"):
+    # Termux/Android clang ignores -march=native for crypto extensions;
+    # explicit +sha2 is required to define __ARM_FEATURE_SHA2 and enable
+    # the vsha256* hardware intrinsics on the phone's dedicated SHA silicon.
+    extra_compile_args = [
         "-O3",
-        "-march=native",        # auto-enable SHA/NEON on ARM64
+        "-march=armv8-a+sha2",
+        "-mtune=native",
         "-funroll-loops",
-        "-fomit-frame-pointer", # free an extra register
-        "-ffast-math",          # no floats in SHA-256, safe and faster
-    ],
-)
+        "-fomit-frame-pointer",
+    ]
+else:
+    extra_compile_args = [
+        "-O3",
+        "-march=native",
+        "-funroll-loops",
+        "-fomit-frame-pointer",
+        "-ffast-math",
+    ]
 
-setup(name="miner_core", version="2.0", ext_modules=[ext])
+ext = Extension("miner_core", sources=["miner_core.c"],
+                extra_compile_args=extra_compile_args)
+
+setup(name="miner_core", version="3.1", ext_modules=[ext])
