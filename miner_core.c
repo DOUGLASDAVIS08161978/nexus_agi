@@ -180,10 +180,10 @@ static inline void state_to_bytes(const uint32_t st[8], uint8_t out[32]) {
     }
 }
 
-/* Returns 1 if hash < target, treating both 32-byte arrays as little-endian integers */
+/* Returns 1 if hash < target, both as 32-byte big-endian integers */
 static inline int hash_lt(const uint8_t hash[32], const uint8_t tgt[32]) {
     int i;
-    for (i = 31; i >= 0; i--) {
+    for (i = 0; i < 32; i++) {
         if (hash[i] < tgt[i]) return 1;
         if (hash[i] > tgt[i]) return 0;
     }

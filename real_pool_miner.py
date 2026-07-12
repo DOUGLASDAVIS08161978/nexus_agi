@@ -314,8 +314,8 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             # mine_range() runs the full SHA-256d loop in C — no Python
             # interpreter overhead per nonce. Called in _C_BATCH-nonce slices
             # so ntime rolls and job-change checks happen between batches.
-            target_le      = target.to_bytes(32, "little")
-            soft_target_le = soft_target.to_bytes(32, "little")
+            target_be      = target.to_bytes(32, "big")
+            soft_target_be = soft_target.to_bytes(32, "big")
 
             nonce = nonce_start
             while state.running and nonce < nonce_end:
@@ -324,7 +324,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                 batch_end     = min(nonce + _C_BATCH, nonce_end)
 
                 winner, hashes_done, soft_found = _miner_core.mine_range(
-                    first_block, second_prefix, target_le, soft_target_le,
+                    first_block, second_prefix, target_be, soft_target_be,
                     nonce, batch_end)
 
                 state.add_hashes(hashes_done)
@@ -362,7 +362,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                 h.update(second_block)
                 inner       = h.digest()
                 hash_result = _sha256(inner).digest()
-                hash_int    = _frombytes(hash_result, "little")
+                hash_int    = _frombytes(hash_result, "big")
 
                 if hash_int < target:
                     conn.submit(job["job_id"], en2, ntime, nonce)
