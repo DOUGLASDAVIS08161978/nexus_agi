@@ -12,6 +12,8 @@ if machine in ("aarch64", "arm64"):
         "-mtune=native",
         "-funroll-loops",
         "-fomit-frame-pointer",
+        "-fno-stack-protector",   # no canary overhead in hot loop
+        "-fipa-cp",               # constant propagation across inlined calls
     ]
 else:
     extra_compile_args = [

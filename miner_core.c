@@ -84,7 +84,8 @@ static const uint32_t H0[8] = {
     ABCD = vsha256hq_u32 (ABCD, EFGH, TMP0);             \
     EFGH = vsha256h2q_u32(EFGH, TMP2, TMP0)
 
-static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
+__attribute__((always_inline))
+static inline void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
     uint32x4_t ABCD, EFGH, ABCD_SAVE, EFGH_SAVE;
     uint32x4_t MSG0, MSG1, MSG2, MSG3, TMP0, TMP2;
 
@@ -137,7 +138,8 @@ static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
 #define SG0(x) (RR(x,7)^RR(x,18)^((x)>>3))
 #define SG1(x) (RR(x,17)^RR(x,19)^((x)>>10))
 
-static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
+__attribute__((always_inline))
+static inline void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
     uint32_t w[64], a, b, c, d, e, f, g, h, t1, t2;
     int i;
     for (i = 0; i < 16; i++)
