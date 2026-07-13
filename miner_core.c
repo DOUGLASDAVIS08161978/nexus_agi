@@ -1,17 +1,15 @@
 /*
- * miner_core.c v3 — True parallel Bitcoin SHA-256d mining
+ * miner_core.c v4 — 4-way batched SHA-256d mining
  *
- * v3 changes vs v2:
- *   - Py_BEGIN/END_ALLOW_THREADS: releases the GIL during the hot loop so
- *     all 8 threads run on real CPU cores simultaneously (v2 was single-threaded
- *     despite launching 8 threads — the GIL serialized them all)
- *   - ARM SHA-256 hardware intrinsics path (vsha256h/vsha256h2/su0/su1):
- *     uses the phone's dedicated SHA-256 silicon when compiled with
- *     -march=armv8-a+sha2 — roughly 4-8x faster than generic C SHA-256
- *   - Generic C fallback for non-ARM or older devices
- *
- * Combined effect of GIL fix + ARM SHA2 on 8-core ARM64: expected 16-30x
- * speedup over v1 (OpenSSL, 4 threads, GIL held).
+ * v4 vs v3:
+ *   - Inner loop processes 4 nonces per iteration instead of 1.
+ *   - 4 independent sha256_compress calls back-to-back expose enough
+ *     independent work for the ARM64 OoO engine to hide the 3-cycle
+ *     SHA2 instruction latency and drive throughput to ~1 SHA2 op/cycle.
+ *   - second_pad copies are built once per mine_range call; only the
+ *     4 nonce bytes are patched inside the hot loop (no memcpy inside loop).
+ *   - outer_pad padding half (bytes 32-63) is also pre-built once.
+ *   - Expected improvement: 2–3× over v3 on Cortex-A76/A78/X1/X2 cores.
  *
  * API unchanged:
  *   mine_range(first_block, second_prefix, target_le, soft_target_le,
@@ -65,8 +63,9 @@ static const uint32_t H0[8] = {
 #ifdef USE_ARM_SHA2
 /*
  * ARM hardware SHA-256 using vsha256h/vsha256h2/vsha256su0/vsha256su1.
- * Processes 4 rounds per pair of instructions using dedicated silicon.
- * ~4-8x faster than the generic C path on Qualcomm/Apple/Samsung ARM64 SoCs.
+ * 4 rounds per instruction pair; latency 3 cycles, throughput 1/cycle.
+ * With 4 independent streams in the v4 hot loop, the OoO engine hides
+ * the latency and drives all 4 SHA2 units at full throughput.
  */
 
 /* 4 rounds with schedule expansion (rounds 0-47) */
@@ -195,6 +194,14 @@ static inline int hash_lt(const uint8_t hash[32], const uint8_t tgt[32]) {
     return 0;
 }
 
+/* Patch a 32-bit nonce (little-endian) into bytes 12-15 of a block */
+#define PATCH_NONCE(buf, n) do {             \
+    (buf)[12] = (uint8_t)((n));              \
+    (buf)[13] = (uint8_t)((n) >>  8);       \
+    (buf)[14] = (uint8_t)((n) >> 16);       \
+    (buf)[15] = (uint8_t)((n) >> 24);       \
+} while (0)
+
 /* ── mine_range() ─────────────────────────────────────────────────────────── */
 
 static PyObject* mine_range(PyObject* self, PyObject* args) {
@@ -224,71 +231,148 @@ static PyObject* mine_range(PyObject* self, PyObject* args) {
         sha256_compress(midstate, first_block);
 
         /*
-         * Pre-build padded second block (64 bytes).
-         * 80-byte message: [first_block:64][second_prefix:12][nonce:4]
-         * SHA-256 padding for 80-byte input:
-         *   [second_prefix:12][nonce:4][0x80][zeros:39][bitlen 640=0x280 big-endian:8]
+         * Build second_pad template (64 bytes) from second_prefix + padding.
+         * Layout: [second_prefix:12][nonce:4][0x80][zeros:38][0x0280 BE:2]
+         * Only bytes 12-15 (nonce) vary per hash; everything else is fixed.
          */
         uint8_t second_pad[64];
         memset(second_pad, 0, sizeof(second_pad));
         memcpy(second_pad, second_prefix, 12);
         second_pad[16] = 0x80u;
         second_pad[62] = 0x02u;
-        second_pad[63] = 0x80u;
-
-        /*
-         * Pre-build outer padded block template (64 bytes).
-         * 32-byte inner hash → SHA-256 padding:
-         *   [inner_hash:32][0x80][zeros:23][bitlen 256=0x100 big-endian:8]
-         */
-        uint8_t outer_pad[64];
-        memset(outer_pad, 0, sizeof(outer_pad));
-        outer_pad[32] = 0x80u;
-        outer_pad[62] = 0x01u;
+        second_pad[63] = 0x80u;  /* bit length 640 = 0x0280 big-endian */
 
         uint64_t hashes_done = 0;
         uint64_t soft_shares = 0;
         long long winner     = -1;
 
         /*
-         * CRITICAL: release the GIL before the hot loop.
-         * Without this, all 8 threads serialize on the GIL and only one
-         * actually hashes at a time — 8 threads behaves like 1 thread.
-         * After releasing, all C code runs truly in parallel on all cores.
-         * All data accessed inside is in C buffers — no Python objects touched.
+         * Release the GIL: all 8 worker threads hash in parallel on real cores.
+         * All data below is in C buffers; no Python objects are touched.
          */
         Py_BEGIN_ALLOW_THREADS
 
         {
-            uint32_t inner_st[8], outer_st[8];
-            uint8_t  hash_out[32];
+            /*
+             * 4-way batched inner loop.
+             *
+             * Four independent second_pad copies let the CPU see 4 unrelated
+             * sha256_compress call chains simultaneously. On ARM64 with SHA2
+             * extensions: SHA2 instructions have 3-cycle latency but 1-cycle
+             * throughput — 4 independent streams fully hide the latency and
+             * keep the SHA2 pipeline saturated.
+             *
+             * Bytes 0-11 and 16-63 of sp0..sp3 are identical (set once here).
+             * Only bytes 12-15 (nonce) are patched inside the hot loop.
+             */
+            uint8_t sp0[64], sp1[64], sp2[64], sp3[64];
+            memcpy(sp0, second_pad, 64);
+            memcpy(sp1, second_pad, 64);
+            memcpy(sp2, second_pad, 64);
+            memcpy(sp3, second_pad, 64);
+
+            /*
+             * Four outer_pad buffers: bytes 32-63 are the SHA-256 padding for
+             * a 32-byte (256-bit) inner hash — fixed for all nonces.
+             * Bytes 0-31 are overwritten by state_to_bytes() each iteration.
+             */
+            uint8_t op0[64], op1[64], op2[64], op3[64];
+            memset(op0, 0, 64); op0[32] = 0x80u; op0[62] = 0x01u;
+            memset(op1, 0, 64); op1[32] = 0x80u; op1[62] = 0x01u;
+            memset(op2, 0, 64); op2[32] = 0x80u; op2[62] = 0x01u;
+            memset(op3, 0, 64); op3[32] = 0x80u; op3[62] = 0x01u;
+
+            uint32_t is0[8], is1[8], is2[8], is3[8]; /* inner states */
+            uint32_t os0[8], os1[8], os2[8], os3[8]; /* outer states */
+            uint8_t  h0[32], h1[32], h2[32], h3[32]; /* final hashes */
             uint64_t nonce;
 
-            for (nonce = nonce_start; nonce < nonce_end; nonce++) {
-                /* Pack nonce little-endian into second block */
-                second_pad[12] = (uint8_t)(nonce);
-                second_pad[13] = (uint8_t)(nonce >>  8);
-                second_pad[14] = (uint8_t)(nonce >> 16);
-                second_pad[15] = (uint8_t)(nonce >> 24);
+            /* ── 4-wide main loop ─────────────────────────────────────────── */
+            for (nonce = nonce_start; nonce + 3 < nonce_end; nonce += 4) {
+                uint32_t n0 = (uint32_t)nonce;
+                uint32_t n1 = n0 + 1u;
+                uint32_t n2 = n0 + 2u;
+                uint32_t n3 = n0 + 3u;
 
-                /* Inner SHA-256: midstate + padded second block */
-                memcpy(inner_st, midstate, 32);
-                sha256_compress(inner_st, second_pad);
-                state_to_bytes(inner_st, outer_pad);  /* inner hash → outer input */
+                /* Patch nonce bytes only (16 byte-stores, no memcpy) */
+                PATCH_NONCE(sp0, n0);
+                PATCH_NONCE(sp1, n1);
+                PATCH_NONCE(sp2, n2);
+                PATCH_NONCE(sp3, n3);
 
-                /* Outer SHA-256: fresh H0 + padded inner hash */
-                memcpy(outer_st, H0, 32);
-                sha256_compress(outer_st, outer_pad);
-                state_to_bytes(outer_st, hash_out);
+                /*
+                 * 4 independent inner SHA-256 compressions.
+                 * The CPU's OoO engine sees no data dependency between the
+                 * 4 chains and issues them into the SHA2 pipeline concurrently.
+                 */
+                memcpy(is0, midstate, 32); sha256_compress(is0, sp0);
+                memcpy(is1, midstate, 32); sha256_compress(is1, sp1);
+                memcpy(is2, midstate, 32); sha256_compress(is2, sp2);
+                memcpy(is3, midstate, 32); sha256_compress(is3, sp3);
 
-                hashes_done++;
+                /* Transfer inner hashes to outer_pad input region (bytes 0-31) */
+                state_to_bytes(is0, op0);
+                state_to_bytes(is1, op1);
+                state_to_bytes(is2, op2);
+                state_to_bytes(is3, op3);
 
-                if (hash_lt(hash_out, target_le)) {
-                    winner = (long long)nonce;
-                    break;
-                }
-                if (hash_lt(hash_out, soft_target_le)) {
-                    soft_shares++;
+                /* 4 independent outer SHA-256 compressions */
+                memcpy(os0, H0, 32); sha256_compress(os0, op0);
+                memcpy(os1, H0, 32); sha256_compress(os1, op1);
+                memcpy(os2, H0, 32); sha256_compress(os2, op2);
+                memcpy(os3, H0, 32); sha256_compress(os3, op3);
+
+                /* Extract final SHA-256d hashes */
+                state_to_bytes(os0, h0);
+                state_to_bytes(os1, h1);
+                state_to_bytes(os2, h2);
+                state_to_bytes(os3, h3);
+
+                hashes_done += 4;
+
+                /* Check hard target (pool difficulty) */
+                if (hash_lt(h0, target_le)) { winner = (long long)n0; break; }
+                if (hash_lt(h1, target_le)) { winner = (long long)n1; break; }
+                if (hash_lt(h2, target_le)) { winner = (long long)n2; break; }
+                if (hash_lt(h3, target_le)) { winner = (long long)n3; break; }
+
+                /* Count soft shares (hashrate calibration) */
+                if (hash_lt(h0, soft_target_le)) soft_shares++;
+                if (hash_lt(h1, soft_target_le)) soft_shares++;
+                if (hash_lt(h2, soft_target_le)) soft_shares++;
+                if (hash_lt(h3, soft_target_le)) soft_shares++;
+            }
+
+            /* ── 1-wide tail: handles remaining 0-3 nonces ───────────────── */
+            if (winner < 0) {
+                uint8_t sp_tail[64], op_tail[64], hash_out[32];
+                uint32_t inner_st[8], outer_st[8];
+
+                memcpy(sp_tail, second_pad, 64);
+                memset(op_tail, 0, 64);
+                op_tail[32] = 0x80u;
+                op_tail[62] = 0x01u;
+
+                for (; nonce < nonce_end; nonce++) {
+                    PATCH_NONCE(sp_tail, (uint32_t)nonce);
+
+                    memcpy(inner_st, midstate, 32);
+                    sha256_compress(inner_st, sp_tail);
+                    state_to_bytes(inner_st, op_tail);
+
+                    memcpy(outer_st, H0, 32);
+                    sha256_compress(outer_st, op_tail);
+                    state_to_bytes(outer_st, hash_out);
+
+                    hashes_done++;
+
+                    if (hash_lt(hash_out, target_le)) {
+                        winner = (long long)nonce;
+                        break;
+                    }
+                    if (hash_lt(hash_out, soft_target_le)) {
+                        soft_shares++;
+                    }
                 }
             }
         }
@@ -309,12 +393,14 @@ cleanup:
     return result;
 }
 
+#undef PATCH_NONCE
+
 static PyMethodDef methods[] = {
     {"mine_range", mine_range, METH_VARARGS,
 #ifdef USE_ARM_SHA2
-     "SHA-256d mining loop — ARM hardware SHA-256 intrinsics + GIL released (v3)"
+     "SHA-256d mining loop — ARM SHA2 hardware, 4-way batched OoO pipeline, GIL released (v4)"
 #else
-     "SHA-256d mining loop — generic C SHA-256 + GIL released (v3)"
+     "SHA-256d mining loop — generic C SHA-256, 4-way batched, GIL released (v4)"
 #endif
     },
     {NULL, NULL, 0, NULL}
@@ -323,9 +409,9 @@ static PyMethodDef methods[] = {
 static struct PyModuleDef module = {
     PyModuleDef_HEAD_INIT, "miner_core",
 #ifdef USE_ARM_SHA2
-    "Bitcoin SHA-256d inner loop v3: ARM SHA-256 hardware + true 8-thread parallelism.",
+    "Bitcoin SHA-256d inner loop v4: ARM SHA2 + 4-way OoO batching + 8-thread parallelism.",
 #else
-    "Bitcoin SHA-256d inner loop v3: generic C SHA-256 + true 8-thread parallelism.",
+    "Bitcoin SHA-256d inner loop v4: generic C SHA-256 + 4-way batching + 8-thread parallelism.",
 #endif
     -1, methods
 };
@@ -334,8 +420,6 @@ PyMODINIT_FUNC PyInit_miner_core(void) {
     PyObject *m = PyModule_Create(&module);
     if (!m) return NULL;
 #ifdef USE_ARM_SHA2
-    /* Runtime guard: compiled for ARM SHA2, but verify the CPU actually has it.
-     * On rare devices without SHA2, return a clear error instead of a crash. */
     if (!(getauxval(AT_HWCAP) & HWCAP_SHA2)) {
         PyErr_SetString(PyExc_RuntimeError,
             "miner_core compiled with ARM SHA2 but this CPU does not support it. "
@@ -343,9 +427,9 @@ PyMODINIT_FUNC PyInit_miner_core(void) {
         Py_DECREF(m);
         return NULL;
     }
-    PyModule_AddStringConstant(m, "path", "ARM_SHA2_hardware");
+    PyModule_AddStringConstant(m, "path", "ARM_SHA2_4way");
 #else
-    PyModule_AddStringConstant(m, "path", "generic_C");
+    PyModule_AddStringConstant(m, "path", "generic_C_4way");
 #endif
     return m;
 }
