@@ -334,7 +334,21 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                 state.add_soft(soft_found)
 
                 if winner is not None:
-                    conn.submit(job["job_id"], en2, cur_ntime, winner)
+                    # Independently verify with Python hashlib before submitting.
+                    # Reconstructs the full 80-byte header and SHA-256d hashes it.
+                    # If "FALSE-POSITIVE", the C extension has a bug; if "VALID"
+                    # but pool rejects, the mismatch is in pool reconstruction.
+                    _hdr = first_block + second_prefix + struct.pack("<I", winner)
+                    _h1  = hashlib.sha256(_hdr).digest()
+                    _h2  = hashlib.sha256(_h1).digest()
+                    _h_int = int.from_bytes(_h2, "big")
+                    _valid = _h_int < target
+                    print(f"\n  ★ nonce={winner:08x}  hash={_h2.hex()}  "
+                          f"{'VALID — submitting' if _valid else 'FALSE-POSITIVE — skipping'}")
+                    if _valid:
+                        conn.submit(job["job_id"], en2, cur_ntime, winner)
+                    else:
+                        print(f"     target={target.to_bytes(32,'big').hex()}")
 
                 nonce = batch_end
                 if state.job is not job or state.difficulty != cur_diff:
@@ -385,7 +399,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                     new_ntime = format(int(time.time()), "08x")
                     if new_ntime != ntime:
                         ntime   = new_ntime
-                        ntime_b = bytes.fromhex(ntime)
+                        ntime_b = struct.pack("<I", int(ntime, 16))
                         second_block[4:8] = ntime_b
 
             state.add_hashes(local_hashes)
