@@ -296,12 +296,15 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
         ntime  = format(int(time.time()), "08x")
 
         # Decode job fields once per extranonce2 sweep — not per nonce
+        # Pool sends version/nbits/ntime as big-endian hex (.toString(16)) but
+        # builds the block header with writeUInt32LE → we must pack little-endian.
+        # prevhash is sent word-swapped (swapEndianWords) → _swap32 un-swaps it.
         en1_b      = bytes.fromhex(state.extranonce1)
         en2_b      = bytes.fromhex(en2)
-        version_b  = bytes.fromhex(job["version"])
-        prevhash_b = bytes.fromhex(job["prevhash"])
-        nbits_b    = bytes.fromhex(job["nbits"])
-        ntime_b    = bytes.fromhex(ntime)
+        version_b  = struct.pack("<I", int(job["version"], 16))
+        prevhash_b = _swap32(bytes.fromhex(job["prevhash"]))
+        nbits_b    = struct.pack("<I", int(job["nbits"], 16))
+        ntime_b    = struct.pack("<I", int(ntime, 16))
 
         # Merkle root: only recomputed when job or extranonce2 changes
         merkle = compute_merkle(job, en1_b, en2_b)
@@ -320,7 +323,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             nonce = nonce_start
             while state.running and nonce < nonce_end:
                 cur_ntime     = format(int(time.time()), "08x")
-                second_prefix = bytes(merkle[28:32] + bytes.fromhex(cur_ntime) + nbits_b)
+                second_prefix = bytes(merkle[28:32] + struct.pack("<I", int(cur_ntime, 16)) + nbits_b)
                 batch_end     = min(nonce + _C_BATCH, nonce_end)
 
                 winner, hashes_done, soft_found = _miner_core.mine_range(
