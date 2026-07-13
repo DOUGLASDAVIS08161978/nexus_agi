@@ -317,8 +317,10 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
             # mine_range() runs the full SHA-256d loop in C — no Python
             # interpreter overhead per nonce. Called in _C_BATCH-nonce slices
             # so ntime rolls and job-change checks happen between batches.
-            target_be      = target.to_bytes(32, "big")
-            soft_target_be = soft_target.to_bytes(32, "big")
+            # Pool uses le256todouble() — treats hash as LE 256-bit number.
+            # Pass target as LE bytes so hash_lt (byte 31 first) compares correctly.
+            target_le      = target.to_bytes(32, "little")
+            soft_target_le = soft_target.to_bytes(32, "little")
 
             nonce = nonce_start
             while state.running and nonce < nonce_end:
@@ -327,7 +329,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                 batch_end     = min(nonce + _C_BATCH, nonce_end)
 
                 winner, hashes_done, soft_found = _miner_core.mine_range(
-                    first_block, second_prefix, target_be, soft_target_be,
+                    first_block, second_prefix, target_le, soft_target_le,
                     nonce, batch_end)
 
                 state.add_hashes(hashes_done)
@@ -341,7 +343,8 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                     _hdr = first_block + second_prefix + struct.pack("<I", winner)
                     _h1  = hashlib.sha256(_hdr).digest()
                     _h2  = hashlib.sha256(_h1).digest()
-                    _h_int = int.from_bytes(_h2, "big")
+                    # LE comparison matches pool's le256todouble() check
+                    _h_int = int.from_bytes(_h2, "little")
                     _valid = _h_int < target
                     print(f"\n  ★ nonce={winner:08x}  hash={_h2.hex()}  "
                           f"{'VALID — submitting' if _valid else 'FALSE-POSITIVE — skipping'}")
@@ -379,7 +382,7 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
                 h.update(second_block)
                 inner       = h.digest()
                 hash_result = _sha256(inner).digest()
-                hash_int    = _frombytes(hash_result, "big")
+                hash_int    = _frombytes(hash_result, "little")  # LE = pool's le256todouble
 
                 if hash_int < target:
                     conn.submit(job["job_id"], en2, ntime, nonce)

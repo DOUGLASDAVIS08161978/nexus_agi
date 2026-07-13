@@ -180,10 +180,15 @@ static inline void state_to_bytes(const uint32_t st[8], uint8_t out[32]) {
     }
 }
 
-/* Returns 1 if hash < target, both as 32-byte big-endian integers */
+/* Returns 1 if hash < target, both treated as little-endian 256-bit integers.
+ * Bitcoin pools (including public-pool.io) use le256todouble() to convert the
+ * natural SHA-256d output bytes to a difficulty value, which means they check
+ * the hash as a LE number: byte 31 is the most-significant byte.
+ * A valid share has trailing zeros in natural byte order (= leading zeros when
+ * displayed reversed, as shown on block explorers). */
 static inline int hash_lt(const uint8_t hash[32], const uint8_t tgt[32]) {
     int i;
-    for (i = 0; i < 32; i++) {
+    for (i = 31; i >= 0; i--) {
         if (hash[i] < tgt[i]) return 1;
         if (hash[i] > tgt[i]) return 0;
     }
