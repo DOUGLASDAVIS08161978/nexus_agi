@@ -1,26 +1,19 @@
 /*
- * miner_core.c v6 — zero-copy SHA-256d: no memcpy, no state_to_bytes in hot loop
+ * miner_core.c v5 — 2-way interleaved + 4-way batched SHA-256d mining
  *
- * v6 vs v5:
- *   sha256_inner2(sa, ba, sb, bb, midstate)
- *     Takes the shared initial state (midstate) directly — no memcpy(is, midstate)
- *     needed before the call. Both streams start from the same midstate value
- *     loaded once.
- *
- *   sha256_outer2(sa, inner_a, sb, inner_b)
- *     Takes the uint32 inner-hash state arrays directly — no state_to_bytes(),
- *     no outer_pad byte buffers, no vrev32q_u8 on input. The inner state words
- *     written by vst1q_u32 are the exact values SHA2 instructions need when
- *     loaded back with vld1q_u32 — the byte-swap round-trip was a no-op.
- *     H0 initial state is hardcoded; padding words (0x80000000, 0x100) are
- *     compile-time constants.
- *
- * Net savings per 4-nonce hot-loop iteration:
- *   - 4 × memcpy(is, midstate, 32)  eliminated
- *   - 4 × memcpy(os, H0, 32)        eliminated
- *   - 4 × state_to_bytes(32 stores) eliminated
- *   - 4 × outer_pad byte buffers    eliminated (256 bytes of stack)
- *   - 8 × vrev32q_u8 in outer load  eliminated
+ * v5 vs v4:
+ *   - Replaces 8× non-inlined sha256_compress() per 4-way iteration with
+ *     4× sha256_compress2() calls — each processes 2 independent blocks
+ *     with explicitly interleaved ARM SHA2 instructions.
+ *   - v4+always_inline caused register spilling (80 virtual NEON regs vs
+ *     32 physical) which hurt performance. sha256_compress2 uses exactly
+ *     18 NEON registers — no spilling.
+ *   - The explicit A/B interleaving hides the 3-cycle SHA2 instruction
+ *     latency: while stream A's vsha256hq result is baking (3 cycles),
+ *     stream B's independent instructions execute, keeping the SHA2
+ *     hardware at ~1-cycle throughput instead of 1-per-3-cycle stall.
+ *   - Expected improvement over v4: ~1.5–2× on big OoO cores (A76/A78/X).
+ *     Little in-order cores (A55/A510) see same throughput as v4.
  *
  * API unchanged:
  *   mine_range(first_block, second_prefix, target_le, soft_target_le,
@@ -73,19 +66,22 @@ static const uint32_t H0[8] = {
 
 #ifdef USE_ARM_SHA2
 
-/* ── single-stream compress (midstate init + tail loop) ────────────────── */
-#define R4SU(C, NXT, B, SC, OFF)                          \
-    TMP0 = vaddq_u32(C, vld1q_u32(K256 + (OFF)));         \
-    TMP2 = ABCD;                                           \
-    C    = vsha256su0q_u32(C, NXT);                        \
-    ABCD = vsha256hq_u32 (ABCD, EFGH, TMP0);              \
-    EFGH = vsha256h2q_u32(EFGH, TMP2, TMP0);              \
+/*
+ * Single-stream ARM SHA-256 compression.
+ * Used by the tail loop (0-3 leftover nonces per mine_range batch).
+ */
+#define R4SU(C, NXT, B, SC, OFF)                         \
+    TMP0 = vaddq_u32(C, vld1q_u32(K256 + (OFF)));        \
+    TMP2 = ABCD;                                          \
+    C    = vsha256su0q_u32(C, NXT);                       \
+    ABCD = vsha256hq_u32 (ABCD, EFGH, TMP0);             \
+    EFGH = vsha256h2q_u32(EFGH, TMP2, TMP0);             \
     C    = vsha256su1q_u32(C, B, SC)
 
-#define R4(C, OFF)                                         \
-    TMP0 = vaddq_u32(C, vld1q_u32(K256 + (OFF)));         \
-    TMP2 = ABCD;                                           \
-    ABCD = vsha256hq_u32 (ABCD, EFGH, TMP0);              \
+#define R4(C, OFF)                                        \
+    TMP0 = vaddq_u32(C, vld1q_u32(K256 + (OFF)));        \
+    TMP2 = ABCD;                                          \
+    ABCD = vsha256hq_u32 (ABCD, EFGH, TMP0);             \
     EFGH = vsha256h2q_u32(EFGH, TMP2, TMP0)
 
 static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
@@ -121,58 +117,65 @@ static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
 #undef R4SU
 #undef R4
 
-/* ── 2-way interleaved round macros (shared by inner2 and outer2) ──────── */
 /*
- * RA4/RB4: 4 rounds + schedule expansion for stream A / stream B.
- * Caller interleaves RA4 immediately followed by RB4 so that B's 6
- * independent instructions run during A's 3-cycle vsha256hq latency stall.
- * Token-paste: RA4(M0,M1,M2,M3,OFF) → uses M0a, M1a … Aa, Ea, T0, T2.
+ * 2-way interleaved ARM SHA-256 compression (the hot-path workhorse).
+ *
+ * Processes 2 independent 64-byte blocks (streams A and B) simultaneously.
+ * Operations for A and B are explicitly interleaved: while A's vsha256hq
+ * result is pending (3-cycle hardware latency), B's independent loads,
+ * adds, and schedule-expansion instructions fill those pipeline slots,
+ * driving the SHA2 execution units at ~1-cycle throughput.
+ *
+ * Register budget: 18 NEON registers — well within ARM64's 32 (no spilling).
+ *   Aa/Ea/SaveAa/SaveEa   — stream A state   (4)
+ *   Ab/Eb/SaveAb/SaveEb   — stream B state   (4)
+ *   M0a–M3a               — stream A schedule (4)
+ *   M0b–M3b               — stream B schedule (4)
+ *   T0/T2                 — shared temporaries (2)
  */
-#define RA4(C,N,B,S,OFF)                                                      \
-    T0=vaddq_u32(C##a,vld1q_u32(K256+(OFF))); T2=Aa;                         \
-    C##a=vsha256su0q_u32(C##a,N##a);                                          \
-    Aa=vsha256hq_u32(Aa,Ea,T0); Ea=vsha256h2q_u32(Ea,T2,T0);                \
+
+/*
+ * Macro token-pasting trick: RA4(M0,M1,M2,M3,OFF) expands to use M0a, M1a etc.
+ * RB4 does the same for M0b, M1b etc. Caller interleaves RA4 then RB4 per
+ * group so that B's instructions run during A's 3-cycle latency stall.
+ */
+#define RA4(C,N,B,S,OFF)                                                     \
+    T0=vaddq_u32(C##a,vld1q_u32(K256+(OFF))); T2=Aa;                        \
+    C##a=vsha256su0q_u32(C##a,N##a);                                         \
+    Aa=vsha256hq_u32(Aa,Ea,T0); Ea=vsha256h2q_u32(Ea,T2,T0);               \
     C##a=vsha256su1q_u32(C##a,B##a,S##a)
 
-#define RB4(C,N,B,S,OFF)                                                      \
-    T0=vaddq_u32(C##b,vld1q_u32(K256+(OFF))); T2=Ab;                         \
-    C##b=vsha256su0q_u32(C##b,N##b);                                          \
-    Ab=vsha256hq_u32(Ab,Eb,T0); Eb=vsha256h2q_u32(Eb,T2,T0);                \
+#define RB4(C,N,B,S,OFF)                                                     \
+    T0=vaddq_u32(C##b,vld1q_u32(K256+(OFF))); T2=Ab;                        \
+    C##b=vsha256su0q_u32(C##b,N##b);                                         \
+    Ab=vsha256hq_u32(Ab,Eb,T0); Eb=vsha256h2q_u32(Eb,T2,T0);               \
     C##b=vsha256su1q_u32(C##b,B##b,S##b)
 
-#define RA4F(C,OFF)                                                           \
-    T0=vaddq_u32(C##a,vld1q_u32(K256+(OFF))); T2=Aa;                         \
+/* Rounds 48-63: schedule fully expanded, just round computation */
+#define RA4F(C,OFF)                                                          \
+    T0=vaddq_u32(C##a,vld1q_u32(K256+(OFF))); T2=Aa;                        \
     Aa=vsha256hq_u32(Aa,Ea,T0); Ea=vsha256h2q_u32(Ea,T2,T0)
 
-#define RB4F(C,OFF)                                                           \
-    T0=vaddq_u32(C##b,vld1q_u32(K256+(OFF))); T2=Ab;                         \
+#define RB4F(C,OFF)                                                          \
+    T0=vaddq_u32(C##b,vld1q_u32(K256+(OFF))); T2=Ab;                        \
     Ab=vsha256hq_u32(Ab,Eb,T0); Eb=vsha256h2q_u32(Eb,T2,T0)
 
-/*
- * sha256_inner2 — 2-way interleaved inner-block compression.
- *
- * Takes the shared midstate directly (init) — both streams start from the
- * same initial state. Eliminates 2× memcpy(is, midstate, 32) per call.
- * Writes results to sa[8] and sb[8].
- */
-static __attribute__((noinline)) void sha256_inner2(
+static void sha256_compress2(
         uint32_t sa[8], const uint8_t ba[64],
-        uint32_t sb[8], const uint8_t bb[64],
-        const uint32_t init[8])
+        uint32_t sb[8], const uint8_t bb[64])
 {
+    /* State: 4 regs each stream × 2 streams = 8 */
     uint32x4_t Aa, Ea, SaveAa, SaveEa;
     uint32x4_t Ab, Eb, SaveAb, SaveEb;
+    /* Schedule: 4 regs each stream × 2 streams = 8 */
     uint32x4_t M0a, M1a, M2a, M3a;
     uint32x4_t M0b, M1b, M2b, M3b;
+    /* Shared temporaries: 2 */
     uint32x4_t T0, T2;
 
-    /* Both streams share the midstate as initial state */
-    Aa = vld1q_u32(init);    Ea = vld1q_u32(init + 4);
-    Ab = Aa;                  Eb = Ea;
-    SaveAa = Aa; SaveEa = Ea;
-    SaveAb = Aa; SaveEb = Ea;
+    Aa=vld1q_u32(sa);   Ea=vld1q_u32(sa+4); SaveAa=Aa; SaveEa=Ea;
+    Ab=vld1q_u32(sb);   Eb=vld1q_u32(sb+4); SaveAb=Ab; SaveEb=Eb;
 
-    /* Load both blocks (differ only at nonce bytes 12-15) */
     M0a=vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(ba)));
     M1a=vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(ba+16)));
     M2a=vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(ba+32)));
@@ -183,78 +186,10 @@ static __attribute__((noinline)) void sha256_inner2(
     M2b=vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(bb+32)));
     M3b=vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(bb+48)));
 
-    RA4(M0,M1,M2,M3, 0); RB4(M0,M1,M2,M3, 0);
-    RA4(M1,M2,M3,M0, 4); RB4(M1,M2,M3,M0, 4);
-    RA4(M2,M3,M0,M1, 8); RB4(M2,M3,M0,M1, 8);
-    RA4(M3,M0,M1,M2,12); RB4(M3,M0,M1,M2,12);
-    RA4(M0,M1,M2,M3,16); RB4(M0,M1,M2,M3,16);
-    RA4(M1,M2,M3,M0,20); RB4(M1,M2,M3,M0,20);
-    RA4(M2,M3,M0,M1,24); RB4(M2,M3,M0,M1,24);
-    RA4(M3,M0,M1,M2,28); RB4(M3,M0,M1,M2,28);
-    RA4(M0,M1,M2,M3,32); RB4(M0,M1,M2,M3,32);
-    RA4(M1,M2,M3,M0,36); RB4(M1,M2,M3,M0,36);
-    RA4(M2,M3,M0,M1,40); RB4(M2,M3,M0,M1,40);
-    RA4(M3,M0,M1,M2,44); RB4(M3,M0,M1,M2,44);
-    RA4F(M0,48); RB4F(M0,48);
-    RA4F(M1,52); RB4F(M1,52);
-    RA4F(M2,56); RB4F(M2,56);
-    RA4F(M3,60); RB4F(M3,60);
-
-    vst1q_u32(sa,   vaddq_u32(Aa, SaveAa));
-    vst1q_u32(sa+4, vaddq_u32(Ea, SaveEa));
-    vst1q_u32(sb,   vaddq_u32(Ab, SaveAb));
-    vst1q_u32(sb+4, vaddq_u32(Eb, SaveEb));
-}
-
-/*
- * sha256_outer2 — 2-way interleaved outer-block compression.
- *
- * Takes uint32 inner-hash state arrays directly — no state_to_bytes(),
- * no byte buffers, no vrev32q_u8 on input. The inner state words stored by
- * vst1q_u32 are identical to what vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8))
- * would recover after a state_to_bytes round-trip, so we skip both steps.
- *
- * H0 initial state is hardcoded as compile-time constants (no load from
- * the H0 array, no memcpy). Padding words are also hardcoded:
- *   W[8]  = 0x80000000  (padding bit for 256-bit message)
- *   W[9..14] = 0
- *   W[15] = 0x00000100  (256 bits in big-endian 64-bit length field)
- */
-static __attribute__((noinline)) void sha256_outer2(
-        uint32_t sa[8], const uint32_t inner_a[8],
-        uint32_t sb[8], const uint32_t inner_b[8])
-{
-    uint32x4_t Aa, Ea, SaveAa, SaveEa;
-    uint32x4_t Ab, Eb, SaveAb, SaveEb;
-    uint32x4_t M0a, M1a, M2a, M3a;
-    uint32x4_t M0b, M1b, M2b, M3b;
-    uint32x4_t T0, T2;
-
-    /* Hardcoded H0 — compiler generates immediate vector loads, no memory reads */
-    Aa = vcombine_u32(vcreate_u32(0xbb67ae856a09e667ULL),
-                      vcreate_u32(0xa54ff53a3c6ef372ULL));
-    Ea = vcombine_u32(vcreate_u32(0x9b05688c510e527fULL),
-                      vcreate_u32(0x5be0cd191f83d9abULL));
-    Ab = Aa; Eb = Ea;
-    SaveAa = Aa; SaveEa = Ea;
-    SaveAb = Aa; SaveEb = Ea;
-
     /*
-     * Load inner hash words as uint32 — no byte reversal needed.
-     * The inner state written by vst1q_u32 is already in the format
-     * that SHA2 instructions consume when loaded with vld1q_u32.
+     * Rounds 0–47: 12 groups of 4. Each group: A first, then B.
+     * B's 6 instructions fill the 3-cycle stall from A's vsha256hq/h2q.
      */
-    M0a = vld1q_u32(inner_a);      /* W[0..3]: inner hash words 0-3 */
-    M1a = vld1q_u32(inner_a + 4);  /* W[4..7]: inner hash words 4-7 */
-    M0b = vld1q_u32(inner_b);
-    M1b = vld1q_u32(inner_b + 4);
-
-    /* Hardcoded padding: W[8]=0x80000000, W[9..14]=0, W[15]=0x00000100 */
-    M2a = M2b = vcombine_u32(vcreate_u32(0x0000000080000000ULL),
-                              vcreate_u32(0x0000000000000000ULL));
-    M3a = M3b = vcombine_u32(vcreate_u32(0x0000000000000000ULL),
-                              vcreate_u32(0x0000010000000000ULL));
-
     RA4(M0,M1,M2,M3, 0); RB4(M0,M1,M2,M3, 0);
     RA4(M1,M2,M3,M0, 4); RB4(M1,M2,M3,M0, 4);
     RA4(M2,M3,M0,M1, 8); RB4(M2,M3,M0,M1, 8);
@@ -267,6 +202,8 @@ static __attribute__((noinline)) void sha256_outer2(
     RA4(M1,M2,M3,M0,36); RB4(M1,M2,M3,M0,36);
     RA4(M2,M3,M0,M1,40); RB4(M2,M3,M0,M1,40);
     RA4(M3,M0,M1,M2,44); RB4(M3,M0,M1,M2,44);
+
+    /* Rounds 48–63: no more schedule expansion */
     RA4F(M0,48); RB4F(M0,48);
     RA4F(M1,52); RB4F(M1,52);
     RA4F(M2,56); RB4F(M2,56);
@@ -283,7 +220,7 @@ static __attribute__((noinline)) void sha256_outer2(
 #undef RA4F
 #undef RB4F
 
-#else  /* Generic C fallback */
+#else  /* Generic C fallback (no ARM crypto extensions) */
 
 #define RR(v,n) (((v)>>(n))|((v)<<(32-(n))))
 #define CH(x,y,z)  (((x)&(y))^(~(x)&(z)))
@@ -312,33 +249,12 @@ static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
     st[4]+=e; st[5]+=f; st[6]+=g; st[7]+=h;
 }
 
-static void sha256_inner2(
+/* Generic 2-way: just call compress twice (no hardware latency to hide) */
+static void sha256_compress2(
         uint32_t sa[8], const uint8_t ba[64],
-        uint32_t sb[8], const uint8_t bb[64],
-        const uint32_t init[8]) {
-    memcpy(sa, init, 32); sha256_compress(sa, ba);
-    memcpy(sb, init, 32); sha256_compress(sb, bb);
-}
-
-static void sha256_outer2(
-        uint32_t sa[8], const uint32_t inner_a[8],
-        uint32_t sb[8], const uint32_t inner_b[8]) {
-    uint8_t op[64]; int i;
-    memset(op, 0, 64); op[32]=0x80u; op[62]=0x01u;
-
-    memcpy(sa, H0, 32);
-    for (i = 0; i < 8; i++) {
-        op[i*4]=(uint8_t)(inner_a[i]>>24); op[i*4+1]=(uint8_t)(inner_a[i]>>16);
-        op[i*4+2]=(uint8_t)(inner_a[i]>>8); op[i*4+3]=(uint8_t)(inner_a[i]);
-    }
-    sha256_compress(sa, op);
-
-    memcpy(sb, H0, 32);
-    for (i = 0; i < 8; i++) {
-        op[i*4]=(uint8_t)(inner_b[i]>>24); op[i*4+1]=(uint8_t)(inner_b[i]>>16);
-        op[i*4+2]=(uint8_t)(inner_b[i]>>8); op[i*4+3]=(uint8_t)(inner_b[i]);
-    }
-    sha256_compress(sb, op);
+        uint32_t sb[8], const uint8_t bb[64]) {
+    sha256_compress(sa, ba);
+    sha256_compress(sb, bb);
 }
 
 #undef RR
@@ -363,6 +279,9 @@ static inline void state_to_bytes(const uint32_t st[8], uint8_t out[32]) {
     }
 }
 
+/* LE comparison: Bitcoin pools interpret hash bytes as a little-endian 256-bit
+ * number (le256todouble). Byte 31 is the MSB; a valid share has trailing zeros
+ * in natural byte order (= leading zeros on a block explorer). */
 static inline int hash_lt(const uint8_t hash[32], const uint8_t tgt[32]) {
     int i;
     for (i = 31; i >= 0; i--) {
@@ -402,7 +321,6 @@ static PyObject* mine_range(PyObject* self, PyObject* args) {
         const uint8_t* target_le      = (const uint8_t*)tb.buf;
         const uint8_t* soft_target_le = (const uint8_t*)stb.buf;
 
-        /* Midstate: compress first 64-byte header block once per call */
         uint32_t midstate[8];
         memcpy(midstate, H0, sizeof(H0));
         sha256_compress(midstate, first_block);
@@ -423,52 +341,65 @@ static PyObject* mine_range(PyObject* self, PyObject* args) {
 
         {
             /*
-             * Hot-loop layout (4 nonces per iteration):
+             * 4-way batched loop using sha256_compress2 for each pair.
              *
-             *   sha256_inner2(is0,sp0, is1,sp1, midstate)  — inner pair 0+1
-             *   sha256_inner2(is2,sp2, is3,sp3, midstate)  — inner pair 2+3
-             *   sha256_outer2(os0,is0, os1,is1)             — outer pair 0+1
-             *   sha256_outer2(os2,is2, os3,is3)             — outer pair 2+3
-             *   state_to_bytes × 4 → h0..h3                 — extract hashes
+             * Inner iteration per 4 nonces:
+             *   sha256_compress2(is0,sp0, is1,sp1)  ← inner hashes for n+0, n+1
+             *   sha256_compress2(is2,sp2, is3,sp3)  ← inner hashes for n+2, n+3
+             *   sha256_compress2(os0,op0, os1,op1)  ← outer hashes for n+0, n+1
+             *   sha256_compress2(os2,op2, os3,op3)  ← outer hashes for n+2, n+3
              *
-             * No memcpy, no state_to_bytes for intermediate transfer,
-             * no outer_pad byte buffers. The outer_pad savings alone
-             * eliminate 128 stores + 8 vrev32q_u8 per 4-nonce iteration.
+             * The OoO engine also sees independence between the two sha256_compress2
+             * calls for inner (and for outer), giving additional overlap.
              */
 
-            /* Second-pad copies: only nonce bytes (12-15) patched per iter */
+            /* Second-pad copies: built once, only nonce bytes (12-15) patched */
             uint8_t sp0[64], sp1[64], sp2[64], sp3[64];
             memcpy(sp0, second_pad, 64);
             memcpy(sp1, second_pad, 64);
             memcpy(sp2, second_pad, 64);
             memcpy(sp3, second_pad, 64);
 
-            uint32_t is0[8], is1[8], is2[8], is3[8];  /* inner states */
-            uint32_t os0[8], os1[8], os2[8], os3[8];  /* outer states */
-            uint8_t  h0[32], h1[32], h2[32], h3[32];  /* final hashes */
+            /* Outer-pad buffers: bytes 32-63 are fixed SHA256 padding */
+            uint8_t op0[64], op1[64], op2[64], op3[64];
+            memset(op0, 0, 64); op0[32]=0x80u; op0[62]=0x01u;
+            memset(op1, 0, 64); op1[32]=0x80u; op1[62]=0x01u;
+            memset(op2, 0, 64); op2[32]=0x80u; op2[62]=0x01u;
+            memset(op3, 0, 64); op3[32]=0x80u; op3[62]=0x01u;
+
+            uint32_t is0[8], is1[8], is2[8], is3[8];
+            uint32_t os0[8], os1[8], os2[8], os3[8];
+            uint8_t  h0[32], h1[32], h2[32], h3[32];
             uint64_t nonce;
 
             /* ── 4-wide main loop ─────────────────────────────────────────── */
             for (nonce = nonce_start; nonce + 3 < nonce_end; nonce += 4) {
                 uint32_t n0 = (uint32_t)nonce;
-                uint32_t n1 = n0+1u, n2 = n0+2u, n3 = n0+3u;
+                uint32_t n1 = n0 + 1u, n2 = n0 + 2u, n3 = n0 + 3u;
 
                 PATCH_NONCE(sp0, n0); PATCH_NONCE(sp1, n1);
                 PATCH_NONCE(sp2, n2); PATCH_NONCE(sp3, n3);
 
-                /* Inner: 2 interleaved pairs — no memcpy of midstate needed */
-                sha256_inner2(is0, sp0, is1, sp1, midstate);
-                sha256_inner2(is2, sp2, is3, sp3, midstate);
+                /* Inner SHA-256: pair (n0,n1) then pair (n2,n3) — interleaved */
+                memcpy(is0, midstate, 32); memcpy(is1, midstate, 32);
+                sha256_compress2(is0, sp0, is1, sp1);
 
-                /* Outer: 2 interleaved pairs — no state_to_bytes, no byte bufs */
-                sha256_outer2(os0, is0, os1, is1);
-                sha256_outer2(os2, is2, os3, is3);
+                memcpy(is2, midstate, 32); memcpy(is3, midstate, 32);
+                sha256_compress2(is2, sp2, is3, sp3);
 
-                /* Extract final SHA-256d hash bytes for comparison */
-                state_to_bytes(os0, h0);
-                state_to_bytes(os1, h1);
-                state_to_bytes(os2, h2);
-                state_to_bytes(os3, h3);
+                /* Move inner hashes into outer-pad input regions */
+                state_to_bytes(is0, op0); state_to_bytes(is1, op1);
+                state_to_bytes(is2, op2); state_to_bytes(is3, op3);
+
+                /* Outer SHA-256: pair (n0,n1) then pair (n2,n3) — interleaved */
+                memcpy(os0, H0, 32); memcpy(os1, H0, 32);
+                sha256_compress2(os0, op0, os1, op1);
+
+                memcpy(os2, H0, 32); memcpy(os3, H0, 32);
+                sha256_compress2(os2, op2, os3, op3);
+
+                state_to_bytes(os0, h0); state_to_bytes(os1, h1);
+                state_to_bytes(os2, h2); state_to_bytes(os3, h3);
 
                 hashes_done += 4;
 
@@ -483,7 +414,7 @@ static PyObject* mine_range(PyObject* self, PyObject* args) {
                 if (hash_lt(h3, soft_target_le)) soft_shares++;
             }
 
-            /* ── 1-wide tail: 0-3 remaining nonces ───────────────────────── */
+            /* ── 1-wide tail: handles remaining 0-3 nonces ───────────────── */
             if (winner < 0) {
                 uint8_t sp_t[64], op_t[64], hash_out[32];
                 uint32_t is[8], os[8];
@@ -531,9 +462,9 @@ cleanup:
 static PyMethodDef methods[] = {
     {"mine_range", mine_range, METH_VARARGS,
 #ifdef USE_ARM_SHA2
-     "SHA-256d: ARM SHA2 2-way interleaved, zero-copy hot loop, GIL released (v6)"
+     "SHA-256d: ARM SHA2 2-way interleaved + 4-way batched, GIL released (v5)"
 #else
-     "SHA-256d: generic C, 4-way batched, GIL released (v6)"
+     "SHA-256d: generic C + 4-way batched, GIL released (v5)"
 #endif
     },
     {NULL, NULL, 0, NULL}
@@ -542,9 +473,9 @@ static PyMethodDef methods[] = {
 static struct PyModuleDef module = {
     PyModuleDef_HEAD_INIT, "miner_core",
 #ifdef USE_ARM_SHA2
-    "Bitcoin SHA-256d v6: ARM SHA2 2-way interleaved, zero-copy, 8-thread parallel.",
+    "Bitcoin SHA-256d v5: ARM SHA2 2-way interleaved + 4-way batching + 8-thread parallel.",
 #else
-    "Bitcoin SHA-256d v6: generic C + 8-thread parallel.",
+    "Bitcoin SHA-256d v5: generic C + 4-way batching + 8-thread parallel.",
 #endif
     -1, methods
 };
@@ -560,9 +491,9 @@ PyMODINIT_FUNC PyInit_miner_core(void) {
         Py_DECREF(m);
         return NULL;
     }
-    PyModule_AddStringConstant(m, "path", "ARM_SHA2_v6_zerocopy");
+    PyModule_AddStringConstant(m, "path", "ARM_SHA2_2way_interleaved");
 #else
-    PyModule_AddStringConstant(m, "path", "generic_C_v6");
+    PyModule_AddStringConstant(m, "path", "generic_C_4way");
 #endif
     return m;
 }
