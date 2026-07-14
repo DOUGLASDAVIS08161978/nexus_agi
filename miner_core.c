@@ -155,7 +155,7 @@ static void sha256_compress(uint32_t st[8], const uint8_t blk[64]) {
  * same initial state. Eliminates 2× memcpy(is, midstate, 32) per call.
  * Writes results to sa[8] and sb[8].
  */
-static void sha256_inner2(
+static __attribute__((noinline)) void sha256_inner2(
         uint32_t sa[8], const uint8_t ba[64],
         uint32_t sb[8], const uint8_t bb[64],
         const uint32_t init[8])
@@ -220,7 +220,7 @@ static void sha256_inner2(
  *   W[9..14] = 0
  *   W[15] = 0x00000100  (256 bits in big-endian 64-bit length field)
  */
-static void sha256_outer2(
+static __attribute__((noinline)) void sha256_outer2(
         uint32_t sa[8], const uint32_t inner_a[8],
         uint32_t sb[8], const uint32_t inner_b[8])
 {
