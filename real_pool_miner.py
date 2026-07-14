@@ -449,7 +449,7 @@ def run(state: MinerState = None) -> MinerState:
     state.running    = True
     state.start_time = time.time()
 
-    print(f"\n  ⛏  Nova Real Bitcoin Miner v3")
+    print(f"\n  ⛏  Nova ASI — Real Bitcoin Miner v5 (ARM SHA2)")
     print(f"  {'─'*45}")
     print(f"  Engine  : {_EXT_PATH}")
     print(f"  Threads : {NUM_THREADS}")
