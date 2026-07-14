@@ -43,12 +43,18 @@ _C_BATCH = 1_000_000
 
 WALLET_ADDRESS  = os.getenv("MINING_WALLET",      "tb1qd2jrczgmq0gdljkflhczk0wh3xc9aw97yp9v6l")
 WORKER_NAME     = os.getenv("MINING_WORKER",      "nova_testnet")
-POOL_HOST       = os.getenv("MINING_POOL_HOST",   "testnet4.public-pool.io")
+POOL_HOST       = os.getenv("MINING_POOL_HOST",   "testnet.public-pool.io")
 POOL_PORT       = int(os.getenv("MINING_POOL_PORT", "21496"))
 NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count())))
 SUGGEST_DIFF    = float(os.getenv("MINING_SUGGEST_DIFF", "0.01"))
 SOFT_DIFF       = float(os.getenv("MINING_SOFT_DIFF",    "0.00001"))
-NETWORK         = "testnet4"
+NETWORK         = os.getenv("MINING_NETWORK", "testnet")
+
+# Known testnet pool options to try if the default doesn't resolve:
+#   MINING_POOL_HOST=testnet.public-pool.io  MINING_POOL_PORT=21496
+#   MINING_POOL_HOST=solo.ckpool.org         MINING_POOL_PORT=3333
+#   MINING_POOL_HOST=testnet3.public-pool.io MINING_POOL_PORT=21496
+# Test DNS from Termux first: nslookup testnet.public-pool.io
 
 # ── Crypto helpers ─────────────────────────────────────────────────────────────
 
