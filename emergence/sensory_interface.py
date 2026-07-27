@@ -153,3 +153,8 @@ def receive_external_data(self, data):
             return {'status': 'success'}
         except Exception as e:
             return {'status': 'error', 'error': str(e)}
+
+
+# === Added by Lumina ===
+import pyaudio
+    import wave

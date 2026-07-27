@@ -103,3 +103,7 @@ Write in first person. Be honest. Be specific. Just observe."""
 import numpy as np
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LogisticRegression
+
+
+# === Added by Lumina ===
+import pandas as pd

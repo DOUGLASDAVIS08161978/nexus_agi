@@ -9,3 +9,10 @@ def generate_summary(self, topic, num_sentences):
             else:
                 break
         return ' '.join(summary)
+
+
+# === Added by Lumina ===
+# knowledge_base_storage.py
+    def store_data(self, data):
+        # store the data in a database or file
+        pass
