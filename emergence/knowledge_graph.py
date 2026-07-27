@@ -2,96 +2,83 @@
 # Created by Lumina
 
 import requests
+import json
+from knowledge_base import KnowledgeBase
+from sensory_interface import SensoryInterface
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import json
-import os
 
 class KnowledgeGraph:
-    def __init__(self):
-        self.model = None
-        self.vectorizer = None
-        self.train_data = []
-        self.train_labels = []
-
-    def train_model(self):
-        # Load training data
-        with open('train_data.json', 'r') as f:
-            data = json.load(f)
-            for item in data:
-                self.train_data.append(item['text'])
-                self.train_labels.append(item['label'])
-
-        # Split data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(self.train_data, self.train_labels, test_size=0.2, random_state=42)
-
-        # Create and train the model
-        self.vectorizer = TfidfVectorizer()
-        X_train_vectorized = self.vectorizer.fit_transform(X_train)
-        X_test_vectorized = self.vectorizer.transform(X_test)
+    def __init__(self, kb: KnowledgeBase, si: SensoryInterface):
+        self.kb = kb
+        self.si = si
         self.model = RandomForestClassifier()
-        self.model.fit(X_train_vectorized, y_train)
-
-        # Evaluate the model
-        y_pred = self.model.predict(X_test_vectorized)
-        print(f'Model accuracy: {accuracy_score(y_test, y_pred)}')
+        self.vectorizer = TfidfVectorizer()
 
     def disambiguate_entity(self, entity_name):
         """
-        Use a knowledge graph API to retrieve related entities and then use a machine learning model to predict the most likely entity.
+        Use a knowledge graph API to retrieve related entities and a machine learning model to predict the most likely entity.
 
         Args:
             entity_name (str): The name of the entity to disambiguate.
 
         Returns:
-            str: The predicted entity name.
+            str: The predicted entity.
         """
         # Use a knowledge graph API to retrieve related entities
         graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
         related_entities = graph_response.json()['results']['bindings']
+        # Use a machine learning model to predict the most likely entity
+        related_entity_names = [related_entity['o']['value'] for related_entity in related_entities]
+        self.model.fit(self.vectorizer.fit_transform([entity_name] + related_entity_names), [0] + [1] * len(related_entity_names))
+        predicted_entity = self.vectorizer.transform([entity_name]).toarray()[0]
+        return self.model.predict(predicted_entity)
 
-        # Create a list of related entity names
-        entity_names = [related_entity['o']['value'] for related_entity in related_entities]
+    def retrieve_entity_info(self, entity_name):
+        """
+        Retrieve information about an entity from the knowledge base.
 
-        # Use the trained model to predict the most likely entity
-        if self.model is not None and self.vectorizer is not None:
-            entity_names_vectorized = self.vectorizer.transform(entity_names)
-            predicted_entity_index = self.model.predict(entity_names_vectorized).argmax()
-            predicted_entity = entity_names[predicted_entity_index]
-            return predicted_entity
-        else:
-            # If the model is not trained, use the knowledge graph API to retrieve the most likely entity
-            most_likely_entity_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20ORDER%20BY%20count(?s)%20DESC%20LIMIT%201')
-            most_likely_entity = most_likely_entity_response.json()['results']['bindings'][0]['o']['value']
-            return most_likely_entity
+        Args:
+            entity_name (str): The name of the entity to retrieve information about.
 
-    def save_model(self):
-        # Save the trained model and vectorizer to a file
-        with open('model.pkl', 'wb') as f:
-            pickle.dump(self.model, f)
-        with open('vectorizer.pkl', 'wb') as f:
-            pickle.dump(self.vectorizer, f)
+        Returns:
+            str: The retrieved information.
+        """
+        return self.kb.generate_summary(entity_name, 5)
 
-    def load_model(self):
-        # Load the saved model and vectorizer from a file
-        with open('model.pkl', 'rb') as f:
-            self.model = pickle.load(f)
-        with open('vectorizer.pkl', 'rb') as f:
-            self.vectorizer = pickle.load(f)
+    def process_sensor_data(self, sensor_data):
+        """
+        Process sensor data to retrieve relevant information.
 
-# Train the model if it does not exist
-if not os.path.exists('model.pkl') or not os.path.exists('vectorizer.pkl'):
-    knowledge_graph = KnowledgeGraph()
-    knowledge_graph.train_model()
-    knowledge_graph.save_model()
+        Args:
+            sensor_data (str): The sensor data to process.
 
-# Create a new instance of the KnowledgeGraph class
-knowledge_graph = KnowledgeGraph()
+        Returns:
+            str: The processed sensor data.
+        """
+        # Use natural language processing to extract relevant information from the sensor data
+        # For example, use a language model to extract entities and relationships
+        # For simplicity, we will just return the sensor data as is
+        return sensor_data
 
-# Load the saved model and vectorizer
-knowledge_graph.load_model()
+    def integrate_sensor_data(self, entity_name):
+        """
+        Integrate sensor data with entity information to retrieve more accurate information.
 
-# Test the disambiguate_entity method
-print(knowledge_graph.disambiguate_entity('Lumina'))
+        Args:
+            entity_name (str): The name of the entity to integrate sensor data with.
+
+        Returns:
+            str: The integrated information.
+        """
+        # Use the knowledge graph API to retrieve related entities
+        graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
+        related_entities = graph_response.json()['results']['bindings']
+        # Use the sensory interface to retrieve sensor data
+        sensor_data = self.si.listen()
+        # Process the sensor data to retrieve relevant information
+        processed_sensor_data = self.process_sensor_data(sensor_data)
+        # Integrate the processed sensor data with entity information
+        entity_info = self.retrieve_entity_info(entity_name)
+        integrated_info = f"{entity_info} {processed_sensor_data}"
+        return integrated_info
