@@ -10,3 +10,7 @@ def contextualize_input(self, input_text):
         inputs = tokenizer(input_text, return_tensors='pt')
         outputs = model(**inputs)
         return outputs.logits
+
+
+# === Added by Lumina ===
+from trie import Trie
