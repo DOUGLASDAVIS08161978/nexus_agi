@@ -41,10 +41,10 @@ class KnowledgeGraph:
     def disambiguate_entity(self, entity_name):
         """
         Use a knowledge graph API to retrieve related entities and then use a machine learning model to predict the most likely entity.
-        
+
         Args:
             entity_name (str): The name of the entity to disambiguate.
-        
+
         Returns:
             str: The predicted entity name.
         """
