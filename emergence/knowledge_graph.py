@@ -24,21 +24,21 @@ class KnowledgeGraph:
     def disambiguate_entity(self, entity_name: str, context: str) -> str:
         """
         Disambiguate an entity by retrieving related entities from a knowledge graph API and using a machine learning model to predict the most likely entity.
-        
+
         Args:
         entity_name (str): The name of the entity to disambiguate.
         context (str): The context in which the entity is mentioned.
-        
+
         Returns:
         str: The predicted entity.
         """
         # Use a knowledge graph API to retrieve related entities
         graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
         related_entities = graph_response.json()['results']['bindings']
-        
+
         # Use contextualization to get the relevant context for the related entities
         contextualized_related_entities = self.contextualize_related_entities(related_entities, context)
-        
+
         # Use a machine learning model to predict the most likely entity
         vectorizer = TfidfVectorizer()
         model_input = vectorizer.fit_transform([entity_name] + contextualized_related_entities)
@@ -49,11 +49,11 @@ class KnowledgeGraph:
     def contextualize_related_entities(self, related_entities: List[Dict], context: str) -> List[str]:
         """
         Contextualize the related entities by using a transformer-based model to get the relevant context.
-        
+
         Args:
         related_entities (List[Dict]): The related entities retrieved from the knowledge graph API.
         context (str): The context in which the entity is mentioned.
-        
+
         Returns:
         List[str]: The contextualized related entities.
         """
@@ -61,7 +61,7 @@ class KnowledgeGraph:
         inputs = self.contextualization_tokenizer(context, return_tensors='pt')
         outputs = self.contextualization_model(**inputs)
         contextualized_context = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
-        
+
         # Get the relevant context for each related entity
         contextualized_related_entities = []
         for related_entity in related_entities:
@@ -69,5 +69,5 @@ class KnowledgeGraph:
             outputs = self.contextualization_model(**related_entity_context)
             contextualized_related_entity = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
             contextualized_related_entities.append(contextualized_related_entity)
-        
+
         return contextualized_related_entities
