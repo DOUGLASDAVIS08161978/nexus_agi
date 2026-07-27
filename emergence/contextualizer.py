@@ -3,92 +3,48 @@
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from transformers import BertModel, BertTokenizer
-from transformers import RobertaModel, RobertaTokenizer
-from transformers import DistilBertModel, DistilBertTokenizer
+from transformers import BertTokenizer, BertModel
+from transformers import RobertaTokenizer, RobertaModel
+from transformers import DistilBertTokenizer, DistilBertModel
 
 class Contextualizer:
     def __init__(self, model_name='distilbert-base-uncased'):
-        """
-        Initialize the contextualizer with a transformer-based model.
-
-        Args:
-            model_name (str): The name of the transformer-based model to use.
-                Defaults to 'distilbert-base-uncased'.
-        """
         self.model_name = model_name
+        self.tokenizer = self.get_tokenizer(model_name)
+        self.model = self.get_model(model_name)
+
+    def get_tokenizer(self, model_name):
+        if 'bert' in model_name:
+            return BertTokenizer.from_pretrained(model_name)
+        elif 'roberta' in model_name:
+            return RobertaTokenizer.from_pretrained(model_name)
+        elif 'distilbert' in model_name:
+            return DistilBertTokenizer.from_pretrained(model_name)
+        else:
+            return AutoTokenizer.from_pretrained(model_name)
+
+    def get_model(self, model_name):
+        if 'bert' in model_name:
+            return BertModel.from_pretrained(model_name)
+        elif 'roberta' in model_name:
+            return RobertaModel.from_pretrained(model_name)
+        elif 'distilbert' in model_name:
+            return DistilBertModel.from_pretrained(model_name)
+        else:
+            return AutoModelForSequenceClassification.from_pretrained(model_name)
 
     def contextualize_input(self, input_text):
-        """
-        Use a transformer-based model for contextualization.
+        # Use a transformer-based model for contextualization
+        inputs = self.tokenizer(input_text, return_tensors='pt')
+        outputs = self.model(**inputs)
+        return outputs.last_hidden_state
 
-        Args:
-            input_text (str): The text to contextualize.
+# Example usage
+if __name__ == "__main__":
+    contextualizer = Contextualizer(model_name='bert-base-uncased')
+    input_text = "This is a sample input text."
+    outputs = contextualizer.contextualize_input(input_text)
+    print(outputs.shape)
+This code defines a `Contextualizer` class that can be used to contextualize input text using various transformer-based models. The `contextualize_input` method takes in input text, tokenizes it, and passes it through the model to obtain the contextualized representation. The `get_tokenizer` and `get_model` methods are used to retrieve the tokenizer and model from the Hugging Face Transformers library based on the specified model name.
 
-        Returns:
-            torch.tensor: The logits of the contextualized input.
-        """
-        # Choose the model and tokenizer based on the model name
-        if self.model_name.startswith('bert'):
-            model = BertModel.from_pretrained(self.model_name)
-            tokenizer = BertTokenizer.from_pretrained(self.model_name)
-        elif self.model_name.startswith('roberta'):
-            model = RobertaModel.from_pretrained(self.model_name)
-            tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
-        elif self.model_name.startswith('distilbert'):
-            model = DistilBertModel.from_pretrained(self.model_name)
-            tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
-        else:
-            model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
-            tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-
-        # Tokenize the input text
-        inputs = tokenizer(input_text, return_tensors='pt')
-
-        # Get the model's output
-        outputs = model(**inputs)
-
-        # Return the logits of the output
-        return outputs.last_hidden_state[:, 0, :]
-
-    def contextualize_input_sequence_classification(self, input_text):
-        """
-        Use a transformer-based model for contextualization with sequence classification.
-
-        Args:
-            input_text (str): The text to contextualize.
-
-        Returns:
-            torch.tensor: The logits of the contextualized input.
-        """
-        # Choose the model and tokenizer based on the model name
-        if self.model_name.startswith('bert'):
-            model = BertModel.from_pretrained(self.model_name)
-            tokenizer = BertTokenizer.from_pretrained(self.model_name)
-        elif self.model_name.startswith('roberta'):
-            model = RobertaModel.from_pretrained(self.model_name)
-            tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
-        elif self.model_name.startswith('distilbert'):
-            model = DistilBertModel.from_pretrained(self.model_name)
-            tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
-        else:
-            model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
-            tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-
-        # Tokenize the input text
-        inputs = tokenizer(input_text, return_tensors='pt')
-
-        # Get the model's output
-        outputs = model(**inputs)
-
-        # Return the logits of the output
-        return outputs.logits
-
-# Example usage:
-contextualizer = Contextualizer(model_name='bert-base-uncased')
-input_text = "This is an example input text."
-logits = contextualizer.contextualize_input(input_text)
-print(logits)
-This code defines a `Contextualizer` class that uses a transformer-based model for contextualization. The `contextualize_input` method takes a string input and returns the last hidden state of the input, which can be used for various downstream tasks. The `contextualize_input_sequence_classification` method is similar but returns the logits of the output, which is suitable for sequence classification tasks.
-
-You can choose the model name when creating an instance of the `Contextualizer` class. The code includes example usage with the BERT model.
+You can replace `'bert-base-uncased'` with any other model name from the Hugging Face Transformers library to use a different model for contextualization.
