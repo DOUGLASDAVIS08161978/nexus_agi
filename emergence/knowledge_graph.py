@@ -1,7 +1,5 @@
 # knowledge_graph.py
 # Created by Lumina
 
-class Node:
-        def __init__(self, id):
-            self.id = id
-            self.neighbors = []
+# Move the traverse_graph and _traverse_graph_recursive functions to a new file called graph_traversal.py
+    # Import and use the functions in knowledge_graph.py as needed.
