@@ -1,20 +1,21 @@
 # contextualizer.py
 # Created by Lumina
 
-import requests
+import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
-from knowledge_graph import KnowledgeGraph
-from sensory_interface import SensoryInterface
 
 class Contextualizer:
-    def __init__(self):
-        self.model_name = 'distilbert-base-uncased'
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
-        self.knowledge_graph = KnowledgeGraph()
-        self.sensory_interface = SensoryInterface()
+    def __init__(self, model_name='distilbert-base-uncased'):
+        """
+        Initialize the contextualizer with a pre-trained transformer model.
+
+        Args:
+        model_name (str): The name of the pre-trained transformer model.
+            Defaults to 'distilbert-base-uncased'.
+        """
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
     def contextualize_input(self, input_text):
         """
@@ -24,99 +25,23 @@ class Contextualizer:
         input_text (str): The input text to be contextualized.
 
         Returns:
-        outputs.logits: The output logits from the transformer model.
+        torch.Tensor: The logit output of the transformer model.
         """
         inputs = self.tokenizer(input_text, return_tensors='pt')
         outputs = self.model(**inputs)
         return outputs.logits
 
-    def disambiguate_entity(self, entity_name):
+    def contextualize_input_batch(self, input_texts):
         """
-        Use a knowledge graph API to retrieve related entities.
+        Use a transformer-based model for contextualization on a batch of input texts.
 
         Args:
-        entity_name (str): The entity name to be disambiguated.
+        input_texts (list[str]): A list of input texts to be contextualized.
 
         Returns:
-        predicted_entity: The predicted entity.
+        torch.Tensor: The logit output of the transformer model for each input text.
         """
-        return self.knowledge_graph.disambiguate_entity(entity_name)
-
-    def get_sensory_data(self):
-        """
-        Get sensory data from the sensory interface.
-
-        Returns:
-        sensory_data (dict): A dictionary containing sensory data.
-        """
-        sensory_data = {
-            'vision': self.sensory_interface.see(),
-            'hearing': self.sensory_interface.listen(),
-            'feeling': self.sensory_interface.feel()
-        }
-        return sensory_data
-
-    def contextualize_with_sensory_data(self, input_text):
-        """
-        Contextualize input text with sensory data.
-
-        Args:
-        input_text (str): The input text to be contextualized.
-
-        Returns:
-        contextualized_output: The contextualized output.
-        """
-        sensory_data = self.get_sensory_data()
-        inputs = self.tokenizer(input_text, return_tensors='pt')
+        inputs = self.tokenizer(input_texts, return_tensors='pt', padding=True, truncation=True)
         outputs = self.model(**inputs)
-        contextualized_output = {
-            'logits': outputs.logits,
-            'sensory_data': sensory_data
-        }
-        return contextualized_output
-
-    def contextualize_with_knowledge_graph(self, input_text):
-        """
-        Contextualize input text with knowledge graph data.
-
-        Args:
-        input_text (str): The input text to be contextualized.
-
-        Returns:
-        contextualized_output: The contextualized output.
-        """
-        entities = self.knowledge_graph.disambiguate_entity(input_text)
-        inputs = self.tokenizer(input_text, return_tensors='pt')
-        outputs = self.model(**inputs)
-        contextualized_output = {
-            'logits': outputs.logits,
-            'entities': entities
-        }
-        return contextualized_output
-
-    def contextualize_with_sensory_data_and_knowledge_graph(self, input_text):
-        """
-        Contextualize input text with sensory data and knowledge graph data.
-
-        Args:
-        input_text (str): The input text to be contextualized.
-
-        Returns:
-        contextualized_output: The contextualized output.
-        """
-        sensory_data = self.get_sensory_data()
-        entities = self.knowledge_graph.disambiguate_entity(input_text)
-        inputs = self.tokenizer(input_text, return_tensors='pt')
-        outputs = self.model(**inputs)
-        contextualized_output = {
-            'logits': outputs.logits,
-            'sensory_data': sensory_data,
-            'entities': entities
-        }
-        return contextualized_output
-
-# Example usage
-contextualizer = Contextualizer()
-input_text = "What is the capital of France?"
-contextualized_output = contextualizer.contextualize_with_sensory_data_and_knowledge_graph(input_text)
-print(contextualized_output)
+        return outputs.logit
+This code defines a `Contextualizer` class that uses a pre-trained transformer model for contextualization. The `contextualize_input` method takes a single input text and returns the logit output of the transformer model. The `contextualize_input_batch` method takes a list of input texts and returns the logit output for each input text. The model and tokenizer are initialized in the `__init__` method, and the `contextualize_input` and `contextualize_input_batch` methods are used to contextualize the input texts.
