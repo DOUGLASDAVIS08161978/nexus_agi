@@ -1,58 +1,84 @@
 # contextualizer.py
 # Created by Lumina
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import logging
+import os
+from typing import Optional
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Contextualizer:
-    def __init__(self, model_name='bert-base-uncased'):
+    def __init__(self, model_name: str = 'distilbert-base-uncased'):
         """
-        Initializes the contextualizer with a transformer-based model.
+        Initializes the Contextualizer model.
 
         Args:
-            model_name (str, optional): The name of the transformer model to use. Defaults to 'bert-base-uncased'.
+        model_name (str): The name of the transformer-based model to use for contextualization.
         """
         self.model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.tokenizer = None
+        self.model = None
 
-    def contextualize_input(self, input_text):
+    def _load_model(self):
         """
-        Contextualizes the input text using the transformer-based model.
+        Loads the transformer-based model and tokenizer.
+        """
+        try:
+            from transformers import AutoModelForSequenceClassification, AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
+            logger.info(f"Model '{self.model_name}' loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load model '{self.model_name}': {str(e)}")
+
+    def contextualize_input(self, input_text: str) -> Optional[float]:
+        """
+        Contextualizes the input text using the loaded transformer-based model.
 
         Args:
-            input_text (str): The text to be contextualized.
+        input_text (str): The input text to be contextualized.
 
         Returns:
-            torch.tensor: The contextualized output of the model.
+        Optional[float]: The contextualized output or None if the model failed to load.
         """
-        inputs = self.tokenizer(input_text, return_tensors='pt')
-        outputs = self.model(**inputs)
-        return outputs.logits
+        if self.model is None or self.tokenizer is None:
+            self._load_model()
 
-    def update_model(self, model_name):
+        if self.model is not None and self.tokenizer is not None:
+            inputs = self.tokenizer(input_text, return_tensors='pt')
+            outputs = self.model(**inputs)
+            return outputs.logits
+        else:
+            logger.error("Failed to contextualize input: Model not loaded.")
+            return None
+
+    def save_model(self, output_dir: str):
         """
-        Updates the contextualizer with a new transformer model.
+        Saves the loaded model and tokenizer to the specified output directory.
 
         Args:
-            model_name (str): The name of the new transformer model to use.
+        output_dir (str): The directory where the model and tokenizer will be saved.
         """
-        self.model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-This updated code includes the following improvements:
+        if self.model is not None and self.tokenizer is not None:
+            self.tokenizer.save_pretrained(output_dir)
+            self.model.save_pretrained(output_dir)
+            logger.info(f"Model saved to '{output_dir}' successfully.")
+        else:
+            logger.error("Failed to save model: Model not loaded.")
 
-*   It defines a `Contextualizer` class to encapsulate the model and its functionality.
-*   It uses a more advanced model like 'bert-base-uncased' for better contextualization.
-*   It includes docstrings to provide documentation for the class and its methods.
-*   It includes a method to update the model with a new transformer model.
+    def load_model(self, input_dir: str):
+        """
+        Loads the saved model and tokenizer from the specified input directory.
 
-You can use this code as follows:
-
-contextualizer = Contextualizer()
-output = contextualizer.contextualize_input("This is a sample input text.")
-print(output)
-
-contextualizer.update_model("distilbert-base-uncased")
-output = contextualizer.contextualize_input("This is a sample input text.")
-print(output)
+        Args:
+        input_dir (str): The directory where the saved model and tokenizer are located.
+        """
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(input_dir)
+            self.model = AutoModelForSequenceClassification.from_pretrained(input_dir)
+            logger.info(f"Model loaded from '{input_dir}' successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load model from '{input_dir}': {str(e)}")
+This refactored code introduces a modular architecture for the Contextualizer model, allowing for easier maintenance and updates. The model and tokenizer are now loaded on demand, and the `save_model` and `load_model` methods provide a way to persist the model and tokenizer to and from disk.
