@@ -1,73 +1,128 @@
 # knowledge_graph.py
 # Created by Lumina
-
 import requests
+import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+import numpy as np
 from typing import List, Dict
-from collections import defaultdict
 
 class KnowledgeGraph:
     """
-    A class to represent a knowledge graph, providing methods for entity disambiguation and contextualization.
+    A class representing a knowledge graph API.
+
+    Attributes:
+    ----------
+    entity_name : str
+        The name of the entity to disambiguate.
+    related_entities : List[Dict]
+        A list of dictionaries containing related entities.
+    model : RandomForestClassifier
+        A machine learning model to predict the most likely entity.
+    vectorizer : TfidfVectorizer
+        A vectorizer to transform text data into numerical features.
     """
 
     def __init__(self):
         """
-        Initialize the knowledge graph object.
+        Initializes the KnowledgeGraph class.
         """
-        self.disambiguation_model = RandomForestClassifier()
-        self.contextualization_model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
-        self.contextualization_tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+        pass
 
-    def disambiguate_entity(self, entity_name: str, context: str) -> str:
+    def disambiguate_entity(self, entity_name: str) -> str:
         """
-        Disambiguate an entity by retrieving related entities from a knowledge graph API and using a machine learning model to predict the most likely entity.
+        Disambiguates an entity using a knowledge graph API and a machine learning model.
 
-        Args:
-        entity_name (str): The name of the entity to disambiguate.
-        context (str): The context in which the entity is mentioned.
+        Parameters:
+        ----------
+        entity_name : str
+            The name of the entity to disambiguate.
 
         Returns:
-        str: The predicted entity.
+        -------
+        str
+            The most likely entity.
         """
         # Use a knowledge graph API to retrieve related entities
         graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
         related_entities = graph_response.json()['results']['bindings']
 
-        # Use contextualization to get the relevant context for the related entities
-        contextualized_related_entities = self.contextualize_related_entities(related_entities, context)
-
         # Use a machine learning model to predict the most likely entity
+        model = RandomForestClassifier()
         vectorizer = TfidfVectorizer()
-        model_input = vectorizer.fit_transform([entity_name] + contextualized_related_entities)
-        self.disambiguation_model.fit(model_input, [0] + [1] * len(contextualized_related_entities))
-        predicted_entity = vectorizer.transform([entity_name]).toarray()[0]
-        return self.disambiguation_model.predict(predicted_entity)
+        X = vectorizer.fit_transform([entity_name] + [related_entity['o']['value'] for related_entity in related_entities])
+        y = [0] + [1] * len(related_entities)
+        model.fit(X, y)
 
-    def contextualize_related_entities(self, related_entities: List[Dict], context: str) -> List[str]:
+        # Predict the most likely entity
+        predicted_entity = model.predict(vectorizer.transform([entity_name]))
+        return predicted_entity
+
+    def recognize_pattern(self, data: List[str]) -> List[str]:
         """
-        Contextualize the related entities by using a transformer-based model to get the relevant context.
+        Recognizes patterns in a list of strings using a machine learning model.
 
-        Args:
-        related_entities (List[Dict]): The related entities retrieved from the knowledge graph API.
-        context (str): The context in which the entity is mentioned.
+        Parameters:
+        ----------
+        data : List[str]
+            A list of strings to recognize patterns in.
 
         Returns:
-        List[str]: The contextualized related entities.
+        -------
+        List[str]
+            A list of recognized patterns.
         """
-        # Use a transformer-based model for contextualization
-        inputs = self.contextualization_tokenizer(context, return_tensors='pt')
-        outputs = self.contextualization_model(**inputs)
-        contextualized_context = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(data, [0] * len(data), test_size=0.2, random_state=42)
 
-        # Get the relevant context for each related entity
-        contextualized_related_entities = []
-        for related_entity in related_entities:
-            related_entity_context = self.contextualization_tokenizer(related_entity['o']['value'], return_tensors='pt')
-            outputs = self.contextualization_model(**related_entity_context)
-            contextualized_related_entity = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
-            contextualized_related_entities.append(contextualized_related_entity)
+        # Train a logistic regression model
+        model = LogisticRegression()
+        model.fit(X_train, y_train)
 
-        return contextualized_related_entities
+        # Predict the patterns
+        predicted_patterns = model.predict(X_test)
+        return predicted_patterns
+
+    def crystallize(self, data: List[str]) -> List[str]:
+        """
+        Crystallizes patterns in a list of strings using a machine learning model.
+
+        Parameters:
+        ----------
+        data : List[str]
+            A list of strings to crystallize patterns in.
+
+        Returns:
+        -------
+        List[str]
+            A list of crystallized patterns.
+        """
+        # Recognize patterns in the data
+        recognized_patterns = self.recognize_pattern(data)
+
+        # Crystallize the recognized patterns
+        crystallized_patterns = [pattern for pattern in recognized_patterns if pattern != 0]
+        return crystallized_patterns
+
+def main():
+    # Create a KnowledgeGraph object
+    kg = KnowledgeGraph()
+
+    # Disambiguate an entity
+    entity_name = "Apple"
+    disambiguated_entity = kg.disambiguate_entity(entity_name)
+    print(f"The disambiguated entity is: {disambiguated_entity}")
+
+    # Recognize patterns in a list of strings
+    data = ["This is a test string.", "This is another test string.", "This is a third test string."]
+    recognized_patterns = kg.recognize_pattern(data)
+    print(f"The recognized patterns are: {recognized_patterns}")
+
+    # Crystallize patterns in a list of strings
+    crystallized_patterns = kg.crystallize(data)
+    print(f"The crystallized patterns are: {crystallized_patterns}")
+
+if __name__ == "__main__":
+    main()
