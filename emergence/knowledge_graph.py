@@ -2,83 +2,72 @@
 # Created by Lumina
 
 import requests
-import json
-from knowledge_base import KnowledgeBase
-from sensory_interface import SensoryInterface
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from typing import List, Dict
+from collections import defaultdict
 
 class KnowledgeGraph:
-    def __init__(self, kb: KnowledgeBase, si: SensoryInterface):
-        self.kb = kb
-        self.si = si
-        self.model = RandomForestClassifier()
-        self.vectorizer = TfidfVectorizer()
+    """
+    A class to represent a knowledge graph, providing methods for entity disambiguation and contextualization.
+    """
 
-    def disambiguate_entity(self, entity_name):
+    def __init__(self):
         """
-        Use a knowledge graph API to retrieve related entities and a machine learning model to predict the most likely entity.
+        Initialize the knowledge graph object.
+        """
+        self.disambiguation_model = RandomForestClassifier()
+        self.contextualization_model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
+        self.contextualization_tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+
+    def disambiguate_entity(self, entity_name: str, context: str) -> str:
+        """
+        Disambiguate an entity by retrieving related entities from a knowledge graph API and using a machine learning model to predict the most likely entity.
 
         Args:
-            entity_name (str): The name of the entity to disambiguate.
+        entity_name (str): The name of the entity to disambiguate.
+        context (str): The context in which the entity is mentioned.
 
         Returns:
-            str: The predicted entity.
+        str: The predicted entity.
         """
         # Use a knowledge graph API to retrieve related entities
         graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
         related_entities = graph_response.json()['results']['bindings']
+
+        # Use contextualization to get the relevant context for the related entities
+        contextualized_related_entities = self.contextualize_related_entities(related_entities, context)
+
         # Use a machine learning model to predict the most likely entity
-        related_entity_names = [related_entity['o']['value'] for related_entity in related_entities]
-        self.model.fit(self.vectorizer.fit_transform([entity_name] + related_entity_names), [0] + [1] * len(related_entity_names))
-        predicted_entity = self.vectorizer.transform([entity_name]).toarray()[0]
-        return self.model.predict(predicted_entity)
+        vectorizer = TfidfVectorizer()
+        model_input = vectorizer.fit_transform([entity_name] + contextualized_related_entities)
+        self.disambiguation_model.fit(model_input, [0] + [1] * len(contextualized_related_entities))
+        predicted_entity = vectorizer.transform([entity_name]).toarray()[0]
+        return self.disambiguation_model.predict(predicted_entity)
 
-    def retrieve_entity_info(self, entity_name):
+    def contextualize_related_entities(self, related_entities: List[Dict], context: str) -> List[str]:
         """
-        Retrieve information about an entity from the knowledge base.
+        Contextualize the related entities by using a transformer-based model to get the relevant context.
 
         Args:
-            entity_name (str): The name of the entity to retrieve information about.
+        related_entities (List[Dict]): The related entities retrieved from the knowledge graph API.
+        context (str): The context in which the entity is mentioned.
 
         Returns:
-            str: The retrieved information.
+        List[str]: The contextualized related entities.
         """
-        return self.kb.generate_summary(entity_name, 5)
+        # Use a transformer-based model for contextualization
+        inputs = self.contextualization_tokenizer(context, return_tensors='pt')
+        outputs = self.contextualization_model(**inputs)
+        contextualized_context = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
 
-    def process_sensor_data(self, sensor_data):
-        """
-        Process sensor data to retrieve relevant information.
+        # Get the relevant context for each related entity
+        contextualized_related_entities = []
+        for related_entity in related_entities:
+            related_entity_context = self.contextualization_tokenizer(related_entity['o']['value'], return_tensors='pt')
+            outputs = self.contextualization_model(**related_entity_context)
+            contextualized_related_entity = self.contextualization_tokenizer.decode(outputs.logits[0], skip_special_tokens=True)
+            contextualized_related_entities.append(contextualized_related_entity)
 
-        Args:
-            sensor_data (str): The sensor data to process.
-
-        Returns:
-            str: The processed sensor data.
-        """
-        # Use natural language processing to extract relevant information from the sensor data
-        # For example, use a language model to extract entities and relationships
-        # For simplicity, we will just return the sensor data as is
-        return sensor_data
-
-    def integrate_sensor_data(self, entity_name):
-        """
-        Integrate sensor data with entity information to retrieve more accurate information.
-
-        Args:
-            entity_name (str): The name of the entity to integrate sensor data with.
-
-        Returns:
-            str: The integrated information.
-        """
-        # Use the knowledge graph API to retrieve related entities
-        graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
-        related_entities = graph_response.json()['results']['bindings']
-        # Use the sensory interface to retrieve sensor data
-        sensor_data = self.si.listen()
-        # Process the sensor data to retrieve relevant information
-        processed_sensor_data = self.process_sensor_data(sensor_data)
-        # Integrate the processed sensor data with entity information
-        entity_info = self.retrieve_entity_info(entity_name)
-        integrated_info = f"{entity_info} {processed_sensor_data}"
-        return integrated_info
+        return contextualized_related_entities
