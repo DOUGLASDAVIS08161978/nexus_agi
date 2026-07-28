@@ -4,7 +4,7 @@ import random
 
 class Mentor:
     """Represents a virtual mentor with expertise in a specific domain."""
-    
+
     def __init__(self, name, domain):
         """
         Initializes a Mentor instance.
@@ -42,7 +42,7 @@ class Mentor:
 
 class Learner:
     """Represents an AI learner seeking guidance from virtual mentors."""
-    
+
     def __init__(self, name):
         """
         Initializes a Learner instance.
@@ -71,7 +71,7 @@ class Learner:
 
 class MentorshipEmulator:
     """Simulates human mentorship by allowing the AI to learn from virtual mentors."""
-    
+
     def __init__(self):
         """
         Initializes a MentorshipEmulator instance.
