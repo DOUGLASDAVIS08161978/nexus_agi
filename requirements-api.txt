@@ -7,10 +7,10 @@
 # API Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.27
+python-multipart==0.0.31
 
 # Authentication & Security
-pyjwt==2.8.0
+pyjwt==2.13.0
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.4.0
 
