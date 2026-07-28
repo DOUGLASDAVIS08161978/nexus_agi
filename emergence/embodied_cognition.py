@@ -3,7 +3,7 @@
 class EmbodiedAgent:
     """
     A class representing an embodied agent with cognitive capabilities.
-    
+
     Attributes:
     ----------
     name : str
