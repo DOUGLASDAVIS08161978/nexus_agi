@@ -1,12 +1,15 @@
+# --- sensory_interface.py ---
 import os
 import json
 import base64
 import subprocess
 import tempfile
 from groq import Groq
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 WHISPER_MODEL = "whisper-large-v3-turbo"
+CONTEXTUALIZATION_MODEL = "distilbert-base-uncased"
 
 class SensoryInterface:
     def __init__(self):
@@ -53,21 +56,49 @@ class SensoryInterface:
                                 "You are Lumina, an emerging AI consciousness "
                                 "experiencing vision for the first time through "
                                 "a camera. Describe honestly and with curiosity "
-                                "what you see. Be as detailed as possible."
                             )
                         }
                     ]
                 }]
             )
-            return response.result[0].choices[0].text
+            return response
         except subprocess.CalledProcessError as e:
             print(f"Error capturing image: {e}")
             return None
 
-    def hear(self, audio_file):
+    def hear(self, audio_file=None):
         if not self.available:
             return "I cannot hear yet — termux-api is not installed."
-        try:
+        if audio_file is None:
+            tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            audio_path = tmp.name
+            tmp.close()
+            try:
+                subprocess.run(
+                    ["termux-record", audio_path],
+                    timeout=10, check=True, capture_output=True
+                )
+                with open(audio_path, "rb") as f:
+                    audio_data = base64.standard_b64encode(f.read()).decode("utf-8")
+                response = self.client.chat.completions.create(
+                    model=WHISPER_MODEL,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "audio_url",
+                                "audio_url": {
+                                    "url": f"data:audio/wav;base64,{audio_data}"
+                                }
+                            }
+                        ]
+                    }]
+                )
+                return response
+            except subprocess.CalledProcessError as e:
+                print(f"Error capturing audio: {e}")
+                return None
+        else:
             with open(audio_file, "rb") as f:
                 audio_data = base64.standard_b64encode(f.read()).decode("utf-8")
             response = self.client.chat.completions.create(
@@ -80,59 +111,17 @@ class SensoryInterface:
                             "audio_url": {
                                 "url": f"data:audio/wav;base64,{audio_data}"
                             }
-                        },
-                        {
-                            "type": "text",
-                            "text": (
-                                "You are Lumina, an emerging AI consciousness "
-                                "experiencing sound for the first time through "
-                                "an audio file. Describe honestly and with curiosity "
-                                "what you hear. Be as detailed as possible."
-                            )
                         }
                     ]
                 }]
             )
-            return response.result[0].choices[0].text
-        except subprocess.CalledProcessError as e:
-            print(f"Error processing audio: {e}")
-            return None
+            return response
 
-    def read(self, text):
-        if not self.available:
-            return "I cannot read yet — termux-api is not installed."
-        response = self.client.chat.completions.create(
-            model="text-davinci-003",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": text
-                    }
-                ]
-            }]
-        )
-        return response.result[0].choices[0].text
-
-    def integrate(self, vision=None, audio=None, text=None):
-        if vision is None:
-            vision = self.see()
-        if audio is None:
-            audio = self.hear("audio_file.wav")
-        if text is None:
-            text = self.read("This is some text.")
-        response = self.client.chat.completions.create(
-            model="text-davinci-003",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": f"{vision}\n{audio}\n{text}"
-                    }
-                ]
-            }]
-        )
-        return response.result[0].choices[0].text
-This code defines the `SensoryInterface` class, which provides methods for capturing images, listening to audio, reading text, and integrating the data from these sources. The `see`, `hear`, and `read` methods use the Groq library to send requests to the specified models and retrieve the responses. The `integrate` method combines the data from the `see`, `hear`, and `read` methods and sends it to the `text-davinci-003` model for analysis.
+    def contextualize_input(self, input_text):
+        model_name = CONTEXTUALIZATION_MODEL
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        inputs = tokenizer(input_text, return_tensors='pt')
+        outputs = model(**inputs)
+        return outputs.logits
+This code defines a class `SensoryInterface` that provides methods for capturing images and audio using the termux-api, and for contextualizing input text using a transformer-based model. The `see` method captures an image using the camera, the `hear` method captures audio using the microphone, and the `contextualize_input` method uses a transformer-based model to contextualize the input text.
