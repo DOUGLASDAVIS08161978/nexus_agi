@@ -6,7 +6,7 @@ import random
 class MetaCognitiveReflection:
     """
     A module for enabling AI to reflect on its own thought processes.
-    
+
     Attributes:
     ----------
     reflection_threshold : float
@@ -20,7 +20,7 @@ class MetaCognitiveReflection:
     def __init__(self, reflection_threshold=0.8, reflection_triggers=None):
         """
         Initializes the MetaCognitiveReflection module.
-        
+
         Parameters:
         ----------
         reflection_threshold : float, optional
@@ -35,14 +35,14 @@ class MetaCognitiveReflection:
     def reflect(self, thought_process, confidence_level):
         """
         Reflects on a thought process.
-        
+
         Parameters:
         ----------
         thought_process : str
             The thought process to reflect on.
         confidence_level : float
             The confidence level of the thought process.
-        
+
         Returns:
         -------
         bool
@@ -57,12 +57,12 @@ class MetaCognitiveReflection:
     def _analyze_thought_process(self, thought_process):
         """
         Analyzes a thought process and identifies biases, assumptions, and areas for improvement.
-        
+
         Parameters:
         ----------
         thought_process : str
             The thought process to analyze.
-        
+
         Returns:
         -------
         str
@@ -76,7 +76,7 @@ class MetaCognitiveReflection:
     def get_reflection_history(self):
         """
         Returns the reflection history.
-        
+
         Returns:
         -------
         list
@@ -87,7 +87,7 @@ class MetaCognitiveReflection:
     def add_reflection_trigger(self, trigger):
         """
         Adds a reflection trigger.
-        
+
         Parameters:
         ----------
         trigger : str
@@ -98,7 +98,7 @@ class MetaCognitiveReflection:
     def remove_reflection_trigger(self, trigger):
         """
         Removes a reflection trigger.
-        
+
         Parameters:
         ----------
         trigger : str
