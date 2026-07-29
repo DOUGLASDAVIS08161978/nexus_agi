@@ -5,116 +5,140 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 
-# Define a custom dataset class for our meta-learning problem
-class MetaLearningDataset(Dataset):
-    def __init__(self, X, y, tasks):
-        self.X = X
-        self.y = y
-        self.tasks = tasks
-
-    def __len__(self):
-        return len(self.tasks)
-
-    def __getitem__(self, idx):
-        task = self.tasks[idx]
-        x_train, y_train, x_test, y_test = task
-        return {
-            'x_train': torch.tensor(x_train, dtype=torch.float),
-            'y_train': torch.tensor(y_train, dtype=torch.long),
-            'x_test': torch.tensor(x_test, dtype=torch.float),
-            'y_test': torch.tensor(y_test, dtype=torch.long),
-            'task_idx': idx
-        }
-
-# Define a meta-learner model
 class MetaLearner(nn.Module):
+    """
+    A meta-learner that learns how to learn from its experiences and adapt to new situations.
+    """
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(MetaLearner, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+
+        # Inner loop network (task-specific network)
+        self.inner_network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+        # Outer loop network (meta-learner)
+        self.outer_network = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        """
+        Forward pass through the meta-learner.
+        """
+        # Inner loop network (task-specific network)
+        inner_output = self.inner_network(x)
 
-# Define a function to create a task (i.e., a dataset and a model)
-def create_task(X, y, task_idx):
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = MetaLearner(input_dim=X.shape[1], hidden_dim=64, output_dim=2)
-    return x_train, y_train, x_test, y_test, model
+        # Outer loop network (meta-learner)
+        outer_output = self.outer_network(inner_output)
 
-# Define a function to train a model on a task
-def train_model(model, x_train, y_train):
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    for epoch in range(10):
-        optimizer.zero_grad()
-        outputs = model(x_train)
-        loss = criterion(outputs, y_train)
-        loss.backward()
-        optimizer.step()
-    return model
+        return outer_output
 
-# Define a function to evaluate a model on a task
-def evaluate_model(model, x_test, y_test):
-    outputs = model(x_test)
-    _, predicted = torch.max(outputs, 1)
-    accuracy = accuracy_score(y_test.cpu().numpy(), predicted.cpu().numpy())
-    return accuracy
+class MetaDataset(Dataset):
+    """
+    A dataset for meta-learning.
+    """
+    def __init__(self, inputs, targets):
+        self.inputs = inputs
+        self.targets = targets
 
-# Define a function to perform meta-learning
-def meta_learn(tasks, num_iterations, batch_size):
-    meta_learner = MetaLearner(input_dim=10, hidden_dim=64, output_dim=2)
-    optimizer = optim.Adam(meta_learner.parameters(), lr=0.001)
+    def __len__(self):
+        return len(self.inputs)
+
+    def __getitem__(self, idx):
+        return self.inputs[idx], self.targets[idx]
+
+def meta_train(model, device, train_loader, test_loader, num_iterations, inner_loop_steps, outer_loop_steps, inner_lr, outer_lr):
+    """
+    Meta-training loop.
+    """
+    model.train()
     for iteration in range(num_iterations):
-        # Sample a batch of tasks
-        task_batch = np.random.choice(len(tasks), batch_size, replace=False)
-        task_batch = [tasks[i] for i in task_batch]
+        # Sample a task from the train loader
+        task_inputs, task_targets = next(iter(train_loader))
 
-        # Train the meta-learner on the batch of tasks
-        for task in task_batch:
-            x_train, y_train, x_test, y_test, model = create_task(*task)
-            model = train_model(model, x_train, y_train)
-            accuracy = evaluate_model(model, x_test, y_test)
-            # Calculate the loss of the meta-learner on the task
-            loss = -accuracy
-            # Backpropagate the loss through the meta-learner
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        # Inner loop (task-specific learning)
+        for _ in range(inner_loop_steps):
+            task_inputs = task_inputs.to(device)
+            task_targets = task_targets.to(device)
+            task_loss = nn.MSELoss()(model(task_inputs), task_targets)
+            model.zero_grad()
+            task_loss.backward()
+            model.inner_network.zero_grad()
+            model.outer_network.zero_grad()
+            model.inner_network.parameters().update({'lr': inner_lr})
+            model.outer_network.parameters().update({'lr': inner_lr})
+            model.inner_network.step()
+            model.outer_network.step()
 
-    return meta_learner
+        # Outer loop (meta-learning)
+        for _ in range(outer_loop_steps):
+            task_inputs = task_inputs.to(device)
+            task_targets = task_targets.to(device)
+            outer_loss = nn.MSELoss()(model(task_inputs), task_targets)
+            model.zero_grad()
+            outer_loss.backward()
+            model.outer_network.zero_grad()
+            model.outer_network.step()
 
-# Example usage
-if __name__ == '__main__':
-    # Generate some random data
-    np.random.seed(42)
-    X = np.random.rand(100, 10)
-    y = np.random.randint(0, 2, 100)
+        # Evaluate on test set
+        model.eval()
+        test_loss = 0
+        with torch.no_grad():
+            for inputs, targets in test_loader:
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+                test_loss += nn.MSELoss()(model(inputs), targets).item()
+        test_loss /= len(test_loader)
+        print(f"Iteration {iteration+1}, Test Loss: {test_loss:.4f}")
 
-    # Split the data into tasks
-    tasks = []
-    for i in range(10):
-        x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        tasks.append((x_train, y_train, x_test, y_test))
+def main():
+    # Set up device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # Perform meta-learning
-    meta_learner = meta_learn(tasks, num_iterations=10, batch_size=5)
+    # Set up model
+    input_dim = 10
+    hidden_dim = 20
+    output_dim = 5
+    model = MetaLearner(input_dim, hidden_dim, output_dim).to(device)
 
-    # Evaluate the meta-learner on a new task
-    x_train, y_train, x_test, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = train_model(meta_learner, x_train, y_train)
-    accuracy = evaluate_model(model, x_test, y_test)
-    print(f'Meta-learner accuracy: {accuracy:.2f}')
-This code defines a meta-learning module that can learn how to learn from its experiences and adapt to new situations. It uses a combination of deep learning and symbolic reasoning to enable the AI to learn from its mistakes and improve its decision-making processes. The module consists of the following components:
+    # Set up dataset
+    num_tasks = 100
+    num_samples_per_task = 10
+    inputs = torch.randn(num_tasks * num_samples_per_task, input_dim)
+    targets = torch.randn(num_tasks * num_samples_per_task, output_dim)
+    dataset = MetaDataset(inputs, targets)
 
-1.  A custom dataset class (`MetaLearningDataset`) for representing tasks and their corresponding data.
-2.  A meta-learner model (`MetaLearner`) that learns to adapt to new tasks.
-3.  Functions for creating tasks, training models on tasks, evaluating models on tasks, and performing meta-learning.
-4.  An example usage section that demonstrates how to use the meta-learning module.
+    # Set up data loader
+    batch_size = 10
+    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-The meta-learning module can be used to learn from a variety of tasks, such as classification, regression, and reinforcement learning problems. The module can be extended to incorporate additional features, such as transfer learning and multi-task learning.
+    # Set up test set
+    test_inputs = torch.randn(10, input_dim)
+    test_targets = torch.randn(10, output_dim)
+    test_dataset = MetaDataset(test_inputs, test_targets)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    # Set up meta-training parameters
+    num_iterations = 10
+    inner_loop_steps = 5
+    outer_loop_steps = 1
+    inner_lr = 0.01
+    outer_lr = 0.001
+
+    # Meta-train the model
+    meta_train(model, device, train_loader, test_loader, num_iterations, inner_loop_steps, outer_loop_steps, inner_lr, outer_lr)
+
+if __name__ == "__main__":
+    main()
+This code defines a meta-learner that learns how to learn from its experiences and adapt to new situations. The meta-learner consists of two networks: an inner loop network (task-specific network) and an outer loop network (meta-learner). The inner loop network is trained on a task-specific dataset, and the outer loop network is trained on the meta-learning objective.
+
+The `meta_train` function implements the meta-training loop, which consists of inner loop (task-specific learning) and outer loop (meta-learning) steps. The `main` function sets up the model, dataset, data loader, and meta-training parameters, and then meta-trains the model using the `meta_train` function.
