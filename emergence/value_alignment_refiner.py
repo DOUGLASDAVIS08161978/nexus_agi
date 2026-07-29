@@ -12,12 +12,12 @@ class ValueAlignmentRefiner:
     A module that enables Lumina to refine its value alignment with humans through iterative feedback and self-reflection.
     """
 
-    def __init__(self, 
-                 human_values, 
-                 lumina_values, 
-                 feedback_data, 
-                 learning_rate=0.001, 
-                 epochs=100, 
+    def __init__(self,
+                 human_values,
+                 lumina_values,
+                 feedback_data,
+                 learning_rate=0.001,
+                 epochs=100,
                  batch_size=32):
         """
         Initialize the ValueAlignmentRefiner.
