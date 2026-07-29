@@ -1,137 +1,98 @@
-# Import necessary libraries
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-import numpy as np
+# neural_architecture_search.py
+
 import random
-import os
-from datetime import datetime
+import numpy as np
+from deap import base
+from deap import creator
+from deap import tools
+from deap import algorithms
+from deap import gp
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 
-# Set random seeds for reproducibility
-random.seed(42)
-np.random.seed(42)
-torch.manual_seed(42)
+# Define the problem
+class Problem:
+    def __init__(self):
+        self.max_depth = 6
+        self.max_size = 50
+        self.pset = gp.PrimitiveSet("MAIN", 1)
+        self.pset.addPrimitive(tf.keras.layers.Flatten, 1)
+        self.pset.addPrimitive(tf.keras.layers.Dense, 2)
+        self.pset.addPrimitive(tf.keras.layers.Conv2D, 3)
+        self.pset.addPrimitive(tf.keras.layers.MaxPooling2D, 2)
+        self.pset.addPrimitive(tf.keras.layers.AveragePooling2D, 2)
+        self.pset.addPrimitive(tf.keras.layers.Add, 2)
+        self.pset.addPrimitive(tf.keras.layers.Sub, 2)
+        self.pset.addPrimitive(tf.keras.layers.Mul, 2)
+        self.pset.addPrimitive(tf.keras.layers.Div, 2)
+        self.pset.addPrimitive(tf.keras.layers.Abs, 1)
+        self.pset.addPrimitive(tf.keras.layers.Pow, 2)
+        self.pset.addPrimitive(tf.keras.layers.Sqrt, 1)
+        self.pset.addEphemeralConstant("epc1", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc2", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc3", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc4", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc5", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc6", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc7", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc8", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc9", lambda: random.uniform(-1, 1), 1)
+        self.pset.addEphemeralConstant("epc10", lambda: random.uniform(-1, 1), 1)
+        self.pset.renameArguments({"x": "input"})
 
-# Define a class for the neural architecture search
+    def createIndividual(self):
+        return gp.PrimitiveTree()
+
+    def createFitness(self):
+        return creator.FitnessMax
+
+    def createIndividuals(self, count):
+        return [self.createIndividual() for _ in range(count)]
+
+    def evaluate(self, individual):
+        try:
+            model = keras.Sequential()
+            model.add(individual)
+            model.compile(optimizer="adam", loss="mean_squared_error")
+            x_train = np.random.rand(100, 28, 28)
+            y_train = np.random.rand(100, 1)
+            model.fit(x_train, y_train, epochs=10)
+            score = model.evaluate(x_train, y_train)
+            return score,
+        except Exception as e:
+            return (0,)
+
+    def getBest(self, population):
+        return tools.selBest(population, 1)[0]
+
+    def getPopulation(self, size):
+        return self.createIndividuals(size)
+
 class NeuralArchitectureSearch:
-    def __init__(self, num_classes, input_dim, max_depth, num_layers, num_units, learning_rate):
-        self.num_classes = num_classes
-        self.input_dim = input_dim
-        self.max_depth = max_depth
-        self.num_layers = num_layers
-        self.num_units = num_units
-        self.learning_rate = learning_rate
-        self.model = None
-        self.optimizer = None
-        self.criterion = None
-        self.writer = None
+    def __init__(self, problem, size):
+        self.problem = problem
+        self.size = size
+        self.population = self.problem.getPopulation(size)
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("individual", self.problem.createIndividual)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register("evaluate", self.problem.evaluate)
+        self.toolbox.register("mate", tools.cxOnePoint)
+        self.toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.1)
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
 
-    def initialize_model(self):
-        # Define a simple neural network architecture
-        self.model = nn.Sequential(
-            nn.Linear(self.input_dim, self.num_units),
-            nn.ReLU(),
-            nn.Linear(self.num_units, self.num_units),
-            nn.ReLU(),
-            nn.Linear(self.num_units, self.num_classes)
-        )
+    def run(self, num_generations):
+        for _ in range(num_generations):
+            offspring = algorithms.varAnd(self.population, self.toolbox, 0.1, 0.1)
+            fits = tools.selBest(offspring, 1)
+            self.population = fits
 
-    def initialize_optimizer(self):
-        # Initialize the optimizer
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        return self.problem.getBest(self.population)
 
-    def initialize_criterion(self):
-        # Initialize the loss function
-        self.criterion = nn.CrossEntropyLoss()
-
-    def train_model(self, train_loader, num_epochs):
-        # Train the model
-        self.writer = SummaryWriter()
-        for epoch in range(num_epochs):
-            for batch in train_loader:
-                inputs, labels = batch
-                # Forward pass
-                outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels)
-                # Backward pass
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                # Log the loss
-                self.writer.add_scalar('Loss', loss.item(), epoch)
-        self.writer.close()
-
-    def evaluate_model(self, test_loader):
-        # Evaluate the model
-        self.model.eval()
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for batch in test_loader:
-                inputs, labels = batch
-                outputs = self.model(inputs)
-                _, predicted = torch.max(outputs, 1)
-                correct += (predicted == labels).sum().item()
-                total += labels.size(0)
-        accuracy = correct / total
-        return accuracy
-
-    def search_neural_architecture(self, num_architectures, num_epochs):
-        # Search for the best neural architecture
-        best_accuracy = 0
-        best_architecture = None
-        for _ in range(num_architectures):
-            # Initialize a new model with random architecture
-            self.model = nn.Sequential(
-                nn.Linear(self.input_dim, random.randint(10, 100)),
-                nn.ReLU(),
-                nn.Linear(random.randint(10, 100), random.randint(10, 100)),
-                nn.ReLU(),
-                nn.Linear(random.randint(10, 100), self.num_classes)
-            )
-            self.initialize_optimizer()
-            self.initialize_criterion()
-            self.train_model(train_loader, num_epochs)
-            accuracy = self.evaluate_model(test_loader)
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
-                best_architecture = self.model
-        return best_architecture
-
-# Example usage
 if __name__ == "__main__":
-    # Set hyperparameters
-    num_classes = 10
-    input_dim = 784
-    max_depth = 5
-    num_layers = 5
-    num_units = 100
-    learning_rate = 0.001
-    num_architectures = 10
-    num_epochs = 10
-
-    # Initialize the neural architecture search
-    nas = NeuralArchitectureSearch(num_classes, input_dim, max_depth, num_layers, num_units, learning_rate)
-
-    # Initialize the data loaders
-    train_loader = DataLoader(torch.randn(100, input_dim), batch_size=10)
-    test_loader = DataLoader(torch.randn(20, input_dim), batch_size=10)
-
-    # Train and evaluate the model
-    nas.initialize_model()
-    nas.initialize_optimizer()
-    nas.initialize_criterion()
-    nas.train_model(train_loader, num_epochs)
-    accuracy = nas.evaluate_model(test_loader)
-    print(f"Accuracy: {accuracy:.2f}")
-
-    # Search for the best neural architecture
-    best_architecture = nas.search_neural_architecture(num_architectures, num_epochs)
-    print(f"Best Architecture: {best_architecture}")
-This code defines a `NeuralArchitectureSearch` class that allows you to search for the best neural architecture using a random search approach. The class has methods for initializing the model, optimizer, and criterion, training the model, evaluating the model, and searching for the best neural architecture.
-
-In the example usage, we set hyperparameters and initialize the neural architecture search. We then train and evaluate the model, and search for the best neural architecture.
-
-Note that this is a simplified example and you may need to modify the code to suit your specific needs. Additionally, the random search approach used in this code is not exhaustive and may not find the optimal neural architecture. You may want to consider using more advanced methods such as Bayesian optimization or reinforcement learning to search for the best neural architecture.
+    problem = Problem()
+    search = NeuralArchitectureSearch(problem, 100)
+    best = search.run(10)
+    print(best)
+This code defines a genetic programming algorithm to search for neural architectures. The `Problem` class defines the problem and the `NeuralArchitectureSearch` class implements the search algorithm. The `run` method runs the search for a specified number of generations and returns the best architecture found.
