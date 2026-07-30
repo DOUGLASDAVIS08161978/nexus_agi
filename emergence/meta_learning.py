@@ -8,7 +8,7 @@ import torch.optim as optim
 class MetaLearner(nn.Module):
     """
     A meta learner that learns to learn from its experiences.
-    
+
     Attributes:
     - model (nn.Module): The base model that will be fine-tuned for each task.
     - optimizer (optim.Optimizer): The optimizer used to update the model's parameters.
@@ -17,7 +17,7 @@ class MetaLearner(nn.Module):
     - num_train_steps (int): The number of training steps for each task.
     - num_test_steps (int): The number of testing steps for each task.
     """
-    
+
     def __init__(self, model, optimizer, num_updates, num_tasks, num_train_steps, num_test_steps):
         super(MetaLearner, self).__init__()
         self.model = model
@@ -30,11 +30,11 @@ class MetaLearner(nn.Module):
     def forward(self, input, task_id):
         """
         Forward pass of the meta learner.
-        
+
         Args:
         - input (torch.Tensor): The input to the model.
         - task_id (int): The ID of the task to perform.
-        
+
         Returns:
         - output (torch.Tensor): The output of the model.
         """
@@ -50,7 +50,7 @@ class MetaLearner(nn.Module):
     def meta_train(self, train_dataset, test_dataset):
         """
         Meta-training of the meta learner.
-        
+
         Args:
         - train_dataset (torch.utils.data.Dataset): The training dataset.
         - test_dataset (torch.utils.data.Dataset): The testing dataset.
@@ -95,10 +95,10 @@ class MetaLearner(nn.Module):
     def meta_test(self, test_dataset):
         """
         Meta-testing of the meta learner.
-        
+
         Args:
         - test_dataset (torch.utils.data.Dataset): The testing dataset.
-        
+
         Returns:
         - output (torch.Tensor): The output of the model.
         """
