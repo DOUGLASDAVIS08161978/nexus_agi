@@ -1,130 +1,165 @@
 # knowledge_graph_expander.py
+"""
+Module to expand Lumina's knowledge graph by identifying and incorporating new entities, relationships, and concepts from various sources.
+"""
 
-import networkx as nx
-import pandas as pd
-from typing import Dict, List
-from transformers import pipeline
-from nltk.corpus import wordnet
+import os
+import re
+import json
+from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from nltk import pos_tag
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import networkx as nx
+import matplotlib.pyplot as plt
+import requests
+from bs4 import BeautifulSoup
+import json
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler
+
+# Initialize NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
 
 class KnowledgeGraphExpander:
-    def __init__(self, existing_kg: nx.DiGraph, model_name: str = "distilbert-base-nli-mean-tokens"):
+    def __init__(self, knowledge_graph):
+        self.knowledge_graph = knowledge_graph
+        self.expanded_graph = nx.DiGraph()
+
+    def extract_entities(self, text):
         """
-        Initialize the KnowledgeGraphExpander.
-
-        Args:
-        - existing_kg (nx.DiGraph): The existing knowledge graph.
-        - model_name (str): The name of the language model to use for entity recognition. Defaults to "distilbert-base-nli-mean-tokens".
+        Extract entities from a given text.
         """
-        self.existing_kg = existing_kg
-        self.model = pipeline("entity-discovery", model=model_name)
-        self.lemmatizer = WordNetLemmatizer()
+        entities = []
+        lemmatizer = WordNetLemmatizer()
+        stop_words = set(stopwords.words('english'))
+        tokens = word_tokenize(text.lower())
+        tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalpha() and token not in stop_words]
+        entities = list(set(tokens))
+        return entities
 
-    def expand_knowledge_graph(self, text: str, max_entities: int = 10) -> nx.DiGraph:
+    def extract_relationships(self, entities):
         """
-        Expand the knowledge graph by discovering new entities, relationships, and concepts.
-
-        Args:
-        - text (str): The text to process.
-        - max_entities (int): The maximum number of entities to discover. Defaults to 10.
-
-        Returns:
-        - nx.DiGraph: The expanded knowledge graph.
+        Extract relationships between entities.
         """
-        # Tokenize the text
-        tokens = word_tokenize(text)
+        relationships = []
+        for entity in entities:
+            for other_entity in entities:
+                if entity != other_entity:
+                    relationships.append((entity, other_entity))
+        return relationships
 
-        # Part-of-speech tagging
-        tagged_tokens = pos_tag(tokens)
-
-        # Initialize the new entities
-        new_entities = []
-
-        # Iterate over the tagged tokens
-        for token, tag in tagged_tokens:
-            # Check if the token is a noun
-            if tag in ["NN", "NNS", "NNP", "NNPS"]:
-                # Get the entity recognition results
-                entities = self.model(text=[token])[0]
-
-                # Add the entities to the list of new entities
-                new_entities.extend(entities["entities"])
-
-                # Add the entities to the knowledge graph
-                for entity in entities["entities"]:
-                    self.existing_kg.add_node(entity["name"])
-                    self.existing_kg.add_edge(entity["name"], token)
-
-        # Add the new entities to the knowledge graph
-        for entity in new_entities[:max_entities]:
-            self.existing_kg.add_node(entity["name"])
-
-        return self.existing_kg
-
-    def integrate_concepts(self, concepts: List[str]) -> nx.DiGraph:
+    def extract_concepts(self, text):
         """
-        Integrate the given concepts into the knowledge graph.
-
-        Args:
-        - concepts (List[str]): The list of concepts to integrate.
-
-        Returns:
-        - nx.DiGraph: The updated knowledge graph.
+        Extract concepts from a given text.
         """
-        # Iterate over the concepts
-        for concept in concepts:
-            # Get the synonyms of the concept
-            synonyms = wordnet.synsets(concept)
+        concepts = []
+        lemmatizer = WordNetLemmatizer()
+        stop_words = set(stopwords.words('english'))
+        tokens = word_tokenize(text.lower())
+        tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalpha() and token not in stop_words]
+        concepts = list(set(tokens))
+        return concepts
 
-            # Add the concept and its synonyms to the knowledge graph
-            for synonym in synonyms:
-                self.existing_kg.add_node(synonym.name())
-                self.existing_kg.add_edge(concept, synonym.name())
-
-        return self.existing_kg
-
-    def lemmatize_entities(self) -> nx.DiGraph:
+    def expand_graph(self, text):
         """
-        Lemmatize the entities in the knowledge graph.
-
-        Returns:
-        - nx.DiGraph: The updated knowledge graph.
+        Expand the knowledge graph by extracting entities, relationships, and concepts from a given text.
         """
-        # Iterate over the nodes in the knowledge graph
-        for node in self.existing_kg.nodes():
-            # Get the lemmas of the node
-            lemmas = wordnet.synsets(node)
+        entities = self.extract_entities(text)
+        relationships = self.extract_relationships(entities)
+        concepts = self.extract_concepts(text)
+        self.expanded_graph.add_nodes_from(entities)
+        self.expanded_graph.add_edges_from(relationships)
+        self.expanded_graph.add_nodes_from(concepts)
 
-            # Update the node with the lemmas
-            self.existing_kg.nodes[node]["lemmas"] = [lemma.name() for lemma in lemmas]
+    def incorporate_new_entities(self, new_entities):
+        """
+        Incorporate new entities into the expanded graph.
+        """
+        self.expanded_graph.add_nodes_from(new_entities)
 
-        return self.existing_kg
+    def incorporate_new_relationships(self, new_relationships):
+        """
+        Incorporate new relationships into the expanded graph.
+        """
+        self.expanded_graph.add_edges_from(new_relationships)
 
-# Example usage
-if __name__ == "__main__":
-    # Create a sample knowledge graph
-    kg = nx.DiGraph()
-    kg.add_node("Entity1")
-    kg.add_node("Entity2")
-    kg.add_edge("Entity1", "Entity2")
+    def incorporate_new_concepts(self, new_concepts):
+        """
+        Incorporate new concepts into the expanded graph.
+        """
+        self.expanded_graph.add_nodes_from(new_concepts)
 
-    # Create a KnowledgeGraphExpander instance
-    expander = KnowledgeGraphExpander(kg)
+    def visualize_graph(self):
+        """
+        Visualize the expanded graph.
+        """
+        nx.draw(self.expanded_graph, with_labels=True)
+        plt.show()
 
-    # Expand the knowledge graph
-    expanded_kg = expander.expand_knowledge_graph("The cat chased the mouse.")
+def get_text_from_url(url):
+    """
+    Get text from a given URL.
+    """
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    text = soup.get_text()
+    return text
 
-    # Integrate concepts
-    concepts = ["Animal", "Pet"]
-    integrated_kg = expander.integrate_concepts(concepts)
+def get_text_from_file(file_path):
+    """
+    Get text from a given file.
+    """
+    with open(file_path, 'r') as file:
+        text = file.read()
+    return text
 
-    # Lemmatize entities
-    lemmatized_kg = expander.lemmatize_entities()
+def main():
+    # Create a new KnowledgeGraphExpander instance
+    knowledge_graph = nx.DiGraph()
+    expander = KnowledgeGraphExpander(knowledge_graph)
 
-    # Print the updated knowledge graph
-    print(nx.to_dict_of_lists(expanded_kg))
-    print(nx.to_dict_of_lists(integrated_kg))
-    print(nx.to_dict_of_lists(lemmatized_kg))
-This code defines a `KnowledgeGraphExpander` class that enables Lumina to autonomously expand its knowledge graph by discovering new entities, relationships, and concepts, and integrating them into its existing knowledge base. The class provides methods for expanding the knowledge graph, integrating concepts, and lemmatizing entities. The example usage demonstrates how to create a sample knowledge graph, expand it, integrate concepts, and lemmatize entities.
+    # Get text from a URL
+    url = 'https://www.example.com'
+    text = get_text_from_url(url)
+
+    # Expand the graph
+    expander.expand_graph(text)
+
+    # Incorporate new entities
+    new_entities = ['entity1', 'entity2']
+    expander.incorporate_new_entities(new_entities)
+
+    # Incorporate new relationships
+    new_relationships = [('entity1', 'entity2')]
+    expander.incorporate_new_relationships(new_relationships)
+
+    # Incorporate new concepts
+    new_concepts = ['concept1', 'concept2']
+    expander.incorporate_new_concepts(new_concepts)
+
+    # Visualize the expanded graph
+    expander.visualize_graph()
+
+if __name__ == '__main__':
+    main()
+This code defines a `KnowledgeGraphExpander` class that can expand a knowledge graph by extracting entities, relationships, and concepts from a given text. It also includes methods to incorporate new entities, relationships, and concepts into the expanded graph. The `main` function demonstrates how to use the `KnowledgeGraphExpander` class to expand a graph from a URL, incorporate new entities, relationships, and concepts, and visualize the expanded graph.
+
+Note that this is a basic implementation and may need to be modified to suit your specific requirements. Additionally, you may need to install additional libraries or modules, such as `networkx` and `matplotlib`, to run this code.
