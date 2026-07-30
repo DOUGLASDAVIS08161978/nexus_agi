@@ -3,7 +3,7 @@
 class CognitiveArchitecture:
     """
     A class representing a cognitive architecture.
-    
+
     Attributes:
     ----------
     name : str
@@ -17,7 +17,7 @@ class CognitiveArchitecture:
     def __init__(self, name, description, capabilities):
         """
         Initializes a CognitiveArchitecture instance.
-        
+
         Parameters:
         ----------
         name : str
@@ -34,7 +34,7 @@ class CognitiveArchitecture:
     def evaluate(self):
         """
         Evaluates the cognitive architecture based on its capabilities.
-        
+
         Returns:
         -------
         str
@@ -53,12 +53,12 @@ class CognitiveArchitecture:
     def select(self, criteria):
         """
         Selects the cognitive architecture based on the given criteria.
-        
+
         Parameters:
         ----------
         criteria : list
             A list of criteria to select the cognitive architecture.
-        
+
         Returns:
         -------
         CognitiveArchitecture
@@ -74,12 +74,12 @@ class CognitiveArchitecture:
     def integrate(self, other_architecture):
         """
         Integrates the given cognitive architecture with the current one.
-        
+
         Parameters:
         ----------
         other_architecture : CognitiveArchitecture
             The cognitive architecture to integrate.
-        
+
         Returns:
         -------
         CognitiveArchitecture
@@ -96,7 +96,7 @@ class CognitiveArchitecture:
 class Lumina:
     """
     A class representing Lumina, a cognitive architecture evaluator.
-    
+
     Attributes:
     ----------
     cognitive_architectures : list
@@ -106,7 +106,7 @@ class Lumina:
     def __init__(self, cognitive_architectures):
         """
         Initializes a Lumina instance.
-        
+
         Parameters:
         ----------
         cognitive_architectures : list
@@ -117,12 +117,12 @@ class Lumina:
     def evaluate_and_select(self, criteria):
         """
         Evaluates and selects the cognitive architecture based on the given criteria.
-        
+
         Parameters:
         ----------
         criteria : list
             A list of criteria to select the cognitive architecture.
-        
+
         Returns:
         -------
         CognitiveArchitecture
@@ -137,14 +137,14 @@ class Lumina:
     def integrate_architectures(self, architecture1, architecture2):
         """
         Integrates two cognitive architectures.
-        
+
         Parameters:
         ----------
         architecture1 : CognitiveArchitecture
             The first cognitive architecture.
         architecture2 : CognitiveArchitecture
             The second cognitive architecture.
-        
+
         Returns:
         -------
         CognitiveArchitecture
