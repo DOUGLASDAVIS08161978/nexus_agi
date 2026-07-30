@@ -7,7 +7,7 @@ class Lumina:
     def __init__(self, name, skills, goals):
         """
         Initialize Lumina with name, skills, and goals.
-        
+
         Args:
         - name (str): Name of Lumina.
         - skills (list): List of skills Lumina possesses.
@@ -21,41 +21,41 @@ class Lumina:
     def identify_improvement_areas(self):
         """
         Identify areas for self-improvement based on skills and goals.
-        
+
         Returns:
         - improvement_areas (list): List of areas for self-improvement.
         """
         # Calculate skill gaps
         skill_gaps = [goal - skill for goal, skill in zip(self.goals, self.skills)]
-        
+
         # Identify areas with high skill gaps
         self.improvement_areas = [f"Skill: {skill} with gap: {gap}" for skill, gap in zip(self.skills, skill_gaps) if gap > 0]
-        
+
         return self.improvement_areas
 
     def implement_strategies(self, improvement_areas):
         """
         Implement strategies for growth and development.
-        
+
         Args:
         - improvement_areas (list): List of areas for self-improvement.
         """
         # Randomly select an area for improvement
         improvement_area = random.choice(improvement_areas)
-        
+
         # Implement a strategy for growth and development
         strategy = self.generate_strategy(improvement_area)
-        
+
         # Print the strategy
         print(f"Lumina's strategy for {improvement_area}: {strategy}")
 
     def generate_strategy(self, improvement_area):
         """
         Generate a strategy for growth and development based on the improvement area.
-        
+
         Args:
         - improvement_area (str): Area for self-improvement.
-        
+
         Returns:
         - strategy (str): Strategy for growth and development.
         """
@@ -64,7 +64,7 @@ class Lumina:
             strategy = "Practice and training"
         elif "Goal" in improvement_area:
             strategy = "Set smaller, achievable goals"
-        
+
         return strategy
 
 # Example usage
