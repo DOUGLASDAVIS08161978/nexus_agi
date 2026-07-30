@@ -4,128 +4,138 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 
-# Define a base class for the meta-learning module
-class MetaLearningModule(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(MetaLearningModule, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-# Define a dataset class for the meta-learning module
-class MetaLearningDataset(Dataset):
-    def __init__(self, inputs, labels):
-        self.inputs = inputs
-        self.labels = labels
-
-    def __len__(self):
-        return len(self.inputs)
-
-    def __getitem__(self, index):
-        return self.inputs[index], self.labels[index]
-
-# Define a meta-learning trainer class
-class MetaLearningTrainer:
-    def __init__(self, model, optimizer, device):
+class MetaLearner(nn.Module):
+    """
+    A meta learner that learns to learn from its experiences.
+    
+    Attributes:
+    - model (nn.Module): The base model that will be fine-tuned for each task.
+    - optimizer (optim.Optimizer): The optimizer used to update the model's parameters.
+    - num_updates (int): The number of updates to perform during meta-training.
+    - num_tasks (int): The number of tasks in the meta-training dataset.
+    - num_train_steps (int): The number of training steps for each task.
+    - num_test_steps (int): The number of testing steps for each task.
+    """
+    
+    def __init__(self, model, optimizer, num_updates, num_tasks, num_train_steps, num_test_steps):
+        super(MetaLearner, self).__init__()
         self.model = model
         self.optimizer = optimizer
-        self.device = device
+        self.num_updates = num_updates
+        self.num_tasks = num_tasks
+        self.num_train_steps = num_train_steps
+        self.num_test_steps = num_test_steps
 
-    def train(self, dataset, num_steps, batch_size):
-        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        for step in range(num_steps):
-            for batch in data_loader:
-                inputs, labels = batch
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = nn.MSELoss()(outputs, labels)
+    def forward(self, input, task_id):
+        """
+        Forward pass of the meta learner.
+        
+        Args:
+        - input (torch.Tensor): The input to the model.
+        - task_id (int): The ID of the task to perform.
+        
+        Returns:
+        - output (torch.Tensor): The output of the model.
+        """
+        self.model.train()
+        self.optimizer.zero_grad()
+        output = self.model(input)
+        loss = nn.CrossEntropyLoss()(output, input)
+        loss.backward()
+        self.optimizer.step()
+        self.model.eval()
+        return output
+
+    def meta_train(self, train_dataset, test_dataset):
+        """
+        Meta-training of the meta learner.
+        
+        Args:
+        - train_dataset (torch.utils.data.Dataset): The training dataset.
+        - test_dataset (torch.utils.data.Dataset): The testing dataset.
+        """
+        for task_id in range(self.num_tasks):
+            # Sample a task from the training dataset
+            task = train_dataset.sample_task()
+            # Get the input and output of the task
+            input, output = task
+            # Perform the forward pass
+            output = self.forward(input, task_id)
+            # Update the model's parameters
+            for _ in range(self.num_updates):
+                # Sample a batch from the task
+                batch = task.sample_batch(self.num_train_steps)
+                # Perform the forward pass
+                output = self.forward(batch, task_id)
+                # Compute the loss
+                loss = nn.CrossEntropyLoss()(output, batch)
+                # Backpropagate the loss
                 loss.backward()
+                # Update the model's parameters
                 self.optimizer.step()
+                # Zero the gradients
+                self.optimizer.zero_grad()
+            # Evaluate the model on the testing dataset
+            self.model.eval()
+            for _ in range(self.num_test_steps):
+                # Sample a batch from the task
+                batch = task.sample_batch(self.num_test_steps)
+                # Perform the forward pass
+                output = self.forward(batch, task_id)
+                # Compute the loss
+                loss = nn.CrossEntropyLoss()(output, batch)
+                # Backpropagate the loss
+                loss.backward()
+                # Update the model's parameters
+                self.optimizer.step()
+                # Zero the gradients
+                self.optimizer.zero_grad()
 
-# Define a meta-learning learner class
-class MetaLearningLearner:
-    def __init__(self, model, trainer, device):
-        self.model = model
-        self.trainer = trainer
-        self.device = device
+    def meta_test(self, test_dataset):
+        """
+        Meta-testing of the meta learner.
+        
+        Args:
+        - test_dataset (torch.utils.data.Dataset): The testing dataset.
+        
+        Returns:
+        - output (torch.Tensor): The output of the model.
+        """
+        self.model.eval()
+        output = []
+        for task_id in range(self.num_tasks):
+            # Sample a task from the testing dataset
+            task = test_dataset.sample_task()
+            # Get the input and output of the task
+            input, output_task = task
+            # Perform the forward pass
+            output_task = self.forward(input, task_id)
+            # Append the output to the list
+            output.append(output_task)
+        return output
 
-    def learn(self, dataset, num_steps, batch_size):
-        self.trainer.train(dataset, num_steps, batch_size)
-        return self.model
-
-# Define a meta-learning adapter class
-class MetaLearningAdapter:
-    def __init__(self, model, learner, device):
-        self.model = model
-        self.learner = learner
-        self.device = device
-
-    def adapt(self, dataset, num_steps, batch_size):
-        self.model = self.learner.learn(dataset, num_steps, batch_size)
-        return self.model
-
-# Example usage
-if __name__ == "__main__":
-    # Set up the device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    # Set up the model
-    input_dim = 10
-    hidden_dim = 20
-    output_dim = 5
-    model = MetaLearningModule(input_dim, hidden_dim, output_dim)
-    model.to(device)
-
-    # Set up the dataset
-    inputs = np.random.rand(100, input_dim)
-    labels = np.random.rand(100, output_dim)
-    dataset = MetaLearningDataset(inputs, labels)
-
-    # Set up the optimizer
+def main():
+    # Define the model, optimizer, and meta learner
+    model = nn.Sequential(
+        nn.Linear(10, 10),
+        nn.ReLU(),
+        nn.Linear(10, 10)
+    )
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    meta_learner = MetaLearner(model, optimizer, num_updates=10, num_tasks=10, num_train_steps=10, num_test_steps=10)
 
-    # Set up the trainer
-    trainer = MetaLearningTrainer(model, optimizer, device)
+    # Define the training and testing datasets
+    train_dataset = torch.utils.data.TensorDataset(torch.randn(100, 10), torch.randint(0, 10, (100,)))
+    test_dataset = torch.utils.data.TensorDataset(torch.randn(100, 10), torch.randint(0, 10, (100,)))
 
-    # Set up the learner
-    learner = MetaLearningLearner(model, trainer, device)
+    # Meta-train the meta learner
+    meta_learner.meta_train(train_dataset, test_dataset)
 
-    # Set up the adapter
-    adapter = MetaLearningAdapter(model, learner, device)
+    # Meta-test the meta learner
+    output = meta_learner.meta_test(test_dataset)
+    print(output)
 
-    # Train the model
-    num_steps = 100
-    batch_size = 10
-    model = adapter.adapt(dataset, num_steps, batch_size)
-
-    # Test the model
-    test_inputs = np.random.rand(10, input_dim)
-    test_labels = np.random.rand(10, output_dim)
-    test_dataset = MetaLearningDataset(test_inputs, test_labels)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    for batch in test_loader:
-        inputs, labels = batch
-        inputs, labels = inputs.to(device), labels.to(device)
-        outputs = model(inputs)
-        print(outputs)
-This code defines a meta-learning module that enables Lumina to learn how to learn from its experiences and adapt to new situations. It includes the following components:
-
-1.  **MetaLearningModule**: A base class for the meta-learning module, which consists of three fully connected (dense) layers.
-2.  **MetaLearningDataset**: A dataset class for the meta-learning module, which represents a collection of input-output pairs.
-3.  **MetaLearningTrainer**: A meta-learning trainer class, which trains the model using the Adam optimizer and mean squared error (MSE) loss function.
-4.  **MetaLearningLearner**: A meta-learning learner class, which learns from the dataset using the trainer.
-5.  **MetaLearningAdapter**: A meta-learning adapter class, which adapts the model to new situations by learning from the dataset.
-
-The example usage demonstrates how to set up the device, model, dataset, optimizer, trainer, learner, and adapter. It then trains the model using the adapter and tests the model on a separate dataset.
+if __name__ == "__main__":
+    main()
+This code defines a meta learner that learns to learn from its experiences. The meta learner is trained on a dataset of tasks, where each task consists of an input and an output. The meta learner is trained to fine-tune its model on each task, and then evaluate its performance on the testing dataset. The meta learner is defined as a PyTorch nn.Module, and it uses a PyTorch optimizer to update its model's parameters. The meta learner is trained using the meta_train method, and it is tested using the meta_test method. The main function defines the model, optimizer, and meta learner, and it trains and tests the meta learner on a sample dataset.
