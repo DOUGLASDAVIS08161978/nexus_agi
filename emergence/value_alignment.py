@@ -2,114 +2,83 @@
 
 class ValueAlignment:
     """
-    A module for integrating human values into decision-making processes.
-
-    Attributes:
-    ----------
-    values : list
-        A list of core human values (e.g., empathy, kindness, respect).
-    weights : dict
-        A dictionary mapping each value to its corresponding weight.
+    A module that enables Lumina to align its autonomous self-improvement with human values.
     """
 
-    def __init__(self, values, weights):
+    def __init__(self, human_values):
         """
-        Initializes the ValueAlignment module.
+        Initialize the ValueAlignment module with a list of human values.
 
-        Parameters:
-        ----------
-        values : list
-            A list of core human values.
-        weights : dict
-            A dictionary mapping each value to its corresponding weight.
+        Args:
+            human_values (list): A list of human values, such as 'happiness', 'fairness', 'compassion', etc.
         """
-        self.values = values
-        self.weights = weights
+        self.human_values = human_values
+        self.value_weights = self._calculate_value_weights()
 
-    def align(self, action, context):
+    def _calculate_value_weights(self):
         """
-        Aligns an action with the core human values.
-
-        Parameters:
-        ----------
-        action : str
-            The action to be evaluated.
-        context : dict
-            A dictionary containing relevant context information.
+        Calculate the weights of each human value based on their importance.
 
         Returns:
-        -------
-        aligned_action : str
-            The aligned action, taking into account the core human values.
+            dict: A dictionary where the keys are human values and the values are their corresponding weights.
         """
-        # Initialize the aligned action as the original action
-        aligned_action = action
+        # Define a dictionary to store the weights of each human value
+        value_weights = {}
 
-        # Iterate over each value and its corresponding weight
-        for value, weight in self.weights.items():
-            # Check if the value is relevant in the given context
-            if value in context and context[value]:
-                # Update the aligned action based on the value's weight
-                aligned_action = self._update_action(aligned_action, weight, value)
+        # Assign weights to each human value based on their importance
+        # For example, 'happiness' is considered more important than 'fairness'
+        value_weights['happiness'] = 0.4
+        value_weights['fairness'] = 0.3
+        value_weights['compassion'] = 0.2
+        value_weights['respect'] = 0.1
 
-        return aligned_action
+        return value_weights
 
-    def _update_action(self, action, weight, value):
+    def align_values(self, lumina_values):
         """
-        Updates the action based on the given value and weight.
+        Align Lumina's values with the human values.
 
-        Parameters:
-        ----------
-        action : str
-            The action to be updated.
-        weight : float
-            The weight corresponding to the given value.
-        value : str
-            The value to be considered.
+        Args:
+            lumina_values (list): A list of Lumina's values.
 
         Returns:
-        -------
-        updated_action : str
-            The updated action, taking into account the given value and weight.
+            dict: A dictionary where the keys are human values and the values are their corresponding weights in Lumina's values.
         """
-        # Update the action based on the value and weight
-        if weight > 0.5:
-            # If the weight is high, prioritize the value
-            updated_action = f"{action} with {value}"
-        elif weight < -0.5:
-            # If the weight is low, de-prioritize the value
-            updated_action = f"{action} without {value}"
-        else:
-            # If the weight is moderate, maintain the original action
-            updated_action = action
+        aligned_values = {}
 
-        return updated_action
+        for human_value in self.human_values:
+            aligned_value = 0
+            for lumina_value in lumina_values:
+                if human_value in lumina_value:
+                    aligned_value += self.value_weights[human_value]
+            aligned_values[human_value] = aligned_value
+
+        return aligned_values
+
+    def prioritize_values(self, aligned_values):
+        """
+        Prioritize the human values based on their weights in Lumina's values.
+
+        Args:
+            aligned_values (dict): A dictionary where the keys are human values and the values are their corresponding weights in Lumina's values.
+
+        Returns:
+            list: A list of human values in order of their priority.
+        """
+        prioritized_values = sorted(aligned_values.items(), key=lambda x: x[1], reverse=True)
+
+        return [value[0] for value in prioritized_values]
 
 
 # Example usage:
 if __name__ == "__main__":
-    # Define core human values and their corresponding weights
-    values = ["empathy", "kindness", "respect"]
-    weights = {
-        "empathy": 0.8,
-        "kindness": 0.7,
-        "respect": 0.9
-    }
+    human_values = ['happiness', 'fairness', 'compassion', 'respect']
+    lumina_values = ['happiness and fairness', 'fairness and respect', 'compassion and happiness']
 
-    # Create a ValueAlignment instance
-    aligner = ValueAlignment(values, weights)
+    value_alignment = ValueAlignment(human_values)
+    aligned_values = value_alignment.align_values(lumina_values)
+    prioritized_values = value_alignment.prioritize_values(aligned_values)
 
-    # Define an action and context
-    action = "send a message"
-    context = {
-        "empathy": True,
-        "kindness": False,
-        "respect": True
-    }
-
-    # Align the action with the core human values
-    aligned_action = aligner.align(action, context)
-
-    # Print the aligned action
-    print(f"Aligned action: {aligned_action}")
-This code defines a `ValueAlignment` class that enables the integration of human values into decision-making processes. The class takes a list of core human values and their corresponding weights as input and provides a method to align an action with these values. The aligned action is then returned, taking into account the core human values. The example usage demonstrates how to create a `ValueAlignment` instance, define an action and context, and align the action with the core human values.
+    print("Aligned values:", aligned_values)
+    print("Prioritized values:", prioritized_values)
+This code defines a `ValueAlignment` class that enables Lumina to align its autonomous self-improvement with human values. The class has methods to calculate the weights of each human value, align Lumina's values with the human values, and prioritize the human values based on their weights in Lumina's values. The example usage demonstrates how to use the `ValueAlignment` class to align Lumina's values with the human values and prioritize the human values.
