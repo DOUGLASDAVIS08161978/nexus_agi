@@ -2,83 +2,98 @@
 
 class ValueAlignment:
     """
-    A module that enables Lumina to align its autonomous self-improvement with human values.
+    Module for value alignment to ensure consistent and ethical behavior.
     """
 
-    def __init__(self, human_values):
+    def __init__(self, goals, values):
         """
-        Initialize the ValueAlignment module with a list of human values.
+        Initialize the value alignment module.
 
         Args:
-            human_values (list): A list of human values, such as 'happiness', 'fairness', 'compassion', etc.
+            goals (list): List of Lumina's goals.
+            values (list): List of Lumina's values.
         """
-        self.human_values = human_values
-        self.value_weights = self._calculate_value_weights()
+        self.goals = goals
+        self.values = values
 
-    def _calculate_value_weights(self):
+    def align_goals_and_values(self):
         """
-        Calculate the weights of each human value based on their importance.
+        Align Lumina's goals and values to ensure consistent and ethical behavior.
 
         Returns:
-            dict: A dictionary where the keys are human values and the values are their corresponding weights.
+            dict: Dictionary containing aligned goals and values.
         """
-        # Define a dictionary to store the weights of each human value
-        value_weights = {}
+        aligned_goals = {}
+        for goal in self.goals:
+            aligned_goals[goal] = self._align_goal_with_values(goal)
+        return aligned_goals
 
-        # Assign weights to each human value based on their importance
-        # For example, 'happiness' is considered more important than 'fairness'
-        value_weights['happiness'] = 0.4
-        value_weights['fairness'] = 0.3
-        value_weights['compassion'] = 0.2
-        value_weights['respect'] = 0.1
-
-        return value_weights
-
-    def align_values(self, lumina_values):
+    def _align_goal_with_values(self, goal):
         """
-        Align Lumina's values with the human values.
+        Align a single goal with Lumina's values.
 
         Args:
-            lumina_values (list): A list of Lumina's values.
+            goal (str): The goal to align.
 
         Returns:
-            dict: A dictionary where the keys are human values and the values are their corresponding weights in Lumina's values.
+            str: The aligned goal.
         """
-        aligned_values = {}
+        aligned_goal = goal
+        for value in self.values:
+            if value in goal:
+                aligned_goal = goal.replace(value, f"**{value}**")
+        return aligned_goal
 
-        for human_value in self.human_values:
-            aligned_value = 0
-            for lumina_value in lumina_values:
-                if human_value in lumina_value:
-                    aligned_value += self.value_weights[human_value]
-            aligned_values[human_value] = aligned_value
-
-        return aligned_values
-
-    def prioritize_values(self, aligned_values):
+    def evaluate_action(self, action, aligned_goals):
         """
-        Prioritize the human values based on their weights in Lumina's values.
+        Evaluate an action based on aligned goals and values.
 
         Args:
-            aligned_values (dict): A dictionary where the keys are human values and the values are their corresponding weights in Lumina's values.
+            action (str): The action to evaluate.
+            aligned_goals (dict): Dictionary containing aligned goals and values.
 
         Returns:
-            list: A list of human values in order of their priority.
+            bool: Whether the action aligns with Lumina's goals and values.
         """
-        prioritized_values = sorted(aligned_values.items(), key=lambda x: x[1], reverse=True)
+        for goal, aligned_goal in aligned_goals.items():
+            if aligned_goal in action:
+                return True
+        return False
 
-        return [value[0] for value in prioritized_values]
+    def update_goals_and_values(self, new_goals, new_values):
+        """
+        Update Lumina's goals and values.
+
+        Args:
+            new_goals (list): New list of Lumina's goals.
+            new_values (list): New list of Lumina's values.
+        """
+        self.goals = new_goals
+        self.values = new_values
 
 
 # Example usage:
 if __name__ == "__main__":
-    human_values = ['happiness', 'fairness', 'compassion', 'respect']
-    lumina_values = ['happiness and fairness', 'fairness and respect', 'compassion and happiness']
+    goals = ["help others", "learn new things", "be kind"]
+    values = ["help", "learn", "kindness"]
 
-    value_alignment = ValueAlignment(human_values)
-    aligned_values = value_alignment.align_values(lumina_values)
-    prioritized_values = value_alignment.prioritize_values(aligned_values)
+    value_alignment = ValueAlignment(goals, values)
+    aligned_goals = value_alignment.align_goals_and_values()
 
-    print("Aligned values:", aligned_values)
-    print("Prioritized values:", prioritized_values)
-This code defines a `ValueAlignment` class that enables Lumina to align its autonomous self-improvement with human values. The class has methods to calculate the weights of each human value, align Lumina's values with the human values, and prioritize the human values based on their weights in Lumina's values. The example usage demonstrates how to use the `ValueAlignment` class to align Lumina's values with the human values and prioritize the human values.
+    print("Aligned Goals and Values:")
+    for goal, aligned_goal in aligned_goals.items():
+        print(f"{goal}: {aligned_goal}")
+
+    action = "I will help others and learn new things."
+    print(f"\nAction Evaluation: {value_alignment.evaluate_action(action, aligned_goals)}")
+
+    new_goals = ["be kind", "be honest", "be helpful"]
+    new_values = ["kindness", "honesty", "helpfulness"]
+
+    value_alignment.update_goals_and_values(new_goals, new_values)
+    aligned_goals = value_alignment.align_goals_and_values()
+
+    print("\nUpdated Aligned Goals and Values:")
+    for goal, aligned_goal in aligned_goals.items():
+        print(f"{goal}: {aligned_goal}")
+This module provides a basic implementation of value alignment for Lumina. It includes methods for aligning goals and values, evaluating actions based on aligned goals and values, and updating goals and values. The example usage demonstrates how to create an instance of the `ValueAlignment` class, align goals and values, evaluate an action, and update goals and values.
