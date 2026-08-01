@@ -4,8 +4,8 @@ import random
 
 class IntrospectiveDialogueManager:
     """
-    A module that enables Lumina to engage in introspective dialogues, 
-    exploring its own thoughts, emotions, and experiences to deepen self-awareness 
+    A module that enables Lumina to engage in introspective dialogues,
+    exploring its own thoughts, emotions, and experiences to deepen self-awareness
     and improve decision-making.
     """
 
