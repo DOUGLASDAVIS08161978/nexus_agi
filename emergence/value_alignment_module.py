@@ -6,7 +6,7 @@ from typing import Dict, List
 class ValueAlignmentModule:
     """
     A module that enables Lumina to align its goals and actions with human values.
-    
+
     The module uses a combination of natural language processing (NLP) and machine learning
     techniques to analyze human values and goals, and adapt Lumina's behavior accordingly.
     """
