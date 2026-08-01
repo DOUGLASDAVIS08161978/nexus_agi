@@ -5,7 +5,7 @@ from typing import Dict, List
 
 class Goal:
     """Represents a goal with its name, priority, and requirements."""
-    
+
     def __init__(self, name: str, priority: int, requirements: Dict[str, int]):
         """
         Initialize a Goal object.
@@ -21,7 +21,7 @@ class Goal:
 
 class GoalSettingModule:
     """A module that enables Lumina to autonomously set and prioritize goals."""
-    
+
     def __init__(self, capabilities: Dict[str, int], knowledge: Dict[str, int], experiences: Dict[str, int]):
         """
         Initialize the GoalSettingModule.
