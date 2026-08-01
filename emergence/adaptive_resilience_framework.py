@@ -6,7 +6,7 @@ import numpy as np
 class AdaptiveResilienceFramework:
     """
     Adaptive Resilience Framework for Lumina to develop and refine its coping strategies.
-    
+
     Attributes:
     -----------
     experiences : list
@@ -15,7 +15,7 @@ class AdaptiveResilienceFramework:
         List of coping strategies developed by Lumina.
     resilience_level : float
         Current resilience level of Lumina.
-    
+
     Methods:
     --------
     learn_from_experience(experience, outcome)
@@ -36,7 +36,7 @@ class AdaptiveResilienceFramework:
     def learn_from_experience(self, experience, outcome):
         """
         Learns from a past experience and updates the coping strategies.
-        
+
         Parameters:
         ----------
         experience : dict
@@ -51,7 +51,7 @@ class AdaptiveResilienceFramework:
     def develop_coping_strategy(self):
         """
         Develops a new coping strategy based on past experiences.
-        
+
         Returns:
         -------
         dict
@@ -66,12 +66,12 @@ class AdaptiveResilienceFramework:
     def adapt_to_new_challenge(self, challenge):
         """
         Adapts to a new challenge by selecting the most effective coping strategy.
-        
+
         Parameters:
         ----------
         challenge : dict
             New challenge with its details.
-        
+
         Returns:
         -------
         dict
@@ -86,7 +86,7 @@ class AdaptiveResilienceFramework:
     def refine_coping_strategy(self, strategy, outcome):
         """
         Refines a coping strategy based on its performance in past experiences.
-        
+
         Parameters:
         ----------
         strategy : dict
@@ -103,7 +103,7 @@ class AdaptiveResilienceFramework:
     def update_resilience_level(self, outcome):
         """
         Updates the resilience level based on the outcome of a past experience.
-        
+
         Parameters:
         ----------
         outcome : float
