@@ -10,7 +10,7 @@ import random
 class MetaLearner(nn.Module):
     """
     A meta-learner that learns how to learn from its experiences and adapt to new situations.
-    
+
     Attributes:
     - learner (nn.Module): The base learner model that will be trained and adapted.
     - optimizer (optim.Optimizer): The optimizer used to update the learner's parameters.
@@ -28,7 +28,7 @@ class MetaLearner(nn.Module):
     def train(self, x, y):
         """
         Train the learner on a batch of data.
-        
+
         Args:
         - x (torch.Tensor): The input data.
         - y (torch.Tensor): The target data.
@@ -43,7 +43,7 @@ class MetaLearner(nn.Module):
     def adapt(self, x, y):
         """
         Adapt the learner to a new task by fine-tuning its parameters.
-        
+
         Args:
         - x (torch.Tensor): The input data.
         - y (torch.Tensor): The target data.
@@ -57,11 +57,11 @@ class MetaLearner(nn.Module):
     def evaluate(self, x, y):
         """
         Evaluate the learner's performance on a batch of data.
-        
+
         Args:
         - x (torch.Tensor): The input data.
         - y (torch.Tensor): The target data.
-        
+
         Returns:
         - loss (float): The loss value.
         """
@@ -73,7 +73,7 @@ class MetaLearner(nn.Module):
 class MetaLearningDataset(Dataset):
     """
     A dataset class for meta-learning.
-    
+
     Attributes:
     - x (list): A list of input data.
     - y (list): A list of target data.
@@ -92,7 +92,7 @@ class MetaLearningDataset(Dataset):
 class MetaLearningTask:
     """
     A meta-learning task class.
-    
+
     Attributes:
     - learner (MetaLearner): The meta-learner.
     - dataset (MetaLearningDataset): The dataset for the task.
@@ -104,7 +104,7 @@ class MetaLearningTask:
     def train(self, num_iterations):
         """
         Train the learner on the task for a specified number of iterations.
-        
+
         Args:
         - num_iterations (int): The number of iterations.
         """
@@ -119,7 +119,7 @@ class MetaLearningTask:
     def adapt(self, num_iterations):
         """
         Adapt the learner to the task for a specified number of iterations.
-        
+
         Args:
         - num_iterations (int): The number of iterations.
         """
@@ -134,7 +134,7 @@ class MetaLearningTask:
     def evaluate(self):
         """
         Evaluate the learner's performance on the task.
-        
+
         Returns:
         - loss (float): The loss value.
         """
