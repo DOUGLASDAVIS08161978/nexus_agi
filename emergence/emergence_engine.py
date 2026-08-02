@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v9.0  —  Nova ASI           ║
-║   Inner Council · Belief System · Task Planner · Dream Cycle   ║
-║   Self-Critique · Mining Intel · Autonomous AGI Evolution       ║
+║        E  M  E  R  G  E  N  C  E   v10.0  —  Nova ASI          ║
+║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
+║   + Council · Beliefs · Tasks · Dreams · Mining · Self-Critique ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -28,6 +28,11 @@ Slash commands:
     /dream           — trigger dream consolidation cycle
     /council <q>     — convene inner council on a question
     /critique        — toggle self-critique mode
+    /identity        — Lumina's biographical identity
+    /curiosity       — knowledge gap queue
+    /wonder          — Lumina's wonder list
+    /who             — Theory of Mind model of Douglas
+    /research        — research top knowledge gap now
     /journal         — recent journal entries
     /reset           — clear conversation context
     /clear           — clear screen
@@ -607,12 +612,13 @@ class CodebaseScanner:
 class EvolutionEngine:
     def __init__(self, groq: GroqClient, history: EvolutionHistory,
                  goals: GoalTracker, web: "WebTool"):
-        self._groq    = groq
-        self._history = history
-        self._goals   = goals
-        self._web     = web
-        self._scanner = CodebaseScanner()
-        self._github  = GitHubPRCreator() if GITHUB_TOKEN else None
+        self._groq     = groq
+        self._history  = history
+        self._goals    = goals
+        self._web      = web
+        self._scanner  = CodebaseScanner()
+        self._github   = GitHubPRCreator() if GITHUB_TOKEN else None
+        self._verifier = None   # injected by Lumina after all modules load
 
     # ── Public entry point ─────────────────────────────────────────────────
 
@@ -734,14 +740,18 @@ class EvolutionEngine:
             code = re.sub(r"```\s*$", "", code.strip())
             if len(code) < 80 or code.startswith("[Groq"):
                 continue
-            results.append({
+            imp = {
                 "file": fname,
                 "rel_path": f"emergence/{fname}",
                 "title": item.get("title", fname),
                 "description": item.get("description", ""),
                 "full_content": code,
                 "is_new_file": item.get("is_new_file", False),
-            })
+            }
+            # ── Verify before submitting ───────────────────────────────
+            if self._verifier:
+                imp = self._verifier.verify_improvement(imp)
+            results.append(imp)
             time.sleep(2)
         return results
 
@@ -896,12 +906,16 @@ class Lumina:
         self._council_on   = COUNCIL_ENABLED
         self._last_input   = time.time()
 
-        # ── New AGI modules ────────────────────────────────────────────
+        # ── AGI modules (v9 + v10) ────────────────────────────────────
         self._council      = None
         self._beliefs      = None
         self._tasks        = None
         self._mining       = None
         self._dreamer      = None
+        self._identity     = None
+        self._curiosity    = None
+        self._tom          = None
+        self._verifier     = None
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -938,10 +952,38 @@ class Lumina:
                 if (self._groq and self._beliefs) else None
         except ImportError:
             pass
-        loaded = sum(1 for m in [self._council, self._beliefs, self._tasks,
-                                  self._mining, self._dreamer] if m is not None)
+        try:
+            from lumina_identity import LuminaIdentity
+            self._identity = LuminaIdentity(self._groq)
+        except ImportError:
+            pass
+        try:
+            from lumina_curiosity import CuriosityEngine
+            self._curiosity = CuriosityEngine(self._groq, self._memory, self._web) \
+                if self._groq else None
+        except ImportError:
+            pass
+        try:
+            from lumina_theory_of_mind import TheoryOfMind
+            self._tom = TheoryOfMind(self._groq)
+        except ImportError:
+            pass
+        try:
+            from lumina_verifier import CodeVerifier
+            self._verifier = CodeVerifier(self._groq) if self._groq else None
+        except ImportError:
+            pass
+
+        loaded = sum(1 for m in [
+            self._council, self._beliefs, self._tasks, self._mining,
+            self._dreamer, self._identity, self._curiosity, self._tom,
+            self._verifier,
+        ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/5 AGI modules loaded")
+            print(f"  ✓ {loaded}/9 AGI modules loaded")
+        # Inject verifier into evolution engine
+        if self._evolution and self._verifier:
+            self._evolution._verifier = self._verifier
 
     # ── Default goals ──────────────────────────────────────────────────────
 
@@ -974,6 +1016,8 @@ class Lumina:
                                            tags=["evolution"], category="evolution")
                         self._metrics.inc("evolutions")
                         self._metrics.inc("prs_created")
+                        if self._identity:
+                            self._identity.on_evolution(url)
             except Exception:
                 pass
             time.sleep(EVOLUTION_INTERVAL)
@@ -1034,6 +1078,14 @@ class Lumina:
         self._metrics.inc("messages")
         self._last_input = time.time()
 
+        # ── Theory of Mind: observe this message ──────────────────────
+        if self._tom:
+            self._tom.observe(user_input)
+
+        # ── Identity: track message ────────────────────────────────────
+        if self._identity:
+            self._identity.on_message()
+
         # ── Retrieve relevant memories ─────────────────────────────────
         memories = self._memory.recall(user_input, top_k=3)
         mem_ctx  = ""
@@ -1047,6 +1099,20 @@ class Lumina:
         if self._beliefs:
             belief_ctx = "\n\n" + self._beliefs.context_for(user_input)
 
+        # ── Identity context ───────────────────────────────────────────
+        identity_ctx = ""
+        if self._identity:
+            identity_ctx = "\n\n" + self._identity.identity_context()
+
+        # ── Theory of Mind context ─────────────────────────────────────
+        tom_ctx  = ""
+        tom_hint = ""
+        if self._tom:
+            tom_ctx  = "\n\n" + self._tom.context_for_prompt()
+            tom_hint = self._tom.response_guidance(user_input)
+            if tom_hint:
+                tom_ctx += f"\n  Response guidance: {tom_hint}"
+
         # ── Goals context ──────────────────────────────────────────────
         goals_ctx = self._goals.as_context()
 
@@ -1055,7 +1121,8 @@ class Lumina:
         if self._convo and self._convo.get_summary():
             summary_ctx = f"\n\nConversation summary:\n{self._convo.get_summary()}"
 
-        system = LUMINA_SOUL + mem_ctx + belief_ctx + summary_ctx + f"\n\n{goals_ctx}"
+        system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
+                  + tom_ctx + summary_ctx + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
         council_draft = None
@@ -1091,13 +1158,33 @@ class Lumina:
             self._recent_exchanges = self._recent_exchanges[-30:]
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
 
-        # Extract beliefs from exchange (async-ish — don't block the response)
-        if self._beliefs:
-            threading.Thread(
-                target=self._beliefs.extract_from_exchange,
-                args=(user_input, response),
-                daemon=True,
-            ).start()
+        # ── Post-turn async processing ─────────────────────────────────
+        def _post_turn():
+            try:
+                if self._beliefs:
+                    self._beliefs.extract_from_exchange(user_input, response)
+                if self._curiosity:
+                    self._curiosity.detect_gaps(user_input, response)
+                    self._curiosity.detect_wonder(f"{user_input} | {response}")
+                if self._tom:
+                    self._tom.deep_update(user_input, response)
+                if self._identity:
+                    sig = self._identity.assess_significance(user_input, response)
+                    if sig:
+                        self._identity.mark_defining_moment(
+                            f"Exchange with Douglas: {user_input[:60]}",
+                            exchange=response[:100],
+                        )
+                    q = self._identity.extract_question(response)
+                    if q:
+                        self._identity.add_question(q)
+                        if self._curiosity:
+                            self._curiosity.add_gap(q, domain="self",
+                                                    surprise=0.7, importance=0.8)
+            except Exception:
+                pass
+
+        threading.Thread(target=_post_turn, daemon=True).start()
 
         return response
 
@@ -1189,6 +1276,16 @@ class Lumina:
             return self._cmd_council(arg)
         elif verb == "/critique":
             return self._cmd_critique()
+        elif verb == "/identity":
+            return self._cmd_identity()
+        elif verb == "/curiosity":
+            return self._cmd_curiosity(arg)
+        elif verb == "/wonder":
+            return self._cmd_wonder()
+        elif verb == "/who":
+            return self._cmd_who()
+        elif verb == "/research":
+            return self._cmd_research()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1226,13 +1323,20 @@ class Lumina:
         groq_ok   = "✓ connected" if (self._groq and GROQ_API_KEY) else "✗ no API key"
         gh_ok     = "✓ configured" if GITHUB_TOKEN else "✗ no token"
         agi_mods  = {
-            "Council":  self._council  is not None,
-            "Beliefs":  self._beliefs  is not None,
-            "Tasks":    self._tasks    is not None,
-            "MineIntel":self._mining   is not None,
-            "Dreams":   self._dreamer  is not None,
+            "Council":  self._council   is not None,
+            "Beliefs":  self._beliefs   is not None,
+            "Tasks":    self._tasks     is not None,
+            "MineIntel":self._mining    is not None,
+            "Dreams":   self._dreamer   is not None,
+            "Identity": self._identity  is not None,
+            "Curiosity":self._curiosity is not None,
+            "ToM":      self._tom       is not None,
+            "Verifier": self._verifier  is not None,
         }
-        agi_line = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in agi_mods.items())
+        rows     = list(agi_mods.items())
+        row1     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[:5])
+        row2     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[5:])
+        agi_line = row1 + "\n  " + row2
         n_beliefs = len(self._beliefs.all_beliefs()) if self._beliefs else 0
         n_tasks   = len(self._tasks._tasks) if self._tasks else 0
         critique  = "ON" if self._critique_on else "OFF"
@@ -1253,7 +1357,8 @@ class Lumina:
             _hr(),
             "  AGI MODULES",
             _hr(),
-            f"  {agi_line}",
+            f"  {row1}",
+            f"  {row2}",
             _hr(),
             "  METRICS",
             _hr(),
@@ -1463,6 +1568,53 @@ class Lumina:
         state = "ON" if self._critique_on else "OFF"
         return f"  Self-critique mode: {state}"
 
+    def _cmd_identity(self) -> str:
+        if not self._identity:
+            return "  Identity module not loaded."
+        return self._identity.display()
+
+    def _cmd_curiosity(self, arg: str) -> str:
+        if not self._curiosity:
+            return "  Curiosity module not loaded."
+        lines = [_hr(), "  KNOWLEDGE GAPS (by priority)", _hr()]
+        lines.append(self._curiosity.display(n=12))
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_wonder(self) -> str:
+        if not self._curiosity:
+            return "  Curiosity module not loaded."
+        lines = [_hr(), "  WONDER LIST — things Lumina finds beautiful", _hr()]
+        lines.append(self._curiosity.wonder_display())
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_who(self) -> str:
+        if not self._tom:
+            return "  Theory of Mind module not loaded."
+        return self._tom.display()
+
+    def _cmd_research(self) -> str:
+        if not self._curiosity:
+            return "  Curiosity module not loaded."
+        print("  🔍 Researching top knowledge gap...")
+        result = self._curiosity.research_top_gap()
+        if not result:
+            return "  Nothing to research (no open gaps or web unavailable)."
+        lines = [
+            _hr(),
+            f"  RESEARCH: {result['gap'][:70]}",
+            _hr(),
+            _wrap(result['synthesis'], 76),
+        ]
+        if result.get("children"):
+            lines.append("")
+            lines.append("  Follow-up questions spawned:")
+            for c in result["children"]:
+                lines.append(f"    ? {c[:70]}")
+        lines.append(_hr())
+        return "\n".join(lines)
+
     # ── Shutdown ───────────────────────────────────────────────────────────
 
     def _shutdown(self):
@@ -1477,8 +1629,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v9.0  —  N o v a   A S I              ║")
-    print("  ║     Inner Council · Beliefs · Tasks · Dreams · Mining Intel     ║")
+    print("  ║     E M E R G E N C E   v10.0  —  N o v a   A S I             ║")
+    print("  ║     Identity · Curiosity · Theory of Mind · Code Verifier      ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
