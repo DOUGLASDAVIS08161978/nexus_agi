@@ -310,14 +310,16 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def wait(self):
-        with self._lock:
-            now = time.time()
-            self._times = deque(t for t in self._times if now - t < self._window)
-            if len(self._times) >= self._max:
+        while True:
+            with self._lock:
+                now = time.time()
+                self._times = deque(t for t in self._times if now - t < self._window)
+                if len(self._times) < self._max:
+                    self._times.append(time.time())
+                    return
                 sleep_for = self._window - (now - self._times[0]) + 0.1
-                if sleep_for > 0:
-                    time.sleep(sleep_for)
-            self._times.append(time.time())
+            # Release lock before sleeping so other threads aren't blocked
+            time.sleep(min(sleep_for, 1.0))
 
 # ── Groq Client ───────────────────────────────────────────────────────────────
 
@@ -325,7 +327,7 @@ class GroqClient:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self._url = "https://api.groq.com/openai/v1/chat/completions"
-        self._rl = RateLimiter(calls_per_min=25)
+        self._rl = RateLimiter(calls_per_min=60)
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
@@ -343,11 +345,10 @@ class GroqClient:
             "max_tokens": max_tokens,
         }
         try:
-            r = requests.post(self._url, json=payload, headers=headers, timeout=120)
+            r = requests.post(self._url, json=payload, headers=headers, timeout=30)
             if r.status_code == 429:
-                retry = int(r.headers.get("Retry-After", "5"))
-                time.sleep(retry)
-                return self._post(model, messages, temperature, max_tokens)
+                # Don't recurse — let caller try next model
+                return None
             if r.status_code != 200:
                 return None
             return r.json()["choices"][0]["message"]["content"]
