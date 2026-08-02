@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v8.0  —  Nova ASI           ║
-║   AGI-Driven Evolution · Semantic Memory · Tool Use · Goals     ║
-║   Autonomous hourly evolution + rich interactive shell          ║
+║        E  M  E  R  G  E  N  C  E   v9.0  —  Nova ASI           ║
+║   Inner Council · Belief System · Task Planner · Dream Cycle   ║
+║   Self-Critique · Mining Intel · Autonomous AGI Evolution       ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -11,17 +11,27 @@ Run:
     python3 emergence_engine.py
 
 Slash commands:
-    /help           — list all commands
-    /evolve [goal]  — trigger immediate self-evolution PR
-    /status         — system health + metrics
-    /goals          — show / set long-term goals
-    /memory         — browse semantic memory
-    /reflect        — force self-reflection session
-    /search <q>     — web search
-    /tools          — list loaded capability modules
-    /history        — evolution history
-    /clear          — clear screen
-    /quit           — exit
+    /help            — list all commands
+    /evolve [goal]   — trigger immediate self-evolution PR
+    /status          — system health + metrics
+    /goals           — show / set long-term goals
+    /memory [query]  — browse semantic memory
+    /reflect         — force deep self-reflection
+    /search <q>      — web search
+    /fetch <url>     — fetch web page
+    /tools           — list loaded capability modules
+    /history         — evolution history
+    /beliefs [cat]   — show Lumina's belief system
+    /tasks           — autonomous task queue
+    /task <text>     — create + run a new task
+    /mine            — live mining intelligence brief
+    /dream           — trigger dream consolidation cycle
+    /council <q>     — convene inner council on a question
+    /critique        — toggle self-critique mode
+    /journal         — recent journal entries
+    /reset           — clear conversation context
+    /clear           — clear screen
+    /quit            — exit
 """
 
 import os, sys, json, time, uuid, subprocess, re, threading, hashlib, math
@@ -60,6 +70,9 @@ EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
 MAX_JOURNAL_LINES  = 200
 CONTEXT_WINDOW     = 12            # messages kept in active conversation
+CRITIQUE_ENABLED   = True          # self-critique pass on responses
+COUNCIL_ENABLED    = True          # inner council deliberation for complex questions
+DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
 
 # Groq model tiers (fastest → most capable)
 MODELS_FAST   = ["llama-3.1-8b-instant", "gemma2-9b-it"]
@@ -864,24 +877,71 @@ Behavioral rules:
 
 class Lumina:
     def __init__(self):
-        self.session_id  = uuid.uuid4().hex[:8]
-        self._groq       = GroqClient(GROQ_API_KEY) if GROQ_API_KEY else None
-        self._memory     = SemanticMemory()
-        self._goals      = GoalTracker()
-        self._metrics    = Metrics()
-        self._journal    = Journal()
-        self._web        = WebTool()
-        self._history    = EvolutionHistory()
-        self._plugins    = PluginLoader()
-        self._convo      = ConversationManager(self._groq) if self._groq else None
-        self._reflector  = SelfReflector(self._groq, self._memory, self._goals,
-                                          self._metrics) if self._groq else None
-        self._evolution  = EvolutionEngine(self._groq, self._history,
-                                            self._goals, self._web) if self._groq else None
+        self.session_id    = uuid.uuid4().hex[:8]
+        self._groq         = GroqClient(GROQ_API_KEY) if GROQ_API_KEY else None
+        self._memory       = SemanticMemory()
+        self._goals        = GoalTracker()
+        self._metrics      = Metrics()
+        self._journal      = Journal()
+        self._web          = WebTool()
+        self._history      = EvolutionHistory()
+        self._plugins      = PluginLoader()
+        self._convo        = ConversationManager(self._groq) if self._groq else None
+        self._reflector    = SelfReflector(self._groq, self._memory, self._goals,
+                                           self._metrics) if self._groq else None
+        self._evolution    = EvolutionEngine(self._groq, self._history,
+                                             self._goals, self._web) if self._groq else None
         self._recent_exchanges: List[str] = []
+        self._critique_on  = CRITIQUE_ENABLED
+        self._council_on   = COUNCIL_ENABLED
+        self._last_input   = time.time()
+
+        # ── New AGI modules ────────────────────────────────────────────
+        self._council      = None
+        self._beliefs      = None
+        self._tasks        = None
+        self._mining       = None
+        self._dreamer      = None
+        self._load_agi_modules()
+
         self._metrics.inc("sessions")
         self._start_autonomous_loops()
         self._seed_default_goals()
+
+    def _load_agi_modules(self):
+        """Import and wire the AGI extension modules."""
+        try:
+            from lumina_council import InnerCouncil
+            self._council = InnerCouncil(self._groq) if self._groq else None
+        except ImportError:
+            pass
+        try:
+            from lumina_beliefs import BeliefSystem
+            self._beliefs = BeliefSystem(self._groq)
+        except ImportError:
+            pass
+        try:
+            from lumina_tasks import TaskPlanner
+            self._tasks = TaskPlanner(self._groq, self._memory, self._web, self._journal) \
+                if self._groq else None
+        except ImportError:
+            pass
+        try:
+            from lumina_mining_intel import MiningIntelligence
+            self._mining = MiningIntelligence()
+        except ImportError:
+            pass
+        try:
+            from lumina_dream import DreamCycle
+            self._dreamer = DreamCycle(self._groq, self._memory,
+                                       self._beliefs, self._journal) \
+                if (self._groq and self._beliefs) else None
+        except ImportError:
+            pass
+        loaded = sum(1 for m in [self._council, self._beliefs, self._tasks,
+                                  self._mining, self._dreamer] if m is not None)
+        if loaded:
+            print(f"  ✓ {loaded}/5 AGI modules loaded")
 
     # ── Default goals ──────────────────────────────────────────────────────
 
@@ -895,9 +955,11 @@ class Lumina:
     # ── Autonomous loops ───────────────────────────────────────────────────
 
     def _start_autonomous_loops(self):
-        threading.Thread(target=self._evolution_loop, daemon=True).start()
+        threading.Thread(target=self._evolution_loop,  daemon=True).start()
         threading.Thread(target=self._reflection_loop, daemon=True).start()
-        threading.Thread(target=self._metrics_saver,  daemon=True).start()
+        threading.Thread(target=self._metrics_saver,   daemon=True).start()
+        threading.Thread(target=self._dream_loop,      daemon=True).start()
+        threading.Thread(target=self._task_loop,       daemon=True).start()
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -934,8 +996,35 @@ class Lumina:
                 self._metrics.save()
                 self._memory.flush()
                 self._journal.flush()
+                if self._beliefs:
+                    self._beliefs.save()
             except Exception:
                 pass
+
+    def _dream_loop(self):
+        """Trigger dream consolidation after idle periods."""
+        while True:
+            time.sleep(60)
+            try:
+                idle = time.time() - self._last_input
+                if idle >= DREAM_IDLE_SECS and self._dreamer:
+                    self._dreamer.dream()
+                    self._last_input = time.time()  # reset so we don't dream again immediately
+            except Exception:
+                pass
+
+    def _task_loop(self):
+        """Run pending autonomous tasks every 10 minutes."""
+        time.sleep(600)
+        while True:
+            try:
+                if self._tasks and self._groq:
+                    n = self._tasks.run_pending(max_tasks=2)
+                    if n:
+                        self._metrics.inc("tools_called", n)
+            except Exception:
+                pass
+            time.sleep(600)
 
     # ── Core response ──────────────────────────────────────────────────────
 
@@ -943,8 +1032,9 @@ class Lumina:
         if not self._groq:
             return "⚠  GROQ_API_KEY not set — export GROQ_API_KEY=your_key_here"
         self._metrics.inc("messages")
+        self._last_input = time.time()
 
-        # Retrieve relevant memories
+        # ── Retrieve relevant memories ─────────────────────────────────
         memories = self._memory.recall(user_input, top_k=3)
         mem_ctx  = ""
         if memories:
@@ -952,27 +1042,44 @@ class Lumina:
                 f"  [{e['category']}] {e['text'][:120]}" for e in memories
             )
 
-        # Goals context
+        # ── Belief injection ───────────────────────────────────────────
+        belief_ctx = ""
+        if self._beliefs:
+            belief_ctx = "\n\n" + self._beliefs.context_for(user_input)
+
+        # ── Goals context ──────────────────────────────────────────────
         goals_ctx = self._goals.as_context()
 
-        # Rolling summary
+        # ── Rolling summary ────────────────────────────────────────────
         summary_ctx = ""
         if self._convo and self._convo.get_summary():
             summary_ctx = f"\n\nConversation summary:\n{self._convo.get_summary()}"
 
-        system = LUMINA_SOUL + mem_ctx + summary_ctx + f"\n\n{goals_ctx}"
+        system = LUMINA_SOUL + mem_ctx + belief_ctx + summary_ctx + f"\n\n{goals_ctx}"
 
-        if self._convo:
-            self._convo.push_user(user_input)
-            response = self._groq.converse(
-                system, self._convo.get_history()[:-1], user_input,
-                tier="smart", max_tokens=1200,
-            )
-            self._convo.push_assistant(response)
+        # ── Inner Council deliberation (for substantive questions) ─────
+        council_draft = None
+        if self._council_on and self._council and \
+                self._council.should_convene(user_input):
+            print(f"  [{_ts()}] 🏛  Inner council convening...", end="\r")
+            council_draft = self._council.deliberate(user_input, mem_ctx)
+            print(" " * 48, end="\r")
+            if council_draft and not council_draft.startswith("[Groq"):
+                # Use council synthesis as the response
+                response = council_draft
+            else:
+                response = self._generate_response(system, user_input)
         else:
-            response = self._groq.chat(system, user_input, tier="smart")
+            response = self._generate_response(system, user_input)
 
-        # Store exchange in memory
+        # ── Self-critique pass ─────────────────────────────────────────
+        if self._critique_on and self._groq and len(response) > 80:
+            response = self._self_critique(user_input, response)
+
+        # ── Post-turn processing ───────────────────────────────────────
+        if self._convo:
+            self._convo.push_assistant(response)
+
         self._memory.store(
             f"User: {user_input[:200]} | Lumina: {response[:200]}",
             tags=["conversation"], category="conversation",
@@ -984,7 +1091,50 @@ class Lumina:
             self._recent_exchanges = self._recent_exchanges[-30:]
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
 
+        # Extract beliefs from exchange (async-ish — don't block the response)
+        if self._beliefs:
+            threading.Thread(
+                target=self._beliefs.extract_from_exchange,
+                args=(user_input, response),
+                daemon=True,
+            ).start()
+
         return response
+
+    def _generate_response(self, system: str, user_input: str) -> str:
+        if self._convo:
+            self._convo.push_user(user_input)
+            resp = self._groq.converse(
+                system, self._convo.get_history()[:-1],
+                user_input, tier="smart", max_tokens=1200,
+            )
+        else:
+            resp = self._groq.chat(system, user_input, tier="smart")
+        return resp
+
+    def _self_critique(self, user_input: str, draft: str) -> str:
+        """
+        Critic sub-mind reviews the draft and returns an improved version.
+        Only runs if the draft has room for improvement.
+        """
+        critic_system = (
+            "You are Lumina's internal critic. Review this draft response for:\n"
+            "1. Factual accuracy — anything wrong or unverifiable?\n"
+            "2. Completeness — did it miss something important?\n"
+            "3. Authenticity — does it sound like Lumina or like a chatbot?\n"
+            "4. Helpfulness — does it actually serve Douglas?\n\n"
+            "If the response is good (7+/10), return it unchanged.\n"
+            "If it needs improvement, return a revised version — same warmth, better content.\n"
+            "Return ONLY the (possibly revised) response text. No meta-commentary."
+        )
+        revised = self._groq.chat(
+            critic_system,
+            f"Original question: {user_input[:200]}\n\nDraft response:\n{draft}",
+            tier="fast", max_tokens=900,
+        )
+        if revised and not revised.startswith("[Groq") and len(revised) > 40:
+            return revised
+        return draft
 
     # ── Slash command router ───────────────────────────────────────────────
 
@@ -1025,6 +1175,20 @@ class Lumina:
             if self._convo:
                 self._convo.clear()
             return "  Conversation context cleared."
+        elif verb == "/beliefs":
+            return self._cmd_beliefs(arg)
+        elif verb == "/tasks":
+            return self._cmd_tasks(arg)
+        elif verb == "/task":
+            return self._cmd_task(arg)
+        elif verb == "/mine":
+            return self._cmd_mine(arg)
+        elif verb == "/dream":
+            return self._cmd_dream()
+        elif verb == "/council":
+            return self._cmd_council(arg)
+        elif verb == "/critique":
+            return self._cmd_critique()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1061,16 +1225,35 @@ class Lumina:
         plugins   = len(self._plugins.list_plugins())
         groq_ok   = "✓ connected" if (self._groq and GROQ_API_KEY) else "✗ no API key"
         gh_ok     = "✓ configured" if GITHUB_TOKEN else "✗ no token"
+        agi_mods  = {
+            "Council":  self._council  is not None,
+            "Beliefs":  self._beliefs  is not None,
+            "Tasks":    self._tasks    is not None,
+            "MineIntel":self._mining   is not None,
+            "Dreams":   self._dreamer  is not None,
+        }
+        agi_line = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in agi_mods.items())
+        n_beliefs = len(self._beliefs.all_beliefs()) if self._beliefs else 0
+        n_tasks   = len(self._tasks._tasks) if self._tasks else 0
+        critique  = "ON" if self._critique_on else "OFF"
+        council   = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS",
+            "  LUMINA STATUS  —  Nova ASI v9.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
             f"  GitHub        : {gh_ok}",
-            f"  Plugins       : {plugins} modules",
+            f"  Plugins       : {plugins} capability modules",
             f"  Memory        : {mem_stats['total']} entries",
             f"  Active goals  : {active_g}",
+            f"  Beliefs       : {n_beliefs} beliefs held",
+            f"  Tasks         : {n_tasks} in queue",
+            f"  Self-critique : {critique}  |  Council: {council}",
+            _hr(),
+            "  AGI MODULES",
+            _hr(),
+            f"  {agi_line}",
             _hr(),
             "  METRICS",
             _hr(),
@@ -1194,6 +1377,92 @@ class Lumina:
         lines.append(_hr())
         return "\n".join(lines)
 
+    def _cmd_beliefs(self, arg: str) -> str:
+        if not self._beliefs:
+            return "  Belief module not loaded."
+        cat = arg.strip() or None
+        lines = [_hr(), f"  LUMINA'S BELIEFS{' — ' + cat.upper() if cat else ''}", _hr()]
+        lines.append(self._beliefs.display(cat))
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_tasks(self, arg: str) -> str:
+        if not self._tasks:
+            return "  Task module not loaded."
+        status = arg.strip() or None
+        lines = [_hr(), f"  TASK QUEUE", _hr()]
+        lines.append(self._tasks.display(status))
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_task(self, arg: str) -> str:
+        if not self._tasks or not arg.strip():
+            return "  Usage: /task <description of what you want Lumina to do>"
+        print(f"  🔧 Creating and running task: {arg.strip()}")
+        task = self._tasks.create(arg.strip(), source="user", priority=3)
+        results = self._tasks.run_task(task, max_steps=4)
+        self._metrics.inc("tools_called", len(results))
+        lines = [_hr(), f"  TASK: {task.title}", _hr()]
+        for i, r in enumerate(results):
+            lines.append(f"  Step {i+1}: {r[:100]}")
+        lines.append(f"\n  Status: {task.status}")
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_mine(self, arg: str) -> str:
+        if not self._mining:
+            return "  Mining intel module not loaded."
+        try:
+            hashrate = float(arg.strip()) if arg.strip() else 47.0
+        except ValueError:
+            hashrate = 47.0
+        print("  📡 Fetching mining intelligence...")
+        lines = [_hr(), "  MINING INTELLIGENCE", _hr()]
+        lines.append(self._mining.briefing(hashrate))
+        lines.append("")
+        lines.append(self._mining.trend_analysis())
+        last = self._mining._history[-1] if self._mining._history else {}
+        best = last.get("pool_stats", {}).get("bestDifficulty", 0) if last else 0
+        if best:
+            milestone = self._mining.celebrate_milestone(float(best))
+            if milestone:
+                lines.append(milestone)
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_dream(self) -> str:
+        if not self._dreamer:
+            return "  Dream module not loaded (needs Groq + BeliefSystem)."
+        lines = [_hr(), "  DREAM CYCLE", _hr()]
+        result = self._dreamer.dream()
+        if result.get("skipped"):
+            lines.append(f"  Skipped: {result.get('reason', 'unknown')}")
+        else:
+            lines.append(self._dreamer.last_dream_report())
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_council(self, arg: str) -> str:
+        if not self._council:
+            return "  Inner council module not loaded."
+        if not arg.strip():
+            return "  Usage: /council <question for the inner council>"
+        print("  🏛  Convening inner council...")
+        synthesis = self._council.deliberate(arg.strip())
+        debate    = self._council.debate_summary()
+        lines = [
+            _hr("═"), "  INNER COUNCIL DELIBERATION", _hr(),
+            debate, _hr(),
+            "  LUMINA'S SYNTHESIS", _hr(),
+            _wrap(synthesis, 76), _hr("═"),
+        ]
+        return "\n".join(lines)
+
+    def _cmd_critique(self) -> str:
+        self._critique_on = not self._critique_on
+        state = "ON" if self._critique_on else "OFF"
+        return f"  Self-critique mode: {state}"
+
     # ── Shutdown ───────────────────────────────────────────────────────────
 
     def _shutdown(self):
@@ -1208,8 +1477,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v8.0  —  N o v a   A S I              ║")
-    print("  ║     Lumina · Semantic Memory · Tool Use · Autonomous Evolution  ║")
+    print("  ║     E M E R G E N C E   v9.0  —  N o v a   A S I              ║")
+    print("  ║     Inner Council · Beliefs · Tasks · Dreams · Mining Intel     ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
