@@ -3,7 +3,7 @@ import numpy as np
 class IntegratedInformationTheory:
     """
     A class implementing Integrated Information Theory (IIT) to quantify and analyze consciousness.
-    
+
     Attributes:
     ----------
     phi : float
