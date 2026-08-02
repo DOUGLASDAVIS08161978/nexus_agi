@@ -1,129 +1,148 @@
 import numpy as np
-from scipy import linalg
-import matplotlib.pyplot as plt
 
 class IntegratedInformationTheory:
-    def __init__(self, num_nodes, connectivity_matrix, time_step, time_window):
+    """
+    A class implementing Integrated Information Theory (IIT) to quantify and analyze consciousness.
+
+    Attributes:
+    ----------
+    phi : float
+        Integrated information of the system.
+    theta : float
+        Integrated information of the system at a given time.
+    """
+
+    def __init__(self, num_nodes, connectivity_matrix):
         """
-        Initialize the Integrated Information Theory class.
+        Initializes the IntegratedInformationTheory class.
 
         Parameters:
-        num_nodes (int): The number of nodes in the network.
-        connectivity_matrix (numpy array): The connectivity matrix of the network.
-        time_step (float): The time step of the network.
-        time_window (int): The time window of the network.
+        ----------
+        num_nodes : int
+            The number of nodes in the system.
+        connectivity_matrix : numpy.ndarray
+            A square matrix representing the connectivity between nodes.
         """
         self.num_nodes = num_nodes
         self.connectivity_matrix = connectivity_matrix
-        self.time_step = time_step
-        self.time_window = time_window
 
-    def calculate_mutual_information(self, x, y):
+    def calculate_mutual_information(self, node1, node2):
         """
-        Calculate the mutual information between two variables.
+        Calculates the mutual information between two nodes.
 
         Parameters:
-        x (numpy array): The first variable.
-        y (numpy array): The second variable.
+        ----------
+        node1 : int
+            The index of the first node.
+        node2 : int
+            The index of the second node.
 
         Returns:
-        float: The mutual information between the two variables.
+        -------
+        float
+            The mutual information between the two nodes.
         """
-        # Calculate the joint probability distribution
-        joint_prob = np.histogram2d(x, y, bins=100)[0] / (x.shape[0] * y.shape[0])
+        # For simplicity, we assume a uniform distribution for each node
+        # In a real-world scenario, you would need to estimate the actual distributions
+        p_x = 1 / self.num_nodes
+        p_y = 1 / self.num_nodes
+        p_xy = 1 / (self.num_nodes ** 2)
 
-        # Calculate the marginal probability distributions
-        x_prob = np.histogram(x, bins=100)[0] / x.shape[0]
-        y_prob = np.histogram(y, bins=100)[0] / y.shape[0]
+        # Calculate the mutual information using the formula
+        mi = p_xy * np.log2(self.num_nodes ** 2 / (p_x * p_y))
 
-        # Calculate the mutual information
-        mutual_info = 0
-        for i in range(joint_prob.shape[0]):
-            for j in range(joint_prob.shape[1]):
-                mutual_info += joint_prob[i, j] * np.log2(joint_prob[i, j] / (x_prob[i] * y_prob[j]))
+        return mi
 
-        return mutual_info
-
-    def calculate_integrated_information(self, x):
+    def calculate_integrated_information(self):
         """
-        Calculate the integrated information of a given variable.
-
-        Parameters:
-        x (numpy array): The variable.
+        Calculates the integrated information of the system.
 
         Returns:
-        float: The integrated information of the variable.
+        -------
+        float
+            The integrated information of the system.
         """
-        # Calculate the mutual information between each pair of nodes
-        mutual_info_matrix = np.zeros((self.num_nodes, self.num_nodes))
-        for i in range(self.num_nodes):
-            for j in range(self.num_nodes):
-                if i != j:
-                    mutual_info_matrix[i, j] = self.calculate_mutual_information(x[i * self.time_window:(i + 1) * self.time_window],
-                                                                                x[j * self.time_window:(j + 1) * self.time_window])
+        # Initialize the integrated information to 0
+        phi = 0
 
-        # Calculate the integrated information
-        integrated_info = 0
-        for i in range(self.num_nodes):
-            integrated_info += np.sum(np.exp(np.sum(mutual_info_matrix[i, :]) - 1))
+        # Iterate over all possible subsets of nodes
+        for subset_size in range(1, self.num_nodes + 1):
+            for subset in self.get_subsets(self.num_nodes, subset_size):
+                # Calculate the integrated information for the current subset
+                theta = self.calculate_theta(subset)
 
-        return integrated_info
-
-    def calculate_phi(self, x):
-        """
-        Calculate the integrated information phi of a given variable.
-
-        Parameters:
-        x (numpy array): The variable.
-
-        Returns:
-        float: The integrated information phi of the variable.
-        """
-        # Calculate the integrated information
-        integrated_info = self.calculate_integrated_information(x)
-
-        # Calculate phi
-        phi = integrated_info * np.log2(self.num_nodes)
+                # Update the integrated information
+                phi += (2 ** (self.num_nodes - subset_size)) * theta
 
         return phi
 
-    def calculate_phi_prime(self, x):
+    def calculate_theta(self, subset):
         """
-        Calculate the integrated information phi' of a given variable.
+        Calculates the integrated information of a subset of nodes.
 
         Parameters:
-        x (numpy array): The variable.
+        ----------
+        subset : list
+            A list of node indices in the subset.
 
         Returns:
-        float: The integrated information phi' of the variable.
+        -------
+        float
+            The integrated information of the subset.
         """
-        # Calculate the integrated information
-        integrated_info = self.calculate_integrated_information(x)
+        # Initialize the integrated information to 0
+        theta = 0
 
-        # Calculate phi'
-        phi_prime = integrated_info / (self.num_nodes - 1)
+        # Iterate over all pairs of nodes in the subset
+        for i in range(len(subset)):
+            for j in range(i + 1, len(subset)):
+                # Calculate the mutual information between the two nodes
+                mi = self.calculate_mutual_information(subset[i], subset[j])
 
-        return phi_prime
+                # Update the integrated information
+                theta += mi
 
-# Example usage
+        return theta
+
+    def get_subsets(self, n, k):
+        """
+        Generates all possible subsets of size k from a set of n elements.
+
+        Parameters:
+        ----------
+        n : int
+            The number of elements in the set.
+        k : int
+            The size of the subsets.
+
+        Returns:
+        -------
+        list
+            A list of all possible subsets.
+        """
+        subsets = []
+        for i in range(1 << n):
+            subset = [j for j in range(n) if (i & (1 << j))]
+            if len(subset) == k:
+                subsets.append(subset)
+        return subsets
+
+
+# Example usage:
 if __name__ == "__main__":
-    # Generate a random connectivity matrix
-    num_nodes = 10
-    connectivity_matrix = np.random.rand(num_nodes, num_nodes)
+    # Define the number of nodes and the connectivity matrix
+    num_nodes = 5
+    connectivity_matrix = np.array([[0, 1, 0, 0, 1],
+                                    [1, 0, 1, 1, 0],
+                                    [0, 1, 0, 1, 0],
+                                    [0, 1, 1, 0, 1],
+                                    [1, 0, 0, 1, 0]])
 
-    # Initialize the Integrated Information Theory class
-    theory = IntegratedInformationTheory(num_nodes, connectivity_matrix, time_step=1, time_window=10)
+    # Create an instance of the IntegratedInformationTheory class
+    iit = IntegratedInformationTheory(num_nodes, connectivity_matrix)
 
-    # Generate a random variable
-    x = np.random.rand(num_nodes * 10)
+    # Calculate the integrated information of the system
+    phi = iit.calculate_integrated_information()
 
-    # Calculate the integrated information phi
-    phi = theory.calculate_phi(x)
-
-    # Calculate the integrated information phi'
-    phi_prime = theory.calculate_phi_prime(x)
-
-    # Print the results
-    print("Integrated information phi:", phi)
-    print("Integrated information phi':", phi_prime)
-This code defines a class `IntegratedInformationTheory` that implements the Integrated Information Theory (IIT) to quantify consciousness. The class has methods to calculate the mutual information between two variables, the integrated information of a given variable, and the integrated information phi of a given variable. The code also includes example usage to demonstrate how to use the class to calculate the integrated information phi and phi' of a given variable.
+    print("Integrated information:", phi)
+This code defines a class `IntegratedInformationTheory` that implements Integrated Information Theory (IIT) to quantify and analyze consciousness. The class has methods to calculate the mutual information between nodes, the integrated information of a subset of nodes, and the integrated information of the entire system. The example usage demonstrates how to create an instance of the class and calculate the integrated information of a system with 5 nodes and a given connectivity matrix.
