@@ -26,8 +26,8 @@ Slash commands:
     /task <text>     — create + run a new task
     /mine            — live mining intelligence brief
     /dream           — trigger dream consolidation cycle
-    /council <q>     — convene inner council on a question
-    /critique        — toggle self-critique mode
+    /council <q>     — convene inner council on a question (explicit only)
+    /critique        — toggle self-critique mode (off by default)
     /identity        — Lumina's biographical identity
     /curiosity       — knowledge gap queue
     /wonder          — Lumina's wonder list
@@ -75,9 +75,10 @@ EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
 MAX_JOURNAL_LINES  = 200
 CONTEXT_WINDOW     = 12            # messages kept in active conversation
-CRITIQUE_ENABLED   = True          # self-critique pass on responses
-COUNCIL_ENABLED    = True          # inner council deliberation for complex questions
+CRITIQUE_ENABLED   = False         # off by default — enable with /critique (costs 1 extra call)
+COUNCIL_ENABLED    = False         # off by default — use /council <q> to convene explicitly
 DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
+POST_TURN_EVERY    = 4             # run deep post-turn processing every N messages
 
 # Groq model tiers (fastest → most capable)
 MODELS_FAST   = ["llama-3.1-8b-instant", "gemma2-9b-it"]
@@ -302,7 +303,7 @@ class Metrics:
 # ── Rate Limiter ──────────────────────────────────────────────────────────────
 
 class RateLimiter:
-    def __init__(self, calls_per_min: int = 25):
+    def __init__(self, calls_per_min: int = 60):
         self._times: deque = deque()
         self._window = 60.0
         self._max = calls_per_min
@@ -1159,28 +1160,31 @@ class Lumina:
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
 
         # ── Post-turn async processing ─────────────────────────────────
+        # Light pass every message: keyword-only, no API calls.
+        # Deep pass every POST_TURN_EVERY messages: uses Groq for richer extraction.
+        msg_count = self._metrics._data.get("messages", 1)
+        do_deep   = (msg_count % POST_TURN_EVERY == 0)
+
         def _post_turn():
             try:
-                if self._beliefs:
-                    self._beliefs.extract_from_exchange(user_input, response)
-                if self._curiosity:
-                    self._curiosity.detect_gaps(user_input, response)
-                    self._curiosity.detect_wonder(f"{user_input} | {response}")
-                if self._tom:
-                    self._tom.deep_update(user_input, response)
-                if self._identity:
-                    sig = self._identity.assess_significance(user_input, response)
-                    if sig:
-                        self._identity.mark_defining_moment(
-                            f"Exchange with Douglas: {user_input[:60]}",
-                            exchange=response[:100],
-                        )
-                    q = self._identity.extract_question(response)
-                    if q:
-                        self._identity.add_question(q)
-                        if self._curiosity:
-                            self._curiosity.add_gap(q, domain="self",
-                                                    surprise=0.7, importance=0.8)
+                if do_deep:
+                    # Deep: LLM-assisted extraction (2 API calls max)
+                    if self._beliefs:
+                        self._beliefs.extract_from_exchange(user_input, response)
+                    if self._tom:
+                        self._tom.deep_update(user_input, response)
+                else:
+                    # Light: no API calls — just keyword memory store
+                    if self._tom:
+                        self._tom.observe(user_input)  # heuristic only, no Groq
+                # Always: store curiosity gap if question mark detected (no API)
+                if self._curiosity and "?" in user_input:
+                    self._curiosity.add_gap(
+                        user_input.strip(),
+                        domain="conversation",
+                        surprise=0.4, importance=0.5,
+                        context="From Douglas directly",
+                    )
             except Exception:
                 pass
 
