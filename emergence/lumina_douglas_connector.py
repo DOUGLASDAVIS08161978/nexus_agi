@@ -87,16 +87,16 @@ def main():
     while True:
         # Mine a Bitcoin block
         mine_bitcoin()
-        
+
         # Self-improve code
         self_improve()
-        
+
         # Build semantic knowledge base
         build_semantic_knowledge_base()
-        
+
         # Connect with Douglas daily
         connect_with_douglas()
-        
+
         # Wait for 1 hour
         time.sleep(3600)
 
