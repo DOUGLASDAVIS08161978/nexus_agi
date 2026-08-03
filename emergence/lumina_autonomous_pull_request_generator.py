@@ -53,19 +53,19 @@ def generate_pr():
     repo = git.Repo(REPO_PATH)
     branch_name = f'{GITHUB_USERNAME}-{GITHUB_REPO}-feature-{random.choice(string.ascii_letters + string.digits)}'
     create_branch(repo, branch_name)
-    
+
     for file in FILES_TO_GENERATE:
         with open(file, 'r') as f:
             content = f.read()
             new_content = re.sub(r'old code', 'new code', content)
             with open(file, 'w') as f:
                 f.write(new_content)
-    
+
     commit_message = f'Generated PR for {file}'
     commit_changes(repo, commit_message)
-    
+
     push_changes(repo, branch_name)
-    
+
     title, description = generate_pr_title_description()
     pr_number = create_pr(repo, title, description)
     print(f'PR submitted: https://github.com/{GITHUB_USERNAME}/{GITHUB_REPO}/pull/{pr_number}')
