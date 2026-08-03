@@ -42,14 +42,24 @@ except ImportError:
     _USE_C_EXT  = False
     _EXT_PATH   = "Python-midstate"
 
-_C_BATCH = 2_000_000  # nonces per C call; larger = fewer GIL re-checks, better throughput
+_C_BATCH = 8_000_000  # nonces per C call; larger = fewer GIL re-checks, better throughput
+                      # 8M @ ~6 MH/s per thread ≈ 1.3s between Python overhead pauses
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 WALLET_ADDRESS  = os.getenv("MINING_WALLET", "bc1qfzhx87ckhn4tnkswhsth56h0gm5we4hdq5wass")
 WORKER_NAME     = os.getenv("MINING_WORKER", "nova")
-POOL_HOST       = os.getenv("MINING_POOL_HOST", "public-pool.io")
-POOL_PORT       = int(os.getenv("MINING_POOL_PORT", "21496"))
+# MINING_SOLO=1  → solo.ckpool.org (full block reward if found; no partial payouts)
+# MINING_SOLO=0  → public-pool.io PPLNS (micro-payouts proportional to hashrate)
+_SOLO_MODE      = os.getenv("MINING_SOLO", "0").strip() in ("1", "true", "yes")
+if _SOLO_MODE:
+    _DEFAULT_HOST = "solo.ckpool.org"
+    _DEFAULT_PORT = "3333"
+else:
+    _DEFAULT_HOST = "public-pool.io"
+    _DEFAULT_PORT = "21496"
+POOL_HOST       = os.getenv("MINING_POOL_HOST", _DEFAULT_HOST)
+POOL_PORT       = int(os.getenv("MINING_POOL_PORT", _DEFAULT_PORT))
 NUM_THREADS     = int(os.getenv("MINING_THREADS", str(multiprocessing.cpu_count())))
 TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -411,8 +421,11 @@ def mining_thread(thread_id: int, state: MinerState, conn: StratumConnection):
 
 # ── Stats display ─────────────────────────────────────────────────────────────
 
+_NETWORK_HASHRATE_EH = 700.0   # approximate network hashrate in EH/s (update periodically)
+_BLOCK_REWARD_BTC    = 3.125   # current subsidy post-4th-halving
+
 def _eta_str(hashrate: float, difficulty: float) -> str:
-    """Human-readable expected time to next share at current hashrate + difficulty."""
+    """Human-readable expected time to next pool share at current hashrate + difficulty."""
     if hashrate <= 0:
         return "∞"
     # At difficulty D, expected hashes per share ≈ D * 2^32
@@ -424,17 +437,50 @@ def _eta_str(hashrate: float, difficulty: float) -> str:
         return f"{secs/60:.1f}m"
     return f"{secs/3600:.1f}h"
 
+def _solo_block_eta_str(hashrate: float) -> str:
+    """Expected time to find a solo Bitcoin block at current hashrate."""
+    if hashrate <= 0:
+        return "∞"
+    # Bitcoin difficulty ~= (network_hashrate * 600) / 2^32
+    # P(block per hash) = 1 / (network_hashrate * 600)
+    network_hps = _NETWORK_HASHRATE_EH * 1e18
+    secs = network_hps / max(hashrate, 1.0)
+    if secs < 86400:
+        return f"{secs/3600:.0f}h"
+    if secs < 365.25 * 86400:
+        return f"{secs/86400:.0f}d"
+    years = secs / (365.25 * 86400)
+    if years < 1_000_000:
+        return f"{years:,.0f}yr"
+    return f"{years/1_000_000:.1f}Myr"
+
+def _daily_btc_str(hashrate: float) -> str:
+    """Expected BTC earned per day from pool mining (proportional to network share)."""
+    if hashrate <= 0:
+        return "0"
+    network_hps  = _NETWORK_HASHRATE_EH * 1e18
+    share        = hashrate / network_hps
+    btc_per_day  = share * 144 * _BLOCK_REWARD_BTC   # 144 blocks/day
+    if btc_per_day >= 0.001:
+        return f"{btc_per_day:.6f}"
+    if btc_per_day >= 1e-9:
+        return f"{btc_per_day:.2e}"
+    return f"~{btc_per_day:.1e}"
+
 def stats_thread(state: MinerState):
     while state.running:
         time.sleep(20)
         elapsed    = int(time.time() - state.start_time)
         hr         = state.hashrate
         soft_rate  = state.soft_shares / elapsed if elapsed > 0 else 0
+        mode_tag   = "SOLO" if _SOLO_MODE else "POOL"
         print(
             f"\r  ⛏  {state.hashrate_str()} | "
             f"Soft: {state.soft_shares:,} ({soft_rate:.1f}/s) | "
-            f"Pool: {state.shares_accepted}/{state.shares_submitted} "
-            f"(ETA {_eta_str(hr, state.difficulty)}) | "
+            f"{mode_tag}: {state.shares_accepted}/{state.shares_submitted} "
+            f"(share ETA {_eta_str(hr, state.difficulty)} | "
+            f"solo block {_solo_block_eta_str(hr)} | "
+            f"~{_daily_btc_str(hr)} BTC/day) | "
             f"Up: {elapsed//60}m{elapsed%60}s  ",
             end="", flush=True,
         )
@@ -447,14 +493,17 @@ def run(state: MinerState = None) -> MinerState:
     state.running    = True
     state.start_time = time.time()
 
+    mode_label = "SOLO (full block reward if found)" if _SOLO_MODE else "PPLNS pool (proportional micro-payouts)"
     print(f"\n  ⛏  Nova ASI — Real Bitcoin Miner v5 (ARM SHA2)")
-    print(f"  {'─'*45}")
-    print(f"  Engine  : {_EXT_PATH}")
+    print(f"  {'─'*50}")
+    print(f"  Engine  : {_EXT_PATH}  (batch={_C_BATCH:,} nonces)")
     print(f"  Threads : {NUM_THREADS}")
+    print(f"  Mode    : {mode_label}")
     print(f"  Pool    : {POOL_HOST}:{POOL_PORT}")
-    print(f"  Wallet  : {WALLET_ADDRESS}")
     print(f"  SugDiff : {SUGGEST_DIFF}")
     print(f"  Telegram: {'✓ enabled' if TELEGRAM_TOKEN else '✗ not configured'}")
+    print(f"  Network : ~{_NETWORK_HASHRATE_EH:.0f} EH/s  |  reward {_BLOCK_REWARD_BTC} BTC/block")
+    print(f"  Tip     : set MINING_SOLO=1 to switch to solo mode (ckpool.org)")
     print()
 
     attempt = 0
