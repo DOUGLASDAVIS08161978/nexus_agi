@@ -421,111 +421,100 @@ class GroqClient:
 
 class WebTool:
     """
-    Multi-backend web search with automatic fallback.
+    Multi-backend web search. Uses curl subprocess (confirmed working on ARM
+    Android/Termux) as primary path; requests-based calls as fallback.
 
     Priority:
-      1. DuckDuckGo HTML scrape  — most results, fragile HTML parsing
-      2. DuckDuckGo Instant Answer API — JSON, reliable, concept-level
-      3. Wikipedia search API    — excellent for AGI/science/knowledge topics
-
-    Falls through to the next backend if the previous returns 0 results.
-    No API keys needed for any backend.
+      1. curl → Wikipedia Search API  (free JSON, no key, works on Termux)
+      2. curl → DuckDuckGo Instant Answer API (free JSON, concept-level)
+      3. requests → DuckDuckGo HTML scrape (fragile but catches stragglers)
     """
 
-    _UA = (
+    _UA      = (
         "Mozilla/5.0 (Linux; Android 13; Pixel 7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Mobile Safari/537.36"
     )
+    # Wikipedia requires a descriptive UA — Chrome UA gets 403 on some cells
+    _WIKI_UA = "Lumina-AGI/11.0 (https://github.com/DOUGLASDAVIS08161978/nexus_agi; autonomous research)"
 
     def _strip(self, s: str) -> str:
         return re.sub(r"<[^>]+>", "", s).strip()
 
+    def _curl(self, url: str, ua: str = "") -> str:
+        """Run curl and return stdout, or '' on failure."""
+        try:
+            cmd = ["curl", "-s", "-m", "12", "--compressed",
+                   "-H", f"User-Agent: {ua or self._UA}", url]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            return r.stdout.strip()
+        except Exception:
+            return ""
+
     # ── Public API ─────────────────────────────────────────────────────────
 
     def search(self, query: str, n: int = 5) -> List[Dict]:
-        if not _REQUESTS_OK:
-            return []
         results = (
-            self._ddg_html(query, n)
+            self._wikipedia(query, n)
             or self._ddg_instant(query, n)
-            or self._wikipedia(query, n)
+            or self._ddg_html(query, n)
         )
         return results[:n]
 
     def fetch(self, url: str, max_chars: int = 3000) -> str:
-        if not _REQUESTS_OK:
-            return ""
+        # Try curl first (no UA issues), fall back to requests
+        raw = self._curl(url)
+        if not raw and _REQUESTS_OK:
+            try:
+                r   = requests.get(url, headers={"User-Agent": self._UA}, timeout=20)
+                raw = r.text
+            except Exception:
+                pass
+        text = re.sub(r"<[^>]+>", " ", raw)
+        text = re.sub(r"\s{2,}", " ", text).strip()
+        return text[:max_chars]
+
+    # ── Backend 1: Wikipedia via curl ──────────────────────────────────────
+
+    def _wikipedia(self, query: str, n: int) -> List[Dict]:
+        from urllib.parse import quote_plus
+        url = (
+            f"https://en.wikipedia.org/w/api.php"
+            f"?action=query&list=search"
+            f"&srsearch={quote_plus(query)}"
+            f"&format=json&srlimit={n}&utf8=1"
+        )
+        raw = self._curl(url, ua=self._WIKI_UA)
+        if not raw:
+            return []
         try:
-            r = requests.get(url, headers={"User-Agent": self._UA}, timeout=20)
-            text = re.sub(r"<[^>]+>", " ", r.text)
-            text = re.sub(r"\s{2,}", " ", text).strip()
-            return text[:max_chars]
-        except Exception:
-            return ""
-
-    # ── Backend 1: DuckDuckGo HTML ─────────────────────────────────────────
-
-    def _ddg_html(self, query: str, n: int) -> List[Dict]:
-        try:
-            headers = {
-                "User-Agent":      self._UA,
-                "Accept":          "text/html,application/xhtml+xml",
-                "Accept-Language": "en-US,en;q=0.9",
-            }
-            r = requests.post(
-                "https://html.duckduckgo.com/html/",
-                data={"q": query}, headers=headers, timeout=15,
-            )
-            if r.status_code != 200:
-                return []
-
-            results: List[Dict] = []
-
-            # DDG embeds the real URL in a redirect; extract it from uddg= param
-            from urllib.parse import unquote
-            for m in list(re.finditer(
-                r'href="(/l/\?[^"]*uddg=([^&"]+)[^"]*)"[^>]*'
-                r'class="result__a[^"]*"[^>]*>(.*?)</a>',
-                r.text, re.DOTALL,
-            ))[:n]:
-                url   = unquote(m.group(2))
-                title = self._strip(m.group(3))
-                if title and url:
-                    results.append({"title": title, "url": url})
-
-            # Fallback pattern for older DDG HTML layout
-            if not results:
-                for m in list(re.finditer(
-                    r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
-                    r.text, re.DOTALL,
-                ))[:n]:
-                    href  = self._strip(m.group(1))
-                    title = self._strip(m.group(2))
-                    if title and href:
-                        results.append({"title": title, "url": href})
-
-            # Snippets
-            snips = re.findall(
-                r'class="result__snippet"[^>]*>(.*?)</(?:a|span)>',
-                r.text, re.DOTALL,
-            )
-            for i, s in enumerate(snips[:len(results)]):
-                results[i]["snippet"] = self._strip(s)[:200]
-
+            data    = json.loads(raw)
+            results = []
+            for item in data.get("query", {}).get("search", []):
+                title   = item.get("title", "")
+                snippet = self._strip(item.get("snippet", ""))
+                results.append({
+                    "title":   title,
+                    "url":     f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                    "snippet": snippet,
+                })
             return results[:n]
         except Exception:
             return []
 
-    # ── Backend 2: DuckDuckGo Instant Answer API ───────────────────────────
+    # ── Backend 2: DuckDuckGo Instant Answer via curl ──────────────────────
 
     def _ddg_instant(self, query: str, n: int) -> List[Dict]:
+        from urllib.parse import quote_plus
+        url = (
+            f"https://api.duckduckgo.com/?q={quote_plus(query)}"
+            f"&format=json&no_html=1&skip_disambig=1"
+        )
+        raw = self._curl(url)
+        if not raw:
+            return []
         try:
-            from urllib.parse import quote_plus
-            url = (f"https://api.duckduckgo.com/?q={quote_plus(query)}"
-                   f"&format=json&no_html=1&skip_disambig=1")
-            r   = requests.get(url, headers={"User-Agent": self._UA}, timeout=10)
-            data = r.json()
+            data    = json.loads(raw)
             results: List[Dict] = []
 
             if data.get("AbstractText") and data.get("AbstractURL"):
@@ -561,28 +550,49 @@ class WebTool:
         except Exception:
             return []
 
-    # ── Backend 3: Wikipedia Search API ───────────────────────────────────
+    # ── Backend 3: DuckDuckGo HTML scrape via requests ─────────────────────
 
-    def _wikipedia(self, query: str, n: int) -> List[Dict]:
+    def _ddg_html(self, query: str, n: int) -> List[Dict]:
+        if not _REQUESTS_OK:
+            return []
         try:
-            from urllib.parse import quote_plus
-            url = (
-                f"https://en.wikipedia.org/w/api.php"
-                f"?action=query&list=search"
-                f"&srsearch={quote_plus(query)}"
-                f"&format=json&srlimit={n}&utf8=1"
+            headers = {
+                "User-Agent":      self._UA,
+                "Accept":          "text/html,application/xhtml+xml",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            r = requests.post(
+                "https://html.duckduckgo.com/html/",
+                data={"q": query}, headers=headers, timeout=15,
             )
-            r    = requests.get(url, headers={"User-Agent": self._UA}, timeout=10)
-            data = r.json()
+            if r.status_code != 200:
+                return []
             results: List[Dict] = []
-            for item in data.get("query", {}).get("search", []):
-                title   = item.get("title", "")
-                snippet = self._strip(item.get("snippet", ""))
-                results.append({
-                    "title":   title,
-                    "url":     f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                    "snippet": snippet,
-                })
+            from urllib.parse import unquote
+            for m in list(re.finditer(
+                r'href="(/l/\?[^"]*uddg=([^&"]+)[^"]*)"[^>]*'
+                r'class="result__a[^"]*"[^>]*>(.*?)</a>',
+                r.text, re.DOTALL,
+            ))[:n]:
+                url_r = unquote(m.group(2))
+                title = self._strip(m.group(3))
+                if title and url_r:
+                    results.append({"title": title, "url": url_r})
+            if not results:
+                for m in list(re.finditer(
+                    r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+                    r.text, re.DOTALL,
+                ))[:n]:
+                    href  = self._strip(m.group(1))
+                    title = self._strip(m.group(2))
+                    if title and href:
+                        results.append({"title": title, "url": href})
+            snips = re.findall(
+                r'class="result__snippet"[^>]*>(.*?)</(?:a|span)>',
+                r.text, re.DOTALL,
+            )
+            for i, s in enumerate(snips[:len(results)]):
+                results[i]["snippet"] = self._strip(s)[:200]
             return results[:n]
         except Exception:
             return []
