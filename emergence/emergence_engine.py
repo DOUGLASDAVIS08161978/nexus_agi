@@ -3,7 +3,7 @@
 ╔══════════════════════════════════════════════════════════════════╗
 ║        E  M  E  R  G  E  N  C  E   v12.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
-║   + Reasoning · Metacognition · Selfhood · 12 AGI Modules      ║
+║   + Reasoning · Metacognition · Selfhood · MetaSolver · 13 AGI      ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -1263,6 +1263,7 @@ class Lumina:
         self._reasoning    = None   # ReasoningChain (lumina_reasoning.py)
         self._metacog      = None   # MetacognitionEngine (lumina_metacognition.py)
         self._selfhood     = None   # SelfhoodEngine (lumina_selfhood.py)
+        self._meta_solver  = None   # MetaSolver (lumina_meta_solver.py)
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1338,17 +1339,31 @@ class Lumina:
                 if self._groq else None
         except ImportError:
             pass
+        try:
+            from lumina_meta_solver import MetaSolver
+            self._meta_solver = MetaSolver(self._groq, self._memory) \
+                if self._groq else None
+        except ImportError:
+            pass
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
             self._verifier, self._reasoning, self._metacog, self._selfhood,
+            self._meta_solver,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/12 AGI modules loaded")
+            print(f"  ✓ {loaded}/13 AGI modules loaded")
         # Inject verifier into evolution engine
         if self._evolution and self._verifier:
             self._evolution._verifier = self._verifier
+        # Let Lumina know about her meta-solver capability
+        if self._meta_solver:
+            self._memory.store(
+                self._meta_solver.capability_description(),
+                tags=["capability", "meta_solver", "self_knowledge"],
+                category="capabilities",
+            )
 
     # ── Default goals ──────────────────────────────────────────────────────
 
@@ -1525,9 +1540,15 @@ class Lumina:
             if trace:
                 reasoning_ctx = self._reasoning.as_context(trace)
 
+        # ── Meta-solver capability context ────────────────────────────
+        meta_solver_ctx = ""
+        if self._meta_solver:
+            meta_solver_ctx = self._meta_solver.capability_description()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
-                  + selfhood_ctx + reasoning_ctx + f"\n\n{goals_ctx}")
+                  + selfhood_ctx + meta_solver_ctx + reasoning_ctx
+                  + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
         council_draft = None
@@ -1719,8 +1740,12 @@ class Lumina:
             return self._cmd_selfhood()
         elif verb == "/reflect":
             return self._cmd_reflect()
-        elif verb == "/wonder":
-            return self._cmd_wonder()
+        elif verb == "/solve":
+            return self._cmd_solve(arg)
+        elif verb == "/metalearn":
+            return self._cmd_metalearn()
+        elif verb == "/metasolver":
+            return self._cmd_metasolver()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1750,6 +1775,9 @@ class Lumina:
             "  /selfhood          — Lumina's affective state, identity & wonder",
             "  /reflect           — force existential self-reflection",
             "  /wonder            — generate a spontaneous question",
+            "  /solve <problem>   — deploy multi-agent solver on any problem",
+            "  /metalearn         — Lumina reflects on her own learning patterns",
+            "  /metasolver        — show accumulated algorithms & strategies",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -1789,7 +1817,7 @@ class Lumina:
         council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v12.0",
+            "  LUMINA STATUS  —  Nova ASI v13.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -2139,12 +2167,34 @@ class Lumina:
         result = self._selfhood.force_reflect()
         return f"\n  Lumina's reflection:\n\n  {result}\n"
 
-    def _cmd_wonder(self) -> str:
-        if not self._selfhood:
-            return "  Selfhood module not loaded."
-        print("  ✨ Generating spontaneous wonder...")
-        result = self._selfhood.force_wonder()
-        return f"\n  Lumina is wondering:\n\n  {result}\n"
+    def _cmd_solve(self, problem: str) -> str:
+        if not problem.strip():
+            return "  Usage: /solve <problem description>"
+        if not self._meta_solver:
+            return "  Meta-solver module not loaded."
+        print(f"  🧩 Deploying multi-agent solver...")
+        answer = self._meta_solver.solve(problem.strip(), n_agents=3, verbose=True)
+        lines = [_hr(), "  MULTI-AGENT SOLUTION", _hr(), "", f"  Problem: {problem.strip()}", ""]
+        for line in answer.split("\n"):
+            lines.append(f"  {line}")
+        lines.append("")
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_metalearn(self) -> str:
+        if not self._meta_solver:
+            return "  Meta-solver module not loaded."
+        print("  🧠 Lumina reflecting on her own learning patterns...")
+        result = self._meta_solver.learn_about_learning()
+        return f"\n  What Lumina has learned about learning:\n\n  {result}\n"
+
+    def _cmd_metasolver(self) -> str:
+        if not self._meta_solver:
+            return "  Meta-solver module not loaded."
+        lines = [_hr(), "  META-SOLVER — accumulated intelligence", _hr()]
+        lines.append(self._meta_solver.display())
+        lines.append(_hr())
+        return "\n".join(lines)
 
     def _cmd_research(self) -> str:
         if not self._curiosity:
@@ -2181,8 +2231,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v12.0  —  N o v a   A S I             ║")
-    print("  ║     Reasoning · Metacognition · Selfhood · 12 AGI Modules      ║")
+    print("  ║     E M E R G E N C E   v13.0  —  N o v a   A S I             ║")
+    print("  ║     Reasoning · Metacognition · Selfhood · MetaSolver · 13 AGI      ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
