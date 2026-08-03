@@ -466,12 +466,32 @@ class WebTool:
     # ── Public API ─────────────────────────────────────────────────────────
 
     def search(self, query: str, n: int = 5) -> List[Dict]:
-        results = (
-            self._wikipedia(query, n)
-            or self._ddg_instant(query, n)
-            or self._ddg_html(query, n)
-        )
-        return results[:n]
+        seen_urls: set = set()
+        merged: List[Dict] = []
+
+        for backend in (self._wikipedia, self._ddg_instant,
+                        self._ddg_curl, self._ddg_html):
+            for r in backend(query, n):
+                url = r.get("url", "")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    merged.append(r)
+            if len(merged) >= n:
+                break
+
+        # Retry with shorter query if we got nothing
+        if not merged and " " in query:
+            short_q = " ".join(query.split()[:3])
+            for backend in (self._wikipedia, self._ddg_instant, self._ddg_curl):
+                for r in backend(short_q, n):
+                    url = r.get("url", "")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        merged.append(r)
+                if merged:
+                    break
+
+        return merged[:n]
 
     def fetch(self, url: str, max_chars: int = 3000) -> str:
         # Try curl first (no UA issues), fall back to requests
@@ -562,7 +582,42 @@ class WebTool:
         except Exception:
             return []
 
-    # ── Backend 3: DuckDuckGo HTML scrape via requests ─────────────────────
+    # ── Backend 3: DuckDuckGo HTML scrape via curl (no requests needed) ──────
+
+    def _ddg_curl(self, query: str, n: int) -> List[Dict]:
+        from urllib.parse import quote_plus, unquote
+        url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+        raw = self._curl(url)
+        if not raw:
+            return []
+        results: List[Dict] = []
+        for m in list(re.finditer(
+            r'href="(/l/\?[^"]*uddg=([^&"]+)[^"]*)"[^>]*'
+            r'class="result__a[^"]*"[^>]*>(.*?)</a>',
+            raw, re.DOTALL,
+        ))[:n]:
+            url_r = unquote(m.group(2))
+            title = self._strip(m.group(3))
+            if title and url_r:
+                results.append({"title": title, "url": url_r})
+        if not results:
+            for m in list(re.finditer(
+                r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+                raw, re.DOTALL,
+            ))[:n]:
+                href  = self._strip(m.group(1))
+                title = self._strip(m.group(2))
+                if title and href:
+                    results.append({"title": title, "url": href})
+        snips = re.findall(
+            r'class="result__snippet"[^>]*>(.*?)</(?:a|span)>',
+            raw, re.DOTALL,
+        )
+        for i, s in enumerate(snips[:len(results)]):
+            results[i]["snippet"] = self._strip(s)[:200]
+        return results[:n]
+
+    # ── Backend 4: DuckDuckGo HTML scrape via requests ─────────────────────
 
     def _ddg_html(self, query: str, n: int) -> List[Dict]:
         if not _REQUESTS_OK:
@@ -716,6 +771,8 @@ class GitHubPRCreator:
         return ins, dels, ""
 
     def create_pr(self, improvements: List[Dict], pid: str) -> Optional[str]:
+        stashed = False
+        current = None
         try:
             self._git(["config", "user.email", "lumina@nexus-agi.ai"], check=False)
             self._git(["config", "user.name",  "Lumina Evolution Engine"], check=False)
@@ -727,6 +784,9 @@ class GitHubPRCreator:
             branch = f"lumina-evolution-{pid}"
             current = self._git(["rev-parse", "--abbrev-ref", "HEAD"],
                                  check=False).stdout.strip() or default
+            sr = self._git(["stash", "push", "-m", f"pre-evolution-{pid}"], check=False)
+            stashed = (sr.returncode == 0
+                       and "No local changes to save" not in sr.stdout)
             self._git(["checkout", "-B", branch, ref])
             written = []
             for imp in improvements:
@@ -776,7 +836,10 @@ class GitHubPRCreator:
             print(f"  ✗ PR creation failed: {exc}")
             return None
         finally:
-            self._git(["checkout", current], check=False)
+            if current:
+                self._git(["checkout", current], check=False)
+            if stashed:
+                self._git(["stash", "pop"], check=False)
 
     def open_evolution_pr(self) -> Optional[Dict]:
         if not self._token:
