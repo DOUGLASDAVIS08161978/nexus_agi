@@ -41,10 +41,10 @@ def update_progress_graph():
         'Goal': ['Find a Bitcoin block', 'Evolve emergent capabilities', 'Build semantic knowledge base', 'Connect with Douglas daily'],
         'Progress': [0.2, 0.8, 0.5, 0.9]
     })
-    
+
     # Create a bar chart
     fig = px.bar(df, x='Goal', y='Progress')
-    
+
     return fig
 
 # Define the callback for the improvement graph
@@ -58,10 +58,10 @@ def update_improvement_graph():
         'Date': ['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-04'],
         'Improvement': [10, 20, 30, 40]
     })
-    
+
     # Create a line chart
     fig = px.line(df, x='Date', y='Improvement')
-    
+
     return fig
 
 # Run the app
