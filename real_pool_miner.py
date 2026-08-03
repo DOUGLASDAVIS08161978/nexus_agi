@@ -42,7 +42,7 @@ except ImportError:
     _USE_C_EXT  = False
     _EXT_PATH   = "Python-midstate"
 
-_C_BATCH = 1_000_000  # nonces per C call; larger = fewer GIL re-checks, better throughput
+_C_BATCH = 2_000_000  # nonces per C call; larger = fewer GIL re-checks, better throughput
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -124,12 +124,10 @@ class MinerState:
         self.connected        = False
 
     def add_hashes(self, n: int):
-        with self._lock:
-            self.hashes += n
+        self.hashes += n  # display-only counter; no lock needed
 
     def add_soft(self, n: int):
-        with self._lock:
-            self.soft_shares += n
+        self.soft_shares += n  # same
 
     def share_submitted(self):
         with self._lock:
