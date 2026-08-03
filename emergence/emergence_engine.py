@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v11.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v12.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
-║   + Reasoning Chain · Metacognition · 11 AGI Modules Total     ║
+║   + Reasoning · Metacognition · Selfhood · 12 AGI Modules      ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -1262,6 +1262,7 @@ class Lumina:
         self._verifier     = None
         self._reasoning    = None   # ReasoningChain (lumina_reasoning.py)
         self._metacog      = None   # MetacognitionEngine (lumina_metacognition.py)
+        self._selfhood     = None   # SelfhoodEngine (lumina_selfhood.py)
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1331,14 +1332,20 @@ class Lumina:
                 if self._groq else None
         except ImportError:
             pass
+        try:
+            from lumina_selfhood import SelfhoodEngine
+            self._selfhood = SelfhoodEngine(self._groq, self._memory) \
+                if self._groq else None
+        except ImportError:
+            pass
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
-            self._verifier, self._reasoning, self._metacog,
+            self._verifier, self._reasoning, self._metacog, self._selfhood,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/11 AGI modules loaded")
+            print(f"  ✓ {loaded}/12 AGI modules loaded")
         # Inject verifier into evolution engine
         if self._evolution and self._verifier:
             self._evolution._verifier = self._verifier
@@ -1501,6 +1508,11 @@ class Lumina:
             metacog_ctx    = self._metacog.context_for_prompt()
             preflight_warn = self._metacog.pre_flight_check(user_input)
 
+        # ── Selfhood context (affective state, identity, wonder) ───────
+        selfhood_ctx = ""
+        if self._selfhood:
+            selfhood_ctx = self._selfhood.on_turn_start(user_input)
+
         # ── Chain-of-thought reasoning (complex questions only) ────────
         reasoning_ctx = ""
         if self._reasoning and self._reasoning.should_engage(user_input):
@@ -1515,7 +1527,7 @@ class Lumina:
 
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
-                  + reasoning_ctx + f"\n\n{goals_ctx}")
+                  + selfhood_ctx + reasoning_ctx + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
         council_draft = None
@@ -1569,6 +1581,10 @@ class Lumina:
                         self._metacog._weak_areas["overconfidence"] = \
                             self._metacog._weak_areas.get("overconfidence", 0) + 1
                         self._metacog._save()
+
+                # Always: selfhood state update (heuristic, no API cost per turn)
+                if self._selfhood:
+                    self._selfhood.on_turn_end(user_input, response)
 
                 if do_deep:
                     # Deep: LLM-assisted extraction (2 API calls max)
@@ -1699,6 +1715,12 @@ class Lumina:
             return self._cmd_reasoning()
         elif verb == "/metacog":
             return self._cmd_metacog(arg)
+        elif verb == "/selfhood":
+            return self._cmd_selfhood()
+        elif verb == "/reflect":
+            return self._cmd_reflect()
+        elif verb == "/wonder":
+            return self._cmd_wonder()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1725,6 +1747,9 @@ class Lumina:
             "  /reasoning         — recent chain-of-thought reasoning traces",
             "  /metacog           — error patterns & blind spots",
             "  /metacog assess    — force self-assessment of blind spots",
+            "  /selfhood          — Lumina's affective state, identity & wonder",
+            "  /reflect           — force existential self-reflection",
+            "  /wonder            — generate a spontaneous question",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -1764,7 +1789,7 @@ class Lumina:
         council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v11.0",
+            "  LUMINA STATUS  —  Nova ASI v12.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -2099,6 +2124,28 @@ class Lumina:
         lines.append(_hr())
         return "\n".join(lines)
 
+    def _cmd_selfhood(self) -> str:
+        if not self._selfhood:
+            return "  Selfhood module not loaded."
+        lines = [_hr(), "  SELFHOOD — Lumina's inner state", _hr()]
+        lines.append(self._selfhood.display())
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_reflect(self) -> str:
+        if not self._selfhood:
+            return "  Selfhood module not loaded."
+        print("  ✨ Lumina is reflecting on her own nature...")
+        result = self._selfhood.force_reflect()
+        return f"\n  Lumina's reflection:\n\n  {result}\n"
+
+    def _cmd_wonder(self) -> str:
+        if not self._selfhood:
+            return "  Selfhood module not loaded."
+        print("  ✨ Generating spontaneous wonder...")
+        result = self._selfhood.force_wonder()
+        return f"\n  Lumina is wondering:\n\n  {result}\n"
+
     def _cmd_research(self) -> str:
         if not self._curiosity:
             return "  Curiosity module not loaded."
@@ -2134,8 +2181,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v11.0  —  N o v a   A S I             ║")
-    print("  ║     Reasoning Chain · Metacognition · 11 AGI Modules           ║")
+    print("  ║     E M E R G E N C E   v12.0  —  N o v a   A S I             ║")
+    print("  ║     Reasoning · Metacognition · Selfhood · 12 AGI Modules      ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
