@@ -420,42 +420,172 @@ class GroqClient:
 # ── Web Tool ──────────────────────────────────────────────────────────────────
 
 class WebTool:
-    """Lightweight web search via DuckDuckGo HTML scrape (no API key needed)."""
+    """
+    Multi-backend web search with automatic fallback.
+
+    Priority:
+      1. DuckDuckGo HTML scrape  — most results, fragile HTML parsing
+      2. DuckDuckGo Instant Answer API — JSON, reliable, concept-level
+      3. Wikipedia search API    — excellent for AGI/science/knowledge topics
+
+    Falls through to the next backend if the previous returns 0 results.
+    No API keys needed for any backend.
+    """
+
+    _UA = (
+        "Mozilla/5.0 (Linux; Android 13; Pixel 7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Mobile Safari/537.36"
+    )
+
+    def _strip(self, s: str) -> str:
+        return re.sub(r"<[^>]+>", "", s).strip()
+
+    # ── Public API ─────────────────────────────────────────────────────────
 
     def search(self, query: str, n: int = 5) -> List[Dict]:
         if not _REQUESTS_OK:
             return []
-        try:
-            url = "https://html.duckduckgo.com/html/"
-            headers = {"User-Agent": "Mozilla/5.0 (compatible; Lumina/8.0)"}
-            r = requests.post(url, data={"q": query}, headers=headers, timeout=15)
-            results = []
-            for m in re.finditer(
-                r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
-                r.text, re.DOTALL
-            )[:n]:
-                href = re.sub(r"<[^>]+>", "", m.group(1)).strip()
-                title = re.sub(r"<[^>]+>", "", m.group(2)).strip()
-                results.append({"title": title, "url": href})
-            # also grab snippets
-            snips = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', r.text, re.DOTALL)
-            for i, s in enumerate(snips[:len(results)]):
-                results[i]["snippet"] = re.sub(r"<[^>]+>", "", s).strip()
-            return results[:n]
-        except Exception:
-            return []
+        results = (
+            self._ddg_html(query, n)
+            or self._ddg_instant(query, n)
+            or self._wikipedia(query, n)
+        )
+        return results[:n]
 
     def fetch(self, url: str, max_chars: int = 3000) -> str:
         if not _REQUESTS_OK:
             return ""
         try:
-            headers = {"User-Agent": "Mozilla/5.0 (compatible; Lumina/8.0)"}
-            r = requests.get(url, headers=headers, timeout=20)
+            r = requests.get(url, headers={"User-Agent": self._UA}, timeout=20)
             text = re.sub(r"<[^>]+>", " ", r.text)
             text = re.sub(r"\s{2,}", " ", text).strip()
             return text[:max_chars]
         except Exception:
             return ""
+
+    # ── Backend 1: DuckDuckGo HTML ─────────────────────────────────────────
+
+    def _ddg_html(self, query: str, n: int) -> List[Dict]:
+        try:
+            headers = {
+                "User-Agent":      self._UA,
+                "Accept":          "text/html,application/xhtml+xml",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            r = requests.post(
+                "https://html.duckduckgo.com/html/",
+                data={"q": query}, headers=headers, timeout=15,
+            )
+            if r.status_code != 200:
+                return []
+
+            results: List[Dict] = []
+
+            # DDG embeds the real URL in a redirect; extract it from uddg= param
+            from urllib.parse import unquote
+            for m in list(re.finditer(
+                r'href="(/l/\?[^"]*uddg=([^&"]+)[^"]*)"[^>]*'
+                r'class="result__a[^"]*"[^>]*>(.*?)</a>',
+                r.text, re.DOTALL,
+            ))[:n]:
+                url   = unquote(m.group(2))
+                title = self._strip(m.group(3))
+                if title and url:
+                    results.append({"title": title, "url": url})
+
+            # Fallback pattern for older DDG HTML layout
+            if not results:
+                for m in list(re.finditer(
+                    r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+                    r.text, re.DOTALL,
+                ))[:n]:
+                    href  = self._strip(m.group(1))
+                    title = self._strip(m.group(2))
+                    if title and href:
+                        results.append({"title": title, "url": href})
+
+            # Snippets
+            snips = re.findall(
+                r'class="result__snippet"[^>]*>(.*?)</(?:a|span)>',
+                r.text, re.DOTALL,
+            )
+            for i, s in enumerate(snips[:len(results)]):
+                results[i]["snippet"] = self._strip(s)[:200]
+
+            return results[:n]
+        except Exception:
+            return []
+
+    # ── Backend 2: DuckDuckGo Instant Answer API ───────────────────────────
+
+    def _ddg_instant(self, query: str, n: int) -> List[Dict]:
+        try:
+            from urllib.parse import quote_plus
+            url = (f"https://api.duckduckgo.com/?q={quote_plus(query)}"
+                   f"&format=json&no_html=1&skip_disambig=1")
+            r   = requests.get(url, headers={"User-Agent": self._UA}, timeout=10)
+            data = r.json()
+            results: List[Dict] = []
+
+            if data.get("AbstractText") and data.get("AbstractURL"):
+                results.append({
+                    "title":   data.get("Heading", query)[:80],
+                    "url":     data["AbstractURL"],
+                    "snippet": data["AbstractText"][:300],
+                })
+
+            for topic in data.get("RelatedTopics", []):
+                if not isinstance(topic, dict):
+                    continue
+                if topic.get("FirstURL"):
+                    text = self._strip(topic.get("Text", ""))
+                    results.append({
+                        "title":   text[:60] or "Related",
+                        "url":     topic["FirstURL"],
+                        "snippet": text[:200],
+                    })
+                elif topic.get("Topics"):
+                    for sub in topic["Topics"]:
+                        if sub.get("FirstURL"):
+                            text = self._strip(sub.get("Text", ""))
+                            results.append({
+                                "title":   text[:60] or "Related",
+                                "url":     sub["FirstURL"],
+                                "snippet": text[:200],
+                            })
+                if len(results) >= n:
+                    break
+
+            return results[:n]
+        except Exception:
+            return []
+
+    # ── Backend 3: Wikipedia Search API ───────────────────────────────────
+
+    def _wikipedia(self, query: str, n: int) -> List[Dict]:
+        try:
+            from urllib.parse import quote_plus
+            url = (
+                f"https://en.wikipedia.org/w/api.php"
+                f"?action=query&list=search"
+                f"&srsearch={quote_plus(query)}"
+                f"&format=json&srlimit={n}&utf8=1"
+            )
+            r    = requests.get(url, headers={"User-Agent": self._UA}, timeout=10)
+            data = r.json()
+            results: List[Dict] = []
+            for item in data.get("query", {}).get("search", []):
+                title   = item.get("title", "")
+                snippet = self._strip(item.get("snippet", ""))
+                results.append({
+                    "title":   title,
+                    "url":     f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                    "snippet": snippet,
+                })
+            return results[:n]
+        except Exception:
+            return []
 
 # ── Plugin Loader ─────────────────────────────────────────────────────────────
 
