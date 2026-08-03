@@ -3,7 +3,7 @@
 ╔══════════════════════════════════════════════════════════════════╗
 ║        E  M  E  R  G  E  N  C  E   v12.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
-║   + Reasoning · Metacognition · Selfhood · MetaSolver · 13 AGI      ║
+║   + Reasoning · Metacognition · Selfhood · Memory Arch · 14 AGI      ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -1264,6 +1264,7 @@ class Lumina:
         self._metacog      = None   # MetacognitionEngine (lumina_metacognition.py)
         self._selfhood     = None   # SelfhoodEngine (lumina_selfhood.py)
         self._meta_solver  = None   # MetaSolver (lumina_meta_solver.py)
+        self._mem_arch     = None   # LuminaMemoryArchitecture (lumina_memory_arch.py)
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1345,15 +1346,27 @@ class Lumina:
                 if self._groq else None
         except ImportError:
             pass
+        try:
+            from lumina_memory_arch import LuminaMemoryArchitecture
+            self._mem_arch = LuminaMemoryArchitecture(
+                session_id=self.session_id,
+                semantic=self._memory,
+                meta_solver=self._meta_solver,
+                groq=self._groq,
+            )
+        except ImportError:
+            pass
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
             self._verifier, self._reasoning, self._metacog, self._selfhood,
-            self._meta_solver,
+            self._meta_solver, self._mem_arch,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/13 AGI modules loaded")
+            print(f"  ✓ {loaded}/14 AGI modules loaded")
+        if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
+            pass  # C status reported by /memory command
         # Inject verifier into evolution engine
         if self._evolution and self._verifier:
             self._evolution._verifier = self._verifier
@@ -1577,6 +1590,16 @@ class Lumina:
             f"User: {user_input[:200]} | Lumina: {response[:200]}",
             tags=["conversation"], category="conversation",
         )
+        # Also store in multi-tier memory architecture
+        if self._mem_arch:
+            self._mem_arch.store(
+                f"User: {user_input[:200]} | Lumina: {response[:200]}",
+                tags=["conversation"],
+                category="conversation",
+                salience=0.5,
+                working=True,
+                episodic=True,
+            )
         self._metrics.inc("memories_stored")
         self._recent_exchanges.append(f"User: {user_input[:100]}")
         self._recent_exchanges.append(f"Lumina: {response[:100]}")
@@ -1746,6 +1769,10 @@ class Lumina:
             return self._cmd_metalearn()
         elif verb == "/metasolver":
             return self._cmd_metasolver()
+        elif verb == "/memory":
+            return self._cmd_memory()
+        elif verb == "/consolidate":
+            return self._cmd_consolidate()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1778,6 +1805,8 @@ class Lumina:
             "  /solve <problem>   — deploy multi-agent solver on any problem",
             "  /metalearn         — Lumina reflects on her own learning patterns",
             "  /metasolver        — show accumulated algorithms & strategies",
+            "  /memory            — memory architecture status (all tiers)",
+            "  /consolidate       — run memory consolidation (sleep/dreaming)",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -1817,7 +1846,7 @@ class Lumina:
         council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v13.0",
+            "  LUMINA STATUS  —  Nova ASI v14.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -2196,6 +2225,31 @@ class Lumina:
         lines.append(_hr())
         return "\n".join(lines)
 
+    def _cmd_memory(self) -> str:
+        lines = [_hr(), "  MEMORY ARCHITECTURE", _hr()]
+        if self._mem_arch:
+            lines.append(self._mem_arch.display())
+        else:
+            lines.append("  Multi-tier memory not loaded.")
+            if self._memory:
+                entries = getattr(self._memory, "_entries", [])
+                lines.append(f"  Semantic memory: {len(entries)} entries")
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_consolidate(self) -> str:
+        if not self._mem_arch:
+            return "  Memory architecture not loaded."
+        print("  💭 Running memory consolidation...")
+        stats = self._mem_arch.force_consolidate()
+        return (f"\n  Consolidation complete:\n"
+                f"    Entries before : {stats['before']}\n"
+                f"    Entries after  : {stats['after']}\n"
+                f"    Strengthened   : {stats['strengthened']}\n"
+                f"    Faded          : {stats['faded']}\n"
+                f"    Pruned         : {stats['pruned']}\n"
+                f"    Abstracted     : {stats['abstracted']}\n")
+
     def _cmd_research(self) -> str:
         if not self._curiosity:
             return "  Curiosity module not loaded."
@@ -2231,8 +2285,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v13.0  —  N o v a   A S I             ║")
-    print("  ║     Reasoning · Metacognition · Selfhood · MetaSolver · 13 AGI      ║")
+    print("  ║     E M E R G E N C E   v14.0  —  N o v a   A S I             ║")
+    print("  ║     Reasoning · Metacognition · Selfhood · Memory Arch · 14 AGI      ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
