@@ -547,6 +547,22 @@ class GitHubPRCreator:
         r = self._git(["branch", "-r"], check=False)
         return "main" if "origin/main" in r.stdout else "master"
 
+    # Maximum lines an evolution PR may delete before it is auto-aborted.
+    # Keeps Lumina from accidentally nuking the codebase.
+    _MAX_DELETIONS = 300
+    _MAX_DEL_RATIO = 5   # deletions must not exceed additions × this factor
+
+    def _diff_safe(self) -> Tuple[int, int, str]:
+        """Return (insertions, deletions, verdict) for the current staged diff."""
+        stat = self._git(["diff", "--cached", "--stat"], check=False).stdout
+        ins  = sum(int(m) for m in re.findall(r"(\d+) insertion", stat))
+        dels = sum(int(m) for m in re.findall(r"(\d+) deletion",  stat))
+        if dels > self._MAX_DELETIONS:
+            return ins, dels, f"deletions ({dels}) exceed hard limit ({self._MAX_DELETIONS})"
+        if dels > max(ins, 1) * self._MAX_DEL_RATIO:
+            return ins, dels, f"deletions ({dels}) far exceed additions ({ins})"
+        return ins, dels, ""
+
     def create_pr(self, improvements: List[Dict], pid: str) -> Optional[str]:
         try:
             self._git(["config", "user.email", "lumina@nexus-agi.ai"], check=False)
@@ -569,6 +585,17 @@ class GitHubPRCreator:
             if not written:
                 return None
             self._git(["add"] + written)
+
+            # ── Safety check: abort if staged diff is net-destructive ──────
+            ins, dels, problem = self._diff_safe()
+            if problem:
+                self._git(["checkout", current], check=False)
+                raise RuntimeError(
+                    f"Safety abort — {problem}. "
+                    f"PR NOT created. Proposal saved locally instead."
+                )
+            print(f"  ✓ Diff safety check passed (+{ins}/-{dels})")
+
             titles = " + ".join(i.get("title", i["file"])[:28] for i in improvements)
             msg = f"🌱 Lumina evolution {pid}: {titles}"
             self._git(["commit", "-m", msg])
