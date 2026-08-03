@@ -442,12 +442,24 @@ class WebTool:
         return re.sub(r"<[^>]+>", "", s).strip()
 
     def _curl(self, url: str, ua: str = "") -> str:
-        """Run curl and return stdout, or '' on failure."""
+        """Fetch URL via curl subprocess OR urllib fallback, return body or ''."""
+        agent = ua or self._UA
+        # Try subprocess curl first
         try:
-            cmd = ["curl", "-s", "-m", "12", "--compressed",
-                   "-H", f"User-Agent: {ua or self._UA}", url]
+            curl_bin = shutil.which("curl") or "curl"
+            cmd = [curl_bin, "-s", "-m", "12",
+                   "-H", f"User-Agent: {agent}", url]
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            return r.stdout.strip()
+            if r.returncode == 0 and r.stdout.strip():
+                return r.stdout.strip()
+        except Exception:
+            pass
+        # Fallback: stdlib urllib (no external deps, honours custom UA)
+        try:
+            import urllib.request as _ur
+            req = _ur.Request(url, headers={"User-Agent": agent})
+            with _ur.urlopen(req, timeout=12) as resp:
+                return resp.read().decode("utf-8", errors="replace")
         except Exception:
             return ""
 
