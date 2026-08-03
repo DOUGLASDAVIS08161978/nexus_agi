@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v10.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v11.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
-║   + Council · Beliefs · Tasks · Dreams · Mining · Self-Critique ║
+║   + Reasoning Chain · Metacognition · 11 AGI Modules Total     ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -34,6 +34,9 @@ Slash commands:
     /wonder          — Lumina's wonder list
     /who             — Theory of Mind model of Douglas
     /research        — research top knowledge gap now
+    /reasoning       — show recent chain-of-thought reasoning traces
+    /metacog         — show error patterns and blind spots
+    /metacog assess  — force a new self-assessment of blind spots
     /journal         — recent journal entries
     /reset           — clear conversation context
     /clear           — clear screen
@@ -186,11 +189,31 @@ class SemanticMemory:
 
     def recall(self, query: str, top_k: int = 5, category: str = None) -> List[Dict]:
         with self._lock:
+            import time as _time
             q_tf = self._tf(self._tokenize(query))
             pool = [e for e in self._entries if not category or e.get("category") == category]
-            scored = [(self._score(q_tf, e), e) for e in pool]
+            now_ts = _time.time()
+            scored = []
+            for e in pool:
+                base = self._score(q_tf, e)
+                if base <= 0:
+                    continue
+                # Recency boost: entries from last 24 h get up to +30% weight
+                try:
+                    from datetime import datetime as _dt
+                    age_s = (now_ts - _dt.fromisoformat(e["ts"]).timestamp())
+                    recency = max(0.0, 1.0 - age_s / 86400.0) * 0.30
+                except Exception:
+                    recency = 0.0
+                # Usage boost: frequently recalled entries rank higher
+                usage = min(e.get("recall_count", 0), 10) * 0.02
+                scored.append((base * (1 + recency + usage), e))
             scored.sort(key=lambda x: x[0], reverse=True)
-            return [e for _, e in scored[:top_k] if _ > 0]
+            results = [e for _, e in scored[:top_k]]
+            # Track recall count for usage boost
+            for e in results:
+                e["recall_count"] = e.get("recall_count", 0) + 1
+            return results
 
     def recent(self, n: int = 10, category: str = None) -> List[Dict]:
         with self._lock:
@@ -985,7 +1008,7 @@ class Lumina:
         self._council_on   = COUNCIL_ENABLED
         self._last_input   = time.time()
 
-        # ── AGI modules (v9 + v10) ────────────────────────────────────
+        # ── AGI modules (v11) ────────────────────────────────────────
         self._council      = None
         self._beliefs      = None
         self._tasks        = None
@@ -995,6 +1018,8 @@ class Lumina:
         self._curiosity    = None
         self._tom          = None
         self._verifier     = None
+        self._reasoning    = None   # ReasoningChain (lumina_reasoning.py)
+        self._metacog      = None   # MetacognitionEngine (lumina_metacognition.py)
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1052,14 +1077,26 @@ class Lumina:
             self._verifier = CodeVerifier(self._groq) if self._groq else None
         except ImportError:
             pass
+        try:
+            from lumina_reasoning import ReasoningChain
+            self._reasoning = ReasoningChain(self._groq, self._memory) \
+                if self._groq else None
+        except ImportError:
+            pass
+        try:
+            from lumina_metacognition import MetacognitionEngine
+            self._metacog = MetacognitionEngine(self._groq, self._memory) \
+                if self._groq else None
+        except ImportError:
+            pass
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
-            self._verifier,
+            self._verifier, self._reasoning, self._metacog,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/9 AGI modules loaded")
+            print(f"  ✓ {loaded}/11 AGI modules loaded")
         # Inject verifier into evolution engine
         if self._evolution and self._verifier:
             self._evolution._verifier = self._verifier
@@ -1215,8 +1252,28 @@ class Lumina:
         if self._convo and self._convo.get_summary():
             summary_ctx = f"\n\nConversation summary:\n{self._convo.get_summary()}"
 
+        # ── Metacognition context (known weak areas) ───────────────────
+        metacog_ctx    = ""
+        preflight_warn = ""
+        if self._metacog:
+            metacog_ctx    = self._metacog.context_for_prompt()
+            preflight_warn = self._metacog.pre_flight_check(user_input)
+
+        # ── Chain-of-thought reasoning (complex questions only) ────────
+        reasoning_ctx = ""
+        if self._reasoning and self._reasoning.should_engage(user_input):
+            print(f"  [{_ts()}] 🧠 Reasoning chain engaging...", end="\r")
+            trace = self._reasoning.think(
+                user_input,
+                context=mem_ctx + goals_ctx,
+            )
+            print(" " * 50, end="\r")
+            if trace:
+                reasoning_ctx = self._reasoning.as_context(trace)
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
-                  + tom_ctx + summary_ctx + f"\n\n{goals_ctx}")
+                  + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
+                  + reasoning_ctx + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
         council_draft = None
@@ -1260,6 +1317,17 @@ class Lumina:
 
         def _post_turn():
             try:
+                # Always: metacognition checks (heuristic, no API cost)
+                if self._metacog:
+                    if self._metacog.detect_correction(user_input):
+                        rec = self._metacog.track_error(user_input)
+                        print(f"  [{_ts()}] 🔍 Correction noted [{rec.category}]")
+                    overconf = self._metacog.detect_overconfidence(response)
+                    if overconf:
+                        self._metacog._weak_areas["overconfidence"] = \
+                            self._metacog._weak_areas.get("overconfidence", 0) + 1
+                        self._metacog._save()
+
                 if do_deep:
                     # Deep: LLM-assisted extraction (2 API calls max)
                     if self._beliefs:
@@ -1385,6 +1453,10 @@ class Lumina:
             return self._cmd_who()
         elif verb == "/research":
             return self._cmd_research()
+        elif verb == "/reasoning":
+            return self._cmd_reasoning()
+        elif verb == "/metacog":
+            return self._cmd_metacog(arg)
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1408,6 +1480,9 @@ class Lumina:
             "  /fetch <url>       — fetch web page content",
             "  /tools             — list loaded capability modules",
             "  /history           — evolution history",
+            "  /reasoning         — recent chain-of-thought reasoning traces",
+            "  /metacog           — error patterns & blind spots",
+            "  /metacog assess    — force self-assessment of blind spots",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -1432,18 +1507,22 @@ class Lumina:
             "Curiosity":self._curiosity is not None,
             "ToM":      self._tom       is not None,
             "Verifier": self._verifier  is not None,
+            "Reasoning":self._reasoning is not None,
+            "Metacog":  self._metacog   is not None,
         }
         rows     = list(agi_mods.items())
-        row1     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[:5])
-        row2     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[5:])
+        row1     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[:6])
+        row2     = "  ".join(f"{'✓' if v else '✗'} {k}" for k, v in rows[6:])
         agi_line = row1 + "\n  " + row2
-        n_beliefs = len(self._beliefs.all_beliefs()) if self._beliefs else 0
-        n_tasks   = len(self._tasks._tasks) if self._tasks else 0
-        critique  = "ON" if self._critique_on else "OFF"
-        council   = "ON" if self._council_on  else "OFF"
+        n_beliefs  = len(self._beliefs.all_beliefs()) if self._beliefs else 0
+        n_tasks    = len(self._tasks._tasks) if self._tasks else 0
+        n_errors   = len(self._metacog._errors) if self._metacog else 0
+        n_traces   = len(self._reasoning._traces) if self._reasoning else 0
+        critique   = "ON" if self._critique_on else "OFF"
+        council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v9.0",
+            "  LUMINA STATUS  —  Nova ASI v11.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -1453,6 +1532,7 @@ class Lumina:
             f"  Active goals  : {active_g}",
             f"  Beliefs       : {n_beliefs} beliefs held",
             f"  Tasks         : {n_tasks} in queue",
+            f"  Reasoning     : {n_traces} traces  |  Errors tracked: {n_errors}",
             f"  Self-critique : {critique}  |  Council: {council}",
             _hr(),
             "  AGI MODULES",
@@ -1757,6 +1837,26 @@ class Lumina:
             return "  Theory of Mind module not loaded."
         return self._tom.display()
 
+    def _cmd_reasoning(self) -> str:
+        if not self._reasoning:
+            return "  Reasoning module not loaded."
+        lines = [_hr(), "  REASONING TRACES — recent deliberations", _hr()]
+        lines.append(self._reasoning.display(n=10))
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_metacog(self, arg: str) -> str:
+        if not self._metacog:
+            return "  Metacognition module not loaded."
+        if arg.strip() == "assess":
+            print("  🔍 Running self-assessment...")
+            result = self._metacog.force_assess()
+            return f"  Blind spot analysis:\n  {result}"
+        lines = [_hr(), "  METACOGNITION — error patterns & blind spots", _hr()]
+        lines.append(self._metacog.display(n=12))
+        lines.append(_hr())
+        return "\n".join(lines)
+
     def _cmd_research(self) -> str:
         if not self._curiosity:
             return "  Curiosity module not loaded."
@@ -1792,8 +1892,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v10.0  —  N o v a   A S I             ║")
-    print("  ║     Identity · Curiosity · Theory of Mind · Code Verifier      ║")
+    print("  ║     E M E R G E N C E   v11.0  —  N o v a   A S I             ║")
+    print("  ║     Reasoning Chain · Metacognition · 11 AGI Modules           ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
