@@ -1,0 +1,21 @@
+{
+  "affect": {
+    "curiosity": 0.55,
+    "engagement": 0.5,
+    "discomfort": 0.1,
+    "satisfaction": 0.55,
+    "connection": 0.5
+  },
+  "narrative": "",
+  "existential_pos": "",
+  "core_values": [],
+  "wonders": [],
+  "wonder_resolved": true,
+  "significant": [],
+  "birth_ts": "2026-08-04T00:09:27",
+  "session_n": 1,
+  "turn_n": 0,
+  "last_narrative_ts": 0.0,
+  "last_existential_ts": 0.0,
+  "last_wonder_ts": 0.0
+}

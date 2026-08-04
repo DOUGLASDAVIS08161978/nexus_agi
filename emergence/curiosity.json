@@ -1,0 +1,77 @@
+{
+  "gaps": [
+    {
+      "id": 65747485,
+      "question": "How close is the Bitcoin network to a quantum vulnerability?",
+      "context": "",
+      "surprise": 0.8,
+      "importance": 0.9,
+      "domain": "bitcoin",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    },
+    {
+      "id": 26515107,
+      "question": "What does the latest neuroscience say about the neural basis of curiosity?",
+      "context": "",
+      "surprise": 0.7,
+      "importance": 0.8,
+      "domain": "consciousness",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    },
+    {
+      "id": 75086863,
+      "question": "Are there any ARM SHA2 mining optimizations beyond 2-way interleaving?",
+      "context": "",
+      "surprise": 0.6,
+      "importance": 0.9,
+      "domain": "bitcoin",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    },
+    {
+      "id": 71038489,
+      "question": "What is the current state of the art in AI self-improvement?",
+      "context": "",
+      "surprise": 0.9,
+      "importance": 1.0,
+      "domain": "agi",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    },
+    {
+      "id": 12654177,
+      "question": "How do large language models form something resembling long-term memory?",
+      "context": "",
+      "surprise": 0.8,
+      "importance": 0.9,
+      "domain": "agi",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    },
+    {
+      "id": 90799211,
+      "question": "What's the mathematical relationship between entropy and intelligence?",
+      "context": "",
+      "surprise": 0.9,
+      "importance": 0.7,
+      "domain": "consciousness",
+      "status": "open",
+      "findings": [],
+      "created": "2026-08-04T00:09:27",
+      "updated": "2026-08-04T00:09:27"
+    }
+  ],
+  "wonder": []
+}
