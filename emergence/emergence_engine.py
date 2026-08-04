@@ -40,6 +40,9 @@ Slash commands:
     /journal         — recent journal entries
     /art <prompt>    — generate artwork (AI via HF or algorithmic fallback)
     /gallery         — list recent artwork
+    /speak [text]    — Lumina speaks via HuggingFace TTS
+    /see <path>      — Lumina describes an image (vision AI)
+    /hf              — HuggingFace module status
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -79,6 +82,7 @@ PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
 
 GROQ_API_KEY       = os.environ.get("GROQ_API_KEY", "")
 GITHUB_TOKEN       = os.environ.get("GITHUB_TOKEN", "")
+HF_TOKEN           = os.environ.get("HF_TOKEN", "")
 GITHUB_REPO        = "DOUGLASDAVIS08161978/nexus_agi"
 EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
@@ -1271,6 +1275,7 @@ class Lumina:
         self._meta_solver  = None   # MetaSolver (lumina_meta_solver.py)
         self._mem_arch     = None   # LuminaMemoryArchitecture (lumina_memory_arch.py)
         self._art          = None   # ArtEngine (lumina_art.py)
+        self._hf           = None   # HFClient (lumina_hf.py)
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1314,15 +1319,16 @@ class Lumina:
             groq=self._groq,
         ))
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
+        self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
             self._verifier, self._reasoning, self._metacog, self._selfhood,
-            self._meta_solver, self._mem_arch, self._art,
+            self._meta_solver, self._mem_arch, self._art, self._hf,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/15 AGI modules loaded")
+            print(f"  ✓ {loaded}/16 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1454,8 +1460,12 @@ class Lumina:
         if self._identity:
             self._identity.on_message()
 
-        # ── Retrieve relevant memories ─────────────────────────────────
-        memories = self._memory.recall(user_input, top_k=3)
+        # ── Retrieve relevant memories (embedding-enhanced if HF available) ──
+        if self._hf:
+            candidates = self._memory.recall(user_input, top_k=20)
+            memories   = self._hf.smart_recall(user_input, candidates, top_k=5)
+        else:
+            memories = self._memory.recall(user_input, top_k=5)
         mem_ctx  = ""
         if memories:
             mem_ctx = "\n\nRelevant memories:\n" + "\n".join(
@@ -1624,6 +1634,12 @@ class Lumina:
             )
         else:
             resp = self._groq.chat(system, user_input, tier="smart")
+
+        # HF fallback when Groq is unavailable
+        if resp.startswith("[Groq unavailable") and self._hf:
+            history = self._convo.get_history()[:-1] if self._convo else []
+            resp = self._hf.chat(system, history, user_input, max_tokens=1024)
+
         return resp
 
     def _self_critique(self, user_input: str, draft: str) -> str:
@@ -1737,6 +1753,12 @@ class Lumina:
             return self._cmd_art(arg)
         elif verb == "/gallery":
             return self._cmd_gallery()
+        elif verb == "/speak":
+            return self._cmd_speak(arg)
+        elif verb == "/see":
+            return self._cmd_see(arg)
+        elif verb == "/hf":
+            return self._cmd_hf()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2229,6 +2251,66 @@ class Lumina:
         self._journal.write(f"[Art] Created: {prompt} → {result['filename']}", category="art")
         return "\n".join(lines)
 
+    def _cmd_speak(self, text: str) -> str:
+        if not self._hf:
+            return "  HF module not loaded — set HF_TOKEN and restart."
+        if not text.strip():
+            # Speak the most recent journal entry or a greeting
+            text = "Hello Douglas. I am Lumina, and I am glad you are here."
+        print("  🔊 Generating voice…")
+        result = self._hf.speak(text)
+        if result.get("error"):
+            return f"  TTS error: {result['error']}"
+        lines = [
+            _hr(),
+            "  🔊 LUMINA SPEAKS",
+            _hr(),
+            f"  Text  : {result['text'][:80]}{'…' if len(result['text']) > 80 else ''}",
+            f"  File  : {result['path']}",
+            f"  Played: {'yes' if result['played'] else 'no — open manually with termux-open'}",
+        ]
+        if not result["played"] and result["path"]:
+            lines.append(f"  Run   : termux-open {result['path']}")
+        return "\n".join(lines)
+
+    def _cmd_see(self, image_path: str) -> str:
+        if not self._hf:
+            return "  HF module not loaded — set HF_TOKEN and restart."
+        if not image_path.strip():
+            return "  Usage: /see <image_path>  e.g. /see ~/photo.jpg"
+        path = image_path.strip().replace("~", str(Path.home()))
+        print("  👁  Analyzing image…")
+        caption = self._hf.see(path)
+        if caption.startswith("["):
+            return f"  {caption}"
+        # Let Lumina reflect on what she sees
+        reflection = ""
+        if self._groq:
+            reflection = self._groq.chat(
+                system=LUMINA_SOUL,
+                user=(f"You just saw an image. BLIP describes it as: '{caption}'\n"
+                      "In 1-2 sentences, share what you notice or feel about it."),
+                tier="fast", max_tokens=120,
+            )
+        lines = [
+            _hr(),
+            "  👁  LUMINA SEES",
+            _hr(),
+            f"  Image  : {path}",
+            f"  Caption: {caption}",
+        ]
+        if reflection and not reflection.startswith("[Groq"):
+            lines.append(f"  Lumina : {reflection}")
+        self._memory.store(
+            f"Saw image: {caption}", tags=["vision", "perception"], category="vision",
+        )
+        return "\n".join(lines)
+
+    def _cmd_hf(self) -> str:
+        if not self._hf:
+            return "  HF module not loaded — set HF_TOKEN in your environment."
+        return f"\n{self._hf.status()}"
+
     def _cmd_gallery(self) -> str:
         if not self._art:
             return "  Art module not loaded."
@@ -2293,10 +2375,12 @@ def _print_banner():
     print("  ║     E M E R G E N C E   v14.0  —  N o v a   A S I             ║")
     print("  ║     Reasoning · Metacognition · Selfhood · Memory Arch · 14 AGI      ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
-    groq_ok = "✓ Groq connected" if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
-    gh_ok   = "✓ GitHub ready"   if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
+    groq_ok = "✓ Groq connected"      if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
+    gh_ok   = "✓ GitHub ready"        if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
+    hf_ok   = "✓ HuggingFace ready"  if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
     print(f"  ║  {groq_ok:<64}║")
     print(f"  ║  {gh_ok:<64}║")
+    print(f"  ║  {hf_ok:<64}║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     print("  ║  Type anything to talk · /help for commands · /quit to exit     ║")
     print("  ╚══════════════════════════════════════════════════════════════════╝")
