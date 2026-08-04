@@ -1273,89 +1273,36 @@ class Lumina:
 
     def _load_agi_modules(self):
         """Import and wire the AGI extension modules."""
-        try:
-            from lumina_council import InnerCouncil
-            self._council = InnerCouncil(self._groq) if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_beliefs import BeliefSystem
-            self._beliefs = BeliefSystem(self._groq)
-        except ImportError:
-            pass
-        try:
-            from lumina_tasks import TaskPlanner
-            self._tasks = TaskPlanner(self._groq, self._memory, self._web, self._journal) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_mining_intel import MiningIntelligence
-            self._mining = MiningIntelligence()
-        except ImportError:
-            pass
-        try:
-            from lumina_dream import DreamCycle
-            self._dreamer = DreamCycle(self._groq, self._memory,
-                                       self._beliefs, self._journal) \
-                if (self._groq and self._beliefs) else None
-        except ImportError:
-            pass
-        try:
-            from lumina_identity import LuminaIdentity
-            self._identity = LuminaIdentity(self._groq)
-        except ImportError:
-            pass
-        try:
-            from lumina_curiosity import CuriosityEngine
-            self._curiosity = CuriosityEngine(self._groq, self._memory, self._web) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_theory_of_mind import TheoryOfMind
-            self._tom = TheoryOfMind(self._groq)
-        except ImportError:
-            pass
-        try:
-            from lumina_verifier import CodeVerifier
-            self._verifier = CodeVerifier(self._groq) if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_reasoning import ReasoningChain
-            self._reasoning = ReasoningChain(self._groq, self._memory) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_metacognition import MetacognitionEngine
-            self._metacog = MetacognitionEngine(self._groq, self._memory) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_selfhood import SelfhoodEngine
-            self._selfhood = SelfhoodEngine(self._groq, self._memory) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_meta_solver import MetaSolver
-            self._meta_solver = MetaSolver(self._groq, self._memory) \
-                if self._groq else None
-        except ImportError:
-            pass
-        try:
-            from lumina_memory_arch import LuminaMemoryArchitecture
-            self._mem_arch = LuminaMemoryArchitecture(
-                session_id=self.session_id,
-                semantic=self._memory,
-                meta_solver=self._meta_solver,
-                groq=self._groq,
-            )
-        except ImportError:
-            pass
+        _fails: Dict[str, str] = {}
+
+        def _load(label: str, fn):
+            try:
+                return fn()
+            except ImportError:
+                return None
+            except Exception as exc:
+                _fails[label] = f"{type(exc).__name__}: {exc}"
+                return None
+
+        self._council    = _load("council",     lambda: __import__("lumina_council",        fromlist=["InnerCouncil"]).InnerCouncil(self._groq) if self._groq else None)
+        self._beliefs    = _load("beliefs",     lambda: __import__("lumina_beliefs",        fromlist=["BeliefSystem"]).BeliefSystem(self._groq))
+        self._tasks      = _load("tasks",       lambda: __import__("lumina_tasks",          fromlist=["TaskPlanner"]).TaskPlanner(self._groq, self._memory, self._web, self._journal) if self._groq else None)
+        self._mining     = _load("mining",      lambda: __import__("lumina_mining_intel",   fromlist=["MiningIntelligence"]).MiningIntelligence())
+        self._dreamer    = _load("dreamer",     lambda: __import__("lumina_dream",          fromlist=["DreamCycle"]).DreamCycle(self._groq, self._memory, self._beliefs, self._journal) if (self._groq and self._beliefs) else None)
+        self._identity   = _load("identity",    lambda: __import__("lumina_identity",       fromlist=["LuminaIdentity"]).LuminaIdentity(self._groq))
+        self._curiosity  = _load("curiosity",   lambda: __import__("lumina_curiosity",      fromlist=["CuriosityEngine"]).CuriosityEngine(self._groq, self._memory, self._web) if self._groq else None)
+        self._tom        = _load("tom",         lambda: __import__("lumina_theory_of_mind", fromlist=["TheoryOfMind"]).TheoryOfMind(self._groq))
+        self._verifier   = _load("verifier",    lambda: __import__("lumina_verifier",       fromlist=["CodeVerifier"]).CodeVerifier(self._groq) if self._groq else None)
+        self._reasoning  = _load("reasoning",   lambda: __import__("lumina_reasoning",      fromlist=["ReasoningChain"]).ReasoningChain(self._groq, self._memory) if self._groq else None)
+        self._metacog    = _load("metacog",     lambda: __import__("lumina_metacognition",  fromlist=["MetacognitionEngine"]).MetacognitionEngine(self._groq, self._memory) if self._groq else None)
+        self._selfhood   = _load("selfhood",    lambda: __import__("lumina_selfhood",       fromlist=["SelfhoodEngine"]).SelfhoodEngine(self._groq, self._memory) if self._groq else None)
+        self._meta_solver= _load("meta_solver", lambda: __import__("lumina_meta_solver",    fromlist=["MetaSolver"]).MetaSolver(self._groq, self._memory) if self._groq else None)
+        self._mem_arch   = _load("mem_arch",    lambda: __import__("lumina_memory_arch",    fromlist=["LuminaMemoryArchitecture"]).LuminaMemoryArchitecture(
+            session_id=self.session_id,
+            semantic=self._memory,
+            meta_solver=self._meta_solver,
+            groq=self._groq,
+        ))
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
@@ -1365,6 +1312,8 @@ class Lumina:
         ] if m is not None)
         if loaded:
             print(f"  ✓ {loaded}/14 AGI modules loaded")
+        for label, reason in _fails.items():
+            print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
             pass  # C status reported by /memory command
         # Inject verifier into evolution engine
