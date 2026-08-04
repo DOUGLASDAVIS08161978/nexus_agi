@@ -43,7 +43,7 @@ Slash commands:
     /quit            — exit
 """
 
-import os, sys, json, time, uuid, subprocess, re, threading, hashlib, math
+import atexit, os, sys, json, time, uuid, subprocess, re, threading, hashlib, math
 import importlib, importlib.util, textwrap, shutil, tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -64,9 +64,11 @@ REPO_DIR      = BASE_DIR.parent
 HISTORY_FILE  = BASE_DIR / "evolution_history.json"
 MEMORY_FILE   = BASE_DIR / "semantic_memory.json"
 GOALS_FILE    = BASE_DIR / "goals.json"
-JOURNAL_FILE  = BASE_DIR / "journal.jsonl"
-STATE_FILE    = BASE_DIR / "state.json"
-METRICS_FILE  = BASE_DIR / "metrics.json"
+JOURNAL_FILE     = BASE_DIR / "journal.jsonl"
+STATE_FILE       = BASE_DIR / "state.json"
+METRICS_FILE     = BASE_DIR / "metrics.json"
+SESSION_PID_FILE = BASE_DIR / ".session.pid"
+BRIEF_FILE       = BASE_DIR / "morning_brief.json"
 PROPOSALS_DIR = BASE_DIR / "evolution_proposals"
 PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1271,6 +1273,10 @@ class Lumina:
         self._start_autonomous_loops()
         self._seed_default_goals()
 
+        # Tell the daemon an interactive session is live
+        SESSION_PID_FILE.write_text(str(os.getpid()))
+        atexit.register(lambda: SESSION_PID_FILE.unlink(missing_ok=True))
+
     def _load_agi_modules(self):
         """Import and wire the AGI extension modules."""
         _fails: Dict[str, str] = {}
@@ -2247,8 +2253,52 @@ def _print_banner():
     print()
 
 
+def _show_morning_brief():
+    """Display any overnight daemon findings, then archive them."""
+    if not BRIEF_FILE.exists():
+        return
+    try:
+        brief = json.loads(BRIEF_FILE.read_text("utf-8"))
+    except Exception:
+        return
+    items = brief.get("items", [])
+    if not items:
+        return
+
+    print()
+    print("  ╔══════════════════════════════════════════════════════════════════╗")
+    print("  ║  🌅  MORNING BRIEF — Lumina worked while you slept              ║")
+    print("  ╠══════════════════════════════════════════════════════════════════╣")
+    greeting = brief.get("morning_message", "")
+    if greeting:
+        for line in textwrap.wrap(greeting, width=62):
+            print(f"  ║  {line:<64}║")
+        print("  ╠══════════════════════════════════════════════════════════════════╣")
+    for item in items[-8:]:
+        cat  = item.get("category", "note").upper()[:10]
+        head = item.get("headline", "")[:52]
+        print(f"  ║  [{cat:<10}] {head:<52}║")
+        detail = item.get("detail", "")
+        if detail:
+            for dl in textwrap.wrap(detail[:120], width=60):
+                print(f"  ║    {dl:<64}║")
+    print("  ╚══════════════════════════════════════════════════════════════════╝")
+    print()
+
+    # Archive by renaming; a fresh brief starts clean
+    archive = BRIEF_FILE.with_suffix(".prev.json")
+    try:
+        BRIEF_FILE.rename(archive)
+    except Exception:
+        try:
+            BRIEF_FILE.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 def main():
     _print_banner()
+    _show_morning_brief()
     lumina = Lumina()
     print(f"\n  [{_ts()}] Session {lumina.session_id} started.\n")
 
