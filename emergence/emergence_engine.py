@@ -2278,7 +2278,12 @@ class Lumina:
             return "  HF module not loaded — set HF_TOKEN and restart."
         if not image_path.strip():
             return "  Usage: /see <image_path>  e.g. /see ~/photo.jpg"
-        path = image_path.strip().replace("~", str(Path.home()))
+        # Strip leading ": " that users copy from the artwork output display
+        text = image_path.strip()
+        if not text.startswith(("/", "~")):
+            idx = next((i for i, c in enumerate(text) if c in "/~"), 0)
+            text = text[idx:]
+        path = text.replace("~", str(Path.home()))
         print("  👁  Analyzing image…")
         caption = self._hf.see(path)
         if caption.startswith("["):
