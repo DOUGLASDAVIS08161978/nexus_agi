@@ -43,6 +43,7 @@ Slash commands:
     /speak [text]    — Lumina speaks via HuggingFace TTS
     /see <path>      — Lumina describes an image (vision AI)
     /hf              — HuggingFace module status
+    /thinking        — show DeepSeek-R1's last reasoning trace
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -95,8 +96,8 @@ POST_TURN_EVERY    = 4             # run deep post-turn processing every N messa
 
 # Groq model tiers (fastest → most capable)
 MODELS_FAST   = ["llama-3.1-8b-instant", "gemma2-9b-it"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-MODELS_CODE   = ["llama-3.1-8b-instant", "llama3-8b-8192"]
+MODELS_SMART  = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+MODELS_CODE   = ["deepseek-r1-distill-llama-70b", "llama-3.1-8b-instant", "llama3-8b-8192"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -356,11 +357,26 @@ class RateLimiter:
 
 # ── Groq Client ───────────────────────────────────────────────────────────────
 
+def _strip_think(text: str) -> tuple:
+    """
+    Strip DeepSeek-R1 <think>...</think> reasoning blocks.
+    Returns (clean_answer, thinking_trace).
+    thinking_trace is empty string if no think block present.
+    """
+    match = re.search(r"<think>(.*?)</think>", text, re.DOTALL)
+    if not match:
+        return text.strip(), ""
+    thinking = match.group(1).strip()
+    answer   = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    return answer, thinking
+
+
 class GroqClient:
     def __init__(self, api_key: str):
-        self.api_key = api_key
-        self._url = "https://api.groq.com/openai/v1/chat/completions"
-        self._rl = RateLimiter(calls_per_min=60)
+        self.api_key   = api_key
+        self._url      = "https://api.groq.com/openai/v1/chat/completions"
+        self._rl       = RateLimiter(calls_per_min=60)
+        self.last_thinking: str = ""   # exposes R1's reasoning to callers
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
@@ -372,19 +388,22 @@ class GroqClient:
             "Content-Type": "application/json",
         }
         payload = {
-            "model": model,
-            "messages": messages,
+            "model":       model,
+            "messages":    messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens":  max_tokens,
         }
         try:
-            r = requests.post(self._url, json=payload, headers=headers, timeout=30)
+            r = requests.post(self._url, json=payload, headers=headers, timeout=45)
             if r.status_code == 429:
-                # Don't recurse — let caller try next model
                 return None
             if r.status_code != 200:
                 return None
-            return r.json()["choices"][0]["message"]["content"]
+            raw = r.json()["choices"][0]["message"]["content"]
+            answer, thinking = _strip_think(raw)
+            if thinking:
+                self.last_thinking = thinking
+            return answer
         except Exception:
             return None
 
@@ -1640,6 +1659,14 @@ class Lumina:
             history = self._convo.get_history()[:-1] if self._convo else []
             resp = self._hf.chat(system, history, user_input, max_tokens=1024)
 
+        # Store DeepSeek-R1 thinking trace in journal for /thinking command
+        if self._groq and self._groq.last_thinking:
+            self._journal.write(
+                f"[R1 thinking] {self._groq.last_thinking[:600]}",
+                category="reasoning",
+            )
+            self._groq.last_thinking = ""
+
         return resp
 
     def _self_critique(self, user_input: str, draft: str) -> str:
@@ -1753,6 +1780,8 @@ class Lumina:
             return self._cmd_art(arg)
         elif verb == "/gallery":
             return self._cmd_gallery()
+        elif verb == "/thinking":
+            return self._cmd_thinking()
         elif verb == "/speak":
             return self._cmd_speak(arg)
         elif verb == "/see":
@@ -2249,6 +2278,24 @@ class Lumina:
             tags=["art", "creativity"], category="art",
         )
         self._journal.write(f"[Art] Created: {prompt} → {result['filename']}", category="art")
+        return "\n".join(lines)
+
+    def _cmd_thinking(self) -> str:
+        """Show the most recent DeepSeek-R1 reasoning trace from the journal."""
+        recent = self._journal.recent(n=20)
+        traces = [e for e in recent if e.get("category") == "reasoning"
+                  and e.get("entry", "").startswith("[R1 thinking]")]
+        if not traces:
+            return "  No DeepSeek-R1 reasoning traces yet — ask Lumina something complex."
+        latest = traces[-1]
+        thinking = latest["entry"].replace("[R1 thinking] ", "")
+        lines = [
+            _hr("═"),
+            f"  🧠 DEEPSEEK-R1 REASONING  [{latest['ts']}]",
+            _hr(),
+            _wrap(thinking, 76),
+            _hr(),
+        ]
         return "\n".join(lines)
 
     def _cmd_speak(self, text: str) -> str:
