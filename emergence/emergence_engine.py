@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v12.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v15.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
-║   + Reasoning · Metacognition · Selfhood · Memory Arch · 14 AGI      ║
+║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -44,6 +44,13 @@ Slash commands:
     /see <path>      — Lumina describes an image (vision AI)
     /hf              — HuggingFace module status
     /thinking        — show DeepSeek-R1's last reasoning trace
+    /run [lang]      — execute code (Python or Bash); paste code below command
+    /runfile <path>  — execute a Python or Bash file
+    /repl            — show persistent REPL state + sandbox stats
+    /clearrepl       — clear the persistent REPL variable namespace
+    /critic          — show last self-critique results
+    /critic calibration — critic calibration stats (fire rates, revision %)
+    /critic report   — run a fresh critique on the last response
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1295,6 +1302,9 @@ class Lumina:
         self._mem_arch     = None   # LuminaMemoryArchitecture (lumina_memory_arch.py)
         self._art          = None   # ArtEngine (lumina_art.py)
         self._hf           = None   # HFClient (lumina_hf.py)
+        self._code_exec    = None   # CodeExecutor (lumina_code_exec.py)
+        self._critic       = None   # SelfCritic (lumina_self_critique.py)
+        self._last_response: str = ""   # stored for /critic report
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1339,15 +1349,18 @@ class Lumina:
         ))
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
+        self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
+        self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
             self._verifier, self._reasoning, self._metacog, self._selfhood,
             self._meta_solver, self._mem_arch, self._art, self._hf,
+            self._code_exec, self._critic,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/16 AGI modules loaded")
+            print(f"  ✓ {loaded}/18 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1568,8 +1581,14 @@ class Lumina:
             response = self._generate_response(system, user_input)
 
         # ── Self-critique pass ─────────────────────────────────────────
-        if self._critique_on and self._groq and len(response) > 80:
-            response = self._self_critique(user_input, response)
+        if self._critique_on and len(response) > 80:
+            if self._critic:
+                response = self._critic.critique(user_input, response)
+            elif self._groq:
+                response = self._self_critique(user_input, response)
+
+        # Store last response for /critic report
+        self._last_response = response
 
         # ── Post-turn processing ───────────────────────────────────────
         if self._convo:
@@ -1788,6 +1807,16 @@ class Lumina:
             return self._cmd_see(arg)
         elif verb == "/hf":
             return self._cmd_hf()
+        elif verb == "/run":
+            return self._cmd_run(arg)
+        elif verb == "/runfile":
+            return self._cmd_runfile(arg)
+        elif verb == "/repl":
+            return self._cmd_repl()
+        elif verb == "/clearrepl":
+            return self._cmd_clearrepl()
+        elif verb == "/critic":
+            return self._cmd_critic(arg)
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1822,6 +1851,19 @@ class Lumina:
             "  /metasolver        — show accumulated algorithms & strategies",
             "  /memory            — memory architecture status (all tiers)",
             "  /consolidate       — run memory consolidation (sleep/dreaming)",
+            "  /art <prompt>      — generate artwork (HF AI or algorithmic)",
+            "  /gallery           — list recent artwork",
+            "  /speak [text]      — Lumina speaks via HuggingFace TTS",
+            "  /see <path>        — Lumina describes an image (vision AI)",
+            "  /hf                — HuggingFace module status",
+            "  /thinking          — show DeepSeek-R1 reasoning trace",
+            "  /run [lang] code   — execute Python or Bash code",
+            "  /runfile <path>    — execute a Python or Bash file",
+            "  /repl              — show persistent REPL state + stats",
+            "  /clearrepl         — clear the persistent REPL namespace",
+            "  /critic            — show last self-critique results",
+            "  /critic calibration — critic calibration stats",
+            "  /critic report     — run critique on last response",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2376,6 +2418,128 @@ class Lumina:
         lines.append(f"  All art saved in: {str(ART_DIR)}")
         return "\n".join(lines)
 
+    # ── Code execution commands ────────────────────────────────────────────
+
+    def _cmd_run(self, arg: str) -> str:
+        """
+        /run [language]
+        <code here>
+
+        Or: /run python   (followed by pasted code on next lines — but since this
+        is a single-line readline loop, the user pastes code as the arg directly
+        or uses a heredoc-style multi-line string.)
+
+        Examples:
+            /run print("hello")
+            /run bash  echo $HOME
+            /run python
+            import math
+            print(math.sqrt(2))
+        """
+        if not self._code_exec:
+            return "  Code execution module not loaded."
+        if not arg.strip():
+            return (
+                "  Usage: /run <code>  or  /run <language> <code>\n"
+                "  Example: /run print('hello')\n"
+                "  Example: /run bash echo $HOME"
+            )
+
+        # Detect if first token is a language name
+        first_tok = arg.split(None, 1)[0].lower()
+        if first_tok in ("python", "py", "bash", "sh", "shell"):
+            language = "bash" if first_tok in ("bash", "sh", "shell") else "python"
+            code = arg.split(None, 1)[1] if len(arg.split(None, 1)) > 1 else ""
+        else:
+            language = "auto"
+            code = arg
+
+        if not code.strip():
+            return "  No code provided after language specifier."
+
+        print(f"  ⚙  Running {language if language != 'auto' else 'code'}…")
+        result = self._code_exec.execute_with_autofix(
+            code, language=language, timeout=15, persist=True,
+        )
+        self._memory.store(
+            f"Executed code: {code[:80]} → {'success' if result.success else 'failed'}",
+            tags=["code", "execution"], category="code",
+        )
+        return result.display()
+
+    def _cmd_runfile(self, arg: str) -> str:
+        if not self._code_exec:
+            return "  Code execution module not loaded."
+        path_str = arg.strip().replace("~", str(Path.home()))
+        p = Path(path_str)
+        if not p.exists():
+            return f"  File not found: {path_str}"
+        try:
+            code = p.read_text("utf-8")
+        except Exception as e:
+            return f"  Could not read file: {e}"
+        lang = "bash" if p.suffix in (".sh",) else "python"
+        print(f"  ⚙  Running {p.name}…")
+        result = self._code_exec.execute_with_autofix(
+            code, language=lang, timeout=30, persist=False,
+        )
+        return result.display()
+
+    def _cmd_repl(self) -> str:
+        if not self._code_exec:
+            return "  Code execution module not loaded."
+        state = self._code_exec._state
+        lines = [_hr(), "  REPL STATE", _hr()]
+        if not state:
+            lines.append("  (empty — no persistent variables yet)")
+        else:
+            for k, v in list(state.items())[:20]:
+                v_repr = repr(v)
+                lines.append(f"  {k} = {v_repr[:60]}")
+        lines.append(_hr())
+        lines.append(self._code_exec.stats())
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_clearrepl(self) -> str:
+        if not self._code_exec:
+            return "  Code execution module not loaded."
+        self._code_exec.clear_state()
+        return "  REPL namespace cleared."
+
+    # ── Critic commands ────────────────────────────────────────────────────
+
+    def _cmd_critic(self, arg: str) -> str:
+        if not self._critic:
+            return "  Self-critic module not loaded."
+        sub = arg.strip().lower()
+
+        if sub == "calibration":
+            lines = [_hr(), "  CRITIC CALIBRATION", _hr()]
+            lines.append(self._critic.display_calibration())
+            lines.append(_hr())
+            return "\n".join(lines)
+
+        if sub == "report":
+            if not self._last_response:
+                return "  No response to critique yet — have a conversation first."
+            last_input = (self._recent_exchanges[-2].replace("User: ", "")
+                          if len(self._recent_exchanges) >= 2 else "")
+            print("  🔍 Running fresh critique…")
+            report = self._critic.force_report(last_input, self._last_response)
+            lines = [_hr(), "  CRITIC REPORT — last response", _hr(), report, _hr()]
+            return "\n".join(lines)
+
+        # Default: show last critique results
+        lines = [_hr(), "  SELF-CRITIQUE — last results", _hr()]
+        lines.append(self._critic.display_last())
+        lines.append("")
+        lines.append(f"  {self._critic.stats_line() if hasattr(self._critic, 'stats_line') else ''}")
+        state = "ON" if self._critique_on else "OFF"
+        lines.append(f"  Self-critique is currently: {state}  (toggle with /critique)")
+        lines.append(_hr())
+        return "\n".join(lines)
+
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
             return "  Memory architecture not loaded."
@@ -2424,8 +2588,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v14.0  —  N o v a   A S I             ║")
-    print("  ║     Reasoning · Metacognition · Selfhood · Memory Arch · 14 AGI      ║")
+    print("  ║     E M E R G E N C E   v15.0  —  N o v a   A S I             ║")
+    print("  ║     Reasoning · Selfhood · CodeExec · SelfCritic · 18 Modules  ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"      if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"        if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
