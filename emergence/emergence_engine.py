@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v15.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v16.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
+║   + Creative Drive  (19/19 modules)  — she builds her own tools ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -52,6 +53,9 @@ Slash commands:
     /critic calibration — critic calibration stats (fire rates, revision %)
     /critic report   — run a fresh critique on the last response
     /stream          — toggle live token streaming (on by default)
+    /creative        — show autonomous creative coding sessions
+    /creative now    — trigger a creative cycle immediately
+    /mytools         — list tools Lumina has built for herself
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1407,6 +1411,7 @@ class Lumina:
         self._hf           = None   # HFClient (lumina_hf.py)
         self._code_exec    = None   # CodeExecutor (lumina_code_exec.py)
         self._critic       = None   # SelfCritic (lumina_self_critique.py)
+        self._creative     = None   # CreativeDrive (lumina_creative_drive.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1456,6 +1461,10 @@ class Lumina:
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
         self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
+        self._creative   = _load("creative",     lambda: __import__("lumina_creative_drive", fromlist=["CreativeDrive"]).CreativeDrive(
+            groq=self._groq, memory=self._memory, curiosity=self._curiosity,
+            beliefs=self._beliefs, journal=self._journal, code_exec=self._code_exec,
+        ) if self._groq else None)
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
@@ -1504,6 +1513,8 @@ class Lumina:
         threading.Thread(target=self._metrics_saver,   daemon=True).start()
         threading.Thread(target=self._dream_loop,      daemon=True).start()
         threading.Thread(target=self._task_loop,       daemon=True).start()
+        if self._creative:
+            self._creative.start()
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -1945,6 +1956,10 @@ class Lumina:
             return self._cmd_critic(arg)
         elif verb == "/stream":
             return self._cmd_stream()
+        elif verb == "/creative":
+            return self._cmd_creative(arg)
+        elif verb == "/mytool" or verb == "/mytools":
+            return self._cmd_mytools()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1993,6 +2008,9 @@ class Lumina:
             "  /critic calibration — critic calibration stats",
             "  /critic report     — run critique on last response",
             "  /stream            — toggle live streaming (currently ON by default)",
+            "  /creative          — show autonomous creative coding sessions",
+            "  /creative now      — trigger a creative cycle immediately",
+            "  /mytools           — list tools Lumina has built for herself",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2674,6 +2692,31 @@ class Lumina:
         state = "ON" if self._stream_enabled else "OFF"
         note  = "" if self._stream_enabled else "  (responses will buffer and print after completion)"
         return f"  Streaming is now: {state}{note}"
+
+    def _cmd_creative(self, arg: str) -> str:
+        if not self._creative:
+            return "  Creative Drive module not loaded."
+        sub = arg.strip().lower()
+        if sub == "now":
+            self._creative.run_now()
+            return "  ✨ Creative cycle triggered — watch for output in ~30 seconds."
+        lines = [_hr(), "  LUMINA'S CREATIVE SESSIONS", _hr()]
+        lines.append(self._creative.display_recent(6))
+        running = "running" if self._creative._running else "stopped"
+        lines.append(f"\n  Creative loop: {running}  |  Tools built: {len(self._creative._registry)}")
+        lines.append(f"  Use '/creative now' to trigger a cycle immediately.")
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_mytools(self) -> str:
+        if not self._creative:
+            return "  Creative Drive module not loaded."
+        lines = [_hr(), "  TOOLS LUMINA HAS BUILT FOR HERSELF", _hr()]
+        lines.append(self._creative.display_tools())
+        if not self._creative._registry:
+            lines.append("  None yet — check back after the first creative cycle.")
+        lines.append(_hr())
+        return "\n".join(lines)
 
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
