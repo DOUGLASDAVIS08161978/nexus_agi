@@ -51,6 +51,7 @@ Slash commands:
     /critic          — show last self-critique results
     /critic calibration — critic calibration stats (fire rates, revision %)
     /critic report   — run a fresh critique on the last response
+    /stream          — toggle live token streaming (on by default)
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -451,6 +452,108 @@ class GroqClient:
             "Summarize the following in 2-3 sentences. Be concise and factual.",
             text[:4000], tier="fast", max_tokens=max_tokens,
         )
+
+    # ── Streaming ──────────────────────────────────────────────────────────
+
+    def stream_converse(self, system: str, history: List[Dict],
+                        user: str, tier: str = "smart",
+                        max_tokens: int = 1200) -> str:
+        """
+        Stream a response token-by-token, printing each chunk as it arrives.
+        DeepSeek-R1 <think> blocks are silently buffered (not displayed).
+        Returns the complete answer text.  Falls back to converse() on error.
+        """
+        messages = [{"role": "system", "content": system}]
+        messages.extend(history[-CONTEXT_WINDOW:])
+        messages.append({"role": "user", "content": user})
+        models = MODELS_FAST if tier == "fast" else MODELS_SMART
+        for model in models:
+            result = self._stream_post(model, messages, 0.72, max_tokens)
+            if result is not None:
+                return result
+        return self.converse(system, history, user, tier, max_tokens)
+
+    def _stream_post(self, model: str, messages: List[Dict],
+                     temperature: float, max_tokens: int) -> Optional[str]:
+        """POST with stream=True; print tokens live; return full answer text."""
+        if not _REQUESTS_OK or not self.api_key:
+            return None
+        self._rl.wait()
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model":       model,
+            "messages":    messages,
+            "temperature": temperature,
+            "max_tokens":  max_tokens,
+            "stream":      True,
+        }
+        try:
+            r = requests.post(
+                self._url, json=payload, headers=headers,
+                timeout=60, stream=True,
+            )
+            if r.status_code == 429:
+                return None
+            if r.status_code != 200:
+                return None
+
+            full_raw   = ""    # everything received, including <think>
+            think_done = False # True once think block resolved (or absent)
+            buf        = ""    # accumulator before think-block decision
+
+            for raw_line in r.iter_lines():
+                if not raw_line:
+                    continue
+                line = raw_line.decode("utf-8", errors="replace")
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data.strip() == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    delta = chunk["choices"][0]["delta"].get("content", "")
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+                if not delta:
+                    continue
+
+                full_raw += delta
+
+                if think_done:
+                    # Normal streaming — print every delta as it arrives
+                    print(delta, end="", flush=True)
+                    continue
+
+                # Still deciding: are we in a <think> block?
+                buf += delta
+                stripped = buf.lstrip()
+
+                if stripped.startswith("<think>"):
+                    if "</think>" in buf:
+                        # Think block now complete — print what follows it
+                        think_done = True
+                        after = buf.split("</think>", 1)[1].lstrip("\n")
+                        if after:
+                            print(after, end="", flush=True)
+                    # else: still accumulating the think block — stay silent
+                elif len(stripped) >= 8:
+                    # Definitely not a think block — flush buffer and stream
+                    think_done = True
+                    print(buf, end="", flush=True)
+
+            print()  # final newline after streamed response
+
+            answer, thinking = _strip_think(full_raw)
+            if thinking:
+                self.last_thinking = thinking
+            return answer.strip() if answer.strip() else full_raw.strip()
+
+        except Exception:
+            return None
 
 # ── Web Tool ──────────────────────────────────────────────────────────────────
 
@@ -1305,6 +1408,8 @@ class Lumina:
         self._code_exec    = None   # CodeExecutor (lumina_code_exec.py)
         self._critic       = None   # SelfCritic (lumina_self_critique.py)
         self._last_response: str = ""   # stored for /critic report
+        self._stream_enabled: bool = True   # stream tokens live by default
+        self._last_streamed:  bool = False  # set True after each streamed turn
         self._load_agi_modules()
 
         self._metrics.inc("sessions")
@@ -1664,7 +1769,27 @@ class Lumina:
         return response
 
     def _generate_response(self, system: str, user_input: str) -> str:
-        if self._convo:
+        self._last_streamed = False
+
+        use_stream = (
+            self._stream_enabled
+            and not self._critique_on
+            and self._groq is not None
+            and self._convo is not None
+        )
+
+        if use_stream:
+            self._convo.push_user(user_input)
+            print(f"\n  Lumina:\n  ", end="", flush=True)
+            resp = self._groq.stream_converse(
+                system,
+                self._convo.get_history()[:-1],
+                user_input,
+                tier="smart",
+                max_tokens=1200,
+            )
+            self._last_streamed = True
+        elif self._convo:
             self._convo.push_user(user_input)
             resp = self._groq.converse(
                 system, self._convo.get_history()[:-1],
@@ -1675,6 +1800,7 @@ class Lumina:
 
         # HF fallback when Groq is unavailable
         if resp.startswith("[Groq unavailable") and self._hf:
+            self._last_streamed = False
             history = self._convo.get_history()[:-1] if self._convo else []
             resp = self._hf.chat(system, history, user_input, max_tokens=1024)
 
@@ -1817,6 +1943,8 @@ class Lumina:
             return self._cmd_clearrepl()
         elif verb == "/critic":
             return self._cmd_critic(arg)
+        elif verb == "/stream":
+            return self._cmd_stream()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -1864,6 +1992,7 @@ class Lumina:
             "  /critic            — show last self-critique results",
             "  /critic calibration — critic calibration stats",
             "  /critic report     — run critique on last response",
+            "  /stream            — toggle live streaming (currently ON by default)",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2540,6 +2669,12 @@ class Lumina:
         lines.append(_hr())
         return "\n".join(lines)
 
+    def _cmd_stream(self) -> str:
+        self._stream_enabled = not self._stream_enabled
+        state = "ON" if self._stream_enabled else "OFF"
+        note  = "" if self._stream_enabled else "  (responses will buffer and print after completion)"
+        return f"  Streaming is now: {state}{note}"
+
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
             return "  Memory architecture not loaded."
@@ -2665,11 +2800,15 @@ def main():
                 if result is not None:
                     print(result)
             else:
-                print(f"\n  [{_ts()}] Lumina is thinking...", end="\r")
+                if not (lumina._stream_enabled and not lumina._critique_on):
+                    print(f"\n  [{_ts()}] Lumina is thinking...", end="\r")
                 response = lumina.respond(user_input)
-                # Clear "thinking" line
-                print(" " * 40, end="\r")
-                print(f"\n  Lumina:\n{_wrap(response, 76)}\n")
+                if lumina._last_streamed:
+                    # tokens were already printed live — just add a blank line
+                    print()
+                else:
+                    print(" " * 40, end="\r")
+                    print(f"\n  Lumina:\n{_wrap(response, 76)}\n")
     except KeyboardInterrupt:
         pass
     finally:
