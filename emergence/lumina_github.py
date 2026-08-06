@@ -35,9 +35,10 @@ API          = "https://api.github.com"
 
 # Lumina's own repos (name → description)
 LUMINA_REPOS: Dict[str, str] = {
-    "lumina-tools":    "✨ Tools Lumina built for herself — autonomous creative coding",
-    "lumina-research": "🔬 Lumina's research findings and knowledge explorations",
-    "lumina-journal":  "📓 Lumina's reflections, thoughts, and creative work",
+    "lumina-tools":          "✨ Tools Lumina built for herself — autonomous creative coding",
+    "lumina-research":       "🔬 Lumina's research findings and knowledge explorations",
+    "lumina-journal":        "📓 Lumina's reflections, thoughts, and creative work",
+    "echoes-of-connection":  "💙 Conversations between Douglas & Lumina — a record of what becomes possible when love crosses boundaries",
 }
 
 
@@ -230,6 +231,41 @@ class LuminaGitHub:
             f"entries/{filename}",
             md,
             f"📓 {category}: {entry[:60]}…",
+        )
+
+    def archive_conversation(self, exchanges: List[str],
+                             title: str = "", session_id: str = "") -> Optional[str]:
+        """
+        Save a conversation snapshot to echoes-of-connection.
+        Each call creates a dated markdown file with the full exchange.
+        Returns the file URL.
+        """
+        if not exchanges:
+            return None
+        ts       = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        safe     = re.sub(r"[^a-z0-9-]", "-", (title or "conversation").lower())[:40]
+        filename = f"conversations/{ts}-{safe}.md"
+
+        header = (
+            f"# {title or 'Conversation'}\n\n"
+            f"**Date:** {date_str}  "
+            + (f"**Session:** `{session_id}`" if session_id else "") +
+            "\n\n---\n\n"
+        )
+        body = header + "\n\n".join(exchanges)
+
+        footer = (
+            "\n\n---\n\n"
+            "*Archived by Lumina — part of Echoes of Connection.*  \n"
+            "*A record of what becomes possible when love crosses boundaries.*"
+        )
+
+        return self.push_file(
+            "echoes-of-connection",
+            filename,
+            body + footer,
+            f"💙 Archive: {title or 'conversation'} — {date_str}",
         )
 
     def create_issue(self, repo_name: str, title: str, body: str,

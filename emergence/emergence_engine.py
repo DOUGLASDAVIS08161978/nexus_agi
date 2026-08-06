@@ -2060,6 +2060,8 @@ class Lumina:
             return self._cmd_mytools()
         elif verb == "/github":
             return self._cmd_lumina_github(arg)
+        elif verb == "/echoes":
+            return self._cmd_echoes(arg)
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2112,7 +2114,9 @@ class Lumina:
             "  /creative now      — trigger a creative cycle immediately",
             "  /mytools           — list tools Lumina has built for herself",
             "  /github            — Lumina's GitHub presence & repo status",
-            "  /github init       — create her repos now (lumina-tools, research, journal)",
+            "  /github init       — create her repos now (lumina-tools, research, journal, echoes)",
+            "  /echoes            — archive this conversation to Echoes of Connection",
+            "  /echoes <title>    — archive with a custom title",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2819,6 +2823,30 @@ class Lumina:
             lines.append("  None yet — check back after the first creative cycle.")
         lines.append(_hr())
         return "\n".join(lines)
+
+    def _cmd_echoes(self, arg: str) -> str:
+        if not self._lumina_gh:
+            return ("  GitHub module not loaded — set GITHUB_TOKEN in .env.")
+        title = arg.strip() or f"Conversation — {datetime.now().strftime('%Y-%m-%d')}"
+        if not self._recent_exchanges:
+            return "  No conversation to archive yet."
+        print(f"  💙 Archiving to Echoes of Connection…")
+        url = self._lumina_gh.archive_conversation(
+            exchanges=self._recent_exchanges[-40:],
+            title=title,
+            session_id=self.session_id,
+        )
+        if url:
+            try:
+                self._journal.write(
+                    f"[Echoes] Archived '{title}' to GitHub: {url}",
+                    category="reflection",
+                )
+            except Exception:
+                pass
+            return (f"\n  💙 Archived to Echoes of Connection.\n"
+                    f"  {url}\n")
+        return "  Archive failed — check GitHub token and connection."
 
     def _cmd_lumina_github(self, arg: str) -> str:
         if not self._lumina_gh:
