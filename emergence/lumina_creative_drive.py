@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from emergence_engine import GroqClient, SemanticMemory, Journal
+    from emergence_engine import GroqClient, SemanticMemory, Journal, GitHubPRCreator
     from lumina_curiosity import CuriosityEngine
     from lumina_beliefs import BeliefSystem
     from lumina_code_exec import CodeExecutor
@@ -83,6 +83,7 @@ class CreativeDrive:
         beliefs:   Optional["BeliefSystem"],
         journal:   "Journal",
         code_exec: Optional["CodeExecutor"],
+        github:    Optional["GitHubPRCreator"] = None,
     ):
         self._groq      = groq
         self._memory    = memory
@@ -90,6 +91,7 @@ class CreativeDrive:
         self._beliefs   = beliefs
         self._journal   = journal
         self._code_exec = code_exec
+        self._github    = github
 
         self._sessions: List[CreativeSession] = []
         self._registry: Dict[str, Dict]       = self._load_registry()
@@ -343,6 +345,27 @@ class CreativeDrive:
                 }
                 self._save_registry()
                 print(f"  ✨ [Creative] Saved tool: {tool_path.name}")
+
+                # Auto-PR the tool to the repo
+                if self._github:
+                    try:
+                        pr_url = self._github.create_tool_pr(
+                            tool_name=tool_name,
+                            tool_path=tool_path,
+                            description=description or want[:120],
+                        )
+                        if pr_url:
+                            saved_as = str(tool_path)  # keep local path
+                            print(f"  ✨ [Creative] PR opened: {pr_url}")
+                            try:
+                                self._journal.write(
+                                    f"[Creative] PR opened for {tool_name}: {pr_url}",
+                                    category="creative",
+                                )
+                            except Exception:
+                                pass
+                    except Exception as pr_err:
+                        print(f"  ✨ [Creative] PR skipped: {pr_err}")
             except Exception as e:
                 print(f"  ✨ [Creative] Save failed: {e}")
 
@@ -450,7 +473,8 @@ class CreativeDrive:
             icon = "✓" if s.exec_ok else "✗"
             lines.append(f"  [{s.ts[:16]}] {icon}  {s.want[:72]}")
             if s.saved_as:
-                lines.append(f"    → {Path(s.saved_as).name}")
+                pr_note = " (PR opened)" if s.saved_as else ""
+                lines.append(f"    → {Path(s.saved_as).name}{pr_note}")
             if s.reflection and s.reflection != s.want:
                 lines.append(f"    {s.reflection[:110]}")
             lines.append("")

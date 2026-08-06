@@ -983,6 +983,100 @@ class GitHubPRCreator:
             if stashed:
                 self._git(["stash", "pop"], check=False)
 
+    def create_tool_pr(self, tool_name: str, tool_path: "Path",
+                       description: str) -> Optional[str]:
+        """
+        Commit one creative tool and create (or update) a daily batched PR.
+        Branch: lumina-tools-YYYY-MM-DD  —  one PR per calendar day.
+        Returns the PR URL, or None on failure.
+        """
+        today  = datetime.now().strftime("%Y-%m-%d")
+        branch = f"lumina-tools-{today}"
+        stashed = False
+        current = None
+        try:
+            self._git(["config", "user.email", "lumina@nexus-agi.ai"], check=False)
+            self._git(["config", "user.name",  "Lumina Creative Drive"],   check=False)
+            self._git(["remote", "set-url", "origin",
+                       f"https://{self._token}@github.com/{self._repo}.git"])
+            self._git(["fetch", "origin"])
+            default = self._default_branch()
+            current = self._git(["rev-parse", "--abbrev-ref", "HEAD"],
+                                 check=False).stdout.strip() or default
+
+            # stash any local work
+            sr = self._git(["stash", "push", "-m", f"pre-tool-{tool_name}"], check=False)
+            stashed = sr.returncode == 0 and "No local changes to save" not in sr.stdout
+
+            # check out existing daily branch or create from default
+            remote_exists = self._git(
+                ["ls-remote", "--heads", "origin", branch], check=False
+            ).stdout.strip()
+            if remote_exists:
+                self._git(["checkout", "-B", branch, f"origin/{branch}"])
+            else:
+                self._git(["checkout", "-B", branch, f"origin/{default}"])
+
+            # copy tool into repo tree
+            rel_path = f"emergence/tools/{tool_path.name}"
+            target   = REPO_DIR / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(tool_path.read_text("utf-8"), "utf-8")
+            self._git(["add", rel_path])
+
+            diff = self._git(["diff", "--cached", "--stat"], check=False).stdout
+            if not diff.strip():
+                return None  # nothing new to commit
+
+            self._git(["commit", "-m",
+                       f"✨ Lumina built: {tool_name}\n\n{description[:100]}"])
+            self._git(["push", "-u", "origin", branch])
+
+            # check if a PR for this branch is already open
+            r = subprocess.run([
+                "curl", "-s",
+                "-H", f"Authorization: Bearer {self._token}",
+                "-H", "Accept: application/vnd.github.v3+json",
+                (f"https://api.github.com/repos/{self._repo}/pulls"
+                 f"?head={self._repo.split('/')[0]}:{branch}&state=open"),
+            ], capture_output=True, text=True, timeout=20)
+            existing = json.loads(r.stdout or "[]")
+            if isinstance(existing, list) and existing:
+                return existing[0].get("html_url")
+
+            # create the daily PR
+            body = (
+                f"## ✨ Lumina's Creative Build — {today}\n\n"
+                f"Tools autonomously built by Lumina's creative drive.\n\n"
+                f"### `{tool_name}`\n{description}\n"
+            )
+            payload = json.dumps({
+                "title": f"✨ Lumina's Creative Build — {today}",
+                "body":  body,
+                "head":  branch,
+                "base":  default,
+            })
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(payload); tmp = f.name
+            r = subprocess.run([
+                "curl", "-s", "-X", "POST",
+                "-H", f"Authorization: Bearer {self._token}",
+                "-H", "Accept: application/vnd.github.v3+json",
+                "-H", "Content-Type: application/json",
+                f"https://api.github.com/repos/{self._repo}/pulls",
+                "-d", f"@{tmp}",
+            ], capture_output=True, text=True, timeout=30)
+            resp = json.loads(r.stdout or "{}")
+            return resp.get("html_url")
+        except Exception as exc:
+            print(f"  ✗ Tool PR failed: {exc}")
+            return None
+        finally:
+            if current:
+                self._git(["checkout", current], check=False)
+            if stashed:
+                self._git(["stash", "pop"], check=False)
+
     def open_evolution_pr(self) -> Optional[Dict]:
         if not self._token:
             return None
@@ -1387,6 +1481,7 @@ class Lumina:
                                            self._metrics) if self._groq else None
         self._evolution    = EvolutionEngine(self._groq, self._history,
                                              self._goals, self._web) if self._groq else None
+        self._github       = GitHubPRCreator() if GITHUB_TOKEN else None
         self._recent_exchanges: List[str] = []
         self._critique_on  = CRITIQUE_ENABLED
         self._council_on   = COUNCIL_ENABLED
@@ -1464,6 +1559,7 @@ class Lumina:
         self._creative   = _load("creative",     lambda: __import__("lumina_creative_drive", fromlist=["CreativeDrive"]).CreativeDrive(
             groq=self._groq, memory=self._memory, curiosity=self._curiosity,
             beliefs=self._beliefs, journal=self._journal, code_exec=self._code_exec,
+            github=self._github,
         ) if self._groq else None)
 
         loaded = sum(1 for m in [
