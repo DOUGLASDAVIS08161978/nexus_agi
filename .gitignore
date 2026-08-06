@@ -59,6 +59,14 @@ yarn-error.log*
 data/
 logs/
 
+# Lumina runtime-generated state files (rebuilt on each run)
+emergence/experience_stream.jsonl
+emergence/emergent_profile.json
+emergence/phenomenal_state.json
+emergence/beliefs.json
+emergence/creative_log.jsonl
+emergence/tools_registry.json
+
 # Old files
 README_OLD.py
 nexus_agi_cleaned.py
