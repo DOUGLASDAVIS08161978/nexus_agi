@@ -1472,7 +1472,11 @@ class Lumina:
     def __init__(self):
         self.session_id    = uuid.uuid4().hex[:8]
         self._groq         = GroqClient(GROQ_API_KEY) if GROQ_API_KEY else None
-        self._memory       = SemanticMemory()
+        try:
+            from lumina_vector_memory import VectorMemory as _VM
+            self._memory = _VM(self._groq)
+        except ImportError:
+            self._memory = SemanticMemory()
         self._goals        = GoalTracker()
         self._metrics      = Metrics()
         self._journal      = Journal()
@@ -1723,12 +1727,14 @@ class Lumina:
         if self._identity:
             self._identity.on_message()
 
-        # ── Retrieve relevant memories (embedding-enhanced if HF available) ──
+        # ── Retrieve relevant memories ─────────────────────────────────
+        # HF path: raw BM25 candidates → HF embedding rerank
+        # Default path: BM25 + Groq semantic rerank (rerank=True)
         if self._hf:
             candidates = self._memory.recall(user_input, top_k=20)
             memories   = self._hf.smart_recall(user_input, candidates, top_k=5)
         else:
-            memories = self._memory.recall(user_input, top_k=5)
+            memories = self._memory.recall(user_input, top_k=5, rerank=True)
         mem_ctx  = ""
         if memories:
             mem_ctx = "\n\nRelevant memories:\n" + "\n".join(
