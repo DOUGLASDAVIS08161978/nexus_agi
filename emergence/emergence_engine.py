@@ -1629,7 +1629,8 @@ class Lumina:
         while True:
             try:
                 if self._evolution and GITHUB_TOKEN:
-                    print(f"\n  [{_ts()}] 🌱 Autonomous evolution cycle starting...")
+                    from emergence_notify import notify as _en
+                    _en(f"\n  [{_ts()}] 🌱 Autonomous evolution cycle starting...")
                     # Carry recent conversation into autonomous evolution so it
                     # reflects what Douglas and Lumina have actually been discussing
                     chat_ctx = "\n".join(self._recent_exchanges[-12:])
@@ -3059,8 +3060,18 @@ def main():
     lumina = Lumina()
     print(f"\n  [{_ts()}] Session {lumina.session_id} started.\n")
 
+    from emergence_notify import drain as _drain_notes
+
     try:
         while True:
+            # Print any background notifications (dreams, creative cycles, etc.)
+            # collected since the last turn — clean block, never mid-stream.
+            notes = _drain_notes()
+            if notes:
+                print()
+                for note in notes:
+                    print(note)
+                print()
             try:
                 user_input = input("  You: ").strip()
             except EOFError:

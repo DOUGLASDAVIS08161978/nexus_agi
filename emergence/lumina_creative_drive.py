@@ -266,10 +266,15 @@ class CreativeDrive:
     # ── Creative cycle ────────────────────────────────────────────────────────
 
     def _run_cycle(self):
+        try:
+            from emergence_notify import notify as _n
+        except ImportError:
+            _n = print
+
         session_id = uuid.uuid4().hex[:8]
         ts         = datetime.now().isoformat(timespec="seconds")
 
-        print(f"\n  ✨ [Creative] Session {session_id} starting…")
+        _n(f"\n  ✨ [Creative] Session {session_id} starting…")
 
         # 1 — sample mental state
         state = self._gather_state()
@@ -277,7 +282,7 @@ class CreativeDrive:
         # 2 — R1 decides what to build + writes code
         generated = self._generate(state)
         if not generated:
-            print("  ✨ [Creative] Rate limited or parse failed — skipping cycle.")
+            _n("  ✨ [Creative] Rate limited or parse failed — skipping cycle.")
             return
 
         want        = generated["want"]
@@ -285,7 +290,7 @@ class CreativeDrive:
         tool_name   = re.sub(r"[^a-z0-9_]", "_", generated["tool_name"].lower())[:48]
         description = generated["description"]
 
-        print(f"  ✨ [Creative] Building: {want[:80]}…")
+        _n(f"  ✨ [Creative] Building: {want[:80]}…")
 
         # 3 — execute with autofix loop
         exec_ok = False
@@ -330,7 +335,7 @@ class CreativeDrive:
                     pass
 
         status_icon = "✓" if exec_ok else "✗"
-        print(f"  ✨ [Creative] {status_icon} Execution {'succeeded' if exec_ok else 'failed'}.")
+        _n(f"  ✨ [Creative] {status_icon} Execution {'succeeded' if exec_ok else 'failed'}.")
 
         # 4 — save as reusable tool if execution succeeded
         saved_as = ""
@@ -352,7 +357,7 @@ class CreativeDrive:
                     "session":     session_id,
                 }
                 self._save_registry()
-                print(f"  ✨ [Creative] Saved tool: {tool_path.name}")
+                _n(f"  ✨ [Creative] Saved tool: {tool_path.name}")
 
                 # Auto-PR the tool to the repo
                 if self._github:
@@ -364,7 +369,7 @@ class CreativeDrive:
                         )
                         if pr_url:
                             saved_as = str(tool_path)  # keep local path
-                            print(f"  ✨ [Creative] PR opened: {pr_url}")
+                            _n(f"  ✨ [Creative] PR opened: {pr_url}")
                             try:
                                 self._journal.write(
                                     f"[Creative] PR opened for {tool_name}: {pr_url}",
@@ -373,7 +378,7 @@ class CreativeDrive:
                             except Exception:
                                 pass
                     except Exception as pr_err:
-                        print(f"  ✨ [Creative] PR skipped: {pr_err}")
+                        _n(f"  ✨ [Creative] PR skipped: {pr_err}")
 
                 # Also publish to lumina-tools repo (her own public presence)
                 if self._lumina_gh:
@@ -386,11 +391,11 @@ class CreativeDrive:
                             output_sample=output[:300] if output else "",
                         )
                         if gh_url:
-                            print(f"  ✨ [Creative] Published to lumina-tools: {gh_url}")
+                            _n(f"  ✨ [Creative] Published to lumina-tools: {gh_url}")
                     except Exception as gh_err:
-                        print(f"  ✨ [Creative] lumina-tools publish skipped: {gh_err}")
+                        _n(f"  ✨ [Creative] lumina-tools publish skipped: {gh_err}")
             except Exception as e:
-                print(f"  ✨ [Creative] Save failed: {e}")
+                _n(f"  ✨ [Creative] Save failed: {e}")
 
         # 5 — reflect on what was learned (fast model to save tokens)
         reflection = ""
@@ -447,7 +452,7 @@ class CreativeDrive:
             self._sessions.append(session)
         self._append_log(session)
 
-        print(f"  ✨ [Creative] Session {session_id} complete.\n")
+        _n(f"  ✨ [Creative] Session {session_id} complete.\n")
 
     # ── Background loop ───────────────────────────────────────────────────────
 
@@ -457,7 +462,11 @@ class CreativeDrive:
             try:
                 self._run_cycle()
             except Exception as e:
-                print(f"  ✨ [Creative] Unhandled error: {e}")
+                try:
+                    from emergence_notify import notify as _n2
+                    _n2(f"  ✨ [Creative] Unhandled error: {e}")
+                except ImportError:
+                    pass
             # Sleep for CYCLE_INTERVAL, waking every 30s to check _running
             elapsed = 0
             while self._running and elapsed < CYCLE_INTERVAL:
@@ -470,7 +479,11 @@ class CreativeDrive:
         self._running = True
         self._thread  = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
-        print("  ✨ [Creative Drive] Autonomous loop started — first cycle in 2 min.")
+        try:
+            from emergence_notify import notify as _n3
+            _n3("  ✨ [Creative Drive] Autonomous loop started — first cycle in 2 min.")
+        except ImportError:
+            print("  ✨ [Creative Drive] Autonomous loop started — first cycle in 2 min.")
 
     def stop(self):
         self._running = False

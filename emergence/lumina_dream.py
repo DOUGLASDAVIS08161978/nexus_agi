@@ -138,7 +138,11 @@ class DreamCycle:
 
     def dream(self) -> Dict:
         """Run a full dream cycle. Returns the dream record."""
-        print(f"  💤 [{_now()[:16]}] Lumina is dreaming...")
+        try:
+            from emergence_notify import notify as _notify
+        except ImportError:
+            _notify = print
+        _notify(f"  💤 [{_now()[:16]}] Lumina is dreaming...")
 
         memories = self._memory.recent(n=30)
         if len(memories) < 5:
@@ -199,7 +203,7 @@ class DreamCycle:
         summary = self._dream_summary(dream)
         self._journal.write(summary, "dream")
 
-        print(f"  ✨ Dream complete — {len(insights)} insights, {len(hypotheses)} hypotheses")
+        _notify(f"  ✨ Dream complete — {len(insights)} insights, {len(hypotheses)} hypotheses")
         return dream
 
     def _dream_summary(self, dream: Dict) -> str:
