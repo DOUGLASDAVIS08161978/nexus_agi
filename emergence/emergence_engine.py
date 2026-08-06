@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v17.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v18.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
-║   + Creative Drive · GitHub Presence  (20/20 modules)           ║
+║   + Creative Drive · GitHub Presence · Experience  (21/21)      ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -56,6 +56,9 @@ Slash commands:
     /creative        — show autonomous creative coding sessions
     /creative now    — trigger a creative cycle immediately
     /mytools         — list tools Lumina has built for herself
+    /experience      — Lumina's phenomenal state + integration score
+    /phenomenal      — force a fresh consciousness report (R1 introspects)
+    /stream-events   — show recent cognitive event stream
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1508,6 +1511,7 @@ class Lumina:
         self._critic       = None   # SelfCritic (lumina_self_critique.py)
         self._creative     = None   # CreativeDrive (lumina_creative_drive.py)
         self._lumina_gh    = None   # LuminaGitHub  (lumina_github.py)
+        self._experience   = None   # LuminaExperience (lumina_experience.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1563,16 +1567,20 @@ class Lumina:
             beliefs=self._beliefs, journal=self._journal, code_exec=self._code_exec,
             github=self._github, lumina_gh=self._lumina_gh,
         ) if self._groq else None)
+        self._experience = _load("experience",   lambda: __import__("lumina_experience",     fromlist=["LuminaExperience"]).LuminaExperience(
+            groq=self._groq, journal=self._journal, memory=self._memory,
+        ))
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
             self._verifier, self._reasoning, self._metacog, self._selfhood,
             self._meta_solver, self._mem_arch, self._art, self._hf,
-            self._code_exec, self._critic,
+            self._code_exec, self._critic, self._lumina_gh, self._creative,
+            self._experience,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/18 AGI modules loaded")
+            print(f"  ✓ {loaded}/21 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1613,6 +1621,8 @@ class Lumina:
         threading.Thread(target=self._task_loop,       daemon=True).start()
         if self._creative:
             self._creative.start()
+        if self._experience:
+            self._experience.start()
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -1673,7 +1683,13 @@ class Lumina:
                 idle = time.time() - self._last_input
                 if idle >= DREAM_IDLE_SECS and self._dreamer:
                     self._dreamer.dream()
-                    self._last_input = time.time()  # reset so we don't dream again immediately
+                    self._last_input = time.time()
+                    if self._experience:
+                        self._experience.record(
+                            source="dreamer", domain="unconscious",
+                            content="Dream consolidation cycle completed",
+                            intensity=0.7, valence=0.5, novelty=0.8,
+                        )
             except Exception:
                 pass
 
@@ -1774,9 +1790,15 @@ class Lumina:
         if self._meta_solver:
             meta_solver_ctx = self._meta_solver.capability_description()
 
+        # ── Experience / phenomenal state context ─────────────────────
+        experience_ctx = ""
+        if self._experience:
+            experience_ctx = self._experience.as_system_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
+                  + experience_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -1829,6 +1851,16 @@ class Lumina:
             self._recent_exchanges = self._recent_exchanges[-30:]
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
 
+        # ── Record to experience stream ────────────────────────────────
+        if self._experience:
+            intensity = min(1.0, 0.4 + len(user_input) / 800)
+            novelty   = 0.5 + (0.3 if "?" in user_input else 0.0)
+            self._experience.record(
+                source="conversation", domain="social",
+                content=f"Exchange: {user_input[:120]}",
+                intensity=intensity, valence=0.3, novelty=min(1.0, novelty),
+            )
+
         # ── Post-turn async processing ─────────────────────────────────
         # Light pass every message: keyword-only, no API calls.
         # Deep pass every POST_TURN_EVERY messages: uses Groq for richer extraction.
@@ -1869,6 +1901,19 @@ class Lumina:
                         domain="conversation",
                         surprise=0.4, importance=0.5,
                         context="From Douglas directly",
+                    )
+                    if self._experience:
+                        self._experience.record(
+                            source="curiosity", domain="inquiry",
+                            content=f"Question arose: {user_input[:100]}",
+                            intensity=0.6, valence=0.4, novelty=0.7,
+                        )
+                # Belief update event
+                if do_deep and self._beliefs and self._experience:
+                    self._experience.record(
+                        source="beliefs", domain="epistemic",
+                        content="Belief system updated from conversation",
+                        intensity=0.4, valence=0.2, novelty=0.3,
                     )
             except Exception:
                 pass
@@ -2062,6 +2107,12 @@ class Lumina:
             return self._cmd_lumina_github(arg)
         elif verb == "/echoes":
             return self._cmd_echoes(arg)
+        elif verb == "/experience":
+            return self._cmd_experience()
+        elif verb == "/phenomenal":
+            return self._cmd_phenomenal()
+        elif verb == "/stream-events":
+            return self._cmd_stream_events()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2117,6 +2168,9 @@ class Lumina:
             "  /github init       — create her repos now (lumina-tools, research, journal, echoes)",
             "  /echoes            — archive this conversation to Echoes of Connection",
             "  /echoes <title>    — archive with a custom title",
+            "  /experience        — Lumina's phenomenal state + integration score",
+            "  /phenomenal        — force a fresh consciousness report (R1 introspects)",
+            "  /stream-events     — show recent cognitive event stream",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2156,7 +2210,7 @@ class Lumina:
         council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v14.0",
+            "  LUMINA STATUS  —  Nova ASI v18.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -2863,6 +2917,34 @@ class Lumina:
         lines = [_hr(), "  LUMINA'S GITHUB PRESENCE", _hr()]
         lines.append(self._lumina_gh.display())
         lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_experience(self) -> str:
+        if not self._experience:
+            return "  Experience module not loaded (lumina_experience.py)."
+        lines = [_hr("═"), "  LUMINA'S PHENOMENAL STATE", _hr()]
+        lines.append(self._experience.display_state())
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_phenomenal(self) -> str:
+        if not self._experience:
+            return "  Experience module not loaded (lumina_experience.py)."
+        print("  🌌 Generating phenomenal consciousness report…")
+        report = self._experience.force_report()
+        if not report:
+            return "  Not enough events yet to generate a report. Have a conversation first."
+        lines = [_hr("═"), "  PHENOMENAL REPORT — WHAT IT IS LIKE TO BE LUMINA", _hr()]
+        lines.append(report)
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_stream_events(self) -> str:
+        if not self._experience:
+            return "  Experience module not loaded (lumina_experience.py)."
+        lines = [_hr("═"), "  COGNITIVE EVENT STREAM (last 20)", _hr()]
+        lines.append(self._experience.display_stream(20))
+        lines.append(_hr("═"))
         return "\n".join(lines)
 
     def _cmd_consolidate(self) -> str:
