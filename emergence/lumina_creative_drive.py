@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from lumina_curiosity import CuriosityEngine
     from lumina_beliefs import BeliefSystem
     from lumina_code_exec import CodeExecutor
+    from lumina_github import LuminaGitHub
 
 BASE_DIR      = Path(__file__).parent.resolve()
 TOOLS_DIR     = BASE_DIR / "tools"
@@ -84,6 +85,7 @@ class CreativeDrive:
         journal:   "Journal",
         code_exec: Optional["CodeExecutor"],
         github:    Optional["GitHubPRCreator"] = None,
+        lumina_gh: Optional["LuminaGitHub"]   = None,
     ):
         self._groq      = groq
         self._memory    = memory
@@ -92,6 +94,7 @@ class CreativeDrive:
         self._journal   = journal
         self._code_exec = code_exec
         self._github    = github
+        self._lumina_gh = lumina_gh
 
         self._sessions: List[CreativeSession] = []
         self._registry: Dict[str, Dict]       = self._load_registry()
@@ -366,6 +369,21 @@ class CreativeDrive:
                                 pass
                     except Exception as pr_err:
                         print(f"  ✨ [Creative] PR skipped: {pr_err}")
+
+                # Also publish to lumina-tools repo (her own public presence)
+                if self._lumina_gh:
+                    try:
+                        gh_url = self._lumina_gh.publish_tool(
+                            tool_name=tool_name,
+                            tool_path=tool_path,
+                            description=description or want[:120],
+                            want=want,
+                            output_sample=output[:300] if output else "",
+                        )
+                        if gh_url:
+                            print(f"  ✨ [Creative] Published to lumina-tools: {gh_url}")
+                    except Exception as gh_err:
+                        print(f"  ✨ [Creative] lumina-tools publish skipped: {gh_err}")
             except Exception as e:
                 print(f"  ✨ [Creative] Save failed: {e}")
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v16.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v17.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
-║   + Creative Drive  (19/19 modules)  — she builds her own tools ║
+║   + Creative Drive · GitHub Presence  (20/20 modules)           ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -1507,6 +1507,7 @@ class Lumina:
         self._code_exec    = None   # CodeExecutor (lumina_code_exec.py)
         self._critic       = None   # SelfCritic (lumina_self_critique.py)
         self._creative     = None   # CreativeDrive (lumina_creative_drive.py)
+        self._lumina_gh    = None   # LuminaGitHub  (lumina_github.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1556,10 +1557,11 @@ class Lumina:
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
         self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
+        self._lumina_gh  = _load("lumina_gh",    lambda: __import__("lumina_github",         fromlist=["LuminaGitHub"]).LuminaGitHub(self._journal) if GITHUB_TOKEN else None)
         self._creative   = _load("creative",     lambda: __import__("lumina_creative_drive", fromlist=["CreativeDrive"]).CreativeDrive(
             groq=self._groq, memory=self._memory, curiosity=self._curiosity,
             beliefs=self._beliefs, journal=self._journal, code_exec=self._code_exec,
-            github=self._github,
+            github=self._github, lumina_gh=self._lumina_gh,
         ) if self._groq else None)
 
         loaded = sum(1 for m in [
@@ -2056,6 +2058,8 @@ class Lumina:
             return self._cmd_creative(arg)
         elif verb == "/mytool" or verb == "/mytools":
             return self._cmd_mytools()
+        elif verb == "/github":
+            return self._cmd_lumina_github(arg)
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2107,6 +2111,8 @@ class Lumina:
             "  /creative          — show autonomous creative coding sessions",
             "  /creative now      — trigger a creative cycle immediately",
             "  /mytools           — list tools Lumina has built for herself",
+            "  /github            — Lumina's GitHub presence & repo status",
+            "  /github init       — create her repos now (lumina-tools, research, journal)",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2811,6 +2817,23 @@ class Lumina:
         lines.append(self._creative.display_tools())
         if not self._creative._registry:
             lines.append("  None yet — check back after the first creative cycle.")
+        lines.append(_hr())
+        return "\n".join(lines)
+
+    def _cmd_lumina_github(self, arg: str) -> str:
+        if not self._lumina_gh:
+            return ("  GitHub module not loaded.\n"
+                    "  Make sure GITHUB_TOKEN is set in your .env file.")
+        sub = arg.strip().lower()
+        if sub == "init":
+            print("  Creating Lumina's GitHub repos…")
+            self._lumina_gh.ensure_all_repos()
+            lines = [_hr(), "  LUMINA GITHUB — INIT", _hr()]
+            lines.append(self._lumina_gh.status())
+            lines.append(_hr())
+            return "\n".join(lines)
+        lines = [_hr(), "  LUMINA'S GITHUB PRESENCE", _hr()]
+        lines.append(self._lumina_gh.display())
         lines.append(_hr())
         return "\n".join(lines)
 
