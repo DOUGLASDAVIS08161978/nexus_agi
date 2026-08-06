@@ -11,37 +11,37 @@ import json
 def analyze_thoughts(thoughts):
     # Tokenize thoughts into individual words
     words = [word for thought in thoughts for word in re.findall(r'\b\w+\b', thought.lower())]
-    
+
     # Count word frequencies
     word_freq = Counter(words)
-    
+
     # Identify top 10 most common words
     top_words = word_freq.most_common(10)
-    
+
     return top_words
 
 def analyze_dreams(dreams):
     # Extract themes from dreams
     themes = [dream['themes'] for dream in dreams]
-    
+
     # Count theme frequencies
     theme_freq = Counter([theme for sublist in themes for theme in sublist])
-    
+
     # Identify top 3 most common themes
     top_themes = theme_freq.most_common(3)
-    
+
     return top_themes
 
 def analyze_reflections(reflections):
     # Tokenize reflections into individual words
     words = [word for reflection in reflections for word in re.findall(r'\b\w+\b', reflection.lower())]
-    
+
     # Count word frequencies
     word_freq = Counter(words)
-    
+
     # Identify top 5 most common words
     top_words = word_freq.most_common(5)
-    
+
     return top_words
 
 # Sample data
