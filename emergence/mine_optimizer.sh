@@ -37,15 +37,16 @@ echo "  ARM big-core pinner + thermal watchdog"
 echo -e "${RESET}"
 
 # ── Detect big cores ──────────────────────────────────────────────────────────
+# Stores result in global BIG_CORES (avoids $() swallowing say/warn output)
+BIG_CORES=""
 detect_big_cores() {
     local -a max_freqs=()
     local -a cpu_ids=()
 
     for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/cpuinfo_max_freq; do
         [[ -r "$f" ]] || continue
-        local cpu_id
-        cpu_id=$(echo "$f" | grep -oP 'cpu\K[0-9]+')
-        local freq
+        local cpu_id freq
+        cpu_id=$(echo "$f" | grep -oE '[0-9]+' | tail -1)
         freq=$(cat "$f" 2>/dev/null) || continue
         cpu_ids+=("$cpu_id")
         max_freqs+=("$freq")
@@ -53,7 +54,7 @@ detect_big_cores() {
 
     if [[ ${#cpu_ids[@]} -eq 0 ]]; then
         warn "Could not read cpufreq info — falling back to all cores"
-        echo ""
+        BIG_CORES=""
         return
     fi
 
@@ -75,16 +76,17 @@ detect_big_cores() {
 
     if [[ ${#big_cores[@]} -eq 0 ]]; then
         warn "No big cores found at threshold ${threshold} kHz — using all cores"
-        echo ""
+        BIG_CORES=""
         return
     fi
 
     say "Detected ${#big_cores[@]} big core(s): ${big_cores[*]}"
     say "Peak freq: ${peak} kHz  |  Threshold: ${threshold} kHz"
 
-    # Build comma-separated list for taskset -c
-    local IFS=','
-    echo "${big_cores[*]}"
+    # Store comma-separated list for taskset -c
+    local joined
+    printf -v joined '%s,' "${big_cores[@]}"
+    BIG_CORES="${joined%,}"
 }
 
 # ── CPU governor ──────────────────────────────────────────────────────────────
@@ -201,7 +203,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-BIG_CORES=$(detect_big_cores)
+detect_big_cores
 
 set_performance_governor
 
@@ -213,7 +215,19 @@ if [[ ${#MINER_CMD[@]} -gt 0 ]]; then
     MANAGED="true"
 else
     # Try to find a running miner process to pin
-    MINER_PID=$(pgrep -f 'xmrig\|cpuminer\|bfgminer\|cgminer\|infinite_miner\|real_pool_miner\|nova_real_miner' 2>/dev/null | head -1) || true
+    # Use ps|grep for portability (pgrep \| alternation varies across Android builds)
+    local _pattern='xmrig|cpuminer|bfgminer|cgminer|infinite_miner|real_pool_miner|nova_real_miner'
+    MINER_PID=$(
+        ps -A 2>/dev/null \
+            | grep -E "$_pattern" \
+            | grep -v grep \
+            | awk '{print $1}' \
+            | head -1
+    ) || true
+    # Fallback: pgrep with -E flag
+    if [[ -z "${MINER_PID:-}" ]]; then
+        MINER_PID=$(pgrep -f -E "$_pattern" 2>/dev/null | head -1) || true
+    fi
 
     if [[ -n "$MINER_PID" ]]; then
         say "Found running miner at PID $MINER_PID"
