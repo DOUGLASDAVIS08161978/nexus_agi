@@ -1010,7 +1010,7 @@ class GitHubPRCreator:
                                  check=False).stdout.strip() or default
 
             # stash any local work
-            sr = self._git(["stash", "push", "-m", f"pre-tool-{tool_name}"], check=False)
+            sr = self._git(["stash", "push", "-u", "-m", f"pre-tool-{tool_name}"], check=False)
             stashed = sr.returncode == 0 and "No local changes to save" not in sr.stdout
 
             # check out existing daily branch or create from default
