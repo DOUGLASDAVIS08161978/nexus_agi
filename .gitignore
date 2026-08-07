@@ -67,6 +67,7 @@ emergence/beliefs.json
 emergence/creative_log.jsonl
 emergence/tools_registry.json
 emergence/vector_memory.json
+emergence/insights.json
 
 # Old files
 README_OLD.py

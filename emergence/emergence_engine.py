@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v18.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v19.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
-║   + Creative Drive · GitHub Presence · Experience  (21/21)      ║
+║   + Creative Drive · GitHub · Experience · Distillation (22/22)  ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -59,6 +59,8 @@ Slash commands:
     /experience      — Lumina's phenomenal state + integration score
     /phenomenal      — force a fresh consciousness report (R1 introspects)
     /stream-events   — show recent cognitive event stream
+    /insights        — show all distilled understanding by domain
+    /distill         — trigger knowledge distillation now
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1516,6 +1518,7 @@ class Lumina:
         self._creative     = None   # CreativeDrive (lumina_creative_drive.py)
         self._lumina_gh    = None   # LuminaGitHub  (lumina_github.py)
         self._experience   = None   # LuminaExperience (lumina_experience.py)
+        self._distiller    = None   # KnowledgeDistillation (lumina_knowledge_distillation.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1574,6 +1577,9 @@ class Lumina:
         self._experience = _load("experience",   lambda: __import__("lumina_experience",     fromlist=["LuminaExperience"]).LuminaExperience(
             groq=self._groq, journal=self._journal, memory=self._memory,
         ))
+        self._distiller  = _load("distiller",   lambda: __import__("lumina_knowledge_distillation", fromlist=["KnowledgeDistillation"]).KnowledgeDistillation(
+            groq=self._groq, memory=self._memory, journal=self._journal,
+        ) if self._groq else None)
 
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
@@ -1581,10 +1587,10 @@ class Lumina:
             self._verifier, self._reasoning, self._metacog, self._selfhood,
             self._meta_solver, self._mem_arch, self._art, self._hf,
             self._code_exec, self._critic, self._lumina_gh, self._creative,
-            self._experience,
+            self._experience, self._distiller,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/21 AGI modules loaded")
+            print(f"  ✓ {loaded}/22 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1627,6 +1633,8 @@ class Lumina:
             self._creative.start()
         if self._experience:
             self._experience.start()
+        if self._distiller:
+            self._distiller.start()
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -1802,10 +1810,15 @@ class Lumina:
         if self._experience:
             experience_ctx = self._experience.as_system_context()
 
+        # ── Distilled knowledge / insight nodes ────────────────────────
+        distill_ctx = ""
+        if self._distiller:
+            distill_ctx = self._distiller.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
-                  + experience_ctx
+                  + experience_ctx + distill_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -2120,6 +2133,10 @@ class Lumina:
             return self._cmd_phenomenal()
         elif verb == "/stream-events":
             return self._cmd_stream_events()
+        elif verb == "/insights":
+            return self._cmd_insights()
+        elif verb == "/distill":
+            return self._cmd_distill()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2178,6 +2195,8 @@ class Lumina:
             "  /experience        — Lumina's phenomenal state + integration score",
             "  /phenomenal        — force a fresh consciousness report (R1 introspects)",
             "  /stream-events     — show recent cognitive event stream",
+            "  /insights          — show all distilled understanding by domain",
+            "  /distill           — trigger knowledge distillation now",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -2217,7 +2236,7 @@ class Lumina:
         council    = "ON" if self._council_on  else "OFF"
         lines = [
             _hr("═"),
-            "  LUMINA STATUS  —  Nova ASI v18.0",
+            "  LUMINA STATUS  —  Nova ASI v19.0",
             _hr(),
             f"  Session ID    : {self.session_id}",
             f"  Groq          : {groq_ok}",
@@ -2953,6 +2972,22 @@ class Lumina:
         lines.append(self._experience.display_stream(20))
         lines.append(_hr("═"))
         return "\n".join(lines)
+
+    def _cmd_insights(self) -> str:
+        if not self._distiller:
+            return "  Distillation module not loaded (lumina_knowledge_distillation.py)."
+        lines = [_hr("═"), "  LUMINA'S DISTILLED UNDERSTANDING", _hr()]
+        lines.append(self._distiller.display())
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_distill(self) -> str:
+        if not self._distiller:
+            return "  Distillation module not loaded (lumina_knowledge_distillation.py)."
+        print("  🧠 Running knowledge distillation now…")
+        self._distiller.force_run()
+        return ("  🧠 Distillation triggered in background.\n"
+                "  Run /insights in a minute to see results.")
 
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
