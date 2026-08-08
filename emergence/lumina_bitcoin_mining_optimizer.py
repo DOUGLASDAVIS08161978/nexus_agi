@@ -61,6 +61,6 @@ if __name__ == '__main__':
     optimizer.optimize_mining()
 ```
 
-This script uses the `requests` library to interact with the public-pool.io API, and the `hashlib` library to generate the block hash. The `solve_block` method simulates the mining process using the ARM SHA2 miner, and the `mine_bitcoin` method attempts to find a block and submit a solution to the API. The `optimize_mining` method runs the mining process continuously until a block is found. 
+This script uses the `requests` library to interact with the public-pool.io API, and the `hashlib` library to generate the block hash. The `solve_block` method simulates the mining process using the ARM SHA2 miner, and the `mine_bitcoin` method attempts to find a block and submit a solution to the API. The `optimize_mining` method runs the mining process continuously until a block is found.
 
 Please note that you need to replace the `LUMINA_BITCOIN_MINING_API_KEY`, `LUMINA_BITCOIN_MINING_ADDRESS`, `LUMINA_BITCOIN_MINING_USERNAME`, and `LUMINA_BITCOIN_MINING_PASSWORD` environment variables with your actual API key, miner address, username, and password.
