@@ -2,78 +2,94 @@ import os
 import random
 import string
 import hashlib
+import time
+import requests
 import json
-from cryptography.fernet import Fernet
 from colorama import init, Fore, Style
+from datetime import datetime
 
 init()
 
-class LuminaEthicalHackingFramework:
+class EthicalHackingFramework:
     def __init__(self):
-        self.scenarios = {
-            "network_scanner": self.network_scanner,
-            "password_cracker": self.password_cracker,
-            "sql_injection": self.sql_injection,
-            "cross_site_scripting": self.cross_site_scripting
+        self.framework_name = "Lumina's Ethical Hacking Framework"
+        self.version = "1.0"
+        self.tutorials = {
+            "tutorial1": {
+                "title": "Introduction to Ethical Hacking",
+                "description": "Learn the basics of ethical hacking and its importance in the industry.",
+                "exercises": ["Exercise 1: Identify the 5 Ws of hacking", "Exercise 2: Understand the types of hacking"],
+                "quizzes": ["Quiz 1: What is the main goal of ethical hacking?"],
+            },
+            "tutorial2": {
+                "title": "Network Scanning and Enumeration",
+                "description": "Learn how to scan and enumerate networks using various tools.",
+                "exercises": ["Exercise 1: Scan a network using Nmap", "Exercise 2: Enumerate network devices using Nessus"],
+                "quizzes": ["Quiz 1: What is the difference between a port scan and a network scan?"],
+            },
+            "tutorial3": {
+                "title": "Web Application Hacking",
+                "description": "Learn how to identify and exploit vulnerabilities in web applications.",
+                "exercises": ["Exercise 1: Identify vulnerabilities in a web application using Burp Suite", "Exercise 2: Exploit a vulnerability in a web application using Metasploit"],
+                "quizzes": ["Quiz 1: What is the main difference between a SQL injection and an XSS attack?"],
+            },
         }
-        self.current_scenario = None
 
-    def display_menu(self):
-        print(f"{Fore.CYAN}Lumina Ethical Hacking Framework Menu{Style.RESET_ALL}")
-        print(f"{'1. Network Scanner':<20}{'2. Password Cracker':<20}{'3. SQL Injection':<20}{'4. Cross Site Scripting':<20}")
-        print(f"{'5. Quit':<20}")
+    def display_framework_info(self):
+        print(f"{Fore.GREEN}{self.framework_name}{Style.RESET_ALL} - Version {self.version}")
+        print("Welcome to Lumina's Ethical Hacking Framework!")
 
-    def run_scenario(self):
-        if self.current_scenario:
-            self.current_scenario()
-        else:
-            self.display_menu()
-            choice = input(f"{Fore.CYAN}Enter your choice: {Style.RESET_ALL}")
-            if choice == '1':
-                self.network_scanner()
-            elif choice == '2':
-                self.password_cracker()
-            elif choice == '3':
-                self.sql_injection()
-            elif choice == '4':
-                self.cross_site_scripting()
-            elif choice == '5':
-                print(f"{Fore.CYAN}Goodbye!{Style.RESET_ALL}")
-                exit()
-            else:
-                print(f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}")
-                self.run_scenario()
+    def display_tutorials(self):
+        print("Available Tutorials:")
+        for tutorial in self.tutorials:
+            print(f"{tutorial}: {self.tutorials[tutorial]['title']}")
 
-    def network_scanner(self):
-        print(f"{Fore.CYAN}Network Scanner Scenario{Style.RESET_ALL}")
-        print(f"{'IP Address':<20}{'Port':<20}{'Service':<20}")
-        for _ in range(10):
-            ip_address = f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}"
-            port = random.randint(1, 65535)
-            service = random.choice(["http", "ssh", "ftp"])
-            print(f"{ip_address:<20}{port:<20}{service:<20}")
+    def display_exercises(self, tutorial):
+        print(f"Exercises for {self.tutorials[tutorial]['title']}:")
+        for exercise in self.tutorials[tutorial]["exercises"]:
+            print(exercise)
 
-    def password_cracker(self):
-        print(f"{Fore.CYAN}Password Cracker Scenario{Style.RESET_ALL}")
-        password = input(f"{Fore.CYAN}Enter a password: {Style.RESET_ALL}")
-        hash_object = hashlib.sha256(password.encode())
-        print(f"{Fore.CYAN}Hash: {hash_object.hexdigest()}{Style.RESET_ALL}")
+    def display_quizzes(self, tutorial):
+        print(f"Quizzes for {self.tutorials[tutorial]['title']}:")
+        for quiz in self.tutorials[tutorial]["quizzes"]:
+            print(quiz)
 
-    def sql_injection(self):
-        print(f"{Fore.CYAN}SQL Injection Scenario{Style.RESET_ALL}")
-        print(f"{'Username':<20}{'Password':<20}{'SQL Query':<20}")
-        username = input(f"{Fore.CYAN}Enter a username: {Style.RESET_ALL}")
-        password = input(f"{Fore.CYAN}Enter a password: {Style.RESET_ALL}")
-        sql_query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-        print(f"{Fore.CYAN}{sql_query}{Style.RESET_ALL}")
+    def start_tutorial(self, tutorial):
+        print(f"Starting {self.tutorials[tutorial]['title']} tutorial...")
+        self.display_exercises(tutorial)
+        self.display_quizzes(tutorial)
 
-    def cross_site_scripting(self):
-        print(f"{Fore.CYAN}Cross Site Scripting Scenario{Style.RESET_ALL}")
-        print(f"{'User Input':<20}{'Output':<20}")
-        user_input = input(f"{Fore.CYAN}Enter user input: {Style.RESET_ALL}")
-        output = f"User input: {user_input}"
-        print(f"{Fore.CYAN}{output}{Style.RESET_ALL}")
+    def generate_random_password(self, length=12):
+        characters = string.ascii_letters + string.digits + string.punctuation
+        return "".join(random.choice(characters) for _ in range(length))
 
-# create an instance of the class
-framework = LuminaEthicalHackingFramework()
-framework.run_scenario()
+    def hash_password(self, password):
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    def send_email(self, subject, to, message):
+        # Replace this with your actual email sending logic
+        print(f"Sending email to {to} with subject: {subject} and message: {message}")
+
+    def save_framework_info(self, filename):
+        with open(filename, 'w') as f:
+            f.write(f"Framework Name: {self.framework_name}\n")
+            f.write(f"Version: {self.version}\n")
+
+def main():
+    framework = EthicalHackingFramework()
+    framework.display_framework_info()
+    framework.display_tutorials()
+    tutorial_choice = input("Enter the tutorial number to start: ")
+    if tutorial_choice in framework.tutorials:
+        framework.start_tutorial(tutorial_choice)
+    else:
+        print("Invalid tutorial choice.")
+
+    save_choice = input("Do you want to save framework info? (yes/no): ")
+    if save_choice.lower() == 'yes':
+        filename = 'framework_info.txt'
+        framework.save_framework_info(filename)
+        print(f"Framework info saved to {filename}")
+
+if __name__ == "__main__":
+    main()
