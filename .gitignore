@@ -69,6 +69,8 @@ emergence/tools_registry.json
 emergence/vector_memory.json
 emergence/insights.json
 emergence/consciousness_state.json
+emergence/consciousness_journal.jsonl
+emergence/self_model.json
 
 # Old files
 README_OLD.py

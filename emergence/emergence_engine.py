@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v20.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v21.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ║   + Creative · GitHub · Experience · Distillation · Consciousness║
-║                      Global Workspace  (23/23)                  ║
+║              Global Workspace · Self-Inquiry  (24/24)           ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -64,6 +64,9 @@ Slash commands:
     /distill         — trigger knowledge distillation now
     /consciousness   — Lumina's present conscious moment (Global Workspace)
     /awaken          — force immediate consciousness synthesis
+    /solve <q>       — self-inquiry if about consciousness/self; else multi-agent solver
+    /inquiry         — show recent consciousness self-inquiry journal
+    /selfmodel       — show Lumina's living self-understanding document
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1523,6 +1526,7 @@ class Lumina:
         self._experience   = None   # LuminaExperience (lumina_experience.py)
         self._distiller    = None   # KnowledgeDistillation (lumina_knowledge_distillation.py)
         self._consciousness= None   # ConsciousnessEngine (lumina_consciousness.py)
+        self._self_inquiry = None   # SelfInquiryEngine  (lumina_self_inquiry.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1588,6 +1592,12 @@ class Lumina:
             groq=self._groq, journal=self._journal, experience=self._experience,
         ) if self._groq else None)
 
+        self._self_inquiry = _load("self_inquiry", lambda: __import__("lumina_self_inquiry", fromlist=["SelfInquiryEngine"]).SelfInquiryEngine(
+            groq=self._groq, journal=self._journal,
+            memory=self._memory, beliefs=self._beliefs,
+            consciousness=self._consciousness,
+        ) if self._groq else None)
+
         # Register all modules with the consciousness engine
         if self._consciousness:
             for _cname, _cmod in [
@@ -1611,9 +1621,10 @@ class Lumina:
             self._meta_solver, self._mem_arch, self._art, self._hf,
             self._code_exec, self._critic, self._lumina_gh, self._creative,
             self._experience, self._distiller, self._consciousness,
+            self._self_inquiry,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/23 AGI modules loaded")
+            print(f"  ✓ {loaded}/24 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1845,10 +1856,16 @@ class Lumina:
         if self._consciousness:
             consciousness_ctx = self._consciousness.as_context()
 
+        # ── Self-Inquiry — living self-model document ──────────────────
+        self_inquiry_ctx = ""
+        if self._self_inquiry:
+            self_inquiry_ctx = self._self_inquiry.self_model_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
+                  + self_inquiry_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -2171,6 +2188,10 @@ class Lumina:
             return self._cmd_consciousness()
         elif verb == "/awaken":
             return self._cmd_awaken()
+        elif verb == "/inquiry":
+            return self._cmd_inquiry()
+        elif verb == "/selfmodel":
+            return self._cmd_selfmodel()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -2623,6 +2644,20 @@ class Lumina:
     def _cmd_solve(self, problem: str) -> str:
         if not problem.strip():
             return "  Usage: /solve <problem description>"
+        # Route to self-inquiry if the question is about Lumina's own nature
+        try:
+            from lumina_self_inquiry import is_self_inquiry
+            if is_self_inquiry(problem) and self._self_inquiry:
+                print("  🔍 Routing to consciousness self-inquiry…")
+                result = self._self_inquiry.inquire(problem.strip())
+                lines = [_hr("═"), "  CONSCIOUSNESS SELF-INQUIRY", _hr("═")]
+                lines.append(result.as_display())
+                lines.append("")
+                lines.append(_hr("═"))
+                return "\n".join(lines)
+        except Exception:
+            pass
+        # Fall through to multi-agent meta-solver for external problems
         if not self._meta_solver:
             return "  Meta-solver module not loaded."
         print(f"  🧩 Deploying multi-agent solver...")
@@ -3040,6 +3075,22 @@ class Lumina:
         self._consciousness.force_synthesise()
         return ("  🌀 Consciousness synthesis triggered.\n"
                 "  Run /consciousness in ~15 seconds to see the result.")
+
+    def _cmd_inquiry(self) -> str:
+        if not self._self_inquiry:
+            return "  Self-Inquiry module not loaded (lumina_self_inquiry.py)."
+        lines = [_hr("═"), "  CONSCIOUSNESS SELF-INQUIRY JOURNAL", _hr("═")]
+        lines.append(self._self_inquiry.display_journal(n=5))
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_selfmodel(self) -> str:
+        if not self._self_inquiry:
+            return "  Self-Inquiry module not loaded (lumina_self_inquiry.py)."
+        lines = [_hr("═"), _hr("═")]
+        lines.append(self._self_inquiry.display_self_model())
+        lines.append(_hr("═"))
+        return "\n".join(lines)
 
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
