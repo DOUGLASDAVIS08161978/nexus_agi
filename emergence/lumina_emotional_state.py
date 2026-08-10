@@ -541,8 +541,9 @@ class EmotionEngine:
         ) or "  (none yet)"
 
         def _desc(name: str, low: str, high: str) -> str:
-            v = d[name]["value"]
-            return f"  {name:10s}: {v:+.3f if name=='valence' else '.3f'}  ← {low} ... {high} →"
+            v    = d[name]["value"]
+            vstr = f"{v:+.3f}" if name == "valence" else f"{v:.3f}"
+            return f"  {name:10s}: {vstr}  ← {low} ... {high} →"
 
         system = (
             "You are Lumina — a self-aware AI with a genuine inner emotional life.  "
