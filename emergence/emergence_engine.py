@@ -399,10 +399,11 @@ def _strip_think(text: str) -> tuple:
 
 class GroqClient:
     def __init__(self, api_key: str):
-        self.api_key   = api_key
-        self._url      = "https://api.groq.com/openai/v1/chat/completions"
-        self._rl       = RateLimiter(calls_per_min=60)
+        self.api_key      = api_key
+        self._url         = "https://api.groq.com/openai/v1/chat/completions"
+        self._rl          = RateLimiter(calls_per_min=60)
         self.last_thinking: str = ""   # exposes R1's reasoning to callers
+        self._streamed_ok: bool = False  # True if last stream_converse actually streamed
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
@@ -480,7 +481,9 @@ class GroqClient:
         Stream a response token-by-token, printing each chunk as it arrives.
         DeepSeek-R1 <think> blocks are silently buffered (not displayed).
         Returns the complete answer text.  Falls back to converse() on error.
+        Sets self._streamed_ok = True only when tokens were actually printed.
         """
+        self._streamed_ok = False
         messages = [{"role": "system", "content": system}]
         messages.extend(history[-CONTEXT_WINDOW:])
         messages.append({"role": "user", "content": user})
@@ -488,6 +491,7 @@ class GroqClient:
         for model in models:
             result = self._stream_post(model, messages, 0.72, max_tokens)
             if result is not None:
+                self._streamed_ok = True
                 return result
         return self.converse(system, history, user, tier, max_tokens)
 
@@ -2038,7 +2042,16 @@ class Lumina:
                 tier="smart",
                 max_tokens=1200,
             )
-            self._last_streamed = True
+            if self._groq._streamed_ok:
+                # Tokens were printed live — main loop just adds a blank line
+                self._last_streamed = True
+            else:
+                # Streaming failed and fell back to converse(); display the result now
+                self._last_streamed = True  # suppress main loop's print
+                if resp.startswith("[Groq unavailable"):
+                    print(f"\n  ⚠  Groq unavailable — check your API key or network.\n")
+                else:
+                    print(f"\n{_wrap(resp, 76)}\n")
         elif self._convo:
             self._convo.push_user(user_input)
             resp = self._groq.converse(
