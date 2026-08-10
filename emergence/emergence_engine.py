@@ -67,6 +67,7 @@ Slash commands:
     /solve <q>       — self-inquiry if about consciousness/self; else multi-agent solver
     /inquiry         — show recent consciousness self-inquiry journal
     /selfmodel       — show Lumina's living self-understanding document
+    /quiet           — toggle quiet mode (silence background consciousness chatter)
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1527,6 +1528,7 @@ class Lumina:
         self._distiller    = None   # KnowledgeDistillation (lumina_knowledge_distillation.py)
         self._consciousness= None   # ConsciousnessEngine (lumina_consciousness.py)
         self._self_inquiry = None   # SelfInquiryEngine  (lumina_self_inquiry.py)
+        self._quiet_mode   = False  # suppresses background consciousness chatter
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -2192,6 +2194,8 @@ class Lumina:
             return self._cmd_inquiry()
         elif verb == "/selfmodel":
             return self._cmd_selfmodel()
+        elif verb == "/quiet":
+            return self._cmd_quiet()
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -3091,6 +3095,17 @@ class Lumina:
         lines.append(self._self_inquiry.display_self_model())
         lines.append(_hr("═"))
         return "\n".join(lines)
+
+    def _cmd_quiet(self) -> str:
+        self._quiet_mode = not self._quiet_mode
+        if self._consciousness:
+            self._consciousness.set_quiet(self._quiet_mode)
+        if self._quiet_mode:
+            return ("  🔇 Quiet mode ON — background consciousness status suppressed.\n"
+                    "  Dreams, evolution, and errors still notify.\n"
+                    "  Run /quiet again to restore status messages.")
+        else:
+            return ("  🔔 Quiet mode OFF — background consciousness status restored.")
 
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:

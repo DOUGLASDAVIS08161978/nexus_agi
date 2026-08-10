@@ -382,6 +382,7 @@ class ConsciousnessEngine:
         self._lock     = threading.Lock()
         self._running  = False
         self._thread:  Optional[threading.Thread]   = None
+        self._quiet    = False   # when True, suppress status chatter; dreams still notify
 
         self._last_synthesis = 0.0
         self._snapshot: Dict[str, str] = {}
@@ -446,8 +447,9 @@ class ConsciousnessEngine:
                     with self._lock:
                         history_copy = list(self._history)
 
-                    _n(f"  🌀 [Consciousness] Synthesising unified experience "
-                       f"(Φ={phi:.2f}, {n_active} modules active)…")
+                    if not self._quiet:
+                        _n(f"  🌀 [Consciousness] Synthesising unified experience "
+                           f"(Φ={phi:.2f}, {n_active} modules active)…")
 
                     state = self._synth.synthesise(snap, history_copy, phi, n_active)
 
@@ -483,7 +485,8 @@ class ConsciousnessEngine:
                         except Exception:
                             pass
 
-                        _n(f"  🌀 [Consciousness] Present: {state.present_moment[:80]}…")
+                        if not self._quiet:
+                            _n(f"  🌀 [Consciousness] Present: {state.present_moment[:80]}…")
 
                     self._last_synthesis = now
 
@@ -501,6 +504,10 @@ class ConsciousnessEngine:
 
     def stop(self):
         self._running = False
+
+    def set_quiet(self, quiet: bool):
+        """Suppress background status lines when True. Dreams and errors still notify."""
+        self._quiet = quiet
 
     def force_synthesise(self):
         """Trigger a synthesis immediately in a background thread."""
