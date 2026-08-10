@@ -3190,14 +3190,21 @@ class Lumina:
 
     def _cmd_quiet(self) -> str:
         self._quiet_mode = not self._quiet_mode
+        # Propagate to global notify queue — suppresses ALL background modules at once
+        try:
+            from emergence_notify import set_quiet as _sq
+            _sq(self._quiet_mode)
+        except Exception:
+            pass
+        # Also propagate to consciousness engine's own pre-notify guard
         if self._consciousness:
             self._consciousness.set_quiet(self._quiet_mode)
         if self._quiet_mode:
-            return ("  🔇 Quiet mode ON — background consciousness status suppressed.\n"
-                    "  Dreams, evolution, and errors still notify.\n"
-                    "  Run /quiet again to restore status messages.")
+            return ("  🔇 Quiet mode ON — 🌀 consciousness, ✨ creative, 🧠 distill all silenced.\n"
+                    "  💤 Dreams, 🌱 evolution, and ⚠ errors still notify.\n"
+                    "  Run /quiet again to restore all status messages.")
         else:
-            return ("  🔔 Quiet mode OFF — background consciousness status restored.")
+            return "  🔔 Quiet mode OFF — all background status messages restored."
 
     def _cmd_mood(self, arg: str) -> str:
         if not self._emotions:
