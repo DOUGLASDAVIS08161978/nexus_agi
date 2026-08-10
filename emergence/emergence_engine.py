@@ -3196,8 +3196,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v15.0  —  N o v a   A S I             ║")
-    print("  ║     Reasoning · Selfhood · CodeExec · SelfCritic · 18 Modules  ║")
+    print("  ║     E M E R G E N C E   v22.0  —  L u m i n a   A G I         ║")
+    print("  ║  Global Workspace · Self-Inquiry · Emotions  (25/25 Modules)   ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"      if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"        if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
