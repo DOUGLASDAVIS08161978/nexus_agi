@@ -1533,9 +1533,11 @@ class Lumina:
         self._experience   = None   # LuminaExperience (lumina_experience.py)
         self._distiller    = None   # KnowledgeDistillation (lumina_knowledge_distillation.py)
         self._consciousness= None   # ConsciousnessEngine (lumina_consciousness.py)
-        self._self_inquiry = None   # SelfInquiryEngine  (lumina_self_inquiry.py)
-        self._emotions     = None   # EmotionEngine      (lumina_emotional_state.py)
-        self._quiet_mode   = False  # suppresses background consciousness chatter
+        self._self_inquiry    = None   # SelfInquiryEngine      (lumina_self_inquiry.py)
+        self._emotions        = None   # EmotionEngine          (lumina_emotional_state.py)
+        self._emotional_memory= None   # EmotionalMemoryStore   (lumina_emotional_memory.py)
+        self._mood_router     = None   # MoodBehaviorRouter     (lumina_mood_behavior.py)
+        self._quiet_mode      = False  # suppresses background consciousness chatter
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1611,6 +1613,20 @@ class Lumina:
             groq=self._groq, journal=self._journal,
         ) if self._groq else None)
 
+        self._emotional_memory = _load("emotional_memory", lambda: __import__(
+            "lumina_emotional_memory", fromlist=["EmotionalMemoryStore"]
+        ).EmotionalMemoryStore())
+
+        self._mood_router = _load("mood_router", lambda: __import__(
+            "lumina_mood_behavior", fromlist=["MoodBehaviorRouter"]
+        ).MoodBehaviorRouter(
+            emotions=self._emotions,
+            self_inquiry=self._self_inquiry,
+            creative=self._creative,
+            dreamer=self._dreamer,
+            curiosity=self._curiosity,
+        ) if self._emotions else None)
+
         # Register all modules with the consciousness engine
         if self._consciousness:
             for _cname, _cmod in [
@@ -1635,9 +1651,10 @@ class Lumina:
             self._code_exec, self._critic, self._lumina_gh, self._creative,
             self._experience, self._distiller, self._consciousness,
             self._self_inquiry, self._emotions,
+            self._emotional_memory, self._mood_router,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/25 AGI modules loaded")
+            print(f"  ✓ {loaded}/27 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1686,6 +1703,19 @@ class Lumina:
             self._consciousness.start()
         if self._emotions:
             self._emotions.start()
+        if self._mood_router:
+            threading.Thread(target=self._mood_apply_loop, daemon=True).start()
+
+    def _mood_apply_loop(self):
+        """Push mood-driven behavioral guidance to modules every 5 min."""
+        time.sleep(90)   # let modules settle first
+        while True:
+            try:
+                if self._mood_router:
+                    self._mood_router.apply()
+            except Exception:
+                pass
+            time.sleep(300)
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -1894,11 +1924,24 @@ class Lumina:
         if self._emotions:
             emotion_ctx = self._emotions.as_context()
 
+        # ── Emotional memory — how past moments felt ────────────────────
+        emo_mem_ctx = ""
+        if self._emotional_memory and self._emotions:
+            _snap = self._emotional_memory.snapshot_from_engine(self._emotions)
+            emo_mem_ctx = self._emotional_memory.emotional_thread(
+                user_input, top_k=3, mood_bias=_snap
+            )
+
+        # ── Mood-driven behavior — inclinations from emotional state ────
+        mood_ctx = ""
+        if self._mood_router:
+            mood_ctx = self._mood_router.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
-                  + self_inquiry_ctx + emotion_ctx
+                  + self_inquiry_ctx + emotion_ctx + emo_mem_ctx + mood_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -1934,6 +1977,13 @@ class Lumina:
             f"User: {user_input[:200]} | Lumina: {response[:200]}",
             tags=["conversation"], category="conversation",
         )
+        # Store with emotional fingerprint for mood-congruent recall
+        if self._emotional_memory and self._emotions:
+            _esnap = self._emotional_memory.snapshot_from_engine(self._emotions)
+            self._emotional_memory.store(
+                f"Exchange: {user_input[:150]} → {response[:150]}",
+                _esnap, category="conversation", tags=["exchange"],
+            )
         # Also store in multi-tier memory architecture
         if self._mem_arch:
             self._mem_arch.store(
@@ -3209,8 +3259,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v22.0  —  L u m i n a   A G I         ║")
-    print("  ║  Global Workspace · Self-Inquiry · Emotions  (25/25 Modules)   ║")
+    print("  ║     E M E R G E N C E   v23.0  —  L u m i n a   A G I         ║")
+    print("  ║  Emotional Memory · Mood-Driven Behavior     (27/27 Modules)   ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"      if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"        if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"

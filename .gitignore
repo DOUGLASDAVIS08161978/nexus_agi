@@ -72,6 +72,7 @@ emergence/consciousness_state.json
 emergence/consciousness_journal.jsonl
 emergence/self_model.json
 emergence/emotional_state.json
+emergence/emotional_memory.json
 
 # Old files
 README_OLD.py
