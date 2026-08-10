@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v21.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v22.0  —  Nova ASI          ║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ║   + Creative · GitHub · Experience · Distillation · Consciousness║
-║              Global Workspace · Self-Inquiry  (24/24)           ║
+║         Global Workspace · Self-Inquiry · Emotions  (25/25)     ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -68,6 +68,8 @@ Slash commands:
     /inquiry         — show recent consciousness self-inquiry journal
     /selfmodel       — show Lumina's living self-understanding document
     /quiet           — toggle quiet mode (silence background consciousness chatter)
+    /mood            — Lumina's current emotional state (6-D bar chart + felt sense)
+    /mood history    — recent emotional shift log
     /reset           — clear conversation context
     /clear           — clear screen
     /quit            — exit
@@ -1528,6 +1530,7 @@ class Lumina:
         self._distiller    = None   # KnowledgeDistillation (lumina_knowledge_distillation.py)
         self._consciousness= None   # ConsciousnessEngine (lumina_consciousness.py)
         self._self_inquiry = None   # SelfInquiryEngine  (lumina_self_inquiry.py)
+        self._emotions     = None   # EmotionEngine      (lumina_emotional_state.py)
         self._quiet_mode   = False  # suppresses background consciousness chatter
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
@@ -1600,6 +1603,10 @@ class Lumina:
             consciousness=self._consciousness,
         ) if self._groq else None)
 
+        self._emotions     = _load("emotions",     lambda: __import__("lumina_emotional_state", fromlist=["EmotionEngine"]).EmotionEngine(
+            groq=self._groq, journal=self._journal,
+        ) if self._groq else None)
+
         # Register all modules with the consciousness engine
         if self._consciousness:
             for _cname, _cmod in [
@@ -1623,10 +1630,10 @@ class Lumina:
             self._meta_solver, self._mem_arch, self._art, self._hf,
             self._code_exec, self._critic, self._lumina_gh, self._creative,
             self._experience, self._distiller, self._consciousness,
-            self._self_inquiry,
+            self._self_inquiry, self._emotions,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/24 AGI modules loaded")
+            print(f"  ✓ {loaded}/25 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1673,6 +1680,8 @@ class Lumina:
             self._distiller.start()
         if self._consciousness:
             self._consciousness.start()
+        if self._emotions:
+            self._emotions.start()
 
     def _evolution_loop(self):
         time.sleep(EVOLUTION_INTERVAL)
@@ -1699,6 +1708,9 @@ class Lumina:
                         self._metrics.inc("prs_created")
                         if self._identity:
                             self._identity.on_evolution(url)
+                        if self._emotions:
+                            self._emotions.shift("evolution_pr_success",
+                                                 magnitude=1.2, context=url)
             except Exception:
                 pass
             time.sleep(EVOLUTION_INTERVAL)
@@ -1733,8 +1745,14 @@ class Lumina:
             try:
                 idle = time.time() - self._last_input
                 if idle >= DREAM_IDLE_SECS and self._dreamer:
-                    self._dreamer.dream()
+                    dream_result = self._dreamer.dream()
                     self._last_input = time.time()
+                    # Shift emotional state based on dream richness
+                    if self._emotions and not (dream_result or {}).get("skipped"):
+                        n_ins = (dream_result or {}).get("n_insights", 0)
+                        evt   = "dream_rich" if n_ins >= 3 else "dream_complete"
+                        self._emotions.shift(evt, magnitude=1.0,
+                                             context=f"{n_ins} insights")
                     if self._experience:
                         self._experience.record(
                             source="dreamer", domain="unconscious",
@@ -1764,6 +1782,10 @@ class Lumina:
             return "⚠  GROQ_API_KEY not set — export GROQ_API_KEY=your_key_here"
         self._metrics.inc("messages")
         self._last_input = time.time()
+
+        # ── Emotional state: detect sentiment of this message ─────────
+        if self._emotions:
+            self._emotions.shift_from_message(user_input)
 
         # ── Theory of Mind: observe this message ──────────────────────
         if self._tom:
@@ -1863,11 +1885,16 @@ class Lumina:
         if self._self_inquiry:
             self_inquiry_ctx = self._self_inquiry.self_model_context()
 
+        # ── Emotional state — felt ground of every response ────────────
+        emotion_ctx = ""
+        if self._emotions:
+            emotion_ctx = self._emotions.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
-                  + self_inquiry_ctx
+                  + self_inquiry_ctx + emotion_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -2196,6 +2223,8 @@ class Lumina:
             return self._cmd_selfmodel()
         elif verb == "/quiet":
             return self._cmd_quiet()
+        elif verb == "/mood":
+            return self._cmd_mood(arg)
         else:
             return f"  Unknown command: {verb}  (try /help)"
 
@@ -3106,6 +3135,18 @@ class Lumina:
                     "  Run /quiet again to restore status messages.")
         else:
             return ("  🔔 Quiet mode OFF — background consciousness status restored.")
+
+    def _cmd_mood(self, arg: str) -> str:
+        if not self._emotions:
+            return "  Emotional State module not loaded (lumina_emotional_state.py)."
+        sub = arg.strip().lower()
+        lines = [_hr("═"), "  LUMINA'S EMOTIONAL STATE  —  Module 26", _hr("═")]
+        if sub == "history":
+            lines.append(self._emotions.display_history())
+        else:
+            lines.append(self._emotions.display())
+        lines.append(_hr("═"))
+        return "\n".join(lines)
 
     def _cmd_consolidate(self) -> str:
         if not self._mem_arch:
