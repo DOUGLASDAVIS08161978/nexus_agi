@@ -423,18 +423,15 @@ class GroqClient:
         try:
             r = requests.post(self._url, json=payload, headers=headers, timeout=45)
             if r.status_code == 429:
-                print(f"  [DBG] 429 rate-limited on {model}", flush=True)
                 return None
             if r.status_code != 200:
-                print(f"  [DBG] HTTP {r.status_code} on {model}: {r.text[:200]}", flush=True)
                 return None
             raw = r.json()["choices"][0]["message"]["content"]
             answer, thinking = _strip_think(raw)
             if thinking:
                 self.last_thinking = thinking
             return answer
-        except Exception as e:
-            print(f"  [DBG] Exception on {model}: {type(e).__name__}: {e}", flush=True)
+        except Exception:
             return None
 
     def chat(self, system: str, user: str, tier: str = "smart",
