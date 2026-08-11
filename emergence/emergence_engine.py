@@ -1647,6 +1647,7 @@ class Lumina:
             groq=self._groq, memory=self._memory, curiosity=self._curiosity,
             beliefs=self._beliefs, journal=self._journal, code_exec=self._code_exec,
             github=self._github, lumina_gh=self._lumina_gh,
+            cerebras=self._gh_models,
         ) if self._groq else None)
         self._experience = _load("experience",   lambda: __import__("lumina_experience",     fromlist=["LuminaExperience"]).LuminaExperience(
             groq=self._groq, journal=self._journal, memory=self._memory,

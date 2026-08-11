@@ -86,8 +86,10 @@ class CreativeDrive:
         code_exec: Optional["CodeExecutor"],
         github:    Optional["GitHubPRCreator"] = None,
         lumina_gh: Optional["LuminaGitHub"]   = None,
+        cerebras:  Optional[object]            = None,
     ):
         self._groq      = groq
+        self._cerebras  = cerebras  # primary code-gen engine (faster than Groq)
         self._memory    = memory
         self._curiosity = curiosity
         self._beliefs   = beliefs
@@ -232,9 +234,16 @@ class CreativeDrive:
             "Decide what to build. Make it something you truly want. "
             "Write the complete, runnable Python code."
         )
-        raw = self._groq.chat(self._SYSTEM, prompt, tier="code", max_tokens=2400)
+        # Cerebras is faster for code generation — try it first, fall back to Groq
+        raw = None
+        if self._cerebras:
+            raw = self._cerebras.chat(self._SYSTEM, [], prompt, max_tokens=2400)
+            if not raw or raw.startswith("["):
+                raw = None
+        if not raw:
+            raw = self._groq.chat(self._SYSTEM, prompt, tier="code", max_tokens=2400)
 
-        if not raw or raw.startswith("[Groq"):
+        if not raw or raw.startswith("["):
             return None
 
         want        = ""
