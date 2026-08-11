@@ -37,23 +37,23 @@ class EmotionalAnalyzer:
     def analyze(self, text: str) -> EmotionalState:
         if not text:
             return EmotionalState(raw_text=text)
-        
+
         lower_text = text.lower()
         words = re.findall(r'\b\w+\b', lower_text)
-        
+
         pos_count = sum(1 for w in words if w in self.POSITIVE_KEYWORDS)
         neg_count = sum(1 for w in words if w in self.NEGATIVE_KEYWORDS)
         total_words = max(len(words), 1)
-        
+
         valence = (pos_count - neg_count) / total_words
         valence = max(-1.0, min(1.0, valence))
-        
+
         caps_ratio = len(re.findall(r'[A-Z]', text)) / max(len(text), 1)
         exclamation_count = text.count('!')
         arousal = min(1.0, (caps_ratio * 2.0) + (exclamation_count * 0.15) + (0.3 if valence > 0.3 else 0.0))
-        
+
         intensity = (abs(valence) + arousal) / 2.0
-        
+
         primary_emotion = "neutral"
         if valence > 0.3:
             primary_emotion = "joy" if arousal < 0.6 else "excitement"
@@ -61,12 +61,12 @@ class EmotionalAnalyzer:
             primary_emotion = "sadness" if arousal < 0.6 else "distress"
         elif arousal > 0.7:
             primary_emotion = "high_energy"
-        
+
         context_cues = []
         for cue_type, patterns in self.CONTEXT_PATTERNS.items():
             if any(re.search(p, lower_text) for p in patterns):
                 context_cues.append(cue_type)
-        
+
         return EmotionalState(
             valence=valence,
             arousal=arousal,
@@ -141,24 +141,24 @@ class EmpathicResponder:
     def generate(self, emotion: EmotionalState, history: List[Dict]) -> str:
         if not emotion.raw_text.strip():
             return "I'm listening. Share what's on your mind, Douglas."
-        
+
         primary = emotion.primary_emotion
         templates = self.response_templates.get(primary, self.response_templates["neutral"])
         template = templates[0]
-        
+
         context_ack = self._build_context_ack(emotion)
         self_reflection = self._build_self_reflection(emotion)
         forward_look = self._build_forward_look(emotion)
-        
+
         response = template.format(
             context_ack=context_ack,
             self_reflection=self_reflection,
             forward_look=forward_look
         )
-        
+
         if emotion.intensity > 0.8:
             response = response.replace(".", "!!").replace("!", "!!")
         elif emotion.intensity < 0.3:
             response = response.replace("!", ".").replace("!!", ".")
-            
+
         return response.strip
