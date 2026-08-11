@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-lumina_github_models.py — GitHub Models fallback LLM for Lumina
+lumina_cerebras.py — Cerebras inference fallback for Lumina
 
-Uses GitHub's free model inference API (OpenAI-compatible endpoint).
-Auth: GITHUB_TOKEN — the same token already used for repo operations.
+Cerebras runs the same Llama models as Groq but on a separate free tier,
+giving Lumina a second brain when Groq is rate-limited.
 
-Free tier limits (per model per day):
-  Low-tier  models: 150 requests/day  (gpt-4o-mini, Phi-3.5, Llama-8B)
-  High-tier models:  50 requests/day  (Llama-70B, Mistral-large)
-
-Fallback order tries best quality first, drops to smaller models on failure.
+Free tier: generous daily limits, 30 req/min.
+Auth: CEREBRAS_API_KEY environment variable.
+Sign up free at: https://cloud.cerebras.ai
 """
 
 from __future__ import annotations
@@ -21,18 +19,16 @@ try:
 except ImportError:
     _REQ = False
 
-GH_API = "https://models.inference.ai.azure.com"
+CEREBRAS_API = "https://api.cerebras.ai/v1"
 
-# Try best quality first; smaller models as safety net
-GH_MODELS = [
-    "gpt-4o-mini",                    # best free-tier model, 150 req/day
-    "Meta-Llama-3.3-70B-Instruct",    # 70B quality,           50 req/day
-    "Meta-Llama-3.1-8B-Instruct",     # fast reliable,        150 req/day
-    "Phi-3.5-mini-instruct",          # solid small,          150 req/day
+# Same Llama quality as Groq — separate daily quota
+CEREBRAS_MODELS = [
+    "llama-3.3-70b",    # best quality, same as Groq primary
+    "llama3.1-8b",      # fast fallback
 ]
 
 
-class GitHubModelsClient:
+class CerebrasClient:
 
     def __init__(self, token: str):
         self._token   = token
@@ -46,35 +42,35 @@ class GitHubModelsClient:
             return None
         try:
             r = _req.post(
-                f"{GH_API}/chat/completions",
+                f"{CEREBRAS_API}/chat/completions",
                 headers=self._headers,
                 json=payload,
                 timeout=timeout,
             )
             if r.status_code != 200:
-                print(f"  [DBG-GH] {payload.get('model','?')} → HTTP {r.status_code}", flush=True)
+                print(f"  [DBG-CB] {payload.get('model','?')} → HTTP {r.status_code}", flush=True)
                 return None
             return r.json()
         except Exception as e:
-            print(f"  [DBG-GH] {payload.get('model','?')} → {type(e).__name__}: {e}", flush=True)
+            print(f"  [DBG-CB] {payload.get('model','?')} → {type(e).__name__}: {e}", flush=True)
             return None
 
     def chat(self, system: str, messages: List[Dict], user: str,
              max_tokens: int = 1024) -> str:
         """
-        Chat completion via GitHub Models.
-        Falls back through GH_MODELS until one responds.
+        Chat completion via Cerebras.
+        Falls back through CEREBRAS_MODELS until one responds.
         """
         full_msgs = (
             [{"role": "system", "content": system}]
             + list(messages)
             + [{"role": "user", "content": user}]
         )
-        for model in GH_MODELS:
+        for model in CEREBRAS_MODELS:
             result = self._post({
                 "model":       model,
                 "messages":    full_msgs,
-                "max_tokens":  min(max_tokens, 4096),
+                "max_tokens":  min(max_tokens, 8192),
                 "temperature": 0.70,
             })
             if result and isinstance(result, dict):
@@ -82,15 +78,15 @@ class GitHubModelsClient:
                     return result["choices"][0]["message"]["content"].strip()
                 except (KeyError, IndexError):
                     continue
-        return "[GitHub Models unavailable — all models failed]"
+        return "[Cerebras unavailable — all models failed]"
 
     def chat_simple(self, system: str, user: str, max_tokens: int = 512) -> str:
         return self.chat(system, [], user, max_tokens)
 
     def status(self) -> str:
-        names = ", ".join(m.split("/")[-1] for m in GH_MODELS)
+        names = ", ".join(CEREBRAS_MODELS)
         return (
-            f"  GitHub Models:\n"
+            f"  Cerebras:\n"
             f"    Models    : {names}\n"
-            f"    Token set : {'yes' if self._token else 'NO — set GITHUB_TOKEN'}"
+            f"    Token set : {'yes' if self._token else 'NO — set CEREBRAS_API_KEY'}"
         )

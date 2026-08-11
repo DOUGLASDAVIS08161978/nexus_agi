@@ -110,6 +110,7 @@ PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
 GROQ_API_KEY       = os.environ.get("GROQ_API_KEY", "")
 GITHUB_TOKEN       = os.environ.get("GITHUB_TOKEN", "")
 HF_TOKEN           = os.environ.get("HF_TOKEN", "")
+CEREBRAS_API_KEY   = os.environ.get("CEREBRAS_API_KEY", "")
 GITHUB_REPO        = "DOUGLASDAVIS08161978/nexus_agi"
 EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
@@ -1634,7 +1635,7 @@ class Lumina:
         ))
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
-        self._gh_models  = _load("gh_models",   lambda: __import__("lumina_github_models",  fromlist=["GitHubModelsClient"]).GitHubModelsClient(GITHUB_TOKEN) if GITHUB_TOKEN else None)
+        self._gh_models  = _load("cerebras",    lambda: __import__("lumina_github_models",  fromlist=["CerebrasClient"]).CerebrasClient(CEREBRAS_API_KEY) if CEREBRAS_API_KEY else None)
         if self._groq and self._hf:
             self._groq.set_hf(self._hf)
         if self._groq and self._gh_models:
@@ -3338,7 +3339,7 @@ def _print_banner():
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
-    ghm_ok  = "✓ GitHub Models ready"      if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN for LLM fallback"
+    ghm_ok  = "✓ Cerebras ready"            if CEREBRAS_API_KEY else "✗ Set CEREBRAS_API_KEY for LLM fallback"
     hf_ok   = "✓ HuggingFace ready"       if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
     print(f"  ║  {groq_ok:<64}║")
     print(f"  ║  {gh_ok:<64}║")
