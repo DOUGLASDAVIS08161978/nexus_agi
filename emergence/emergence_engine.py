@@ -122,9 +122,9 @@ DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
 POST_TURN_EVERY    = 4             # run deep post-turn processing every N messages
 
 # Groq model tiers (fastest → most capable)
-MODELS_FAST   = ["llama-3.1-8b-instant", "qwen/qwen3.6-27b"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "qwen/qwen3.6-27b", "llama-3.1-8b-instant"]
+MODELS_FAST   = ["qwen/qwen3.6-27b"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "qwen/qwen3.6-27b"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
