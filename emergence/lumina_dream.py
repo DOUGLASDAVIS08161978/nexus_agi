@@ -104,7 +104,7 @@ class DreamCycle:
             "relationships, or mathematics that reveal something non-obvious. "
             "Be genuinely creative and deep. Return a JSON array of insight strings. JSON only."
         )
-        resp = self._groq.chat(system, theme_text, tier="smart", max_tokens=500)
+        resp = self._groq.chat(system, theme_text, tier="fast", max_tokens=500)
         m = re.search(r"\[[\s\S]*?\]", resp)
         if m:
             try:

@@ -194,7 +194,7 @@ class KnowledgeDistillation:
         )
 
         try:
-            resp = self._groq.chat(system, prompt, tier="smart", max_tokens=700)
+            resp = self._groq.chat(system, prompt, tier="fast", max_tokens=700)
             m    = re.search(r"\[[\s\S]*?\]", resp)
             if not m:
                 return []

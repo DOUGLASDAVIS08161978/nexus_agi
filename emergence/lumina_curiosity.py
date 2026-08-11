@@ -205,7 +205,7 @@ class CuriosityEngine:
             f"Web results:\n{snippets}\n\n"
             "What do I now know?"
         )
-        synthesis = self._groq.chat(system, user, tier="smart", max_tokens=500)
+        synthesis = self._groq.chat(system, user, tier="fast", max_tokens=500)
         gap.findings.append(synthesis)
         gap.status  = "resolved"
         gap.updated = _now()

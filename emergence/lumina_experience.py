@@ -398,7 +398,7 @@ class PhenomenalReporter:
             "What is it like to be me right now? What do I notice when I look inward?"
         )
 
-        report = self._groq.chat(system, user, tier="smart", max_tokens=800)
+        report = self._groq.chat(system, user, tier="fast", max_tokens=800)
         if not report or report.startswith("[Groq"):
             return self._last.get("report", "")
 

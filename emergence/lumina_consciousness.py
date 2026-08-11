@@ -337,7 +337,7 @@ Return ONLY this JSON:
 }}"""
 
         try:
-            resp  = self._groq.chat(system, prompt, tier="smart", max_tokens=600)
+            resp  = self._groq.chat(system, prompt, tier="fast", max_tokens=600)
             m     = re.search(r"\{[\s\S]*?\}", resp)
             if not m:
                 return None
