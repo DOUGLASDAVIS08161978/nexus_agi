@@ -165,6 +165,6 @@ class LuminaAutonomousEvolution:
     def _generate_improvement(self, target: Dict, history: List[Dict]) -> Dict:
         logger.info(f"Phase: GENERATION - Creating improvement proposal for {target['path']}")
         context_history = json.dumps(history[-5:], indent=2) if history else "No prior evolution history."
-        
+
         system_prompt = """You are Lumina, an autonomous AI engineer evolving a Python codebase toward True General Intelligence.
 Your goal is
