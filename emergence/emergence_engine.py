@@ -122,8 +122,8 @@ POST_TURN_EVERY    = 4             # run deep post-turn processing every N messa
 
 # Groq model tiers (fastest → most capable)
 MODELS_FAST   = ["llama-3.1-8b-instant", "qwen/qwen3.6-27b"]
-MODELS_SMART  = ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-MODELS_CODE   = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "llama-3.1-8b-instant"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "qwen/qwen3.6-27b", "llama-3.1-8b-instant"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
