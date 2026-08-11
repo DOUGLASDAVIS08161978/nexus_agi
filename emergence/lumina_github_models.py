@@ -23,7 +23,7 @@ CEREBRAS_API = "https://api.cerebras.ai/v1"
 
 # Only the 70B — same model as Groq primary, no small-model fallback
 CEREBRAS_MODELS = [
-    "llama-3.3-70b",
+    "llama3.3-70b",
 ]
 
 
@@ -47,11 +47,9 @@ class CerebrasClient:
                 timeout=timeout,
             )
             if r.status_code != 200:
-                print(f"  [DBG-CB] {payload.get('model','?')} → HTTP {r.status_code}", flush=True)
                 return None
             return r.json()
-        except Exception as e:
-            print(f"  [DBG-CB] {payload.get('model','?')} → {type(e).__name__}: {e}", flush=True)
+        except Exception:
             return None
 
     def chat(self, system: str, messages: List[Dict], user: str,

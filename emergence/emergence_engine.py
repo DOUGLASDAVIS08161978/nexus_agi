@@ -424,9 +424,8 @@ class GroqClient:
             resp = self._gh.chat(system, history, user, max_tokens=min(max_tokens, 1024))
             if resp and not resp.startswith("["):
                 return resp.strip()
-            print(f"  [DBG-GH] returned: {repr(resp[:100]) if resp else 'None'}", flush=True)
-        except Exception as e:
-            print(f"  [DBG-GH] Exception: {type(e).__name__}: {e}", flush=True)
+        except Exception:
+            pass
         return None
 
     def _hf_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
@@ -438,9 +437,8 @@ class GroqClient:
             if resp and not resp.startswith("["):
                 answer, _ = _strip_think(resp)
                 return answer.strip() if answer.strip() else resp
-            print(f"  [DBG-HF] HF returned: {repr(resp[:120]) if resp else 'None'}", flush=True)
-        except Exception as e:
-            print(f"  [DBG-HF] Exception: {type(e).__name__}: {e}", flush=True)
+        except Exception:
+            pass
         return None
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
@@ -460,19 +458,14 @@ class GroqClient:
         }
         try:
             r = requests.post(self._url, json=payload, headers=headers, timeout=45)
-            if r.status_code == 429:
-                print(f"  [DBG-GROQ] {model} → 429 rate-limited", flush=True)
-                return None
             if r.status_code != 200:
-                print(f"  [DBG-GROQ] {model} → HTTP {r.status_code}", flush=True)
                 return None
             raw = r.json()["choices"][0]["message"]["content"]
             answer, thinking = _strip_think(raw)
             if thinking:
                 self.last_thinking = thinking
             return answer
-        except Exception as e:
-            print(f"  [DBG-GROQ] {model} → {type(e).__name__}: {e}", flush=True)
+        except Exception:
             return None
 
     def chat(self, system: str, user: str, tier: str = "smart",
@@ -564,11 +557,7 @@ class GroqClient:
                 self._url, json=payload, headers=headers,
                 timeout=60, stream=True,
             )
-            if r.status_code == 429:
-                print(f"  [DBG-GROQ] stream {model} → 429 rate-limited", flush=True)
-                return None
             if r.status_code != 200:
-                print(f"  [DBG-GROQ] stream {model} → HTTP {r.status_code}", flush=True)
                 return None
 
             full_raw   = ""    # everything received, including <think>
@@ -623,8 +612,7 @@ class GroqClient:
                 self.last_thinking = thinking
             return answer.strip() if answer.strip() else full_raw.strip()
 
-        except Exception as e:
-            print(f"  [DBG-GROQ] stream {model} → {type(e).__name__}: {e}", flush=True)
+        except Exception:
             return None
 
 # ── Web Tool ──────────────────────────────────────────────────────────────────

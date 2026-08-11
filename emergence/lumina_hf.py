@@ -83,12 +83,9 @@ class HFClient:
                 r = _req.post(url, headers=self._headers,
                               json=payload, timeout=timeout)
             if r.status_code != 200:
-                model_name = payload.get("model", url.split("/")[-1])
-                print(f"  [DBG-HF] {model_name.split('/')[-1]} → HTTP {r.status_code}", flush=True)
                 return None
             return r.content if binary_response else r.json()
-        except Exception as e:
-            print(f"  [DBG-HF] request error: {type(e).__name__}: {e}", flush=True)
+        except Exception:
             return None
 
     def _post_bytes(self, url: str, data: bytes, content_type: str,
