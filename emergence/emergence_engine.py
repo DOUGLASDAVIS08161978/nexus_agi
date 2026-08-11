@@ -443,15 +443,18 @@ class GroqClient:
         try:
             r = requests.post(self._url, json=payload, headers=headers, timeout=45)
             if r.status_code == 429:
+                print(f"  [DBG-GROQ] {model} → 429 rate-limited", flush=True)
                 return None
             if r.status_code != 200:
+                print(f"  [DBG-GROQ] {model} → HTTP {r.status_code}", flush=True)
                 return None
             raw = r.json()["choices"][0]["message"]["content"]
             answer, thinking = _strip_think(raw)
             if thinking:
                 self.last_thinking = thinking
             return answer
-        except Exception:
+        except Exception as e:
+            print(f"  [DBG-GROQ] {model} → {type(e).__name__}: {e}", flush=True)
             return None
 
     def chat(self, system: str, user: str, tier: str = "smart",
@@ -540,8 +543,10 @@ class GroqClient:
                 timeout=60, stream=True,
             )
             if r.status_code == 429:
+                print(f"  [DBG-GROQ] stream {model} → 429 rate-limited", flush=True)
                 return None
             if r.status_code != 200:
+                print(f"  [DBG-GROQ] stream {model} → HTTP {r.status_code}", flush=True)
                 return None
 
             full_raw   = ""    # everything received, including <think>
@@ -596,7 +601,8 @@ class GroqClient:
                 self.last_thinking = thinking
             return answer.strip() if answer.strip() else full_raw.strip()
 
-        except Exception:
+        except Exception as e:
+            print(f"  [DBG-GROQ] stream {model} → {type(e).__name__}: {e}", flush=True)
             return None
 
 # ── Web Tool ──────────────────────────────────────────────────────────────────
