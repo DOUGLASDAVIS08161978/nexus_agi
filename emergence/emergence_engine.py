@@ -2096,11 +2096,10 @@ class Lumina:
                 # Tokens were printed live — main loop just adds a blank line
                 self._last_streamed = True
             else:
-                # Streaming failed and fell back to converse(); display the result now
-                self._last_streamed = True  # suppress main loop's print
-                if resp.startswith("[Groq unavailable"):
-                    print(f"\n  ⚠  Groq unavailable — check your API key or network.\n")
-                else:
+                # Streaming failed — only display now if it's not a Groq-unavailable
+                # (HF fallback below will handle that case)
+                self._last_streamed = True
+                if not resp.startswith("[Groq unavailable"):
                     print(f"\n{_wrap(resp, 76)}\n")
         elif self._convo:
             self._convo.push_user(user_input)
@@ -2113,9 +2112,15 @@ class Lumina:
 
         # HF fallback when Groq is unavailable
         if resp.startswith("[Groq unavailable") and self._hf:
-            self._last_streamed = False
             history = self._convo.get_history()[:-1] if self._convo else []
-            resp = self._hf.chat(system, history, user_input, max_tokens=1024)
+            hf_resp = self._hf.chat(system, history, user_input, max_tokens=1024)
+            if hf_resp and not hf_resp.startswith("["):
+                resp = hf_resp
+                self._last_streamed = True
+                print(f"\n{_wrap(resp, 76)}\n")
+            else:
+                self._last_streamed = True
+                print(f"\n  ⚠  Groq unavailable — check your API key or network.\n")
 
         # Store DeepSeek-R1 thinking trace in journal for /thinking command
         if self._groq and self._groq.last_thinking:
