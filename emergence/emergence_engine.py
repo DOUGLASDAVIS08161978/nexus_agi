@@ -413,14 +413,16 @@ class GroqClient:
     def _hf_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
         """Try HF when Groq is exhausted. Returns clean answer or None."""
         if not self._hf:
+            print("  [DBG-HF] No HF client attached", flush=True)
             return None
         try:
             resp = self._hf.chat(system, history, user, max_tokens=min(max_tokens, 1024))
             if resp and not resp.startswith("["):
                 answer, _ = _strip_think(resp)
                 return answer.strip() if answer.strip() else resp
-        except Exception:
-            pass
+            print(f"  [DBG-HF] HF returned: {repr(resp[:120]) if resp else 'None'}", flush=True)
+        except Exception as e:
+            print(f"  [DBG-HF] Exception: {type(e).__name__}: {e}", flush=True)
         return None
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
