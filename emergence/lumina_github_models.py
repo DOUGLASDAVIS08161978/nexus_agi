@@ -21,10 +21,9 @@ except ImportError:
 
 CEREBRAS_API = "https://api.cerebras.ai/v1"
 
-# Same Llama quality as Groq — separate daily quota
+# Only the 70B — same model as Groq primary, no small-model fallback
 CEREBRAS_MODELS = [
-    "llama-3.3-70b",    # best quality, same as Groq primary
-    "llama3.1-8b",      # fast fallback
+    "llama-3.3-70b",
 ]
 
 
