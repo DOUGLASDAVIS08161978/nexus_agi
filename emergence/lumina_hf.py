@@ -36,9 +36,10 @@ HF_API     = "https://api-inference.huggingface.co"
 # ── Models ─────────────────────────────────────────────────────────────────────
 
 LLM_MODELS = [
-    "Qwen/Qwen2.5-72B-Instruct",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "HuggingFaceH4/zephyr-7b-beta",
+    "Qwen/Qwen2.5-72B-Instruct",          # primary — top-tier 72B
+    "meta-llama/Llama-3.3-70B-Instruct",  # strong 70B fallback
+    "meta-llama/Llama-3.1-70B-Instruct",  # second 70B fallback
+    "mistralai/Mistral-7B-Instruct-v0.3", # fast lightweight fallback
 ]
 TTS_MODEL   = "facebook/mms-tts-eng"
 VISION_MODEL = "Salesforce/blip-image-captioning-large"
