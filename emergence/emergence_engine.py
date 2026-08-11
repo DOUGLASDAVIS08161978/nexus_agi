@@ -404,6 +404,24 @@ class GroqClient:
         self._rl          = RateLimiter(calls_per_min=60)
         self.last_thinking: str = ""   # exposes R1's reasoning to callers
         self._streamed_ok: bool = False  # True if last stream_converse actually streamed
+        self._hf          = None   # optional HuggingFace fallback client
+
+    def set_hf(self, hf_client) -> None:
+        """Wire in a HuggingFace client used as automatic fallback when all Groq models fail."""
+        self._hf = hf_client
+
+    def _hf_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
+        """Try HF when Groq is exhausted. Returns clean answer or None."""
+        if not self._hf:
+            return None
+        try:
+            resp = self._hf.chat(system, history, user, max_tokens=min(max_tokens, 1024))
+            if resp and not resp.startswith("["):
+                answer, _ = _strip_think(resp)
+                return answer.strip() if answer.strip() else resp
+        except Exception:
+            pass
+        return None
 
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
@@ -450,7 +468,8 @@ class GroqClient:
             result = self._post(model, messages, temperature, max_tokens)
             if result:
                 return result
-        return "[Groq unavailable — all models failed]"
+        hf = self._hf_fallback(system, [], user, max_tokens)
+        return hf if hf else "[Groq unavailable — all models failed]"
 
     def converse(self, system: str, history: List[Dict],
                  user: str, tier: str = "smart",
@@ -464,7 +483,8 @@ class GroqClient:
             result = self._post(model, messages, temperature, max_tokens)
             if result:
                 return result
-        return "[Groq unavailable]"
+        hf = self._hf_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
+        return hf if hf else "[Groq unavailable]"
 
     def summarize(self, text: str, max_tokens: int = 300) -> str:
         return self.chat(
@@ -1585,6 +1605,8 @@ class Lumina:
         ))
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
+        if self._groq and self._hf:
+            self._groq.set_hf(self._hf)   # all Groq calls now auto-fallback to HF
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
         self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
         self._lumina_gh  = _load("lumina_gh",    lambda: __import__("lumina_github",         fromlist=["LuminaGitHub"]).LuminaGitHub(self._journal) if GITHUB_TOKEN else None)

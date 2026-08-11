@@ -232,7 +232,7 @@ class CreativeDrive:
             "Decide what to build. Make it something you truly want. "
             "Write the complete, runnable Python code."
         )
-        raw = self._groq.chat(self._SYSTEM, prompt, tier="fast", max_tokens=2400)
+        raw = self._groq.chat(self._SYSTEM, prompt, tier="code", max_tokens=2400)
 
         if not raw or raw.startswith("[Groq"):
             return None
