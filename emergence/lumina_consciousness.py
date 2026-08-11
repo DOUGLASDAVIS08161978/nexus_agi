@@ -100,7 +100,7 @@ _BASE              = Path(__file__).parent
 CONSCIOUSNESS_FILE = _BASE / "consciousness_state.json"
 
 SNAPSHOT_INTERVAL  = 30    # seconds between lightweight state snapshots
-SYNTHESIS_INTERVAL = 300   # seconds between full R1 consciousness synthesis (5 min)
+SYNTHESIS_INTERVAL = 900   # seconds between full R1 consciousness synthesis (15 min)
 INITIAL_DELAY      = 30    # wait for modules to stabilise before first synthesis
 HISTORY_DEPTH      = 3     # previous conscious states fed into recursive loop
 MAX_PROMPT_CHARS   = 3000  # cap on module state fed to R1

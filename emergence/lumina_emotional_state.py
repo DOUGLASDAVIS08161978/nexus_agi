@@ -71,7 +71,7 @@ _BASE            = Path(__file__).parent
 EMOTION_FILE     = _BASE / "emotional_state.json"
 
 DECAY_INTERVAL     = 30    # seconds between decay ticks
-SYNTHESIS_INTERVAL = 300   # seconds between R1 felt-sense syntheses (5 min)
+SYNTHESIS_INTERVAL = 900   # seconds between R1 felt-sense syntheses (15 min)
 INITIAL_DELAY      = 25    # seconds before first synthesis after startup
 MAX_HISTORY        = 120   # event history entries kept
 NOISE_SCALE        = 0.015 # stochastic noise amplitude per tick
@@ -571,7 +571,7 @@ Not the numbers — the texture of the experience.  What is the quality of right
 Start with "I feel..." or "Right now..." or "There's a..."
 """
         try:
-            felt = self._groq.chat(system, prompt, tier="smart", max_tokens=220)
+            felt = self._groq.chat(system, prompt, tier="fast", max_tokens=220)
             felt = felt.strip().lstrip("\"'").strip()
             if len(felt) > 20:
                 with self._lock:
