@@ -74,14 +74,14 @@ class LuminaEmpathicCommunicator:
     def process_emotion(self, user_input: str) -> Optional[EmotionalState]:
         # Tokenize and lemmatize user input
         tokens = re.findall(r'\b\w+\b', user_input.lower())
-        
+
         # Match tokens with lexicon keywords
         matched_emotions: Dict[Emotion, int] = {}
         for token in tokens:
             for emotion, keywords in self.emotion_lexicon.items():
                 if token in keywords:
                     matched_emotions[emotion] = matched_emotions.get(emotion, 0) + 1
-        
+
         # Determine primary emotion
         primary_emotion: Optional[Emotion] = None
         max_matches = 0
@@ -89,10 +89,10 @@ class LuminaEmpathicCommunicator:
             if matches > max_matches:
                 max_matches = matches
                 primary_emotion = emotion
-        
+
         # Calculate intensity
         intensity = max_matches / len(tokens) if tokens else 0
-        
+
         # Create EmotionalState object
         emotional_state = EmotionalState(
             primary=primary_emotion,
@@ -101,7 +101,7 @@ class LuminaEmpathicCommunicator:
             timestamp=datetime.datetime.now(),
             context_tags=[]
         )
-        
+
         return emotional_state
 
     def respond(self, emotional_state: EmotionalState) -> str:
@@ -109,7 +109,7 @@ class LuminaEmpathicCommunicator:
         for emotion, templates in self.response_templates.items():
             if emotional_state.primary == emotion:
                 return random.choice(templates).format(user=self.user_name)
-        
+
         # Default response
         return f"I'm here to listen, {self.user_name}. What's on your mind?"
 
