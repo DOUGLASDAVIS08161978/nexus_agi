@@ -36,11 +36,11 @@ HF_API     = "https://api-inference.huggingface.co"
 # ── Models ─────────────────────────────────────────────────────────────────────
 
 LLM_MODELS = [
-    "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", # primary — best reasoning
-    "Qwen/Qwen2.5-72B-Instruct",                  # strong 72B fallback
-    "meta-llama/Llama-3.3-70B-Instruct",          # strong 70B fallback
-    "meta-llama/Llama-3.1-70B-Instruct",          # second 70B fallback
-    "mistralai/Mistral-7B-Instruct-v0.3",         # fast lightweight fallback
+    "Qwen/Qwen2.5-72B-Instruct",                  # best available on HF free tier
+    "meta-llama/Meta-Llama-3.1-8B-Instruct",      # reliable free tier 8B
+    "mistralai/Mistral-7B-Instruct-v0.3",         # reliable free tier 7B
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", # try if available
+    "meta-llama/Llama-3.3-70B-Instruct",          # try if available
 ]
 TTS_MODEL   = "facebook/mms-tts-eng"
 VISION_MODEL = "Salesforce/blip-image-captioning-large"
