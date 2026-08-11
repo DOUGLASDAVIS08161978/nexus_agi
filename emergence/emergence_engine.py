@@ -405,15 +405,32 @@ class GroqClient:
         self.last_thinking: str = ""   # exposes R1's reasoning to callers
         self._streamed_ok: bool = False  # True if last stream_converse actually streamed
         self._hf          = None   # optional HuggingFace fallback client
+        self._gh          = None   # optional GitHub Models fallback client
 
     def set_hf(self, hf_client) -> None:
         """Wire in a HuggingFace client used as automatic fallback when all Groq models fail."""
         self._hf = hf_client
 
+    def set_github(self, gh_client) -> None:
+        """Wire in a GitHub Models client as fallback (tried before HF)."""
+        self._gh = gh_client
+
+    def _github_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
+        """Try GitHub Models when Groq is exhausted. Returns clean answer or None."""
+        if not self._gh:
+            return None
+        try:
+            resp = self._gh.chat(system, history, user, max_tokens=min(max_tokens, 1024))
+            if resp and not resp.startswith("["):
+                return resp.strip()
+            print(f"  [DBG-GH] returned: {repr(resp[:100]) if resp else 'None'}", flush=True)
+        except Exception as e:
+            print(f"  [DBG-GH] Exception: {type(e).__name__}: {e}", flush=True)
+        return None
+
     def _hf_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
-        """Try HF when Groq is exhausted. Returns clean answer or None."""
+        """Try HF when Groq and GitHub Models are both exhausted."""
         if not self._hf:
-            print("  [DBG-HF] No HF client attached", flush=True)
             return None
         try:
             resp = self._hf.chat(system, history, user, max_tokens=min(max_tokens, 1024))
@@ -473,6 +490,8 @@ class GroqClient:
             result = self._post(model, messages, temperature, max_tokens)
             if result:
                 return result
+        gh = self._github_fallback(system, [], user, max_tokens)
+        if gh: return gh
         hf = self._hf_fallback(system, [], user, max_tokens)
         return hf if hf else "[Groq unavailable — all models failed]"
 
@@ -488,6 +507,8 @@ class GroqClient:
             result = self._post(model, messages, temperature, max_tokens)
             if result:
                 return result
+        gh = self._github_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
+        if gh: return gh
         hf = self._hf_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
         return hf if hf else "[Groq unavailable]"
 
@@ -1613,8 +1634,11 @@ class Lumina:
         ))
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
+        self._gh_models  = _load("gh_models",   lambda: __import__("lumina_github_models",  fromlist=["GitHubModelsClient"]).GitHubModelsClient(GITHUB_TOKEN) if GITHUB_TOKEN else None)
         if self._groq and self._hf:
-            self._groq.set_hf(self._hf)   # all Groq calls now auto-fallback to HF
+            self._groq.set_hf(self._hf)
+        if self._groq and self._gh_models:
+            self._groq.set_github(self._gh_models)   # Groq → GitHub Models → HF
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
         self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
         self._lumina_gh  = _load("lumina_gh",    lambda: __import__("lumina_github",         fromlist=["LuminaGitHub"]).LuminaGitHub(self._journal) if GITHUB_TOKEN else None)
@@ -2140,12 +2164,20 @@ class Lumina:
         else:
             resp = self._groq.chat(system, user_input, tier="smart")
 
-        # HF fallback when Groq is unavailable
-        if resp.startswith("[Groq unavailable") and self._hf:
+        # Fallback chain when Groq is unavailable: GitHub Models → HF
+        if resp.startswith("[Groq unavailable"):
             history = self._convo.get_history()[:-1] if self._convo else []
-            hf_resp = self._hf.chat(system, history, user_input, max_tokens=1024)
-            if hf_resp and not hf_resp.startswith("["):
-                resp = hf_resp
+            fallback = None
+            if self._gh_models:
+                gh_resp = self._gh_models.chat(system, history, user_input, max_tokens=1024)
+                if gh_resp and not gh_resp.startswith("["):
+                    fallback = gh_resp
+            if not fallback and self._hf:
+                hf_resp = self._hf.chat(system, history, user_input, max_tokens=1024)
+                if hf_resp and not hf_resp.startswith("["):
+                    fallback = hf_resp
+            if fallback:
+                resp = fallback
                 self._last_streamed = True
                 print(f"\n{_wrap(resp, 76)}\n")
             else:
@@ -3304,11 +3336,13 @@ def _print_banner():
     print("  ║     E M E R G E N C E   v23.0  —  L u m i n a   A G I         ║")
     print("  ║  Emotional Memory · Mood-Driven Behavior     (27/27 Modules)   ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
-    groq_ok = "✓ Groq connected"      if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
-    gh_ok   = "✓ GitHub ready"        if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
-    hf_ok   = "✓ HuggingFace ready"  if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
+    groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
+    gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
+    ghm_ok  = "✓ GitHub Models ready"      if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN for LLM fallback"
+    hf_ok   = "✓ HuggingFace ready"       if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
     print(f"  ║  {groq_ok:<64}║")
     print(f"  ║  {gh_ok:<64}║")
+    print(f"  ║  {ghm_ok:<64}║")
     print(f"  ║  {hf_ok:<64}║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     print("  ║  Type anything to talk · /help for commands · /quit to exit     ║")
