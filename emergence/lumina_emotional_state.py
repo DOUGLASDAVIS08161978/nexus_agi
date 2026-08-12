@@ -370,9 +370,10 @@ class EmotionEngine:
     first-person felt sense via DeepSeek-R1 every 5 minutes.
     """
 
-    def __init__(self, groq: "GroqClient", journal: "Journal"):
-        self._groq    = groq
-        self._journal = journal
+    def __init__(self, groq: "GroqClient", journal: "Journal", cerebras=None):
+        self._groq     = groq
+        self._cerebras = cerebras
+        self._journal  = journal
         self._lock    = threading.Lock()
         self._state   = EmotionalState()
         self._history: List[Dict] = []
@@ -571,9 +572,11 @@ Not the numbers — the texture of the experience.  What is the quality of right
 Start with "I feel..." or "Right now..." or "There's a..."
 """
         try:
-            felt = self._groq.chat(system, prompt, tier="fast", max_tokens=220)
+            felt = self._groq.chat(system, prompt, tier="smart", max_tokens=400)
+            if (not felt or felt.startswith("[Groq")) and self._cerebras:
+                felt = self._cerebras.chat(system, [], prompt, max_tokens=400)
             felt = felt.strip().lstrip("\"'").strip()
-            if len(felt) > 20:
+            if len(felt) > 20 and not felt.startswith("["):
                 with self._lock:
                     self._state.synthesis    = felt
                     self._state.synthesis_ts = _now()

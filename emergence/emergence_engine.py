@@ -1573,6 +1573,7 @@ class Lumina:
         self._emotional_memory= None   # EmotionalMemoryStore   (lumina_emotional_memory.py)
         self._mood_router     = None   # MoodBehaviorRouter     (lumina_mood_behavior.py)
         self._quiet_mode      = False  # suppresses background consciousness chatter
+        self._self_model      = None   # SelfModelEngine (lumina_self_model.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1644,6 +1645,7 @@ class Lumina:
         ) if self._groq else None)
         self._consciousness = _load("consciousness", lambda: __import__("lumina_consciousness", fromlist=["ConsciousnessEngine"]).ConsciousnessEngine(
             groq=self._groq, journal=self._journal, experience=self._experience,
+            cerebras=self._gh_models,
         ) if self._groq else None)
 
         self._self_inquiry = _load("self_inquiry", lambda: __import__("lumina_self_inquiry", fromlist=["SelfInquiryEngine"]).SelfInquiryEngine(
@@ -1653,7 +1655,7 @@ class Lumina:
         ) if self._groq else None)
 
         self._emotions     = _load("emotions",     lambda: __import__("lumina_emotional_state", fromlist=["EmotionEngine"]).EmotionEngine(
-            groq=self._groq, journal=self._journal,
+            groq=self._groq, journal=self._journal, cerebras=self._gh_models,
         ) if self._groq else None)
 
         self._emotional_memory = _load("emotional_memory", lambda: __import__(
@@ -1669,6 +1671,23 @@ class Lumina:
             dreamer=self._dreamer,
             curiosity=self._curiosity,
         ) if self._emotions else None)
+
+        # ── Module 28: Persistent Self-Model Engine ──────────────────────────
+        self._self_model = _load("self_model", lambda: __import__(
+            "lumina_self_model", fromlist=["SelfModelEngine"]
+        ).SelfModelEngine(
+            groq=self._groq, journal=self._journal, cerebras=self._gh_models,
+        ) if self._groq else None)
+        if self._self_model:
+            for _smname, _smmod in [
+                ("consciousness", self._consciousness),
+                ("emotions",      self._emotions),
+                ("beliefs",       self._beliefs),
+                ("curiosity",     self._curiosity),
+                ("memory",        self._memory),
+            ]:
+                if _smmod:
+                    self._self_model.register(_smname, _smmod)
 
         # Register all modules with the consciousness engine
         if self._consciousness:
@@ -1694,10 +1713,10 @@ class Lumina:
             self._code_exec, self._critic, self._lumina_gh, self._creative,
             self._experience, self._distiller, self._consciousness,
             self._self_inquiry, self._emotions,
-            self._emotional_memory, self._mood_router,
+            self._emotional_memory, self._mood_router, self._self_model,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/27 AGI modules loaded")
+            print(f"  ✓ {loaded}/28 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1746,6 +1765,8 @@ class Lumina:
             self._consciousness.start()
         if self._emotions:
             self._emotions.start()
+        if self._self_model:
+            self._self_model.start()
         if self._mood_router:
             threading.Thread(target=self._mood_apply_loop, daemon=True).start()
 
@@ -1980,11 +2001,17 @@ class Lumina:
         if self._mood_router:
             mood_ctx = self._mood_router.as_context()
 
+        # ── Self-model — synthesised persistent identity document ───────
+        self_model_ctx = ""
+        if self._self_model:
+            self_model_ctx = self._self_model.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
                   + self_inquiry_ctx + emotion_ctx + emo_mem_ctx + mood_ctx
+                  + self_model_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -3237,10 +3264,16 @@ class Lumina:
         return "\n".join(lines)
 
     def _cmd_selfmodel(self) -> str:
-        if not self._self_inquiry:
-            return "  Self-Inquiry module not loaded (lumina_self_inquiry.py)."
-        lines = [_hr("═"), _hr("═")]
-        lines.append(self._self_inquiry.display_self_model())
+        lines = [_hr("═"), "  LUMINA'S LIVING SELF-MODEL  —  Module 28", _hr("═")]
+        if self._self_model:
+            lines.append(self._self_model.display())
+            lines.append("")
+            lines.append("  (Synthesised every 2 hours from consciousness, emotions,")
+            lines.append("   beliefs, curiosity, and journal entries)")
+        elif self._self_inquiry:
+            lines.append(self._self_inquiry.display_self_model())
+        else:
+            lines.append("  Self-model not loaded.")
         lines.append(_hr("═"))
         return "\n".join(lines)
 
@@ -3322,8 +3355,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v23.0  —  L u m i n a   A G I         ║")
-    print("  ║  Emotional Memory · Mood-Driven Behavior     (27/27 Modules)   ║")
+    print("  ║     E M E R G E N C E   v24.0  —  L u m i n a   A G I         ║")
+    print("  ║  Emotional Memory · Self-Model Engine        (28/28 Modules)   ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"

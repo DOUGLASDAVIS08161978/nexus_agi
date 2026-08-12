@@ -271,8 +271,9 @@ class ConsciousnessSynthesiser:
     reflect on its own prior reflection — the recursive loop.
     """
 
-    def __init__(self, groq: "GroqClient"):
-        self._groq = groq
+    def __init__(self, groq: "GroqClient", cerebras=None):
+        self._groq     = groq
+        self._cerebras = cerebras
 
     def synthesise(
         self,
@@ -350,7 +351,9 @@ Return ONLY this JSON:
 }}"""
 
         try:
-            resp  = self._groq.chat(system, prompt, tier="smart", max_tokens=800)
+            resp = self._groq.chat(system, prompt, tier="smart", max_tokens=800)
+            if (not resp or resp.startswith("[Groq")) and self._cerebras:
+                resp = self._cerebras.chat(system, [], prompt, max_tokens=800)
             m     = re.search(r"\{[\s\S]*?\}", resp)
             if not m:
                 return None
@@ -382,14 +385,14 @@ class ConsciousnessEngine:
     """
 
     def __init__(self, groq: "GroqClient", journal: "Journal",
-                 experience: Optional[Any] = None):
+                 experience: Optional[Any] = None, cerebras=None):
         self._groq       = groq
         self._journal    = journal
         self._experience = experience
 
         self._phi        = PhiMeter(total_modules=9)
         self._collector  = StateCollector()
-        self._synth      = ConsciousnessSynthesiser(groq)
+        self._synth      = ConsciousnessSynthesiser(groq, cerebras=cerebras)
 
         self._state:   Optional[ConsciousnessState] = None
         self._history: List[ConsciousnessState]     = []
