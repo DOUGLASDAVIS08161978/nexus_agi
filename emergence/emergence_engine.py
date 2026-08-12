@@ -1171,8 +1171,9 @@ class CodebaseScanner:
 
 class EvolutionEngine:
     def __init__(self, groq: GroqClient, history: EvolutionHistory,
-                 goals: GoalTracker, web: "WebTool"):
+                 goals: GoalTracker, web: "WebTool", cerebras=None):
         self._groq     = groq
+        self._cerebras = cerebras
         self._history  = history
         self._goals    = goals
         self._web      = web
@@ -1369,7 +1370,13 @@ class EvolutionEngine:
             code = re.sub(r"^```python\s*", "", code.strip())
             code = re.sub(r"```\s*$", "", code.strip())
             if len(code) < 80 or code.startswith("[Groq"):
-                continue
+                # Groq failed — try Cerebras
+                if self._cerebras:
+                    code = self._cerebras.chat(system, [], user, max_tokens=4000)
+                    code = re.sub(r"^```python\s*", "", code.strip())
+                    code = re.sub(r"```\s*$", "", code.strip())
+                if len(code) < 80 or code.startswith("["):
+                    continue
 
             imp = {
                 "file":         fname,
@@ -1540,7 +1547,8 @@ class Lumina:
         self._reflector    = SelfReflector(self._groq, self._memory, self._goals,
                                            self._metrics) if self._groq else None
         self._evolution    = EvolutionEngine(self._groq, self._history,
-                                             self._goals, self._web) if self._groq else None
+                                             self._goals, self._web,
+                                             cerebras=self._gh_models) if self._groq else None
         self._github       = GitHubPRCreator() if GITHUB_TOKEN else None
         self._recent_exchanges: List[str] = []
         self._critique_on  = CRITIQUE_ENABLED
