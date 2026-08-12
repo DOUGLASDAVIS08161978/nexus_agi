@@ -1547,8 +1547,7 @@ class Lumina:
         self._reflector    = SelfReflector(self._groq, self._memory, self._goals,
                                            self._metrics) if self._groq else None
         self._evolution    = EvolutionEngine(self._groq, self._history,
-                                             self._goals, self._web,
-                                             cerebras=self._gh_models) if self._groq else None
+                                             self._goals, self._web) if self._groq else None
         self._github       = GitHubPRCreator() if GITHUB_TOKEN else None
         self._recent_exchanges: List[str] = []
         self._critique_on  = CRITIQUE_ENABLED
@@ -1636,6 +1635,8 @@ class Lumina:
             self._groq.set_hf(self._hf)
         if self._groq and self._gh_models:
             self._groq.set_github(self._gh_models)   # Groq → GitHub Models → HF
+        if self._evolution and self._gh_models:
+            self._evolution._cerebras = self._gh_models
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
         self._critic     = _load("critic",       lambda: __import__("lumina_self_critique",  fromlist=["SelfCritic"]).SelfCritic(self._groq) if self._groq else None)
         self._lumina_gh  = _load("lumina_gh",    lambda: __import__("lumina_github",         fromlist=["LuminaGitHub"]).LuminaGitHub(self._journal) if GITHUB_TOKEN else None)
