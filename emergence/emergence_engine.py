@@ -982,7 +982,7 @@ class GitHubPRCreator:
             branch = f"lumina-evolution-{pid}"
             current = self._git(["rev-parse", "--abbrev-ref", "HEAD"],
                                  check=False).stdout.strip() or default
-            sr = self._git(["stash", "push", "-m", f"pre-evolution-{pid}"], check=False)
+            sr = self._git(["stash", "push", "-u", "-m", f"pre-evolution-{pid}"], check=False)
             stashed = (sr.returncode == 0
                        and "No local changes to save" not in sr.stdout)
             self._git(["checkout", "-B", branch, ref])
