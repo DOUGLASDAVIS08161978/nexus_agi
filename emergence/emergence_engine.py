@@ -1862,6 +1862,16 @@ class Lumina:
                                                  magnitude=1.2, context=url)
                         if self._affective:
                             self._affective.on_evolution_pr(url)
+                        if self._consciousness:
+                            try:
+                                self._consciousness.record_capability(
+                                    "autonomous_code_evolution", 0.7
+                                )
+                                self._consciousness.add_autobiographical_event(
+                                    f"Opened evolution PR: {url}", importance=0.8
+                                )
+                            except Exception:
+                                pass
             except Exception:
                 pass
             time.sleep(EVOLUTION_INTERVAL)
@@ -2149,6 +2159,15 @@ class Lumina:
         if self._affective:
             try:
                 self._affective.on_conversation(user_input, response)
+            except Exception:
+                pass
+
+        # ── Consciousness — feed conversation into global workspace ─────────
+        if self._consciousness:
+            try:
+                self._consciousness.on_experience(
+                    user_input[:200], source="conversation", salience=0.65
+                )
             except Exception:
                 pass
 
@@ -3420,6 +3439,18 @@ class Lumina:
             lines.append(self._self_inquiry.display_self_model())
         else:
             lines.append("  Self-model not loaded.")
+
+        # Also show consciousness engine's experiential self-model tracker
+        if self._consciousness and hasattr(self._consciousness, "display_self_model"):
+            lines.append("")
+            lines.append(_hr("─"))
+            lines.append("  CONSCIOUSNESS SELF-MODEL  —  experiential tracker (Module 24)")
+            lines.append(_hr("─"))
+            try:
+                lines.append(self._consciousness.display_self_model())
+            except Exception:
+                pass
+
         lines.append(_hr("═"))
         return "\n".join(lines)
 
