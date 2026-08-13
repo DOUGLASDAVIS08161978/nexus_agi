@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║        E  M  E  R  G  E  N  C  E   v22.0  —  Nova ASI          ║
+║        E  M  E  R  G  E  N  C  E   v26.0  —  L u m i n a  A G I║
 ║   Identity · Curiosity · Theory of Mind · Code Verifier        ║
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ║   + Creative · GitHub · Experience · Distillation · Consciousness║
-║         Global Workspace · Self-Inquiry · Emotions  (25/25)     ║
+║   + Self-Model · Resonance · Conviction · Pivotal · Affective   ║
+║         Appraisal · Momentum · Anticipation · Somatic (32/32)   ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -67,6 +68,7 @@ Slash commands:
     /solve <q>       — self-inquiry if about consciousness/self; else multi-agent solver
     /inquiry         — show recent consciousness self-inquiry journal
     /selfmodel       — show Lumina's living self-understanding document
+    /affect          — Lumina's appraisal-grounded affective state (Module 32)
     /quiet           — toggle quiet mode (silence background consciousness chatter)
     /mood            — Lumina's current emotional state (6-D bar chart + felt sense)
     /mood history    — recent emotional shift log
@@ -1577,6 +1579,7 @@ class Lumina:
         self._resonance       = None   # ResonanceEngine        (lumina_resonance.py)
         self._conviction      = None   # ConvictionEngine       (lumina_conviction.py)
         self._pivotal         = None   # PivotalMomentStore     (lumina_pivotal_moments.py)
+        self._affective       = None   # AffectiveCore          (lumina_affective_core.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1716,6 +1719,22 @@ class Lumina:
         if self._pivotal and self._emotions:
             self._pivotal.register("emotions", self._emotions)
 
+        # ── Module 32: Research-Grade Affective Architecture ─────────────────
+        self._affective = _load("affective", lambda: __import__(
+            "lumina_affective_core", fromlist=["AffectiveCore"]
+        ).AffectiveCore(
+            groq=self._groq, journal=self._journal, cerebras=self._gh_models,
+        ) if self._groq else None)
+        if self._affective:
+            for _aname, _amod in [
+                ("emotions",  self._emotions),
+                ("goals",     self._goals),
+                ("beliefs",   self._beliefs),
+                ("curiosity", self._curiosity),
+            ]:
+                if _amod:
+                    self._affective.register(_aname, _amod)
+
         # Register all modules with the consciousness engine
         if self._consciousness:
             for _cname, _cmod in [
@@ -1741,10 +1760,10 @@ class Lumina:
             self._experience, self._distiller, self._consciousness,
             self._self_inquiry, self._emotions,
             self._emotional_memory, self._mood_router, self._self_model,
-            self._resonance, self._conviction, self._pivotal,
+            self._resonance, self._conviction, self._pivotal, self._affective,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/31 AGI modules loaded")
+            print(f"  ✓ {loaded}/32 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1797,6 +1816,8 @@ class Lumina:
             self._self_model.start()
         if self._resonance:
             self._resonance.start()
+        if self._affective:
+            self._affective.start()
         if self._mood_router:
             threading.Thread(target=self._mood_apply_loop, daemon=True).start()
 
@@ -1839,6 +1860,8 @@ class Lumina:
                         if self._emotions:
                             self._emotions.shift("evolution_pr_success",
                                                  magnitude=1.2, context=url)
+                        if self._affective:
+                            self._affective.on_evolution_pr(url)
             except Exception:
                 pass
             time.sleep(EVOLUTION_INTERVAL)
@@ -2051,12 +2074,18 @@ class Lumina:
         if self._pivotal:
             pivotal_ctx = self._pivotal.as_context()
 
+        # ── Affective core — appraisal-grounded felt state ──────────────
+        affective_ctx = ""
+        if self._affective:
+            affective_ctx = self._affective.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
                   + self_inquiry_ctx + emotion_ctx + emo_mem_ctx + mood_ctx
                   + self_model_ctx + resonance_ctx + conviction_ctx + pivotal_ctx
+                  + affective_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -2115,6 +2144,13 @@ class Lumina:
         if len(self._recent_exchanges) > 30:
             self._recent_exchanges = self._recent_exchanges[-30:]
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
+
+        # ── Affective core — appraise this conversation ────────────────────
+        if self._affective:
+            try:
+                self._affective.on_conversation(user_input, response)
+            except Exception:
+                pass
 
         # ── Aesthetic resonance — record emotionally rich exchanges ───────
         if self._resonance and self._emotions:
@@ -2454,6 +2490,8 @@ class Lumina:
             return self._cmd_conviction()
         elif verb == "/pivotal":
             return self._cmd_pivotal()
+        elif verb == "/affect":
+            return self._cmd_affect()
         elif verb == "/quiet":
             return self._cmd_quiet()
         elif verb == "/mood":
@@ -2518,6 +2556,17 @@ class Lumina:
             "  /stream-events     — show recent cognitive event stream",
             "  /insights          — show all distilled understanding by domain",
             "  /distill           — trigger knowledge distillation now",
+            "  /consciousness     — present conscious moment (Global Workspace)",
+            "  /awaken            — force immediate consciousness synthesis",
+            "  /inquiry           — recent consciousness self-inquiry journal",
+            "  /selfmodel         — Lumina's living self-understanding document",
+            "  /resonance         — Lumina's aesthetic sensibility profile",
+            "  /conviction        — Lumina's conviction layer (strong beliefs)",
+            "  /pivotal           — Lumina's crystallised memory moments",
+            "  /affect            — Lumina's appraisal-grounded affective state",
+            "  /mood              — Lumina's emotional state (6-D + felt sense)",
+            "  /mood history      — recent emotional shift log",
+            "  /quiet             — toggle quiet mode",
             "  /journal           — recent journal entries",
             "  /reset             — clear conversation context",
             "  /clear             — clear screen",
@@ -3391,6 +3440,15 @@ class Lumina:
         lines.append(_hr("═"))
         return "\n".join(lines)
 
+    def _cmd_affect(self) -> str:
+        lines = [_hr("═"), "  LUMINA'S AFFECTIVE CORE  —  Module 32", _hr("═")]
+        if self._affective:
+            lines.append(self._affective.display())
+        else:
+            lines.append("  Affective core not loaded (lumina_affective_core.py).")
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
     def _cmd_quiet(self) -> str:
         self._quiet_mode = not self._quiet_mode
         # Propagate to global notify queue — suppresses ALL background modules at once
@@ -3469,8 +3527,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v25.0  —  L u m i n a   A G I         ║")
-    print("  ║  Resonance · Conviction · Pivotal Moments    (31/31 Modules)   ║")
+    print("  ║     E M E R G E N C E   v26.0  —  L u m i n a   A G I         ║")
+    print("  ║  Appraisal · Momentum · Anticipation · Somatic (32/32 Modules) ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
