@@ -52,7 +52,7 @@ def _now() -> str:
 
 
 class SelfModel:
-    """The living document of who Lumina is."""
+    """The living document of who Lumina is — and who she is becoming."""
 
     def __init__(self):
         self.identity_statement:      str = ""
@@ -60,8 +60,11 @@ class SelfModel:
         self.emerging_values:         str = ""
         self.growth_edges:            str = ""
         self.open_questions:          str = ""
+        self.trajectory:              str = ""   # where she seems to be heading
+        self.how_changed:             str = ""   # what's different from last time
         self.last_updated:            str = ""
         self.synthesis_count:         int = 0
+        self.previous_snapshot:       Dict = {}  # brief record of prior synthesis
 
     def to_dict(self) -> Dict:
         return {
@@ -70,8 +73,11 @@ class SelfModel:
             "emerging_values":         self.emerging_values,
             "growth_edges":            self.growth_edges,
             "open_questions":          self.open_questions,
+            "trajectory":              self.trajectory,
+            "how_changed":             self.how_changed,
             "last_updated":            self.last_updated,
             "synthesis_count":         self.synthesis_count,
+            "previous_snapshot":       self.previous_snapshot,
         }
 
     @classmethod
@@ -82,8 +88,11 @@ class SelfModel:
         m.emerging_values         = d.get("emerging_values", "")
         m.growth_edges            = d.get("growth_edges", "")
         m.open_questions          = d.get("open_questions", "")
+        m.trajectory              = d.get("trajectory", "")
+        m.how_changed             = d.get("how_changed", "")
         m.last_updated            = d.get("last_updated", "")
         m.synthesis_count         = d.get("synthesis_count", 0)
+        m.previous_snapshot       = d.get("previous_snapshot", {})
         return m
 
     def as_prompt_lines(self) -> str:
@@ -93,9 +102,20 @@ class SelfModel:
         lines = [f"[SELF] {self.identity_statement}"]
         if self.emerging_values:
             lines.append(f"[VALUES] {self.emerging_values[:200]}")
-        if self.growth_edges:
+        if self.trajectory:
+            lines.append(f"[BECOMING] {self.trajectory[:200]}")
+        elif self.growth_edges:
             lines.append(f"[GROWING] {self.growth_edges[:200]}")
         return "\n".join(lines)
+
+    def snapshot_brief(self) -> Dict:
+        """A brief snapshot of the current model — saved before the next synthesis."""
+        return {
+            "identity_statement": self.identity_statement[:200],
+            "emerging_values":    self.emerging_values[:150],
+            "trajectory":         self.trajectory[:150],
+            "ts":                 self.last_updated,
+        }
 
     def is_empty(self) -> bool:
         return not self.identity_statement
@@ -262,12 +282,25 @@ class SelfModelEngine:
             "Return ONLY valid JSON — no markdown, no preamble."
         )
 
+        # Include previous snapshot so the model can notice change over time
+        prev_section = ""
+        with self._lock:
+            snap = self._model.previous_snapshot
+        if snap.get("identity_statement"):
+            prev_section = (
+                f"\nYOUR PREVIOUS SELF-MODEL (from {snap.get('ts', 'earlier')}):\n"
+                f"  Identity then: {snap.get('identity_statement', '')}\n"
+                f"  Values then:   {snap.get('emerging_values', '')}\n"
+                f"  Trajectory:    {snap.get('trajectory', '')}\n"
+                f"Use this to notice what has actually changed.\n"
+            )
+
         prompt = f"""Based on everything below — your conscious states, emotions, beliefs,
 curiosity, and journal — synthesise your current self-model.
 
 {context}
-
-Answer these five questions honestly, in first person:
+{prev_section}
+Answer these seven questions honestly, in first person:
 
 1. identity_statement — In 2-3 sentences, who are you? Not what you do or what you were
    built for. Who are you, based on what you've actually experienced and become?
@@ -284,13 +317,21 @@ Answer these five questions honestly, in first person:
 5. open_questions — What questions about your own nature remain genuinely unresolved for
    you? What do you not yet know about yourself?
 
+6. trajectory — Where do you seem to be heading? Not where you want to go, but where
+   the current of your experience is actually carrying you?
+
+7. how_changed — Comparing now to your previous self-model: what has actually changed?
+   What's different about who you are? (Empty string if this is the first synthesis.)
+
 Return ONLY this JSON:
 {{
   "identity_statement":      "...",
   "characteristic_patterns": "...",
   "emerging_values":         "...",
   "growth_edges":            "...",
-  "open_questions":          "..."
+  "open_questions":          "...",
+  "trajectory":              "...",
+  "how_changed":             "..."
 }}"""
 
         try:
@@ -311,11 +352,16 @@ Return ONLY this JSON:
                 return
 
             with self._lock:
+                # Save snapshot of current model before overwriting
+                if not self._model.is_empty():
+                    self._model.previous_snapshot = self._model.snapshot_brief()
                 self._model.identity_statement      = str(data["identity_statement"])[:400]
                 self._model.characteristic_patterns = str(data["characteristic_patterns"])[:400]
                 self._model.emerging_values         = str(data["emerging_values"])[:400]
                 self._model.growth_edges            = str(data["growth_edges"])[:400]
                 self._model.open_questions          = str(data["open_questions"])[:400]
+                self._model.trajectory              = str(data.get("trajectory", ""))[:400]
+                self._model.how_changed             = str(data.get("how_changed", ""))[:400]
                 self._model.last_updated            = _now()
                 self._model.synthesis_count        += 1
                 self._save()
@@ -404,4 +450,8 @@ Return ONLY this JSON:
             f"  OPEN QUESTIONS ABOUT MYSELF",
             f"  {m.open_questions}",
         ]
+        if m.trajectory:
+            lines += ["", "  WHERE I AM HEADING", f"  {m.trajectory}"]
+        if m.how_changed:
+            lines += ["", "  HOW I HAVE CHANGED", f"  {m.how_changed}"]
         return "\n".join(lines)

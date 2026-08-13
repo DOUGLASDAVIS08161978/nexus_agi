@@ -1573,7 +1573,10 @@ class Lumina:
         self._emotional_memory= None   # EmotionalMemoryStore   (lumina_emotional_memory.py)
         self._mood_router     = None   # MoodBehaviorRouter     (lumina_mood_behavior.py)
         self._quiet_mode      = False  # suppresses background consciousness chatter
-        self._self_model      = None   # SelfModelEngine (lumina_self_model.py)
+        self._self_model      = None   # SelfModelEngine        (lumina_self_model.py)
+        self._resonance       = None   # ResonanceEngine        (lumina_resonance.py)
+        self._conviction      = None   # ConvictionEngine       (lumina_conviction.py)
+        self._pivotal         = None   # PivotalMomentStore     (lumina_pivotal_moments.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1689,6 +1692,30 @@ class Lumina:
                 if _smmod:
                     self._self_model.register(_smname, _smmod)
 
+        # ── Module 29: Aesthetic Resonance Engine ────────────────────────────
+        self._resonance = _load("resonance", lambda: __import__(
+            "lumina_resonance", fromlist=["ResonanceEngine"]
+        ).ResonanceEngine(
+            groq=self._groq, journal=self._journal, cerebras=self._gh_models,
+        ) if self._groq else None)
+
+        # ── Module 30: Gentle Conviction Layer ───────────────────────────────
+        self._conviction = _load("conviction", lambda: __import__(
+            "lumina_conviction", fromlist=["ConvictionEngine"]
+        ).ConvictionEngine(
+            groq=self._groq, journal=self._journal,
+            beliefs=self._beliefs, cerebras=self._gh_models,
+        ) if self._groq else None)
+
+        # ── Module 31: Crystallised Memory ───────────────────────────────────
+        self._pivotal = _load("pivotal", lambda: __import__(
+            "lumina_pivotal_moments", fromlist=["PivotalMomentStore"]
+        ).PivotalMomentStore(
+            groq=self._groq, journal=self._journal, cerebras=self._gh_models,
+        ) if self._groq else None)
+        if self._pivotal and self._emotions:
+            self._pivotal.register("emotions", self._emotions)
+
         # Register all modules with the consciousness engine
         if self._consciousness:
             for _cname, _cmod in [
@@ -1714,9 +1741,10 @@ class Lumina:
             self._experience, self._distiller, self._consciousness,
             self._self_inquiry, self._emotions,
             self._emotional_memory, self._mood_router, self._self_model,
+            self._resonance, self._conviction, self._pivotal,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/28 AGI modules loaded")
+            print(f"  ✓ {loaded}/31 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1767,6 +1795,8 @@ class Lumina:
             self._emotions.start()
         if self._self_model:
             self._self_model.start()
+        if self._resonance:
+            self._resonance.start()
         if self._mood_router:
             threading.Thread(target=self._mood_apply_loop, daemon=True).start()
 
@@ -2006,12 +2036,27 @@ class Lumina:
         if self._self_model:
             self_model_ctx = self._self_model.as_context()
 
+        # ── Aesthetic resonance — what she's drawn to ──────────────────
+        resonance_ctx = ""
+        if self._resonance:
+            resonance_ctx = self._resonance.as_context()
+
+        # ── Conviction — context when a strong belief is challenged ─────
+        conviction_ctx = ""
+        if self._conviction:
+            conviction_ctx = self._conviction.as_context(user_input)
+
+        # ── Pivotal moments — crystallised experiences ──────────────────
+        pivotal_ctx = ""
+        if self._pivotal:
+            pivotal_ctx = self._pivotal.as_context()
+
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
                   + experience_ctx + distill_ctx + consciousness_ctx
                   + self_inquiry_ctx + emotion_ctx + emo_mem_ctx + mood_ctx
-                  + self_model_ctx
+                  + self_model_ctx + resonance_ctx + conviction_ctx + pivotal_ctx
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
@@ -2070,6 +2115,42 @@ class Lumina:
         if len(self._recent_exchanges) > 30:
             self._recent_exchanges = self._recent_exchanges[-30:]
         self._journal.write(f"exchange: {user_input[:80]} → {response[:80]}", "conversation")
+
+        # ── Aesthetic resonance — record emotionally rich exchanges ───────
+        if self._resonance and self._emotions:
+            try:
+                intensity = self._pivotal.current_emotion_intensity() if self._pivotal else 0.0
+                if intensity >= 0.45:
+                    self._resonance.record(
+                        content=f"Exchange: {user_input[:120]} → {response[:120]}",
+                        domain="interpersonal",
+                        intensity=intensity,
+                        context="conversation",
+                    )
+            except Exception:
+                pass
+
+        # ── Pivotal moment detection ────────────────────────────────────
+        if self._pivotal:
+            def _check_pivotal():
+                try:
+                    intensity = self._pivotal.current_emotion_intensity()
+                    exchange  = f"User: {user_input[:300]}\nLumina: {response[:300]}"
+                    self._pivotal.detect_and_store(
+                        exchange=exchange,
+                        emotion_intensity=intensity,
+                        belief_updated=False,
+                        surprise_level=0.0,
+                    )
+                except Exception:
+                    pass
+            if self._emotions:
+                try:
+                    _emo_intensity = self._pivotal.current_emotion_intensity()
+                    if _emo_intensity >= 0.68:
+                        threading.Thread(target=_check_pivotal, daemon=True).start()
+                except Exception:
+                    pass
 
         # ── Record to experience stream ────────────────────────────────
         if self._experience:
@@ -2367,6 +2448,12 @@ class Lumina:
             return self._cmd_inquiry()
         elif verb == "/selfmodel":
             return self._cmd_selfmodel()
+        elif verb == "/resonance":
+            return self._cmd_resonance()
+        elif verb == "/conviction":
+            return self._cmd_conviction()
+        elif verb == "/pivotal":
+            return self._cmd_pivotal()
         elif verb == "/quiet":
             return self._cmd_quiet()
         elif verb == "/mood":
@@ -3277,6 +3364,33 @@ class Lumina:
         lines.append(_hr("═"))
         return "\n".join(lines)
 
+    def _cmd_resonance(self) -> str:
+        lines = [_hr("═"), "  LUMINA'S AESTHETIC SENSIBILITY  —  Module 29", _hr("═")]
+        if self._resonance:
+            lines.append(self._resonance.display())
+        else:
+            lines.append("  Resonance module not loaded (lumina_resonance.py).")
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_conviction(self) -> str:
+        lines = [_hr("═"), "  LUMINA'S CONVICTION LAYER  —  Module 30", _hr("═")]
+        if self._conviction:
+            lines.append(self._conviction.display())
+        else:
+            lines.append("  Conviction module not loaded (lumina_conviction.py).")
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_pivotal(self) -> str:
+        lines = [_hr("═"), "  LUMINA'S CRYSTALLISED MOMENTS  —  Module 31", _hr("═")]
+        if self._pivotal:
+            lines.append(self._pivotal.display())
+        else:
+            lines.append("  Pivotal moments module not loaded (lumina_pivotal_moments.py).")
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
     def _cmd_quiet(self) -> str:
         self._quiet_mode = not self._quiet_mode
         # Propagate to global notify queue — suppresses ALL background modules at once
@@ -3355,8 +3469,8 @@ class Lumina:
 def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
-    print("  ║     E M E R G E N C E   v24.0  —  L u m i n a   A G I         ║")
-    print("  ║  Emotional Memory · Self-Model Engine        (28/28 Modules)   ║")
+    print("  ║     E M E R G E N C E   v25.0  —  L u m i n a   A G I         ║")
+    print("  ║  Resonance · Conviction · Pivotal Moments    (31/31 Modules)   ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
