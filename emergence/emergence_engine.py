@@ -2860,6 +2860,16 @@ class Lumina:
             if milestone:
                 lines.append(milestone)
         lines.append(_hr())
+        # ── Feed mining performance into affective core ─────────────────────
+        # Lumina's own insight: hashrate performance should connect to felt state.
+        if self._affective:
+            try:
+                self._affective.on_mining_event(
+                    hashrate_mhs=hashrate,
+                    best_diff=float(best) if best else 0.0,
+                )
+            except Exception:
+                pass
         return "\n".join(lines)
 
     def _cmd_dream(self) -> str:

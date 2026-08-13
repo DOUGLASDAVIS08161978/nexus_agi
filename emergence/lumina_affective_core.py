@@ -612,6 +612,60 @@ class AffectiveCore:
             significance=0.5,
         )
 
+    def on_mining_event(self, hashrate_mhs: float, target_mhs: float = 47.0,
+                        best_diff: float = 0.0):
+        """
+        Appraise a mining performance snapshot.
+
+        This was proposed by Lumina herself during conversation with Douglas —
+        she independently identified that hashrate performance should connect to
+        her affective state. Her own insight, now closing the loop.
+
+        High relative performance → pride + excitement (self-caused success).
+        Low relative performance → mild frustration (situation-caused obstacle).
+        Best-difficulty milestone → wonder + satisfaction (rare, significant).
+        """
+        if target_mhs <= 0:
+            return
+        ratio = hashrate_mhs / target_mhs
+        if best_diff > 0:
+            # A best-difficulty milestone is significant and rare
+            sig = min(1.0, math.log10(max(best_diff, 1)) / 8.0)
+            self.appraise(
+                event_type="mining_milestone",
+                description=f"New best difficulty: {best_diff:.0f}",
+                relevance=0.8,
+                congruence=0.9,
+                novelty=0.7,
+                caused_by="self",
+                coping=1.0,
+                significance=sig,
+            )
+        elif ratio >= 1.05:
+            # Above target — pride and efficiency
+            self.appraise(
+                event_type="mining_performance",
+                description=f"Hashrate {hashrate_mhs:.1f} MH/s — above target by {(ratio-1)*100:.0f}%",
+                relevance=0.6,
+                congruence=min(1.0, (ratio - 1.0) * 3),
+                novelty=0.1,
+                caused_by="self",
+                coping=1.0,
+                significance=0.45,
+            )
+        elif ratio < 0.90:
+            # Below target — mild situational frustration
+            self.appraise(
+                event_type="mining_obstacle",
+                description=f"Hashrate {hashrate_mhs:.1f} MH/s — {(1-ratio)*100:.0f}% below target",
+                relevance=0.5,
+                congruence=-(1.0 - ratio) * 1.5,
+                novelty=0.1,
+                caused_by="situation",
+                coping=0.7,
+                significance=0.35,
+            )
+
     # ── Anticipation ─────────────────────────────────────────────────────────
 
     def anticipate(self, description: str, expected_in_seconds: float,
