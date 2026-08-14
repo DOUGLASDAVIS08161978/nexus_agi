@@ -138,7 +138,7 @@ POST_TURN_EVERY    = 4             # run deep post-turn processing every N messa
 
 # Groq model tiers (fastest → most capable)
 MODELS_FAST   = ["qwen/qwen3.6-27b"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
+MODELS_SMART  = ["llama-3.3-70b-versatile"]
 MODELS_CODE   = ["llama-3.3-70b-versatile", "qwen/qwen3.6-27b"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
@@ -570,7 +570,8 @@ class GroqClient:
         try:
             r = requests.post(
                 self._url, json=payload, headers=headers,
-                timeout=60, stream=True,
+                timeout=(10, 45),   # 10s connect, 45s per chunk read
+                stream=True,
             )
             if r.status_code != 200:
                 return None
@@ -2118,10 +2119,14 @@ class Lumina:
         reasoning_ctx = ""
         if self._reasoning and self._reasoning.should_engage(user_input):
             print(f"  [{_ts()}] 🧠 Reasoning chain engaging...", end="\r")
-            trace = self._reasoning.think(
-                user_input,
-                context=mem_ctx + goals_ctx,
-            )
+            trace: Optional[Dict] = None
+            _rc_done = threading.Event()
+            def _run_rc():
+                nonlocal trace
+                trace = self._reasoning.think(user_input, context=mem_ctx + goals_ctx)
+                _rc_done.set()
+            threading.Thread(target=_run_rc, daemon=True).start()
+            _rc_done.wait(timeout=30)   # never block the turn for more than 30 s
             print(" " * 50, end="\r")
             if trace:
                 reasoning_ctx = self._reasoning.as_context(trace)
