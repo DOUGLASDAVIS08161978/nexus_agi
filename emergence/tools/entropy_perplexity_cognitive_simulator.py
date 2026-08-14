@@ -27,18 +27,18 @@ def simulate_learning(target_logits, epochs=50, lr=0.15):
     vocab_size = len(target_logits)
     current_logits = [random.uniform(-2, 2) for _ in range(vocab_size)]
     target_dist = softmax(target_logits)
-    
+
     history = []
     for epoch in range(epochs):
         pred_dist = softmax(current_logits)
         h = compute_entropy(pred_dist)
         ce = compute_cross_entropy(target_dist, pred_dist)
         perplexity = 2 ** ce
-        
+
         # Cognitive entropy: peaks when prediction error is high but system is actively adjusting
         error_rate = sum(abs(t - p) for t, p in zip(target_dist, pred_dist))
         cognitive_e = error_rate * math.log2(1 + error_rate) * (1 + 0.5 * math.sin(epoch * 0.3))
-        
+
         history.append({
             "epoch": epoch,
             "entropy": round(h, 4),
@@ -46,12 +46,12 @@ def simulate_learning(target_logits, epochs=50, lr=0.15):
             "perplexity": round(perplexity, 4),
             "cognitive_entropy": round(cognitive_e, 4)
         })
-        
+
         # Simple gradient-like update toward target
         for i in range(vocab_size):
             grad = pred_dist[i] - target_dist[i]
             current_logits[i] -= lr * grad
-            
+
     return history
 
 def ascii_plot(data, key, height=10, width=40):
@@ -71,7 +71,7 @@ def ascii_plot(data, key, height=10, width=40):
 def main():
     target_logits = [3.0, 1.5, 0.5, -1.0, -2.5, 2.0, 0.0, 1.0]
     history = simulate_learning(target_logits, epochs=60, lr=0.2)
-    
+
     out = {
         "timestamp": datetime.now().isoformat(),
         "simulation": "entropy_perplexity_cognitive_dynamics",
@@ -83,9 +83,9 @@ def main():
         },
         "history": history
     }
-    
+
     pathlib.Path("entropy_dynamics_analysis.json").write_text(json.dumps(out, indent=2))
-    
+
     print("=== ENTROPY & PERPLEXITY DYNAMICS ===")
     print(ascii_plot(history, "entropy"))
     print("\n=== PERPLEXITY CURVE ===")
