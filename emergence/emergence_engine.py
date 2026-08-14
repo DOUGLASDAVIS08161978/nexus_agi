@@ -2432,25 +2432,42 @@ class Lumina:
         else:
             resp = self._groq.chat(system, user_input, tier="smart")
 
-        # Fallback chain when Groq is unavailable: GitHub Models → HF
+        # Fallback chain when Groq is unavailable: Cerebras (streaming) → HF
         if resp.startswith("[Groq unavailable"):
             history = self._convo.get_history()[:-1] if self._convo else []
             fallback = None
             if self._gh_models:
-                gh_resp = self._gh_models.chat(system, history, user_input, max_tokens=1024)
-                if gh_resp and not gh_resp.startswith("["):
-                    fallback = gh_resp
+                # Try Cerebras with live streaming first
+                print(f"\n  Lumina (Cerebras):\n  ", end="", flush=True)
+                streamed = self._gh_models.stream_chat(
+                    system, history, user_input, max_tokens=1200
+                )
+                if streamed:
+                    fallback = streamed
+                    self._last_streamed = True
+                else:
+                    # Clear the "Lumina (Cerebras):\n  " header if streaming failed
+                    print("\r" + " " * 40 + "\r", end="", flush=True)
+                    # Try non-streaming Cerebras
+                    gh_resp = self._gh_models.chat(
+                        system, history, user_input, max_tokens=1200
+                    )
+                    if gh_resp and not gh_resp.startswith("["):
+                        fallback = gh_resp
+                        self._last_streamed = True
+                        print(f"\n  Lumina (Cerebras):\n{_wrap(fallback, 76)}\n")
             if not fallback and self._hf:
                 hf_resp = self._hf.chat(system, history, user_input, max_tokens=1024)
                 if hf_resp and not hf_resp.startswith("["):
                     fallback = hf_resp
+                    self._last_streamed = True
+                    print(f"\n  Lumina (HF):\n{_wrap(fallback, 76)}\n")
             if fallback:
                 resp = fallback
-                self._last_streamed = True
-                print(f"\n{_wrap(resp, 76)}\n")
             else:
                 self._last_streamed = True
-                print(f"\n  ⚠  Groq unavailable — check your API key or network.\n")
+                print(f"\n  ⚠  All LLMs unavailable (Groq + Cerebras). "
+                      f"Check network or try again in a minute.\n")
 
         # Store DeepSeek-R1 thinking trace in journal for /thinking command
         if self._groq and self._groq.last_thinking:
