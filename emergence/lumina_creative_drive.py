@@ -508,9 +508,9 @@ class CreativeDrive:
         self._thread.start()
         try:
             from emergence_notify import notify as _n3
-            _n3("  ✨ [Creative Drive] Autonomous loop started — first cycle in 2 min.")
+            _n3("  ✨ [Creative Drive] Autonomous loop started — first cycle in 30 min.")
         except ImportError:
-            print("  ✨ [Creative Drive] Autonomous loop started — first cycle in 2 min.")
+            print("  ✨ [Creative Drive] Autonomous loop started — first cycle in 30 min.")
 
     def stop(self):
         self._running = False
@@ -530,7 +530,7 @@ class CreativeDrive:
     def display_recent(self, n: int = 6) -> str:
         sessions = self.recent_sessions(n)
         if not sessions:
-            return "  No creative sessions yet — first cycle fires ~2 min after startup."
+            return "  No creative sessions yet — first cycle fires ~30 min after startup."
         lines = []
         for s in reversed(sessions):
             icon = "✓" if s.exec_ok else "✗"

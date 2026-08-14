@@ -64,9 +64,15 @@ class CerebrasClient:
                 timeout=timeout,
             )
             if r.status_code != 200:
+                try:
+                    err = r.json()
+                    print(f"  [Cerebras] HTTP {r.status_code}: {err}", flush=True)
+                except Exception:
+                    print(f"  [Cerebras] HTTP {r.status_code}: {r.text[:200]}", flush=True)
                 return None
             return r.json()
-        except Exception:
+        except Exception as e:
+            print(f"  [Cerebras] request error: {e}", flush=True)
             return None
 
     def chat(self, system: str, messages: List[Dict], user: str,
@@ -124,6 +130,11 @@ class CerebrasClient:
                     stream=True,
                 )
                 if r.status_code != 200:
+                    try:
+                        err = r.json()
+                        print(f"  [Cerebras stream] HTTP {r.status_code}: {err}", flush=True)
+                    except Exception:
+                        print(f"  [Cerebras stream] HTTP {r.status_code}", flush=True)
                     continue
                 full_text = ""
                 for raw_line in r.iter_lines():
