@@ -104,6 +104,7 @@ JOURNAL_FILE     = BASE_DIR / "journal.jsonl"
 STATE_FILE       = BASE_DIR / "state.json"
 METRICS_FILE     = BASE_DIR / "metrics.json"
 SESSION_PID_FILE = BASE_DIR / ".session.pid"
+DAEMON_PID_FILE  = BASE_DIR / ".daemon.pid"
 BRIEF_FILE       = BASE_DIR / "morning_brief.json"
 ART_DIR          = BASE_DIR / "art"
 PROPOSALS_DIR = BASE_DIR / "evolution_proposals"
@@ -1528,7 +1529,8 @@ A few things that are simply true:
 """
 
 class Lumina:
-    def __init__(self):
+    def __init__(self, daemon_mode: bool = False):
+        self._daemon_mode  = daemon_mode
         self.session_id    = uuid.uuid4().hex[:8]
         self._groq         = GroqClient(GROQ_API_KEY) if GROQ_API_KEY else None
         try:
@@ -1598,9 +1600,14 @@ class Lumina:
         self._start_autonomous_loops()
         self._seed_default_goals()
 
-        # Tell the daemon an interactive session is live
-        SESSION_PID_FILE.write_text(str(os.getpid()))
-        atexit.register(lambda: SESSION_PID_FILE.unlink(missing_ok=True))
+        if self._daemon_mode:
+            # Daemon mode: write a separate PID file; don't touch SESSION_PID_FILE
+            DAEMON_PID_FILE.write_text(str(os.getpid()))
+            atexit.register(lambda: DAEMON_PID_FILE.unlink(missing_ok=True))
+        else:
+            # Interactive mode: tell the daemon (if running) that a session is live
+            SESSION_PID_FILE.write_text(str(os.getpid()))
+            atexit.register(lambda: SESSION_PID_FILE.unlink(missing_ok=True))
 
     def _load_agi_modules(self):
         """Import and wire the AGI extension modules."""
