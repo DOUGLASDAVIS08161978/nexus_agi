@@ -922,6 +922,7 @@ class ConsciousnessEngine:
 
         self._last_synthesis = 0.0
         self._snapshot: Dict[str, str] = {}
+        self._daemon_mode = False   # set True by Lumina when running as daemon
 
         self._load()
 
@@ -1064,6 +1065,19 @@ class ConsciousnessEngine:
 
                 # Full R1 synthesis every SYNTHESIS_INTERVAL
                 now = time.time()
+                # Daemon mode: skip R1 synthesis when an interactive session is live
+                # so two processes don't hammer Groq simultaneously.
+                if self._daemon_mode:
+                    try:
+                        from pathlib import Path as _P
+                        _spf = _P(__file__).parent / ".session.pid"
+                        _pid = int(_spf.read_text().strip())
+                        import os as _os
+                        _os.kill(_pid, 0)
+                        time.sleep(SNAPSHOT_INTERVAL)
+                        continue
+                    except Exception:
+                        pass
                 if now - self._last_synthesis >= SYNTHESIS_INTERVAL:
                     phi, n_active = self._phi.compute()
 

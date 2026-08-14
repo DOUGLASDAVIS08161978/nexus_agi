@@ -119,6 +119,16 @@ CEREBRAS_API_KEY   = os.environ.get("CEREBRAS_API_KEY", "")
 GITHUB_REPO        = "DOUGLASDAVIS08161978/nexus_agi"
 EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
+
+
+def _session_live() -> bool:
+    """Return True if an interactive chat session is currently running."""
+    try:
+        pid = int(SESSION_PID_FILE.read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
 MAX_JOURNAL_LINES  = 200
 CONTEXT_WINDOW     = 12            # messages kept in active conversation
 CRITIQUE_ENABLED   = False         # off by default — enable with /critique (costs 1 extra call)
@@ -1781,6 +1791,13 @@ class Lumina:
             except Exception:
                 pass
 
+        # Propagate daemon_mode so consciousness synthesis yields to live sessions
+        if self._daemon_mode and self._consciousness:
+            try:
+                self._consciousness._daemon_mode = True
+            except Exception:
+                pass
+
         # ── Module 33: Emergence Observer ─────────────────────────────────────
         self._observer = _load("observer", lambda: __import__(
             "lumina_emergence_observer", fromlist=["EmergenceObserver"]
@@ -1879,7 +1896,8 @@ class Lumina:
         threading.Thread(target=self._reflection_loop, daemon=True).start()
         threading.Thread(target=self._metrics_saver,   daemon=True).start()
         threading.Thread(target=self._dream_loop,      daemon=True).start()
-        threading.Thread(target=self._task_loop,       daemon=True).start()
+        if not self._daemon_mode:
+            threading.Thread(target=self._task_loop, daemon=True).start()
         if self._creative:
             self._creative.start()
         if self._experience:
@@ -1960,9 +1978,12 @@ class Lumina:
         time.sleep(1800)
         while True:
             try:
-                if self._reflector:
-                    r = self._reflector.reflect(self._recent_exchanges)
-                    self._journal.write(r, "reflection")
+                # Daemon mode: skip reflection when a chat session is live —
+                # avoid competing with the session's own Groq API calls.
+                if not (self._daemon_mode and _session_live()):
+                    if self._reflector:
+                        r = self._reflector.reflect(self._recent_exchanges)
+                        self._journal.write(r, "reflection")
             except Exception:
                 pass
             time.sleep(3600)
@@ -1984,6 +2005,10 @@ class Lumina:
         while True:
             time.sleep(60)
             try:
+                # Daemon mode: yield to the live interactive session — it handles
+                # dreams on its own idle timer; avoid concurrent Groq API calls.
+                if self._daemon_mode and _session_live():
+                    continue
                 idle = time.time() - self._last_input
                 if idle >= DREAM_IDLE_SECS and self._dreamer:
                     dream_result = self._dreamer.dream()
