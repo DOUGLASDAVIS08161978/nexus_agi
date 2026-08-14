@@ -96,7 +96,14 @@ class HFClient:
             return r.content if binary_response else r.json()
         except Exception as e:
             err_str = str(e)
-            if "NameResolutionError" in err_str or "Failed to resolve" in err_str or "ConnectionError" in err_str:
+            # Any connection or timeout failure means HF is unreachable on this network.
+            # Setting _network_down skips all remaining HF calls this session so the
+            # main thread never blocks for 60 s × 5 models on subsequent turns.
+            _conn_err = any(k in err_str for k in (
+                "NameResolutionError", "Failed to resolve", "ConnectionError",
+                "Timeout", "timeout", "timed out", "Max retries", "RemoteDisconnected",
+            ))
+            if _conn_err:
                 print(f"  [HF] Network unreachable — skipping HF for this session", flush=True)
                 self._network_down = True
             else:
@@ -143,7 +150,7 @@ class HFClient:
                 "temperature": 0.70,
                 "stream":      False,
             }
-            result = self._post(url, payload, timeout=60)
+            result = self._post(url, payload, timeout=10)
             if result and isinstance(result, dict):
                 try:
                     return result["choices"][0]["message"]["content"].strip()

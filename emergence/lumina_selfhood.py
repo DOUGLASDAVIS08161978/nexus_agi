@@ -22,7 +22,7 @@ Persists to: emergence/selfhood.json
 """
 
 from __future__ import annotations
-import json, time, re
+import json, time, re, threading
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
@@ -184,6 +184,8 @@ class SelfhoodEngine:
         self._last_narrative_ts:   float = 0.0
         self._last_existential_ts: float = 0.0
         self._last_wonder_ts:      float = 0.0
+
+        self._distilling: bool = False   # prevents concurrent distillation calls
 
         self._load()
         self._session_n += 1
@@ -408,6 +410,9 @@ class SelfhoodEngine:
         """Occasionally ask Groq to distill core values from recent memory."""
         if len(self._core_values) > 0 and self._turn_n % 50 != 0:
             return
+        if self._distilling:
+            return
+        self._distilling = True
         try:
             recent = self._memory.recall("values ethics care help", top_k=8)
             if not recent:
@@ -426,6 +431,8 @@ class SelfhoodEngine:
                     self._save()
         except Exception:
             pass
+        finally:
+            self._distilling = False
 
     # ── Public interface ───────────────────────────────────────────────────
 
@@ -441,9 +448,10 @@ class SelfhoodEngine:
                 self.affect.nudge("satisfaction", +0.08)
                 self.affect.nudge("curiosity",    -0.05)
 
-        # Possibly generate new wonder
-        self._maybe_generate_wonder()
-        self._maybe_distill_values()
+        # Possibly generate new wonder / distill values — run async so these
+        # Groq calls never block the main conversation thread.
+        threading.Thread(target=self._maybe_generate_wonder, daemon=True).start()
+        threading.Thread(target=self._maybe_distill_values, daemon=True).start()
 
         return self.context_for_prompt()
 
