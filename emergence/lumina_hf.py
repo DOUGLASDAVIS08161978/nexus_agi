@@ -31,7 +31,8 @@ except ImportError:
 
 BASE_DIR   = Path(__file__).parent.resolve()
 VOICE_DIR  = BASE_DIR / "voice"
-HF_API     = "https://api-inference.huggingface.co"
+HF_API          = "https://router.huggingface.co/hf-inference"   # new serverless inference URL (2025)
+HF_PIPELINE_API = "https://api-inference.huggingface.co"           # old pipeline URL (TTS/vision)
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
@@ -165,7 +166,7 @@ class HFClient:
         clean = text.replace("*", "").replace("#", "").replace("\n", " ")
         clean = clean[:500]  # TTS models handle ~500 chars well
 
-        url     = f"{HF_API}/models/{TTS_MODEL}"
+        url     = f"{HF_PIPELINE_API}/models/{TTS_MODEL}"
         payload = {"inputs": clean, "options": {"wait_for_model": True}}
         audio   = self._post(url, payload, timeout=45, binary_response=True)
 
@@ -211,7 +212,7 @@ class HFClient:
             return f"[Image not found: {image_path}]"
 
         img_bytes = p.read_bytes()
-        url       = f"{HF_API}/models/{VISION_MODEL}"
+        url       = f"{HF_PIPELINE_API}/models/{VISION_MODEL}"
         result    = self._post_bytes(url, img_bytes, "application/octet-stream",
                                      timeout=40)
         if not result:
@@ -232,7 +233,7 @@ class HFClient:
         """
         if not texts:
             return None
-        url    = f"{HF_API}/models/{EMBED_MODEL}"
+        url    = f"{HF_PIPELINE_API}/models/{EMBED_MODEL}"
         result = self._post(url, {"inputs": texts}, timeout=30)
         if isinstance(result, list) and result and isinstance(result[0], list):
             return result
