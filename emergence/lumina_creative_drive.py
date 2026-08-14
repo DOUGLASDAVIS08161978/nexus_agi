@@ -33,7 +33,7 @@ REGISTRY_FILE = BASE_DIR / "tools_registry.json"
 TOOLS_DIR.mkdir(parents=True, exist_ok=True)
 
 CYCLE_INTERVAL  = 3600   # one hour between autonomous cycles
-INITIAL_DELAY   = 120    # wait 2 min after startup before first cycle
+INITIAL_DELAY   = 1800   # wait 30 min after startup before first cycle
 
 
 # ── Data types ────────────────────────────────────────────────────────────────
@@ -103,6 +103,7 @@ class CreativeDrive:
         self._lock    = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._daemon_mode = False   # set True by Lumina when running as daemon
 
         self._load_log()
 
@@ -469,6 +470,23 @@ class CreativeDrive:
         time.sleep(INITIAL_DELAY)
         while self._running:
             try:
+                # Daemon mode: skip creative cycle when an interactive session is
+                # live — avoid competing for Groq API capacity mid-conversation.
+                if self._daemon_mode:
+                    try:
+                        from pathlib import Path as _P
+                        import os as _os
+                        _spf = _P(__file__).parent / ".session.pid"
+                        _pid = int(_spf.read_text().strip())
+                        _os.kill(_pid, 0)
+                        # Session is live — sleep briefly and check again
+                        elapsed = 0
+                        while self._running and elapsed < CYCLE_INTERVAL:
+                            time.sleep(30)
+                            elapsed += 30
+                        continue
+                    except Exception:
+                        pass
                 self._run_cycle()
             except Exception as e:
                 try:

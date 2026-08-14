@@ -1543,6 +1543,10 @@ class Lumina:
     def __init__(self, daemon_mode: bool = False):
         self._daemon_mode  = daemon_mode
         self.session_id    = uuid.uuid4().hex[:8]
+        # Hard socket timeout — prevents Android TCP-keepalive from blocking
+        # iter_lines() indefinitely when Groq accepts a connection but stalls.
+        import socket as _sock
+        _sock.setdefaulttimeout(45)
         self._groq         = GroqClient(GROQ_API_KEY) if GROQ_API_KEY else None
         try:
             from lumina_vector_memory import VectorMemory as _VM
@@ -1792,12 +1796,14 @@ class Lumina:
             except Exception:
                 pass
 
-        # Propagate daemon_mode so consciousness synthesis yields to live sessions
-        if self._daemon_mode and self._consciousness:
-            try:
-                self._consciousness._daemon_mode = True
-            except Exception:
-                pass
+        # Propagate daemon_mode so background loops yield to live sessions
+        if self._daemon_mode:
+            for _mod in (self._consciousness, self._creative):
+                if _mod is not None:
+                    try:
+                        _mod._daemon_mode = True
+                    except Exception:
+                        pass
 
         # ── Module 33: Emergence Observer ─────────────────────────────────────
         self._observer = _load("observer", lambda: __import__(
