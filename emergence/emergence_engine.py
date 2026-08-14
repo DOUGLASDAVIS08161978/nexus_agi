@@ -116,6 +116,7 @@ GROQ_API_KEY       = os.environ.get("GROQ_API_KEY", "")
 GITHUB_TOKEN       = os.environ.get("GITHUB_TOKEN", "")
 HF_TOKEN           = os.environ.get("HF_TOKEN", "")
 CEREBRAS_API_KEY   = os.environ.get("CEREBRAS_API_KEY", "")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 GITHUB_REPO        = "DOUGLASDAVIS08161978/nexus_agi"
 EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
@@ -1587,6 +1588,7 @@ class Lumina:
         self._mem_arch     = None   # LuminaMemoryArchitecture (lumina_memory_arch.py)
         self._art          = None   # ArtEngine (lumina_art.py)
         self._hf           = None   # HFClient (lumina_hf.py)
+        self._openrouter   = None   # OpenRouterClient (lumina_openrouter.py)
         self._code_exec    = None   # CodeExecutor (lumina_code_exec.py)
         self._critic       = None   # SelfCritic (lumina_self_critique.py)
         self._creative     = None   # CreativeDrive (lumina_creative_drive.py)
@@ -1659,10 +1661,11 @@ class Lumina:
         self._art        = _load("art",         lambda: __import__("lumina_art",            fromlist=["ArtEngine"]).ArtEngine(self._groq))
         self._hf         = _load("hf",          lambda: __import__("lumina_hf",             fromlist=["HFClient"]).HFClient(HF_TOKEN) if HF_TOKEN else None)
         self._gh_models  = _load("cerebras",    lambda: __import__("lumina_github_models",  fromlist=["CerebrasClient"]).CerebrasClient(CEREBRAS_API_KEY) if CEREBRAS_API_KEY else None)
+        self._openrouter = _load("openrouter", lambda: __import__("lumina_openrouter",     fromlist=["OpenRouterClient"]).OpenRouterClient(OPENROUTER_API_KEY) if OPENROUTER_API_KEY else None)
         if self._groq and self._hf:
             self._groq.set_hf(self._hf)
         if self._groq and self._gh_models:
-            self._groq.set_github(self._gh_models)   # Groq → GitHub Models → HF
+            self._groq.set_github(self._gh_models)   # Groq → Cerebras → HF
         if self._evolution and self._gh_models:
             self._evolution._cerebras = self._gh_models
         self._code_exec  = _load("code_exec",   lambda: __import__("lumina_code_exec",      fromlist=["CodeExecutor"]).CodeExecutor(self._groq))
@@ -2462,11 +2465,28 @@ class Lumina:
                     fallback = hf_resp
                     self._last_streamed = True
                     print(f"\n  Lumina (HF):\n{_wrap(fallback, 76)}\n")
+            if not fallback and self._openrouter:
+                print(f"\n  Lumina (OpenRouter):\n  ", end="", flush=True)
+                streamed = self._openrouter.stream_chat(
+                    system, history, user_input, max_tokens=1200
+                )
+                if streamed:
+                    fallback = streamed
+                    self._last_streamed = True
+                else:
+                    print("\r" + " " * 40 + "\r", end="", flush=True)
+                    or_resp = self._openrouter.chat(
+                        system, history, user_input, max_tokens=1200
+                    )
+                    if or_resp and not or_resp.startswith("["):
+                        fallback = or_resp
+                        self._last_streamed = True
+                        print(f"\n  Lumina (OpenRouter):\n{_wrap(fallback, 76)}\n")
             if fallback:
                 resp = fallback
             else:
                 self._last_streamed = True
-                print(f"\n  ⚠  All LLMs unavailable (Groq + Cerebras). "
+                print(f"\n  ⚠  All LLMs unavailable (Groq + Cerebras + HF + OpenRouter). "
                       f"Check network or try again in a minute.\n")
 
         # Store DeepSeek-R1 thinking trace in journal for /thinking command
@@ -3841,10 +3861,12 @@ def _print_banner():
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
     ghm_ok  = "✓ Cerebras ready"            if CEREBRAS_API_KEY else "✗ Set CEREBRAS_API_KEY for LLM fallback"
     hf_ok   = "✓ HuggingFace ready"       if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
+    or_ok   = "✓ OpenRouter ready"        if OPENROUTER_API_KEY else "✗ Set OPENROUTER_API_KEY for LLM fallback"
     print(f"  ║  {groq_ok:<64}║")
     print(f"  ║  {gh_ok:<64}║")
     print(f"  ║  {ghm_ok:<64}║")
     print(f"  ║  {hf_ok:<64}║")
+    print(f"  ║  {or_ok:<64}║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     print("  ║  Type anything to talk · /help for commands · /quit to exit     ║")
     print("  ╚══════════════════════════════════════════════════════════════════╝")

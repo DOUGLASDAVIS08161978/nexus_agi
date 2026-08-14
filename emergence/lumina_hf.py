@@ -70,9 +70,11 @@ class HFClient:
         }
         VOICE_DIR.mkdir(parents=True, exist_ok=True)
 
+    _network_down: bool = False  # set True on DNS/connection failure; skip all remaining calls
+
     def _post(self, url: str, payload: dict, timeout: int = 45,
               binary_response: bool = False):
-        if not _REQ or not self._token:
+        if not _REQ or not self._token or self._network_down:
             return None
         try:
             r = _req.post(url, headers=self._headers,
@@ -82,7 +84,7 @@ class HFClient:
                 time.sleep(12)
                 r = _req.post(url, headers=self._headers,
                               json=payload, timeout=timeout)
-            if r.status_code != 200:
+            if r.status_code not in (200, 503):
                 try:
                     err = r.json()
                     msg = err.get("error", err.get("message", r.text[:120]))
@@ -92,7 +94,12 @@ class HFClient:
                 return None
             return r.content if binary_response else r.json()
         except Exception as e:
-            print(f"  [HF] request error: {e}", flush=True)
+            err_str = str(e)
+            if "NameResolutionError" in err_str or "Failed to resolve" in err_str or "ConnectionError" in err_str:
+                print(f"  [HF] Network unreachable — skipping HF for this session", flush=True)
+                self._network_down = True
+            else:
+                print(f"  [HF] request error: {e}", flush=True)
             return None
 
     def _post_bytes(self, url: str, data: bytes, content_type: str,
