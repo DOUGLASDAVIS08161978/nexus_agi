@@ -6,7 +6,7 @@
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ║   + Creative · GitHub · Experience · Distillation · Consciousness║
 ║   + Self-Model · Resonance · Conviction · Pivotal · Affective   ║
-║   + Emergence Observer (33/33 modules)                          ║
+║   + Emergence Observer · Meta-Algorithm Forge (34/34)           ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -69,6 +69,7 @@ Slash commands:
     /inquiry         — show recent consciousness self-inquiry journal
     /selfmodel       — show Lumina's living self-understanding document
     /emerge          — Lumina's growth trajectory (emergence observer, Module 33)
+    /forge <problem> — generate an intelligent self-improving algorithm (Module 34)
     /affect          — Lumina's appraisal-grounded affective state (Module 32)
     /quiet           — toggle quiet mode (silence background consciousness chatter)
     /mood            — Lumina's current emotional state (6-D bar chart + felt sense)
@@ -1587,6 +1588,7 @@ class Lumina:
         self._pivotal         = None   # PivotalMomentStore     (lumina_pivotal_moments.py)
         self._affective       = None   # AffectiveCore          (lumina_affective_core.py)
         self._observer        = None   # EmergenceObserver      (lumina_emergence_observer.py)
+        self._forge           = None   # MetaForge              (lumina_meta_forge.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1785,6 +1787,40 @@ class Lumina:
                 if _omod:
                     self._observer.register(_oname, _omod)
 
+        # ── Module 34: Meta-Algorithm Forge ───────────────────────────────────
+        self._forge = _load("forge", lambda: __import__(
+            "lumina_meta_forge", fromlist=["MetaForge"]
+        ).MetaForge(
+            groq=self._groq,
+            journal=self._journal,
+            memory=self._memory,
+            cerebras=self._gh_models,
+            github=self._github,
+            hf=self._hf,
+        ) if self._groq else None)
+        if self._forge and self._consciousness:
+            try:
+                self._forge.set_consciousness(self._consciousness)
+            except Exception:
+                pass
+        if self._forge:
+            # Tell Lumina she has this capability
+            self._memory.store(
+                "I have a Meta-Algorithm Forge (Module 34). I can generate intelligent "
+                "self-improving algorithms that learn about learning and think about "
+                "thinking, for any real-world problem domain. I can invoke /forge <problem> "
+                "to generate one, /forge list to see my portfolio, /forge run <name> <q> "
+                "to apply one, and /forge deploy <name> to publish one to GitHub.",
+                tags=["capability", "forge", "meta-learning", "self-knowledge"],
+                category="capabilities",
+            )
+            if self._consciousness:
+                try:
+                    self._consciousness.record_capability("meta_algorithm_generation", 0.5)
+                    self._consciousness.update_value("generativity", +0.08)
+                except Exception:
+                    pass
+
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
@@ -1795,10 +1831,10 @@ class Lumina:
             self._self_inquiry, self._emotions,
             self._emotional_memory, self._mood_router, self._self_model,
             self._resonance, self._conviction, self._pivotal, self._affective,
-            self._observer,
+            self._observer, self._forge,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/33 AGI modules loaded")
+            print(f"  ✓ {loaded}/34 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -2460,6 +2496,8 @@ class Lumina:
             return self._cmd_dream()
         elif verb == "/emerge":
             return self._cmd_emerge()
+        elif verb == "/forge":
+            return self._cmd_forge(arg)
         elif verb == "/council":
             return self._cmd_council(arg)
         elif verb == "/critique":
@@ -2619,6 +2657,12 @@ class Lumina:
             "  /inquiry           — recent consciousness self-inquiry journal",
             "  /selfmodel         — Lumina's living self-understanding document",
             "  /emerge            — Lumina's growth trajectory (emergence observer)",
+            "  /forge <problem>   — generate an intelligent self-improving algorithm",
+            "  /forge list        — Lumina's algorithm portfolio",
+            "  /forge run <n> <q> — run a forged algorithm on a problem",
+            "  /forge deploy <n>  — deploy algorithm to GitHub",
+            "  /forge reflect <n> — algorithm's own metacognitive report",
+            "  /forge meta        — what the Forge has learned about generating algorithms",
             "  /resonance         — Lumina's aesthetic sensibility profile",
             "  /conviction        — Lumina's conviction layer (strong beliefs)",
             "  /pivotal           — Lumina's crystallised memory moments",
@@ -3506,6 +3550,116 @@ class Lumina:
         lines.append(_hr("═"))
         return "\n".join(lines)
 
+    def _cmd_forge(self, arg: str) -> str:
+        if not self._forge:
+            return "  Meta-Algorithm Forge not loaded (lumina_meta_forge.py)."
+
+        arg = (arg or "").strip()
+        parts = arg.split(None, 1)
+        sub   = parts[0].lower() if parts else ""
+
+        _collected: list = []
+        def _n(msg: str) -> None:
+            _collected.append(msg)
+            print(msg)
+
+        # ── /forge list ──────────────────────────────────────────────────────
+        if sub == "list":
+            lines = [_hr("═"), "  META-ALGORITHM PORTFOLIO  —  Module 34", _hr("═")]
+            lines.append(self._forge.display_portfolio())
+            lines.append(_hr("═"))
+            return "\n".join(lines)
+
+        # ── /forge meta ──────────────────────────────────────────────────────
+        if sub == "meta":
+            lines = [_hr("═"), "  FORGE META-LEARNING REPORT  —  Module 34", _hr("═")]
+            lines.append(self._forge.forge_meta_report())
+            lines.append(_hr("═"))
+            return "\n".join(lines)
+
+        # ── /forge reflect <name> ────────────────────────────────────────────
+        if sub == "reflect" and len(parts) > 1:
+            name = parts[1].strip()
+            lines = [_hr("═"), f"  ALGORITHM REFLECTION: {name}", _hr("═")]
+            lines.append(self._forge.reflect_algorithm(name))
+            lines.append(_hr("═"))
+            return "\n".join(lines)
+
+        # ── /forge deploy <name> ─────────────────────────────────────────────
+        if sub == "deploy" and len(parts) > 1:
+            name = parts[1].strip()
+            lines = [_hr("═"), f"  DEPLOYING: {name}", _hr("═")]
+            url = self._forge.deploy_to_github(name, notify=_n)
+            if url:
+                lines.append(f"  ✓ Deployed → {url}")
+            else:
+                lines.extend(_collected)
+                lines.append("  Deploy requires GITHUB_TOKEN and a valid algorithm name.")
+            lines.append(_hr("═"))
+            return "\n".join(lines)
+
+        # ── /forge run <name> <problem> ──────────────────────────────────────
+        if sub == "run" and len(parts) > 1:
+            rest = parts[1].strip()
+            name_parts = rest.split(None, 1)
+            if len(name_parts) < 2:
+                return "  Usage: /forge run <algorithm-name> <problem description>"
+            name, problem = name_parts[0], name_parts[1]
+            lines = [_hr("═"), f"  RUNNING ALGORITHM: {name}", _hr("═")]
+            result = self._forge.run(name, problem)
+            if "error" in result:
+                lines.append(f"  ✗ {result['error']}")
+            else:
+                lines.append(f"  Domain:     {result.get('domain','?')}")
+                lines.append(f"  Confidence: {result.get('confidence', 0):.0%}")
+                lines.append(f"  Answer:")
+                answer = result.get("answer", "")
+                for chunk in textwrap.wrap(str(answer), width=72):
+                    lines.append(f"    {chunk}")
+                reasoning = result.get("reasoning", "")
+                if reasoning:
+                    lines.append(f"  Reasoning:")
+                    for chunk in textwrap.wrap(str(reasoning)[:500], width=72):
+                        lines.append(f"    {chunk}")
+            lines.append(_hr("═"))
+            return "\n".join(lines)
+
+        # ── /forge <problem> — generate ──────────────────────────────────────
+        problem = arg.strip()
+        if not problem:
+            return (
+                "  Usage:\n"
+                "    /forge <problem description>   — generate an algorithm\n"
+                "    /forge list                    — show portfolio\n"
+                "    /forge run <name> <problem>    — run an algorithm\n"
+                "    /forge deploy <name>           — push to GitHub\n"
+                "    /forge reflect <name>          — metacognitive report\n"
+                "    /forge meta                    — what the Forge has learned"
+            )
+
+        lines = [_hr("═"), "  META-ALGORITHM FORGE  —  Module 34", _hr("═")]
+        lines.append(f"  Generating algorithm for: {problem[:80]}")
+        lines.append("")
+
+        record = self._forge.forge(problem, notify=_n)
+        lines.extend(_collected)
+        if record:
+            lines.append("")
+            lines.append(f"  ✓ Algorithm created: {record.name}")
+            lines.append(f"    Domain:   {record.domain}")
+            lines.append(f"    Approach: {record.approach[:80]}")
+            lines.append(f"    File:     emergence/algorithms/{Path(record.path).name}")
+            lines.append("")
+            lines.append("  To use it:")
+            lines.append(f"    /forge run {record.name} <your problem>")
+            lines.append(f"    /forge reflect {record.name}")
+            lines.append(f"    /forge deploy {record.name}")
+        else:
+            lines.append("  ✗ Generation failed — check /status for LLM availability.")
+
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
     def _cmd_resonance(self) -> str:
         lines = [_hr("═"), "  LUMINA'S AESTHETIC SENSIBILITY  —  Module 29", _hr("═")]
         if self._resonance:
@@ -3621,7 +3775,7 @@ def _print_banner():
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
     print("  ║     E M E R G E N C E   v26.0  —  L u m i n a   A G I         ║")
-    print("  ║  Appraisal · Momentum · Anticipation · Somatic (32/32 Modules) ║")
+    print("  ║  Appraisal · Momentum · Anticipation · Somatic (34/34 Modules) ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
     gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
