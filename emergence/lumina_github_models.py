@@ -24,14 +24,25 @@ except ImportError:
 
 CEREBRAS_API = "https://api.cerebras.ai/v1"
 
-# Model list — tries each in order until one succeeds.
-# Cerebras naming: no hyphen between "llama" and version (e.g. llama3.3-70b).
-CEREBRAS_MODELS = [
-    "llama-3.3-70b",   # Llama 3.3 70B (best quality)
-    "llama3.3-70b",    # alternate spelling
-    "llama3.1-70b",    # Llama 3.1 70B (reliable fallback)
-    "llama3.1-8b",     # Llama 3.1 8B  (fast last resort)
+# Fallback model list — used only if /v1/models discovery fails.
+# Prefer larger/instruct models first; 8B is the fast last resort.
+_FALLBACK_MODELS = [
+    "llama-3.3-70b",
+    "llama3.3-70b",
+    "llama3.1-70b",
+    "llama3.1-8b",
+    "llama-3.1-70b",
+    "llama-3.1-8b",
 ]
+
+# Prefer 70B+ / instruct models; deprioritize tiny or embedding models.
+def _rank_model(model_id: str) -> int:
+    mid = model_id.lower()
+    if "70b" in mid:
+        return 0
+    if "8b" in mid:
+        return 1
+    return 2
 
 
 class CerebrasClient:
@@ -42,7 +53,32 @@ class CerebrasClient:
             "Authorization": f"Bearer {token}",
             "Content-Type":  "application/json",
         }
-        self._working_model: Optional[str] = None  # cache first model that succeeds
+        self._working_model: Optional[str] = None
+        self._models: List[str] = self._discover_models()
+
+    # ── Model discovery ────────────────────────────────────────────────────────
+
+    def _discover_models(self) -> List[str]:
+        """Query /v1/models; return sorted list. Falls back to hardcoded list."""
+        if not _REQ or not self._token:
+            return list(_FALLBACK_MODELS)
+        try:
+            r = _req.get(
+                f"{CEREBRAS_API}/models",
+                headers=self._headers,
+                timeout=10,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                ids = [m["id"] for m in data.get("data", []) if m.get("id")]
+                if ids:
+                    ids.sort(key=_rank_model)
+                    return ids
+        except Exception:
+            pass
+        return list(_FALLBACK_MODELS)
+
+    # ── Message builder ────────────────────────────────────────────────────────
 
     def _build_messages(self, system: str, messages: List[Dict],
                         user: str) -> List[Dict]:
@@ -50,6 +86,13 @@ class CerebrasClient:
         msgs.extend(messages)
         msgs.append({"role": "user", "content": user})
         return msgs
+
+    def _model_list(self) -> List[str]:
+        """Working model first, then rest of discovered list."""
+        if self._working_model:
+            rest = [m for m in self._models if m != self._working_model]
+            return [self._working_model] + rest
+        return self._models
 
     # ── Non-streaming ─────────────────────────────────────────────────────────
 
@@ -77,14 +120,9 @@ class CerebrasClient:
 
     def chat(self, system: str, messages: List[Dict], user: str,
              max_tokens: int = 1200) -> str:
-        """
-        Non-streaming chat completion via Cerebras.
-        Falls through CEREBRAS_MODELS until one responds.
-        """
+        """Non-streaming chat completion via Cerebras."""
         full_msgs = self._build_messages(system, messages, user)
-        models = ([self._working_model] + CEREBRAS_MODELS
-                  if self._working_model else CEREBRAS_MODELS)
-        for model in models:
+        for model in self._model_list():
             result = self._post({
                 "model":       model,
                 "messages":    full_msgs,
@@ -105,16 +143,11 @@ class CerebrasClient:
 
     def stream_chat(self, system: str, messages: List[Dict], user: str,
                     max_tokens: int = 1200) -> Optional[str]:
-        """
-        Stream a response token-by-token, printing each chunk live.
-        Returns the complete text, or None if all models fail.
-        """
+        """Stream response token-by-token. Returns full text or None."""
         if not _REQ or not self._token:
             return None
         full_msgs = self._build_messages(system, messages, user)
-        models = ([self._working_model] + CEREBRAS_MODELS
-                  if self._working_model else CEREBRAS_MODELS)
-        for model in models:
+        for model in self._model_list():
             try:
                 r = _req.post(
                     f"{CEREBRAS_API}/chat/completions",
@@ -156,7 +189,7 @@ class CerebrasClient:
                     full_text += delta
                     print(delta, end="", flush=True)
                 if full_text:
-                    print()   # newline after streamed response
+                    print()
                     self._working_model = model
                     return full_text
             except Exception:
@@ -167,9 +200,10 @@ class CerebrasClient:
         return self.chat(system, [], user, max_tokens)
 
     def status(self) -> str:
-        active = self._working_model or CEREBRAS_MODELS[0]
+        active = self._working_model or (self._models[0] if self._models else "none")
         return (
             f"  Cerebras:\n"
             f"    Active model : {active}\n"
+            f"    Available    : {', '.join(self._models[:3])}{'…' if len(self._models) > 3 else ''}\n"
             f"    Token set    : {'yes' if self._token else 'NO — set CEREBRAS_API_KEY'}"
         )
