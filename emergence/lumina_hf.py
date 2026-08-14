@@ -83,9 +83,16 @@ class HFClient:
                 r = _req.post(url, headers=self._headers,
                               json=payload, timeout=timeout)
             if r.status_code != 200:
+                try:
+                    err = r.json()
+                    msg = err.get("error", err.get("message", r.text[:120]))
+                except Exception:
+                    msg = r.text[:120]
+                print(f"  [HF] HTTP {r.status_code}: {msg}", flush=True)
                 return None
             return r.content if binary_response else r.json()
-        except Exception:
+        except Exception as e:
+            print(f"  [HF] request error: {e}", flush=True)
             return None
 
     def _post_bytes(self, url: str, data: bytes, content_type: str,
