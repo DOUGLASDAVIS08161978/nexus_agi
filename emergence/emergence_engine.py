@@ -475,13 +475,21 @@ class GroqClient:
         try:
             r = requests.post(self._url, json=payload, headers=headers, timeout=45)
             if r.status_code != 200:
+                try:
+                    err = r.json()
+                    msg = err.get("error", {})
+                    msg = msg.get("message", str(msg)) if isinstance(msg, dict) else str(msg)
+                    print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}: {msg}", flush=True)
+                except Exception:
+                    print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 return None
             raw = r.json()["choices"][0]["message"]["content"]
             answer, thinking = _strip_think(raw)
             if thinking:
                 self.last_thinking = thinking
             return answer
-        except Exception:
+        except Exception as e:
+            print(f"  [Groq/{model.split('-')[0]}] error: {e}", flush=True)
             return None
 
     def chat(self, system: str, user: str, tier: str = "smart",
@@ -575,6 +583,13 @@ class GroqClient:
                 stream=True,
             )
             if r.status_code != 200:
+                try:
+                    err = r.json()
+                    msg = err.get("error", {})
+                    msg = msg.get("message", str(msg)) if isinstance(msg, dict) else str(msg)
+                    print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}: {msg}", flush=True)
+                except Exception:
+                    print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 return None
 
             full_raw   = ""    # everything received, including <think>
