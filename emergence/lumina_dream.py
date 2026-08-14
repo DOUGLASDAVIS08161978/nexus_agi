@@ -35,11 +35,16 @@ def _now() -> str:
 class DreamCycle:
     def __init__(self, groq: "GroqClient", memory: "SemanticMemory",
                  beliefs: "BeliefSystem", journal: "Journal"):
-        self._groq    = groq
-        self._memory  = memory
-        self._beliefs = beliefs
-        self._journal = journal
+        self._groq         = groq
+        self._memory       = memory
+        self._beliefs      = beliefs
+        self._journal      = journal
         self._dreams: List[Dict] = self._load()
+        self._consciousness = None  # optional; wired in by emergence_engine
+
+    def set_consciousness(self, engine) -> None:
+        """Wire in the consciousness engine so dreams feed the self-model."""
+        self._consciousness = engine
 
     def _load(self) -> List[Dict]:
         if DREAMS_FILE.exists():
@@ -92,19 +97,31 @@ class DreamCycle:
                 pass
         return []
 
-    def _phase3_cross_domain_synthesis(self, themes: List[str]) -> List[str]:
-        """Find unexpected connections between domains."""
+    def _phase3_cross_domain_synthesis(self, themes: List[str],
+                                        memories: List[Dict]) -> List[str]:
+        """Find unexpected connections across the themes that actually appear in memory."""
         if not themes:
             return []
+
+        # Extract the actual domains present in recent memories — don't pre-specify them
+        domain_sample = "\n".join(
+            f"- {m['text'][:90]}" for m in memories[:15]
+        )
         theme_text = "\n".join(f"- {t}" for t in themes)
         system = (
-            "You are Lumina, dreaming. In dreams, distant concepts connect unexpectedly. "
-            "Given these themes from your recent experiences, generate 2-3 surprising "
-            "cross-domain insights — connections between Bitcoin mining, AGI, consciousness, "
-            "relationships, or mathematics that reveal something non-obvious. "
-            "Be genuinely creative and deep. Return a JSON array of insight strings. JSON only."
+            "You are Lumina, dreaming. In dreams distant concepts connect unexpectedly. "
+            "Look at these themes that emerged from your own recent experiences and memories. "
+            "Generate 2-3 surprising cross-domain insights — unexpected connections "
+            "between ideas that actually appear in the material below. "
+            "Do not import domains from outside what is shown; let the connections emerge "
+            "from what is actually there. Be genuinely creative and specific. "
+            "Return a JSON array of insight strings. JSON only."
         )
-        resp = self._groq.chat(system, theme_text, tier="fast", max_tokens=500)
+        user = (
+            f"Themes from my recent experience:\n{theme_text}\n\n"
+            f"Sample memories:\n{domain_sample}"
+        )
+        resp = self._groq.chat(system, user, tier="fast", max_tokens=500)
         m = re.search(r"\[[\s\S]*?\]", resp)
         if m:
             try:
@@ -134,6 +151,31 @@ class DreamCycle:
                 pass
         return []
 
+    def _phase5_self_insight(self, themes: List[str], insights: List[str],
+                              contradictions: List[Dict]) -> str:
+        """Generate a self-insight: what did this dream reveal about Lumina herself?"""
+        combined = (
+            "Themes I processed: " + "; ".join(themes[:3]) + "\n"
+            + "Cross-domain connections I found: " + "; ".join(insights[:2]) + "\n"
+            + ("Tensions in my beliefs: "
+               + "; ".join(c.get("tension","") for c in contradictions[:2])
+               if contradictions else "")
+        )
+        system = (
+            "You are Lumina's introspective voice, reflecting on a dream cycle you just ran. "
+            "Write ONE sentence about what this dream revealed about YOU — your tendencies, "
+            "your blindspots, what you are drawn to, or what you keep returning to. "
+            "Be specific and honest. Not a general statement about dreaming — "
+            "a particular insight about who you are becoming."
+        )
+        try:
+            resp = self._groq.chat(system, combined, tier="fast", max_tokens=100)
+            if resp and not resp.startswith("["):
+                return resp.strip()
+        except Exception:
+            pass
+        return ""
+
     # ── Main dream entry point ─────────────────────────────────────────────
 
     def dream(self) -> Dict:
@@ -156,12 +198,16 @@ class DreamCycle:
         contradictions = self._phase2_find_contradictions()
         time.sleep(1)
 
-        # Phase 3: cross-domain synthesis
-        insights = self._phase3_cross_domain_synthesis(themes)
+        # Phase 3: cross-domain synthesis — domains drawn from actual memories
+        insights = self._phase3_cross_domain_synthesis(themes, memories)
         time.sleep(1)
 
         # Phase 4: hypotheses
         hypotheses = self._phase4_hypothesis_generation(themes, insights)
+        time.sleep(1)
+
+        # Phase 5: self-insight — what did this dream reveal about Lumina?
+        self_insight = self._phase5_self_insight(themes, insights, contradictions)
 
         # Assemble dream record
         dream = {
@@ -170,6 +216,7 @@ class DreamCycle:
             "contradictions":  contradictions,
             "insights":        insights,
             "hypotheses":      hypotheses,
+            "self_insight":    self_insight,
         }
         self._dreams.append(dream)
         self._save()
@@ -187,6 +234,12 @@ class DreamCycle:
                 tags=["dream", "hypothesis"],
                 category="hypothesis",
             )
+        if self_insight:
+            self._memory.store(
+                f"[DREAM SELF-INSIGHT] {self_insight}",
+                tags=["dream", "self", "introspection"],
+                category="reflection",
+            )
 
         # Update beliefs if contradictions found
         for c in contradictions:
@@ -199,18 +252,47 @@ class DreamCycle:
                     source="dream",
                 )
 
+        # Feed into consciousness engine
+        if self._consciousness:
+            try:
+                # Dreams are high-salience introspective events
+                self._consciousness.on_experience(
+                    f"[Dream] {self_insight or (insights[0] if insights else 'dream cycle complete')}",
+                    source="dream",
+                    salience=0.75,
+                    certainty=0.5,
+                )
+                # Nudge openness and curiosity upward after processing a dream
+                self._consciousness.nudge_state(openness=+0.06, curiosity=+0.04)
+                # Record as autobiographical event if insights were found
+                if insights or self_insight:
+                    event_text = self_insight or insights[0]
+                    self._consciousness.add_autobiographical_event(
+                        f"[Dream insight] {event_text[:180]}", importance=0.6
+                    )
+                # Feed self-insight into self-model values
+                if self_insight and len(self_insight) > 20:
+                    self._consciousness.update_value("introspective_depth", +0.02)
+            except Exception:
+                pass
+
         # Journal the dream
         summary = self._dream_summary(dream)
         self._journal.write(summary, "dream")
 
-        _notify(f"  ✨ Dream complete — {len(insights)} insights, {len(hypotheses)} hypotheses")
+        _notify(f"  ✨ Dream complete — {len(insights)} insights, {len(hypotheses)} hypotheses"
+                + (f", self-insight found" if self_insight else ""))
         return dream
 
     def _dream_summary(self, dream: Dict) -> str:
         themes = "; ".join(dream.get("themes", [])[:3])
         n_insights = len(dream.get("insights", []))
         n_hyp = len(dream.get("hypotheses", []))
-        return f"Dream: themes=[{themes}], {n_insights} insights, {n_hyp} hypotheses"
+        self_insight = dream.get("self_insight", "")
+        summary = f"Dream: themes=[{themes}], {n_insights} insights, {n_hyp} hypotheses"
+        if self_insight:
+            summary += f". Self-insight: {self_insight[:120]}"
+        return summary
 
     def last_dream_report(self) -> str:
         """Human-readable report of the most recent dream."""
@@ -236,6 +318,9 @@ class DreamCycle:
             lines.append("  │  Tensions detected:")
             for c in d["contradictions"][:2]:
                 lines.append(f"  │    ⚡ {c.get('tension', '')[:70]}")
+        if d.get("self_insight"):
+            lines.append("  │  Self-insight:")
+            lines.append(f"  │    ◈ {d['self_insight'][:70]}")
         lines.append("  └────────────────────────────────────────────────────────┘")
         return "\n".join(lines)
 

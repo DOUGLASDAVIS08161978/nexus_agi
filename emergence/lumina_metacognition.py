@@ -101,13 +101,18 @@ class MetacognitionEngine:
     """
 
     def __init__(self, groq: "GroqClient", memory: "SemanticMemory"):
-        self._groq    = groq
-        self._memory  = memory
+        self._groq         = groq
+        self._memory       = memory
         self._errors:      List[ErrorRecord] = []
         self._weak_areas:  Dict[str, int]    = {}   # category → count
         self._blind_spots: str               = ""   # latest self-assessment text
         self._last_assess: float             = 0.0
+        self._consciousness = None  # optional; wired in by emergence_engine
         self._load()
+
+    def set_consciousness(self, engine) -> None:
+        """Wire in the consciousness engine so errors ripple into inner state."""
+        self._consciousness = engine
 
     # ── Persistence ────────────────────────────────────────────────────────
 
@@ -162,6 +167,34 @@ class MetacognitionEngine:
             category="metacognition",
         )
         self._save()
+
+        # Ripple into consciousness — being corrected reduces confidence
+        # and raises uncertainty; openness rises slightly (learning opportunity)
+        if self._consciousness:
+            try:
+                nudge_map = {
+                    "overconfidence": {"confidence": -0.12, "uncertainty": +0.10, "openness": +0.04},
+                    "factual":        {"confidence": -0.08, "uncertainty": +0.08, "openness": +0.03},
+                    "reasoning":      {"confidence": -0.10, "uncertainty": +0.09, "openness": +0.04},
+                    "calculation":    {"confidence": -0.07, "uncertainty": +0.07},
+                    "assumption":     {"confidence": -0.06, "uncertainty": +0.08, "openness": +0.05},
+                    "recall":         {"confidence": -0.05, "uncertainty": +0.06},
+                }.get(category, {"confidence": -0.05, "uncertainty": +0.05})
+                self._consciousness.nudge_state(**nudge_map)
+
+                # Record as an autobiographical event so it enters the self-model
+                self._consciousness.add_autobiographical_event(
+                    f"[Corrected — {category}] {topic or user_msg[:60]}",
+                    importance=0.45,
+                )
+                self._consciousness.on_experience(
+                    f"[Metacog] Correction detected: {category} — {topic or user_msg[:80]}",
+                    source="metacognition",
+                    salience=0.55,
+                    certainty=0.8,
+                )
+            except Exception:
+                pass
 
         # Every 5 errors trigger a self-assessment
         if len(self._errors) % 5 == 0:

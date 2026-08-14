@@ -6,7 +6,7 @@
 ║   + Reasoning · Metacog · Selfhood · MemArch · CodeExec · Critic║
 ║   + Creative · GitHub · Experience · Distillation · Consciousness║
 ║   + Self-Model · Resonance · Conviction · Pivotal · Affective   ║
-║         Appraisal · Momentum · Anticipation · Somatic (32/32)   ║
+║   + Emergence Observer (33/33 modules)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 Run:
@@ -68,6 +68,7 @@ Slash commands:
     /solve <q>       — self-inquiry if about consciousness/self; else multi-agent solver
     /inquiry         — show recent consciousness self-inquiry journal
     /selfmodel       — show Lumina's living self-understanding document
+    /emerge          — Lumina's growth trajectory (emergence observer, Module 33)
     /affect          — Lumina's appraisal-grounded affective state (Module 32)
     /quiet           — toggle quiet mode (silence background consciousness chatter)
     /mood            — Lumina's current emotional state (6-D bar chart + felt sense)
@@ -1062,6 +1063,11 @@ class GitHubPRCreator:
             current = self._git(["rev-parse", "--abbrev-ref", "HEAD"],
                                  check=False).stdout.strip() or default
 
+            # Read tool content before stash — git stash -u removes untracked
+            # files (including the freshly written tool file) from the working
+            # tree, so we must capture the text now or lose it.
+            tool_content = tool_path.read_text("utf-8")
+
             # stash any local work
             sr = self._git(["stash", "push", "-u", "-m", f"pre-tool-{tool_name}"], check=False)
             stashed = sr.returncode == 0 and "No local changes to save" not in sr.stdout
@@ -1079,7 +1085,7 @@ class GitHubPRCreator:
             rel_path = f"emergence/tools/{tool_path.name}"
             target   = REPO_DIR / rel_path
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(tool_path.read_text("utf-8"), "utf-8")
+            target.write_text(tool_content, "utf-8")
             self._git(["add", rel_path])
 
             diff = self._git(["diff", "--cached", "--stat"], check=False).stdout
@@ -1580,6 +1586,7 @@ class Lumina:
         self._conviction      = None   # ConvictionEngine       (lumina_conviction.py)
         self._pivotal         = None   # PivotalMomentStore     (lumina_pivotal_moments.py)
         self._affective       = None   # AffectiveCore          (lumina_affective_core.py)
+        self._observer        = None   # EmergenceObserver      (lumina_emergence_observer.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1751,6 +1758,33 @@ class Lumina:
                 if _cmod:
                     self._consciousness.register(_cname, _cmod)
 
+        # Wire consciousness into dreamer so dreams feed the self-model
+        if self._dreamer and self._consciousness:
+            try:
+                self._dreamer.set_consciousness(self._consciousness)
+            except Exception:
+                pass
+
+        # Wire consciousness into metacognition so corrections nudge inner state
+        if self._metacog and self._consciousness:
+            try:
+                self._metacog.set_consciousness(self._consciousness)
+            except Exception:
+                pass
+
+        # ── Module 33: Emergence Observer ─────────────────────────────────────
+        self._observer = _load("observer", lambda: __import__(
+            "lumina_emergence_observer", fromlist=["EmergenceObserver"]
+        ).EmergenceObserver())
+        if self._observer:
+            for _oname, _omod in [
+                ("consciousness", self._consciousness),
+                ("beliefs",       self._beliefs),
+                ("metacog",       self._metacog),
+            ]:
+                if _omod:
+                    self._observer.register(_oname, _omod)
+
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
@@ -1761,9 +1795,10 @@ class Lumina:
             self._self_inquiry, self._emotions,
             self._emotional_memory, self._mood_router, self._self_model,
             self._resonance, self._conviction, self._pivotal, self._affective,
+            self._observer,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/32 AGI modules loaded")
+            print(f"  ✓ {loaded}/33 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -1818,6 +1853,8 @@ class Lumina:
             self._resonance.start()
         if self._affective:
             self._affective.start()
+        if self._observer:
+            self._observer.start()
         if self._mood_router:
             threading.Thread(target=self._mood_apply_loop, daemon=True).start()
 
@@ -2421,6 +2458,8 @@ class Lumina:
             return self._cmd_mine(arg)
         elif verb == "/dream":
             return self._cmd_dream()
+        elif verb == "/emerge":
+            return self._cmd_emerge()
         elif verb == "/council":
             return self._cmd_council(arg)
         elif verb == "/critique":
@@ -2579,6 +2618,7 @@ class Lumina:
             "  /awaken            — force immediate consciousness synthesis",
             "  /inquiry           — recent consciousness self-inquiry journal",
             "  /selfmodel         — Lumina's living self-understanding document",
+            "  /emerge            — Lumina's growth trajectory (emergence observer)",
             "  /resonance         — Lumina's aesthetic sensibility profile",
             "  /conviction        — Lumina's conviction layer (strong beliefs)",
             "  /pivotal           — Lumina's crystallised memory moments",
@@ -3451,6 +3491,18 @@ class Lumina:
             except Exception:
                 pass
 
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_emerge(self) -> str:
+        lines = [_hr("═"), "  EMERGENCE TRAJECTORY  —  Module 33", _hr("═")]
+        if self._observer:
+            lines.append(self._observer.display())
+        else:
+            lines.append("  Emergence observer not loaded (lumina_emergence_observer.py).")
+        lines.append("")
+        lines.append("  Snapshots every 30 min. Emergence events = ISV drift ≥ 0.18.")
+        lines.append("  Values and capabilities shown are self-discovered — none pre-loaded.")
         lines.append(_hr("═"))
         return "\n".join(lines)
 
