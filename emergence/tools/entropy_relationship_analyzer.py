@@ -46,19 +46,19 @@ def analyze_entropy_relationships(text):
     char_ent = shannon_entropy(text)
     word_ent = word_entropy(text)
     struct_ent = structural_entropy(text)
-    
+
     char_ppl = compute_perplexity(char_ent)
     word_ppl = compute_perplexity(word_ent)
     struct_ppl = compute_perplexity(struct_ent)
-    
+
     # Cognitive entropy proxy: weighted combination
     cognitive_ent = 0.3 * char_ent + 0.5 * word_ent + 0.2 * struct_ent
     cognitive_ppl = compute_perplexity(cognitive_ent)
-    
+
     # Correlation-like metrics
     char_word_ratio = word_ent / char_ent if char_ent > 0 else 0
     word_struct_ratio = struct_ent / word_ent if word_ent > 0 else 0
-    
+
     return {
         "shannon_entropy": round(char_ent, 4),
         "word_entropy": round(word_ent, 4),
@@ -84,24 +84,24 @@ def main():
         "moderate": "Artificial intelligence systems process information through complex neural networks that learn patterns from vast datasets. These systems demonstrate remarkable capabilities in language understanding, pattern recognition, and decision making across diverse domains.",
         "complex": "The interplay between thermodynamic entropy, information-theoretic entropy, and cognitive entropy reveals fundamental constraints on information processing systems. Shannon entropy measures uncertainty in probability distributions, while perplexity quantifies prediction difficulty. In neural networks, minimizing cross-entropy loss effectively reduces predictive uncertainty, suggesting that learning is fundamentally an entropy reduction process. The brain's reward systems may operate on similar principles, where curiosity drives exploration to minimize cognitive entropy through information acquisition."
     }
-    
+
     results = {}
     max_entropy = 0
-    
+
     print("=" * 70)
     print("ENTROPY RELATIONSHIP ANALYZER")
     print("Exploring connections between entropy measures in information systems")
     print("=" * 70)
-    
+
     for name, text in sample_texts.items():
         print(f"\n--- Text: {name.upper()} ---")
         print(f"Sample: {text[:80]}...")
         print("-" * 50)
-        
+
         metrics = analyze_entropy_relationships(text)
         results[name] = metrics
         max_entropy = max(max_entropy, metrics["cognitive_entropy_proxy"])
-        
+
         print(ascii_entropy_bar(metrics["shannon_entropy"], 5.0, "Shannon Entropy"))
         print(ascii_entropy_bar(metrics["word_entropy"], 5.0, "Word Entropy"))
         print(ascii_entropy_bar(metrics["structural_entropy"], 3.0, "Structural Entropy"))
@@ -111,22 +111,22 @@ def main():
         print(f"  Word:        {metrics['word_perplexity']:.2f}")
         print(f"  Structural:  {metrics['structural_perplexity']:.2f}")
         print(f"  Cognitive:   {metrics['cognitive_perplexity']:.2f}")
-    
+
     # Cross-text analysis
     print("\n" + "=" * 70)
     print("CROSS-TEXT ANALYSIS")
     print("=" * 70)
-    
+
     for name, metrics in results.items():
         print(f"\n{name.upper()}:")
         print(f"  Char/Word ratio: {metrics['char_word_ratio']:.4f}")
         print(f"  Word/Struct ratio: {metrics['word_struct_ratio']:.4f}")
-        
+
         if metrics['char_word_ratio'] > 0.5:
             print("  → High vocabulary diversity relative to character entropy")
         if metrics['word_struct_ratio'] > 1.0:
             print("  → Rich vocabulary with varied sentence structure")
-    
+
     # Save results
     output = {
         "analysis_type": "entropy_relationships",
@@ -141,11 +141,11 @@ def main():
             "Higher cognitive entropy suggests more complex information processing"
         ]
     }
-    
+
     output_path = Path("entropy_analysis_results.json")
     with open(output_path, 'w') as f:
         json.dump(output, f, indent=2)
-    
+
     print(f"\nResults saved to: {output_path}")
     print("\nKEY INSIGHT: Entropy measures capture different dimensions of")
     print("information complexity. Their relationships may inform models")
