@@ -137,10 +137,11 @@ COUNCIL_ENABLED    = False         # off by default — use /council <q> to conv
 DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
 POST_TURN_EVERY    = 4             # run deep post-turn processing every N messages
 
-# Groq model tiers (fastest → most capable)
-MODELS_FAST   = ["qwen/qwen3.6-27b"]
-MODELS_SMART  = ["llama-3.3-70b-versatile"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "qwen/qwen3.6-27b"]
+# Groq model tiers — each model has its OWN separate daily quota on free tier.
+# When the primary hits its daily limit (429 TPD), the next model takes over.
+MODELS_FAST   = ["llama-3.1-8b-instant", "llama3-8b-8192"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
