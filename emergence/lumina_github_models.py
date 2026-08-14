@@ -96,9 +96,13 @@ class CerebrasClient:
 
     # ── Non-streaming ─────────────────────────────────────────────────────────
 
-    def _post(self, payload: dict, timeout: int = 45) -> Optional[dict]:
+    # Codes where retrying other models is pointless (account-level, not model-level)
+    _FATAL_CODES = {401, 402, 403}
+
+    def _post(self, payload: dict, timeout: int = 45):
+        """Returns (dict, fatal) — dict is None on failure; fatal=True means stop trying."""
         if not _REQ or not self._token:
-            return None
+            return None, True
         try:
             r = _req.post(
                 f"{CEREBRAS_API}/chat/completions",
@@ -109,26 +113,29 @@ class CerebrasClient:
             if r.status_code != 200:
                 try:
                     err = r.json()
-                    print(f"  [Cerebras] HTTP {r.status_code}: {err}", flush=True)
+                    msg = err.get("message", "")
+                    print(f"  [Cerebras] HTTP {r.status_code}: {msg}", flush=True)
                 except Exception:
-                    print(f"  [Cerebras] HTTP {r.status_code}: {r.text[:200]}", flush=True)
-                return None
-            return r.json()
+                    print(f"  [Cerebras] HTTP {r.status_code}", flush=True)
+                return None, r.status_code in self._FATAL_CODES
+            return r.json(), False
         except Exception as e:
             print(f"  [Cerebras] request error: {e}", flush=True)
-            return None
+            return None, False
 
     def chat(self, system: str, messages: List[Dict], user: str,
              max_tokens: int = 1200) -> str:
         """Non-streaming chat completion via Cerebras."""
         full_msgs = self._build_messages(system, messages, user)
         for model in self._model_list():
-            result = self._post({
+            result, fatal = self._post({
                 "model":       model,
                 "messages":    full_msgs,
                 "max_tokens":  min(max_tokens, 8192),
                 "temperature": 0.70,
             })
+            if fatal:
+                break
             if result and isinstance(result, dict):
                 try:
                     text = result["choices"][0]["message"]["content"].strip()
@@ -165,9 +172,12 @@ class CerebrasClient:
                 if r.status_code != 200:
                     try:
                         err = r.json()
-                        print(f"  [Cerebras stream] HTTP {r.status_code}: {err}", flush=True)
+                        msg = err.get("message", "")
+                        print(f"  [Cerebras stream] HTTP {r.status_code}: {msg}", flush=True)
                     except Exception:
                         print(f"  [Cerebras stream] HTTP {r.status_code}", flush=True)
+                    if r.status_code in self._FATAL_CODES:
+                        return None
                     continue
                 full_text = ""
                 for raw_line in r.iter_lines():
