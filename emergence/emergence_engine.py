@@ -580,7 +580,7 @@ class GroqClient:
         try:
             r = requests.post(
                 self._url, json=payload, headers=headers,
-                timeout=(10, 45),   # 10s connect, 45s per chunk read
+                timeout=(10, 15),   # 10s connect, 15s per chunk read
                 stream=True,
             )
             if r.status_code != 200:
@@ -645,7 +645,8 @@ class GroqClient:
                 self.last_thinking = thinking
             return answer.strip() if answer.strip() else full_raw.strip()
 
-        except Exception:
+        except Exception as e:
+            print(f"  [Groq stream/{model.split('-')[0]}] {type(e).__name__}: {str(e)[:80]}", flush=True)
             return None
 
 # ── Web Tool ──────────────────────────────────────────────────────────────────

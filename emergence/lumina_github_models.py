@@ -99,7 +99,7 @@ class CerebrasClient:
     # Codes where retrying other models is pointless (account-level, not model-level)
     _FATAL_CODES = {401, 402, 403}
 
-    def _post(self, payload: dict, timeout: int = 45):
+    def _post(self, payload: dict, timeout: int = 15):
         """Returns (dict, fatal) — dict is None on failure; fatal=True means stop trying."""
         if not _REQ or not self._token:
             return None, True
@@ -166,7 +166,7 @@ class CerebrasClient:
                         "temperature": 0.70,
                         "stream":      True,
                     },
-                    timeout=(10, 45),
+                    timeout=(10, 15),
                     stream=True,
                 )
                 if r.status_code != 200:
@@ -202,7 +202,8 @@ class CerebrasClient:
                     print()
                     self._working_model = model
                     return full_text
-            except Exception:
+            except Exception as e:
+                print(f"  [Cerebras stream] {type(e).__name__}: {str(e)[:80]}", flush=True)
                 continue
         return None
 
