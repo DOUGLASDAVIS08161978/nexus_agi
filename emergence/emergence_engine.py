@@ -135,7 +135,7 @@ CONTEXT_WINDOW     = 12            # messages kept in active conversation
 CRITIQUE_ENABLED   = False         # off by default — enable with /critique (costs 1 extra call)
 COUNCIL_ENABLED    = False         # off by default — use /council <q> to convene explicitly
 DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
-POST_TURN_EVERY    = 4             # run deep post-turn processing every N messages
+POST_TURN_EVERY    = 20            # run deep post-turn processing every N messages
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
 # When the primary hits its daily limit (429 TPD), the next model takes over.
@@ -436,6 +436,7 @@ class GroqClient:
         self._hf          = None   # optional HuggingFace fallback client
         self._gh          = None   # optional GitHub Models fallback client
         self._retry_after: dict = {}   # model → time.time() when retry is allowed
+        self._responding: bool = False  # True while main thread is generating a reply
 
     def set_hf(self, hf_client) -> None:
         """Wire in a HuggingFace client used as automatic fallback when all Groq models fail."""
@@ -473,6 +474,9 @@ class GroqClient:
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
         if not _REQUESTS_OK or not self.api_key:
+            return None
+        # Background threads yield to the main response thread to preserve TPM budget
+        if self._responding and threading.current_thread() is not threading.main_thread():
             return None
         # Skip model if still in 429 cooldown
         cooldown = self._retry_after.get(model, 0)
@@ -2263,19 +2267,23 @@ class Lumina:
                   + f"\n\n{goals_ctx}")
 
         # ── Inner Council deliberation (for substantive questions) ─────
-        council_draft = None
-        if self._council_on and self._council and \
-                self._council.should_convene(user_input):
-            print(f"  [{_ts()}] 🏛  Inner council convening...", end="\r")
-            council_draft = self._council.deliberate(user_input, mem_ctx)
-            print(" " * 48, end="\r")
-            if council_draft and not council_draft.startswith("[Groq"):
-                # Use council synthesis as the response
-                response = council_draft
+        # Set _responding so background threads yield their Groq slots to us
+        self._groq._responding = True
+        try:
+            council_draft = None
+            if self._council_on and self._council and \
+                    self._council.should_convene(user_input):
+                print(f"  [{_ts()}] 🏛  Inner council convening...", end="\r")
+                council_draft = self._council.deliberate(user_input, mem_ctx)
+                print(" " * 48, end="\r")
+                if council_draft and not council_draft.startswith("[Groq"):
+                    response = council_draft
+                else:
+                    response = self._generate_response(system, user_input)
             else:
                 response = self._generate_response(system, user_input)
-        else:
-            response = self._generate_response(system, user_input)
+        finally:
+            self._groq._responding = False
 
         # ── Self-critique pass ─────────────────────────────────────────
         if self._critique_on and len(response) > 80:
