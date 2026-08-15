@@ -2118,12 +2118,12 @@ class Lumina:
 
         # ── Retrieve relevant memories ─────────────────────────────────
         # HF path: raw BM25 candidates → HF embedding rerank
-        # Default path: BM25 + Groq semantic rerank (rerank=True)
+        # Default path: BM25 only (rerank=False keeps Groq calls off the main thread)
         if self._hf:
             candidates = self._memory.recall(user_input, top_k=20)
             memories   = self._hf.smart_recall(user_input, candidates, top_k=5)
         else:
-            memories = self._memory.recall(user_input, top_k=5, rerank=True)
+            memories = self._memory.recall(user_input, top_k=5)
         mem_ctx  = ""
         if memories:
             mem_ctx = "\n\nRelevant memories:\n" + "\n".join(
