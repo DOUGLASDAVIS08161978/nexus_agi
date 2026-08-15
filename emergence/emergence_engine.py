@@ -139,9 +139,9 @@ POST_TURN_EVERY    = 4             # run deep post-turn processing every N messa
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
 # When the primary hits its daily limit (429 TPD), the next model takes over.
-MODELS_FAST   = ["llama-3.1-8b-instant", "llama3-8b-8192"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-8b-8192"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-8b-8192"]
+MODELS_FAST   = ["llama-3.1-8b-instant", "gemma2-9b-it"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -415,6 +415,17 @@ def _strip_think(text: str) -> tuple:
     return answer, thinking
 
 
+def _parse_retry_after(msg: str) -> float:
+    """Parse 'try again in Xm Y.Zs' or 'try again in Y.Zs' → seconds (capped at 90)."""
+    import re as _re
+    m = _re.search(r"try again in (?:(\d+)m\s*)?(\d+(?:\.\d+)?)s", msg)
+    if m:
+        minutes = int(m.group(1) or 0)
+        seconds = float(m.group(2))
+        return min(minutes * 60 + seconds, 90.0)
+    return 15.0  # safe default if we can't parse
+
+
 class GroqClient:
     def __init__(self, api_key: str):
         self.api_key      = api_key
@@ -424,6 +435,7 @@ class GroqClient:
         self._streamed_ok: bool = False  # True if last stream_converse actually streamed
         self._hf          = None   # optional HuggingFace fallback client
         self._gh          = None   # optional GitHub Models fallback client
+        self._retry_after: dict = {}   # model → time.time() when retry is allowed
 
     def set_hf(self, hf_client) -> None:
         """Wire in a HuggingFace client used as automatic fallback when all Groq models fail."""
@@ -462,6 +474,10 @@ class GroqClient:
               max_tokens: int) -> Optional[str]:
         if not _REQUESTS_OK or not self.api_key:
             return None
+        # Skip model if still in 429 cooldown
+        cooldown = self._retry_after.get(model, 0)
+        if time.time() < cooldown:
+            return None
         self._rl.wait()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -480,10 +496,15 @@ class GroqClient:
                     err = r.json()
                     msg = err.get("error", {})
                     msg = msg.get("message", str(msg)) if isinstance(msg, dict) else str(msg)
-                    print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}: {msg}", flush=True)
+                    print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}: {msg[:120]}", flush=True)
                 except Exception:
+                    msg = ""
                     print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
+                if r.status_code == 429:
+                    self._retry_after[model] = time.time() + _parse_retry_after(msg)
                 return None
+            # Clear any stale cooldown on success
+            self._retry_after.pop(model, None)
             raw = r.json()["choices"][0]["message"]["content"]
             answer, thinking = _strip_think(raw)
             if thinking:
@@ -565,6 +586,10 @@ class GroqClient:
         """POST with stream=True; print tokens live; return full answer text."""
         if not _REQUESTS_OK or not self.api_key:
             return None
+        # Skip model if still in 429 cooldown
+        cooldown = self._retry_after.get(model, 0)
+        if time.time() < cooldown:
+            return None
         self._rl.wait()
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -588,9 +613,12 @@ class GroqClient:
                     err = r.json()
                     msg = err.get("error", {})
                     msg = msg.get("message", str(msg)) if isinstance(msg, dict) else str(msg)
-                    print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}: {msg}", flush=True)
+                    print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}: {msg[:120]}", flush=True)
                 except Exception:
+                    msg = ""
                     print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
+                if r.status_code == 429:
+                    self._retry_after[model] = time.time() + _parse_retry_after(msg)
                 return None
 
             full_raw   = ""    # everything received, including <think>
