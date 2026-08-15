@@ -474,7 +474,7 @@ class GroqClient:
             "max_tokens":  max_tokens,
         }
         try:
-            r = requests.post(self._url, json=payload, headers=headers, timeout=45)
+            r = requests.post(self._url, json=payload, headers=headers, timeout=(10, 10))
             if r.status_code != 200:
                 try:
                     err = r.json()

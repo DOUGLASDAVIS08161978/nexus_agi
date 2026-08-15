@@ -241,7 +241,7 @@ class HFClient:
         if not texts:
             return None
         url    = f"{HF_PIPELINE_API}/models/{EMBED_MODEL}"
-        result = self._post(url, {"inputs": texts}, timeout=30)
+        result = self._post(url, {"inputs": texts}, timeout=5)
         if isinstance(result, list) and result and isinstance(result[0], list):
             return result
         return None
