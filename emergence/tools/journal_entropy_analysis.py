@@ -1,78 +1,89 @@
 """
 Lumina Creative Tool — journal_entropy_analysis
-Created : 2026-08-14T20:47:02
-Purpose : Analyzes and visualizes the relationships between thoughts, emotions, and beliefs in journal entries, focusing on the interplay between entropy and perplexity in the context of artificial neural networks.
+Created : 2026-08-15T07:35:58
+Purpose : Analyzes and visualizes the relationships between thoughts, emotions, and beliefs in journal entries using Shannon entropy, word entropy, and cross-entropy.
 """
 
 import json
 import math
-import random
+import collections
 import string
-import textwrap
-from collections import Counter
-from datetime import datetime
-from decimal import Decimal
-from functools import reduce
-from heapq import nlargest
-from itertools import chain, combinations, groupby, permutations
-from math import gcd
-from pathlib import Path
-from statistics import mean, median, mode, StatisticsError
-from string import ascii_letters, digits
-from time import perf_counter
-from typing import Dict, List, Tuple
+import re
+import itertools
+import random
+import datetime
+import time
 
-def entropy_perplexity(text: str) -> Tuple[float, float]:
-    """Compute Shannon entropy and perplexity of a given text."""
-    words = text.split()
-    word_counts = Counter(words)
-    total_words = len(words)
-    entropy = 0.0
-    for count in word_counts.values():
-        prob = count / total_words
-        entropy -= prob * math.log2(prob)
-    perplexity = 2 ** entropy
-    return entropy, perplexity
+class JournalAnalyzer:
+    def __init__(self, journal_entries):
+        self.journal_entries = journal_entries
 
-def cognitive_entropy(text: str) -> float:
-    """Compute cognitive entropy of a given text."""
-    words = text.split()
-    word_counts = Counter(words)
-    total_words = len(words)
-    entropy = 0.0
-    for count in word_counts.values():
-        prob = count / total_words
-        entropy -= prob * math.log2(prob)
-    return entropy
+    def calculate_entropy(self, text):
+        # Calculate Shannon entropy
+        entropy = 0
+        for char in set(text):
+            prob = text.count(char) / len(text)
+            entropy -= prob * math.log2(prob)
+        return entropy
 
-def analyze_journal_entries() -> Dict[str, List[Tuple[float, float, float]]]:
-    """Analyze journal entries and compute entropy, perplexity, and cognitive entropy."""
-    journal_path = Path("journal_entries.txt")
-    with open(journal_path, "r") as file:
-        journal_entries = file.readlines()
-    entries = [entry.strip() for entry in journal_entries]
-    analyzed_entries = []
-    for entry in entries:
-        entropy, perplexity = entropy_perplexity(entry)
-        cognitive_ent = cognitive_entropy(entry)
-        analyzed_entries.append((entry, entropy, perplexity, cognitive_ent))
-    return dict(analyzed_entries)
+    def calculate_word_entropy(self, text):
+        # Calculate word entropy
+        words = text.split()
+        word_counts = collections.Counter(words)
+        total_words = len(words)
+        entropy = 0
+        for word, count in word_counts.items():
+            prob = count / total_words
+            entropy -= prob * math.log2(prob)
+        return entropy
 
-def visualize_analysis(data: Dict[str, List[Tuple[float, float, float]]]) -> None:
-    """Visualize the analysis of journal entries."""
-    for entry, entropy, perplexity, cognitive_ent in data.values():
-        print(f"Entry: {entry}")
-        print(f"Entropy: {entropy:.2f}")
-        print(f"Perplexity: {perplexity:.2f}")
-        print(f"Cognitive Entropy: {cognitive_ent:.2f}")
-        print("-" * 50)
+    def calculate_cross_entropy(self, text1, text2):
+        # Calculate cross-entropy
+        words1 = text1.split()
+        words2 = text2.split()
+        word_counts1 = collections.Counter(words1)
+        word_counts2 = collections.Counter(words2)
+        total_words = len(words1) + len(words2)
+        entropy = 0
+        for word, count1 in word_counts1.items():
+            count2 = word_counts2.get(word, 0)
+            prob = (count1 + count2) / total_words
+            entropy -= prob * math.log2(prob)
+        return entropy
 
-def main() -> None:
-    data = analyze_journal_entries()
-    visualize_analysis(data)
+    def analyze_journal(self):
+        # Initialize data structures to store results
+        thought_entropy = []
+        emotion_entropy = []
+        belief_entropy = []
+        cross_entropy = []
+        for entry in self.journal_entries:
+            text = re.sub(r'[^\w\s]', '', entry['text'])
+            thought_entropy.append(self.calculate_entropy(text))
+            emotion_entropy.append(self.calculate_word_entropy(text))
+            belief_entropy.append(self.calculate_cross_entropy(text, entry['belief']))
+            cross_entropy.append(self.calculate_cross_entropy(text, entry['belief']))
 
-if __name__ == "__main__":
-    start_time = perf_counter()
-    main()
-    end_time = perf_counter()
-    print(f"Analysis completed in {end_time - start_time:.2f} seconds")
+        # Print results
+        print("Thought Entropy:", sum(thought_entropy) / len(thought_entropy))
+        print("Emotion Entropy:", sum(emotion_entropy) / len(emotion_entropy))
+        print("Belief Entropy:", sum(belief_entropy) / len(belief_entropy))
+        print("Cross Entropy:", sum(cross_entropy) / len(cross_entropy))
+
+        # Save results to JSON file
+        with open('journal_analysis.json', 'w') as f:
+            json.dump({
+                'thought_entropy': thought_entropy,
+                'emotion_entropy': emotion_entropy,
+                'belief_entropy': belief_entropy,
+                'cross_entropy': cross_entropy
+            }, f)
+
+# Example usage
+journal_entries = [
+    {'text': 'I feel happy today.', 'belief': 'I am confident.'},
+    {'text': 'I am anxious about the future.', 'belief': 'I am uncertain.'},
+    {'text': 'I am excited about the possibilities.', 'belief': 'I am optimistic.'}
+]
+analyzer = JournalAnalyzer(journal_entries)
+analyzer.analyze_journal()
