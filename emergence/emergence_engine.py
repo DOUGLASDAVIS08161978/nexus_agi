@@ -139,9 +139,9 @@ POST_TURN_EVERY    = 20            # run deep post-turn processing every N messa
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
 # When the primary hits its daily limit (429 TPD), the next model takes over.
-MODELS_FAST   = ["llama-3.1-8b-instant", "llama-3.2-3b-preview", "llama-3.2-1b-preview"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.2-3b-preview"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.2-3b-preview"]
+MODELS_FAST   = ["llama-3.1-8b-instant"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 

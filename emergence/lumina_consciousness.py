@@ -1120,7 +1120,7 @@ class ConsciousnessEngine:
                                 self._history.append(self._state)
                                 self._history = self._history[-HISTORY_DEPTH:]
                             self._state = state
-                            self._save()
+                        self._save()  # outside lock — _save() acquires it itself
 
                         # Record significant moments in autobiographical narrative
                         if phi > 0.7:
@@ -1211,7 +1211,7 @@ class ConsciousnessEngine:
                         self._history.append(self._state)
                         self._history = self._history[-HISTORY_DEPTH:]
                     self._state = state
-                    self._save()
+                self._save()  # outside lock — _save() acquires it itself
         threading.Thread(target=_run, daemon=True).start()
 
     # ── System prompt injection ────────────────────────────────────────────
