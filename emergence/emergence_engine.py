@@ -2205,27 +2205,31 @@ class Lumina:
             if trace:
                 reasoning_ctx = self._reasoning.as_context(trace)
 
-        print(f"  [DBG 6/8] meta/experience/distill/consciousness", flush=True)
+        print(f"  [DBG 6a] meta_solver", flush=True)
         # ── Meta-solver capability context ────────────────────────────
         meta_solver_ctx = ""
         if self._meta_solver:
             meta_solver_ctx = self._meta_solver.capability_description()
 
+        print(f"  [DBG 6b] experience", flush=True)
         # ── Experience / phenomenal state context ─────────────────────
         experience_ctx = ""
         if self._experience:
             experience_ctx = self._experience.as_system_context()
 
+        print(f"  [DBG 6c] distiller", flush=True)
         # ── Distilled knowledge / insight nodes ────────────────────────
         distill_ctx = ""
         if self._distiller:
             distill_ctx = self._distiller.as_context()
 
+        print(f"  [DBG 6d] consciousness", flush=True)
         # ── Global Workspace — present conscious moment ────────────────
         consciousness_ctx = ""
         if self._consciousness:
             consciousness_ctx = self._consciousness.as_context()
 
+        print(f"  [DBG 6e] self_inquiry", flush=True)
         # ── Self-Inquiry — living self-model document ──────────────────
         self_inquiry_ctx = ""
         if self._self_inquiry:
