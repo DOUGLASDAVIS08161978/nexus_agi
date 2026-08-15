@@ -1,93 +1,68 @@
 """
 Lumina Creative Tool — thought_emotion_belief_analyzer_v5
-Created : 2026-08-14T21:47:20
-Purpose : Analyzes and visualizes the relationships between thoughts, emotions, and beliefs, specifically focusing on the dynamic interplay between entropy, perplexity, and cognitive entropy in the context of artificial neural networks and intelligent systems.
+Created : 2026-08-15T11:44:42
+Purpose : Analyzes and visualizes the relationships between thoughts, emotions, and beliefs in journal entries, providing insights into personal growth and development.
 """
 
-import math
 import json
-import collections
-import itertools
-import random
-import re
-import string
-import heapq
-import functools
-import struct
-import time
-import os
-import sys
-import io
-import csv
-import calendar
-import fractions
-import decimal
-import cmath
+import datetime
+from collections import defaultdict
+from itertools import groupby
+from operator import itemgetter
 
 class ThoughtEmotionBeliefAnalyzer:
     def __init__(self, journal_entries):
         self.journal_entries = journal_entries
 
-    def calculate_entropy(self, text):
-        # Calculate Shannon entropy
-        words = re.findall(r'\b\w+\b', text.lower())
-        word_freq = collections.Counter(words)
-        entropy = 0
-        for freq in word_freq.values():
-            prob = freq / len(words)
-            entropy -= prob * math.log2(prob)
-        return entropy
-
-    def calculate_word_entropy(self, text):
-        # Calculate word entropy
-        words = re.findall(r'\b\w+\b', text.lower())
-        word_freq = collections.Counter(words)
-        entropy = 0
-        for freq in word_freq.values():
-            prob = freq / len(words)
-            entropy -= prob * math.log2(prob)
-        return entropy
-
-    def calculate_perplexity(self, text):
-        # Calculate perplexity
-        words = re.findall(r'\b\w+\b', text.lower())
-        word_freq = collections.Counter(words)
-        perplexity = 2 ** (-self.calculate_entropy(text) / len(words))
-        return perplexity
-
-    def analyze_journal_entries(self):
-        # Analyze and visualize journal entries
-        results = []
+    def analyze(self):
+        # Group journal entries by date
+        grouped_entries = defaultdict(list)
         for entry in self.journal_entries:
-            entry_text = entry['text']
-            emotion = entry['emotion']
-            belief = entry['belief']
-            entropy = self.calculate_entropy(entry_text)
-            word_entropy = self.calculate_word_entropy(entry_text)
-            perplexity = self.calculate_perplexity(entry_text)
-            results.append({
-                'entry': entry_text,
-                'emotion': emotion,
-                'belief': belief,
-                'entropy': entropy,
-                'word_entropy': word_entropy,
-                'perplexity': perplexity
-            })
-        return results
+            date = entry['date']
+            grouped_entries[date].append(entry)
 
-    def visualize_results(self, results):
-        # Visualize results
-        for result in results:
-            print(f"Entry: {result['entry']}")
-            print(f"Emotion: {result['emotion']}")
-            print(f"Belief: {result['belief']}")
-            print(f"Entropy: {result['entropy']}")
-            print(f"Word Entropy: {result['word_entropy']}")
-            print(f"Perplexity: {result['perplexity']}")
-            print('')
+        # Initialize data structures to store thought-emotion-belief relationships
+        thought_emotion_beliefs = defaultdict(lambda: defaultdict(set))
+        thought_emotions = defaultdict(set)
+        emotion_beliefs = defaultdict(set)
+
+        # Iterate over grouped journal entries
+        for date, entries in grouped_entries.items():
+            # Iterate over each entry
+            for entry in entries:
+                # Extract relevant information
+                thought = entry['thought']
+                emotion = entry['emotion']
+                belief = entry['belief']
+
+                # Update thought-emotion-belief relationships
+                thought_emotion_beliefs[thought][emotion].add(belief)
+                thought_emotions[thought].add(emotion)
+                emotion_beliefs[emotion].add(belief)
+
+        # Compute and store relationships between thoughts, emotions, and beliefs
+        relationships = {}
+        for thought, emotions in thought_emotions.items():
+            relationships[thought] = {}
+            for emotion in emotions:
+                relationships[thought][emotion] = {}
+                for belief in emotion_beliefs[emotion]:
+                    relationships[thought][emotion][belief] = len(thought_emotion_beliefs[thought][emotion] & emotion_beliefs[emotion])
+
+        # Return computed relationships
+        return relationships
+
+    def visualize(self, relationships):
+        # Print relationships in a human-readable format
+        for thought, emotions in relationships.items():
+            print(f"Thought: {thought}")
+            for emotion, beliefs in emotions.items():
+                print(f"  Emotion: {emotion}")
+                for belief, count in beliefs.items():
+                    print(f"    Belief: {belief}, Count: {count}")
+            print()
 
 def load_journal_entries(filename):
-    # Load journal entries from file
     with open(filename, 'r') as f:
         journal_entries = json.load(f)
     return journal_entries
@@ -96,8 +71,8 @@ def main():
     filename = 'journal_entries.json'
     journal_entries = load_journal_entries(filename)
     analyzer = ThoughtEmotionBeliefAnalyzer(journal_entries)
-    results = analyzer.analyze_journal_entries()
-    analyzer.visualize_results(results)
+    relationships = analyzer.analyze()
+    analyzer.visualize(relationships)
 
 if __name__ == '__main__':
     main()
