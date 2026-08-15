@@ -2108,6 +2108,7 @@ class Lumina:
         self._metrics.inc("messages")
         self._last_input = time.time()
 
+        print(f"  [DBG 1/8] emotions/tom", flush=True)
         # ── Emotional state: detect sentiment of this message ─────────
         if self._emotions:
             self._emotions.shift_from_message(user_input)
@@ -2120,6 +2121,7 @@ class Lumina:
         if self._identity:
             self._identity.on_message()
 
+        print(f"  [DBG 2/8] memory recall", flush=True)
         # ── Retrieve relevant memories ─────────────────────────────────
         # HF path: raw BM25 candidates → HF embedding rerank
         # Default path: BM25 only (rerank=False keeps Groq calls off the main thread)
@@ -2134,6 +2136,7 @@ class Lumina:
                 f"  [{e['category']}] {e['text'][:120]}" for e in memories
             )
 
+        print(f"  [DBG 3/8] beliefs/identity/tom context", flush=True)
         # ── Belief injection ───────────────────────────────────────────
         belief_ctx = ""
         if self._beliefs:
@@ -2168,15 +2171,17 @@ class Lumina:
             metacog_ctx    = self._metacog.context_for_prompt()
             preflight_warn = self._metacog.pre_flight_check(user_input)
 
+        print(f"  [DBG 4/8] selfhood on_turn_start", flush=True)
         # ── Selfhood context (affective state, identity, wonder) ───────
         selfhood_ctx = ""
         if self._selfhood:
             selfhood_ctx = self._selfhood.on_turn_start(user_input)
 
+        print(f"  [DBG 5/8] reasoning chain check", flush=True)
         # ── Chain-of-thought reasoning (complex questions only) ────────
         reasoning_ctx = ""
         if self._reasoning and self._reasoning.should_engage(user_input):
-            print(f"  [{_ts()}] 🧠 Reasoning chain engaging...", end="\r")
+            print(f"  [{_ts()}] 🧠 Reasoning chain engaging (max 30s)...", flush=True)
             trace: Optional[Dict] = None
             _rc_done = threading.Event()
             def _run_rc():
@@ -2185,10 +2190,11 @@ class Lumina:
                 _rc_done.set()
             threading.Thread(target=_run_rc, daemon=True).start()
             _rc_done.wait(timeout=30)   # never block the turn for more than 30 s
-            print(" " * 50, end="\r")
+            print(f"  [DBG 5b/8] reasoning done", flush=True)
             if trace:
                 reasoning_ctx = self._reasoning.as_context(trace)
 
+        print(f"  [DBG 6/8] meta/experience/distill/consciousness", flush=True)
         # ── Meta-solver capability context ────────────────────────────
         meta_solver_ctx = ""
         if self._meta_solver:
@@ -2214,6 +2220,7 @@ class Lumina:
         if self._self_inquiry:
             self_inquiry_ctx = self._self_inquiry.self_model_context()
 
+        print(f"  [DBG 7/8] emotion/mood/model/resonance/conviction", flush=True)
         # ── Emotional state — felt ground of every response ────────────
         emotion_ctx = ""
         if self._emotions:
@@ -2257,6 +2264,7 @@ class Lumina:
         if self._affective:
             affective_ctx = self._affective.as_context()
 
+        print(f"  [DBG 8/8] generating response", flush=True)
         system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
                   + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
                   + selfhood_ctx + meta_solver_ctx + reasoning_ctx
