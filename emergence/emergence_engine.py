@@ -139,9 +139,9 @@ POST_TURN_EVERY    = 20            # run deep post-turn processing every N messa
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
 # When the primary hits its daily limit (429 TPD), the next model takes over.
-MODELS_FAST   = ["llama-3.1-8b-instant", "gemma2-9b-it"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+MODELS_FAST   = ["llama-3.1-8b-instant", "llama-3.2-3b-preview", "llama-3.2-1b-preview"]
+MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.2-3b-preview"]
+MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama-3.2-3b-preview"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -436,6 +436,7 @@ class GroqClient:
         self._hf          = None   # optional HuggingFace fallback client
         self._gh          = None   # optional GitHub Models fallback client
         self._retry_after: dict = {}   # model → time.time() when retry is allowed
+        self._dead_models: set = set() # permanently skip models that return 400 (decommissioned)
         self._responding: bool = False  # True while main thread is generating a reply
 
     def set_hf(self, hf_client) -> None:
@@ -478,6 +479,9 @@ class GroqClient:
         # Background threads yield to the main response thread to preserve TPM budget
         if self._responding and threading.current_thread() is not threading.main_thread():
             return None
+        # Skip permanently dead (decommissioned) models
+        if model in self._dead_models:
+            return None
         # Skip model if still in 429 cooldown
         cooldown = self._retry_after.get(model, 0)
         if time.time() < cooldown:
@@ -506,6 +510,8 @@ class GroqClient:
                     print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
+                elif r.status_code == 400:
+                    self._dead_models.add(model)  # decommissioned — never try again
                 return None
             # Clear any stale cooldown on success
             self._retry_after.pop(model, None)
@@ -590,6 +596,9 @@ class GroqClient:
         """POST with stream=True; print tokens live; return full answer text."""
         if not _REQUESTS_OK or not self.api_key:
             return None
+        # Skip permanently dead (decommissioned) models
+        if model in self._dead_models:
+            return None
         # Skip model if still in 429 cooldown
         cooldown = self._retry_after.get(model, 0)
         if time.time() < cooldown:
@@ -623,6 +632,8 @@ class GroqClient:
                     print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
+                elif r.status_code == 400:
+                    self._dead_models.add(model)  # decommissioned — never try again
                 return None
 
             full_raw   = ""    # everything received, including <think>

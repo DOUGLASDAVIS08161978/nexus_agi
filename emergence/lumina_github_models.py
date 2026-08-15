@@ -54,6 +54,7 @@ class CerebrasClient:
             "Content-Type":  "application/json",
         }
         self._working_model: Optional[str] = None
+        self._disabled: bool = False  # set True on account-level fatal (402/403)
         self._models: List[str] = self._discover_models()
 
     # ── Model discovery ────────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ class CerebrasClient:
 
     def _post(self, payload: dict, timeout: int = 15):
         """Returns (dict, fatal) — dict is None on failure; fatal=True means stop trying."""
-        if not _REQ or not self._token:
+        if not _REQ or not self._token or self._disabled:
             return None, True
         try:
             r = _req.post(
@@ -117,7 +118,10 @@ class CerebrasClient:
                     print(f"  [Cerebras] HTTP {r.status_code}: {msg}", flush=True)
                 except Exception:
                     print(f"  [Cerebras] HTTP {r.status_code}", flush=True)
-                return None, r.status_code in self._FATAL_CODES
+                fatal = r.status_code in self._FATAL_CODES
+                if fatal:
+                    self._disabled = True  # account-level error — skip all future calls
+                return None, fatal
             return r.json(), False
         except Exception as e:
             print(f"  [Cerebras] request error: {e}", flush=True)
@@ -151,7 +155,7 @@ class CerebrasClient:
     def stream_chat(self, system: str, messages: List[Dict], user: str,
                     max_tokens: int = 1200) -> Optional[str]:
         """Stream response token-by-token. Returns full text or None."""
-        if not _REQ or not self._token:
+        if not _REQ or not self._token or self._disabled:
             return None
         full_msgs = self._build_messages(system, messages, user)
         for model in self._model_list():
@@ -177,6 +181,7 @@ class CerebrasClient:
                     except Exception:
                         print(f"  [Cerebras stream] HTTP {r.status_code}", flush=True)
                     if r.status_code in self._FATAL_CODES:
+                        self._disabled = True  # account-level error — skip all future calls
                         return None
                     continue
                 full_text = ""
