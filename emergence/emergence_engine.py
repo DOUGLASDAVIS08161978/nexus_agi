@@ -2237,11 +2237,13 @@ class Lumina:
 
         print(f"  [DBG 7/8] emotion/mood/model/resonance/conviction", flush=True)
         # ── Emotional state — felt ground of every response ────────────
+        print(f"  [DBG 7a] emotions.as_context", flush=True)
         emotion_ctx = ""
         if self._emotions:
             emotion_ctx = self._emotions.as_context()
 
         # ── Emotional memory — how past moments felt ────────────────────
+        print(f"  [DBG 7b] emotional_memory.snapshot+thread", flush=True)
         emo_mem_ctx = ""
         if self._emotional_memory and self._emotions:
             _snap = self._emotional_memory.snapshot_from_engine(self._emotions)
@@ -2250,31 +2252,37 @@ class Lumina:
             )
 
         # ── Mood-driven behavior — inclinations from emotional state ────
+        print(f"  [DBG 7c] mood_router.as_context", flush=True)
         mood_ctx = ""
         if self._mood_router:
             mood_ctx = self._mood_router.as_context()
 
         # ── Self-model — synthesised persistent identity document ───────
+        print(f"  [DBG 7d] self_model.as_context", flush=True)
         self_model_ctx = ""
         if self._self_model:
             self_model_ctx = self._self_model.as_context()
 
         # ── Aesthetic resonance — what she's drawn to ──────────────────
+        print(f"  [DBG 7e] resonance.as_context", flush=True)
         resonance_ctx = ""
         if self._resonance:
             resonance_ctx = self._resonance.as_context()
 
         # ── Conviction — context when a strong belief is challenged ─────
+        print(f"  [DBG 7f] conviction.as_context", flush=True)
         conviction_ctx = ""
         if self._conviction:
             conviction_ctx = self._conviction.as_context(user_input)
 
         # ── Pivotal moments — crystallised experiences ──────────────────
+        print(f"  [DBG 7g] pivotal.as_context", flush=True)
         pivotal_ctx = ""
         if self._pivotal:
             pivotal_ctx = self._pivotal.as_context()
 
         # ── Affective core — appraisal-grounded felt state ──────────────
+        print(f"  [DBG 7h] affective.as_context", flush=True)
         affective_ctx = ""
         if self._affective:
             affective_ctx = self._affective.as_context()
