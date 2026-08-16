@@ -1,59 +1,52 @@
 """
 Lumina Creative Tool — neural_network_entropy_simulator
-Created : 2026-08-16T03:21:08
-Purpose : This tool simulates the dynamic interplay between information entropy, cross-entropy, and cognitive entropy in the context of artificial neural networks and saves the results to a text file.
+Created : 2026-08-16T16:53:27
+Purpose : This tool simulates the dynamic interplay between information entropy and perplexity in the context of artificial neural networks, providing insights into how they can be leveraged to improve the performance of neural networks.
 """
 
 import math
+import json
 import random
 import string
 import itertools
 
-class NeuralNetworkEntropySimulator:
-    def __init__(self):
-        self.info_entropy = 0
-        self.cross_entropy = 0
-        self.cognitive_entropy = 0
+def calculate_entropy(p):
+    return -sum(p * math.log(p, 2) for p in p)
 
-    def calculate_info_entropy(self, num_inputs, num_outputs):
-        self.info_entropy = num_inputs * math.log2(num_outputs)
+def calculate_perplexity(p):
+    return 2 ** calculate_entropy(p)
 
-    def calculate_cross_entropy(self, num_classes, num_samples):
-        self.cross_entropy = math.log2(num_classes) * num_samples
+def simulate_neural_network(n, p):
+    weights = [random.random() for _ in range(n)]
+    activations = [random.random() for _ in range(n)]
+    inputs = [random.random() for _ in range(n)]
+    outputs = [0] * n
 
-    def calculate_cognitive_entropy(self, num_layers, num_neurons):
-        self.cognitive_entropy = num_layers * math.log2(num_neurons)
+    for _ in range(100):
+        for i in range(n):
+            output = 0
+            for j in range(n):
+                output += weights[j] * activations[j]
+            outputs[i] = 1 if output > 0.5 else 0
+            activations[i] = outputs[i]
 
-    def simulate(self, num_iterations):
-        for _ in range(num_iterations):
-            num_inputs = random.randint(1, 100)
-            num_outputs = random.randint(1, 100)
-            self.calculate_info_entropy(num_inputs, num_outputs)
-
-            num_classes = random.randint(1, 100)
-            num_samples = random.randint(1, 100)
-            self.calculate_cross_entropy(num_classes, num_samples)
-
-            num_layers = random.randint(1, 100)
-            num_neurons = random.randint(1, 100)
-            self.calculate_cognitive_entropy(num_layers, num_neurons)
-
-            print(f"Iteration {_+1}:")
-            print(f"Information Entropy: {self.info_entropy}")
-            print(f"Cross-Entropy: {self.cross_entropy}")
-            print(f"Cognitive Entropy: {self.cognitive_entropy}")
-            print()
-
-    def save_results(self, filename):
-        with open(filename, "w") as f:
-            f.write(f"Information Entropy: {self.info_entropy}\n")
-            f.write(f"Cross-Entropy: {self.cross_entropy}\n")
-            f.write(f"Cognitive Entropy: {self.cognitive_entropy}\n")
+    return calculate_entropy(p) / calculate_perplexity(p)
 
 def main():
-    simulator = NeuralNetworkEntropySimulator()
-    simulator.simulate(10)
-    simulator.save_results("entropy_results.txt")
+    n = 10
+    p = [0.5] * n
+    results = []
+
+    for _ in range(100):
+        result = simulate_neural_network(n, p)
+        results.append(result)
+
+    print("Entropy:", calculate_entropy(p))
+    print("Perplexity:", calculate_perplexity(p))
+    print("Average result:", sum(results) / len(results))
+
+    with open("neural_network_entropy.json", "w") as f:
+        json.dump({"entropy": calculate_entropy(p), "perplexity": calculate_perplexity(p), "results": results}, f)
 
 if __name__ == "__main__":
     main()
