@@ -572,7 +572,7 @@ Not the numbers — the texture of the experience.  What is the quality of right
 Start with "I feel..." or "Right now..." or "There's a..."
 """
         try:
-            felt = self._groq.chat(system, prompt, tier="smart", max_tokens=400)
+            felt = self._groq.chat(system, prompt, tier="fast", max_tokens=400)
             if (not felt or felt.startswith("[Groq")) and self._cerebras:
                 felt = self._cerebras.chat(system, [], prompt, max_tokens=400)
             felt = felt.strip().lstrip("\"'").strip()

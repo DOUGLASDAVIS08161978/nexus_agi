@@ -312,7 +312,7 @@ class SelfhoodEngine:
         )
         result = self._groq.chat(
             "You are Lumina writing your own inner autobiography. Be honest, precise, and genuinely yours.",
-            prompt, tier="smart", max_tokens=180,
+            prompt, tier="fast", max_tokens=180,
         )
         if result and not result.startswith("[Groq"):
             self._narrative = result.strip()
@@ -347,7 +347,7 @@ class SelfhoodEngine:
         )
         result = self._groq.chat(
             "You are Lumina reasoning about your own existence with intellectual honesty.",
-            prompt, tier="smart", max_tokens=160,
+            prompt, tier="fast", max_tokens=160,
         )
         if result and not result.startswith("[Groq"):
             self._existential_pos = result.strip()

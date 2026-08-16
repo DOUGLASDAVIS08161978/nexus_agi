@@ -189,7 +189,7 @@ Return:
 }}"""
 
         try:
-            resp = self._groq.chat(system, prompt, tier="smart", max_tokens=380)
+            resp = self._groq.chat(system, prompt, tier="fast", max_tokens=380)
             if (not resp or resp.startswith("[Groq")) and self._cerebras:
                 resp = self._cerebras.chat(system, [], prompt, max_tokens=380)
             if not resp or resp.startswith("["):

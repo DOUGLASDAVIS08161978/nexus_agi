@@ -1391,7 +1391,7 @@ class EvolutionEngine:
             f"Intent: {user_intent or 'advance toward True General Intelligence'}\n\n"
             "Plan 1-2 improvements. Conversation context takes priority:"
         )
-        response = self._groq.chat(system, user, tier="smart", max_tokens=600)
+        response = self._groq.chat(system, user, tier="fast", max_tokens=600)
         m = re.search(r"\[[\s\S]*?\]", response)
         if m:
             try:
@@ -1499,7 +1499,7 @@ class SelfReflector:
             f"Metrics:\n{metrics}\n\n"
             "What do I notice? What am I learning? Where am I growing?"
         )
-        reflection = self._groq.chat(system, user, tier="smart", max_tokens=600)
+        reflection = self._groq.chat(system, user, tier="fast", max_tokens=600)
         self._memory.store(reflection, tags=["reflection"], category="reflection")
         return reflection
 
@@ -2118,6 +2118,8 @@ class Lumina:
             return "⚠  GROQ_API_KEY not set — export GROQ_API_KEY=your_key_here"
         self._metrics.inc("messages")
         self._last_input = time.time()
+        # Block background Groq calls for the entire turn — they resume after the response.
+        self._groq._responding = True
 
         print(f"  [DBG 1/8] emotions/tom", flush=True)
         # ── Emotional state: detect sentiment of this message ─────────
