@@ -44,7 +44,7 @@ _BASE           = Path(__file__).parent
 SELF_MODEL_FILE = _BASE / "self_model.json"
 
 UPDATE_INTERVAL = 7200   # seconds between full re-synthesis (2 hours)
-INITIAL_DELAY   = 120    # wait for other modules before first synthesis
+INITIAL_DELAY   = 600    # wait 10 min before first synthesis (saves 70B tokens for chat)
 
 
 def _now() -> str:
