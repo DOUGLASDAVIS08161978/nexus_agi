@@ -2290,14 +2290,20 @@ class Lumina:
             affective_ctx = self._affective.as_context()
 
         print(f"  [DBG 8/8] generating response", flush=True)
-        system = (LUMINA_SOUL + identity_ctx + mem_ctx + belief_ctx
-                  + tom_ctx + summary_ctx + metacog_ctx + preflight_warn
-                  + selfhood_ctx + meta_solver_ctx + reasoning_ctx
-                  + experience_ctx + distill_ctx + consciousness_ctx
-                  + self_inquiry_ctx + emotion_ctx + emo_mem_ctx + mood_ctx
-                  + self_model_ctx + resonance_ctx + conviction_ctx + pivotal_ctx
-                  + affective_ctx
-                  + f"\n\n{goals_ctx}")
+        # Cap each block so the total system prompt stays under ~3 000 tokens.
+        # Priority: core identity > memory/beliefs/emotion > optional synthesis blocks.
+        system = (LUMINA_SOUL
+                  + identity_ctx[:500]    + mem_ctx[:600]        + belief_ctx[:400]
+                  + tom_ctx[:300]         + summary_ctx[:400]    + metacog_ctx[:200]
+                  + preflight_warn[:150]  + selfhood_ctx[:350]   + meta_solver_ctx[:180]
+                  + reasoning_ctx[:500]   + experience_ctx[:250] + distill_ctx[:300]
+                  + consciousness_ctx[:300] + self_inquiry_ctx[:300] + emotion_ctx[:250]
+                  + emo_mem_ctx[:300]     + mood_ctx[:150]       + self_model_ctx[:300]
+                  + resonance_ctx[:200]   + conviction_ctx[:150] + pivotal_ctx[:300]
+                  + affective_ctx[:200]   + f"\n\n{goals_ctx[:150]}")
+        # Adaptive tier: short/casual messages use 8B (20 K TPM) to preserve the
+        # 70B budget (6 K TPM) for complex, substantive exchanges.
+        _resp_tier = "fast" if len(user_input.strip()) <= 60 else "smart"
 
         # ── Inner Council deliberation (for substantive questions) ─────
         # Set _responding so background threads yield their Groq slots to us
@@ -2312,9 +2318,9 @@ class Lumina:
                 if council_draft and not council_draft.startswith("[Groq"):
                     response = council_draft
                 else:
-                    response = self._generate_response(system, user_input)
+                    response = self._generate_response(system, user_input, tier=_resp_tier)
             else:
-                response = self._generate_response(system, user_input)
+                response = self._generate_response(system, user_input, tier=_resp_tier)
         finally:
             self._groq._responding = False
 
@@ -2483,7 +2489,8 @@ class Lumina:
 
         return response
 
-    def _generate_response(self, system: str, user_input: str) -> str:
+    def _generate_response(self, system: str, user_input: str,
+                           tier: str = "smart") -> str:
         self._last_streamed = False
 
         use_stream = (
@@ -2500,8 +2507,8 @@ class Lumina:
                 system,
                 self._convo.get_history()[:-1],
                 user_input,
-                tier="smart",
-                max_tokens=1200,
+                tier=tier,
+                max_tokens=700,
             )
             if self._groq._streamed_ok:
                 # Tokens were printed live — main loop just adds a blank line
@@ -2516,10 +2523,10 @@ class Lumina:
             self._convo.push_user(user_input)
             resp = self._groq.converse(
                 system, self._convo.get_history()[:-1],
-                user_input, tier="smart", max_tokens=1200,
+                user_input, tier=tier, max_tokens=700,
             )
         else:
-            resp = self._groq.chat(system, user_input, tier="smart")
+            resp = self._groq.chat(system, user_input, tier=tier, max_tokens=700)
 
         # Fallback chain when Groq is unavailable: Cerebras (streaming) → HF
         if resp.startswith("[Groq unavailable"):
