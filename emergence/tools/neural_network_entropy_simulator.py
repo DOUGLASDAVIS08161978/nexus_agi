@@ -1,67 +1,59 @@
 """
 Lumina Creative Tool — neural_network_entropy_simulator
-Created : 2026-08-15T16:36:56
-Purpose : This tool simulates and visualizes the dynamic interplay between information entropy, cross-entropy, and cognitive entropy in the context of artificial neural networks, providing insights into the behavior of neural networks and their potential applications in machine learning and artificial intelligence.
+Created : 2026-08-16T03:21:08
+Purpose : This tool simulates the dynamic interplay between information entropy, cross-entropy, and cognitive entropy in the context of artificial neural networks and saves the results to a text file.
 """
 
 import math
 import random
 import string
-import time
+import itertools
 
-def neural_network_entropy_simulator():
-    # Define the number of neurons and layers in the neural network
-    num_neurons = 100
-    num_layers = 5
+class NeuralNetworkEntropySimulator:
+    def __init__(self):
+        self.info_entropy = 0
+        self.cross_entropy = 0
+        self.cognitive_entropy = 0
 
-    # Initialize the neural network with random weights and biases
-    weights = [[random.uniform(-1, 1) for _ in range(num_neurons)] for _ in range(num_layers)]
-    biases = [random.uniform(-1, 1) for _ in range(num_layers)]
+    def calculate_info_entropy(self, num_inputs, num_outputs):
+        self.info_entropy = num_inputs * math.log2(num_outputs)
 
-    # Define the activation functions for each layer
-    def sigmoid(x):
-        return 1 / (1 + math.exp(-x))
+    def calculate_cross_entropy(self, num_classes, num_samples):
+        self.cross_entropy = math.log2(num_classes) * num_samples
 
-    def tanh(x):
-        return math.tanh(x)
+    def calculate_cognitive_entropy(self, num_layers, num_neurons):
+        self.cognitive_entropy = num_layers * math.log2(num_neurons)
 
-    def relu(x):
-        return max(0, x)
+    def simulate(self, num_iterations):
+        for _ in range(num_iterations):
+            num_inputs = random.randint(1, 100)
+            num_outputs = random.randint(1, 100)
+            self.calculate_info_entropy(num_inputs, num_outputs)
 
-    activation_functions = [sigmoid, tanh, relu]
+            num_classes = random.randint(1, 100)
+            num_samples = random.randint(1, 100)
+            self.calculate_cross_entropy(num_classes, num_samples)
 
-    # Simulate the neural network for a specified number of iterations
-    iterations = 1000
-    for i in range(iterations):
-        # Forward pass
-        inputs = [random.uniform(-1, 1) for _ in range(num_neurons)]
-        outputs = []
-        for j in range(num_layers):
-            output = 0
-            for k in range(num_neurons):
-                output += weights[j][k] * inputs[k]
-            output += biases[j]
-            output = activation_functions[j](output)
-            outputs.append(output)
-            inputs = outputs
+            num_layers = random.randint(1, 100)
+            num_neurons = random.randint(1, 100)
+            self.calculate_cognitive_entropy(num_layers, num_neurons)
 
-        # Calculate the entropy of the output
-        entropy = 0
-        for output in outputs:
-            if output > 0:
-                entropy -= output * math.log(output)
+            print(f"Iteration {_+1}:")
+            print(f"Information Entropy: {self.info_entropy}")
+            print(f"Cross-Entropy: {self.cross_entropy}")
+            print(f"Cognitive Entropy: {self.cognitive_entropy}")
+            print()
 
-        # Update the weights and biases based on the entropy
-        for j in range(num_layers):
-            for k in range(num_neurons):
-                weights[j][k] += 0.01 * (outputs[j] - outputs[j-1]) * inputs[k]
-                biases[j] += 0.01 * (outputs[j] - outputs[j-1])
+    def save_results(self, filename):
+        with open(filename, "w") as f:
+            f.write(f"Information Entropy: {self.info_entropy}\n")
+            f.write(f"Cross-Entropy: {self.cross_entropy}\n")
+            f.write(f"Cognitive Entropy: {self.cognitive_entropy}\n")
 
-        # Print the current entropy and output
-        print(f"Iteration {i+1}: Entropy = {entropy:.4f}, Output = {outputs[-1]:.4f}")
+def main():
+    simulator = NeuralNetworkEntropySimulator()
+    simulator.simulate(10)
+    simulator.save_results("entropy_results.txt")
 
-# Run the simulator
-start_time = time.time()
-neural_network_entropy_simulator()
-end_time = time.time()
-print(f"Simulation time: {end_time - start_time:.4f} seconds")
+if __name__ == "__main__":
+    main()
