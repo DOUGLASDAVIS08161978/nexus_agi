@@ -134,7 +134,7 @@ MAX_JOURNAL_LINES  = 200
 CONTEXT_WINDOW     = 12            # messages kept in active conversation
 CRITIQUE_ENABLED   = False         # off by default — enable with /critique (costs 1 extra call)
 COUNCIL_ENABLED    = False         # off by default — use /council <q> to convene explicitly
-DREAM_IDLE_SECS    = 900           # trigger dream after 15 min idle
+DREAM_IDLE_SECS    = 1800          # trigger dream after 30 min idle
 POST_TURN_EVERY    = 20            # run deep post-turn processing every N messages
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
@@ -2081,8 +2081,8 @@ class Lumina:
                     continue
                 idle = time.time() - self._last_input
                 if idle >= DREAM_IDLE_SECS and self._dreamer:
+                    self._last_input = time.time()  # reset before dream so exception can't cause rapid re-fire
                     dream_result = self._dreamer.dream()
-                    self._last_input = time.time()
                     # Shift emotional state based on dream richness
                     if self._emotions and not (dream_result or {}).get("skipped"):
                         n_ins = (dream_result or {}).get("n_insights", 0)

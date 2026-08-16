@@ -232,7 +232,7 @@ class LuminaIdentity:
             f"Recent defining moments:\n{moments}\n\n"
             "Evolve the self-concept:"
         )
-        new_concept = self._groq.chat(system, user, tier="smart", max_tokens=100)
+        new_concept = self._groq.chat(system, user, tier="fast", max_tokens=100)
         if new_concept and not new_concept.startswith("[Groq"):
             self._data["self_concept"] = new_concept.strip()
             self._save()
