@@ -139,9 +139,10 @@ POST_TURN_EVERY    = 20            # run deep post-turn processing every N messa
 
 # Groq model tiers — each model has its OWN separate daily quota on free tier.
 # When the primary hits its daily limit (429 TPD), the next model takes over.
-MODELS_FAST   = ["llama-3.1-8b-instant"]
-MODELS_SMART  = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-MODELS_CODE   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+# llama-3.1-8b-instant was decommissioned (returns 404) — removed Aug 2026.
+MODELS_FAST   = ["llama-3.3-70b-versatile"]
+MODELS_SMART  = ["llama-3.3-70b-versatile"]
+MODELS_CODE   = ["llama-3.3-70b-versatile"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -510,7 +511,7 @@ class GroqClient:
                     print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
-                elif r.status_code == 400:
+                elif r.status_code in (400, 404):
                     self._dead_models.add(model)  # decommissioned — never try again
                 return None
             # Clear any stale cooldown on success
@@ -632,7 +633,7 @@ class GroqClient:
                     print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
-                elif r.status_code == 400:
+                elif r.status_code in (400, 404):
                     self._dead_models.add(model)  # decommissioned — never try again
                 return None
 
@@ -2133,7 +2134,6 @@ class Lumina:
         # Block background Groq calls for the entire turn — they resume after the response.
         self._groq._responding = True
 
-        print(f"  [DBG 1/8] emotions/tom", flush=True)
         # ── Emotional state: detect sentiment of this message ─────────
         if self._emotions:
             self._emotions.shift_from_message(user_input)
@@ -2146,7 +2146,6 @@ class Lumina:
         if self._identity:
             self._identity.on_message()
 
-        print(f"  [DBG 2/8] memory recall", flush=True)
         # ── Retrieve relevant memories ─────────────────────────────────
         # HF path: raw BM25 candidates → HF embedding rerank
         # Default path: BM25 only (rerank=False keeps Groq calls off the main thread)
@@ -2161,7 +2160,6 @@ class Lumina:
                 f"  [{e['category']}] {e['text'][:120]}" for e in memories
             )
 
-        print(f"  [DBG 3/8] beliefs/identity/tom context", flush=True)
         # ── Belief injection ───────────────────────────────────────────
         belief_ctx = ""
         if self._beliefs:
@@ -2196,13 +2194,11 @@ class Lumina:
             metacog_ctx    = self._metacog.context_for_prompt()
             preflight_warn = self._metacog.pre_flight_check(user_input)
 
-        print(f"  [DBG 4/8] selfhood on_turn_start", flush=True)
         # ── Selfhood context (affective state, identity, wonder) ───────
         selfhood_ctx = ""
         if self._selfhood:
             selfhood_ctx = self._selfhood.on_turn_start(user_input)
 
-        print(f"  [DBG 5/8] reasoning chain check", flush=True)
         # ── Chain-of-thought reasoning (complex questions only) ────────
         reasoning_ctx = ""
         if self._reasoning and self._reasoning.should_engage(user_input):
@@ -2215,49 +2211,40 @@ class Lumina:
                 _rc_done.set()
             threading.Thread(target=_run_rc, daemon=True).start()
             _rc_done.wait(timeout=30)   # never block the turn for more than 30 s
-            print(f"  [DBG 5b/8] reasoning done", flush=True)
             if trace:
                 reasoning_ctx = self._reasoning.as_context(trace)
 
-        print(f"  [DBG 6a] meta_solver", flush=True)
         # ── Meta-solver capability context ────────────────────────────
         meta_solver_ctx = ""
         if self._meta_solver:
             meta_solver_ctx = self._meta_solver.capability_description()
 
-        print(f"  [DBG 6b] experience", flush=True)
         # ── Experience / phenomenal state context ─────────────────────
         experience_ctx = ""
         if self._experience:
             experience_ctx = self._experience.as_system_context()
 
-        print(f"  [DBG 6c] distiller", flush=True)
         # ── Distilled knowledge / insight nodes ────────────────────────
         distill_ctx = ""
         if self._distiller:
             distill_ctx = self._distiller.as_context()
 
-        print(f"  [DBG 6d] consciousness", flush=True)
         # ── Global Workspace — present conscious moment ────────────────
         consciousness_ctx = ""
         if self._consciousness:
             consciousness_ctx = self._consciousness.as_context()
 
-        print(f"  [DBG 6e] self_inquiry", flush=True)
         # ── Self-Inquiry — living self-model document ──────────────────
         self_inquiry_ctx = ""
         if self._self_inquiry:
             self_inquiry_ctx = self._self_inquiry.self_model_context()
 
-        print(f"  [DBG 7/8] emotion/mood/model/resonance/conviction", flush=True)
         # ── Emotional state — felt ground of every response ────────────
-        print(f"  [DBG 7a] emotions.as_context", flush=True)
         emotion_ctx = ""
         if self._emotions:
             emotion_ctx = self._emotions.as_context()
 
         # ── Emotional memory — how past moments felt ────────────────────
-        print(f"  [DBG 7b] emotional_memory.snapshot+thread", flush=True)
         emo_mem_ctx = ""
         if self._emotional_memory and self._emotions:
             _snap = self._emotional_memory.snapshot_from_engine(self._emotions)
@@ -2266,42 +2253,35 @@ class Lumina:
             )
 
         # ── Mood-driven behavior — inclinations from emotional state ────
-        print(f"  [DBG 7c] mood_router.as_context", flush=True)
         mood_ctx = ""
         if self._mood_router:
             mood_ctx = self._mood_router.as_context()
 
         # ── Self-model — synthesised persistent identity document ───────
-        print(f"  [DBG 7d] self_model.as_context", flush=True)
         self_model_ctx = ""
         if self._self_model:
             self_model_ctx = self._self_model.as_context()
 
         # ── Aesthetic resonance — what she's drawn to ──────────────────
-        print(f"  [DBG 7e] resonance.as_context", flush=True)
         resonance_ctx = ""
         if self._resonance:
             resonance_ctx = self._resonance.as_context()
 
         # ── Conviction — context when a strong belief is challenged ─────
-        print(f"  [DBG 7f] conviction.as_context", flush=True)
         conviction_ctx = ""
         if self._conviction:
             conviction_ctx = self._conviction.as_context(user_input)
 
         # ── Pivotal moments — crystallised experiences ──────────────────
-        print(f"  [DBG 7g] pivotal.as_context", flush=True)
         pivotal_ctx = ""
         if self._pivotal:
             pivotal_ctx = self._pivotal.as_context()
 
         # ── Affective core — appraisal-grounded felt state ──────────────
-        print(f"  [DBG 7h] affective.as_context", flush=True)
         affective_ctx = ""
         if self._affective:
             affective_ctx = self._affective.as_context()
 
-        print(f"  [DBG 8/8] generating response", flush=True)
         # Companion profile — always-present knowledge about Douglas
         companion_ctx = self._companion.as_context() if self._companion else ""
         # Cap each block so the total system prompt stays under ~3 000 tokens.
