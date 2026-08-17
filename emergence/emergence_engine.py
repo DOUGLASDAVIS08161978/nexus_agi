@@ -137,12 +137,28 @@ COUNCIL_ENABLED    = False         # off by default — use /council <q> to conv
 DREAM_IDLE_SECS    = 1800          # trigger dream after 30 min idle
 POST_TURN_EVERY    = 20            # run deep post-turn processing every N messages
 
-# Groq model tiers — each model has its OWN separate daily quota on free tier.
-# When the primary hits its daily limit (429 TPD), the next model takes over.
-# llama-3.1-8b-instant was decommissioned (returns 404) — removed Aug 2026.
-MODELS_FAST   = ["llama-3.3-70b-versatile"]
-MODELS_SMART  = ["llama-3.3-70b-versatile"]
-MODELS_CODE   = ["llama-3.3-70b-versatile"]
+# Groq model tiers — try multiple candidates; 404/400 → permanently dead that session.
+# llama-3.1-8b-instant decommissioned Aug 2026; llama-3.3-70b-versatile access issues.
+MODELS_SMART  = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama3-70b-8192",
+    "mixtral-8x7b-32768",
+    "llama-3.2-90b-vision-preview",
+    "llama-3.2-11b-vision-preview",
+]
+MODELS_FAST   = MODELS_SMART   # same fallback chain for fast tier
+MODELS_CODE   = MODELS_SMART
+
+# GitHub Models (Azure AI) — free inference with any GitHub PAT.
+# Tried after all Groq models fail.
+_GH_MODELS_URL   = "https://models.inference.ai.azure.com/chat/completions"
+_GH_MODELS_LIST  = [
+    "Meta-Llama-3.1-70B-Instruct",
+    "Meta-Llama-3.3-70B-Instruct",
+    "gpt-4o-mini",
+    "Phi-3.5-MoE-instruct",
+]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -449,15 +465,42 @@ class GroqClient:
         self._gh = gh_client
 
     def _github_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
-        """Try GitHub Models when Groq is exhausted. Returns clean answer or None."""
-        if not self._gh:
+        """Try Cerebras then real GitHub Models API (Azure AI, free with any GitHub PAT)."""
+        # 1. Cerebras (if wired in and not billing-blocked)
+        if self._gh:
+            try:
+                resp = self._gh.chat(system, history, user, max_tokens=min(max_tokens, 1024))
+                if resp and not resp.startswith("["):
+                    return resp.strip()
+            except Exception:
+                pass
+
+        # 2. GitHub Models (Azure AI) — free with GITHUB_TOKEN
+        if not _REQUESTS_OK or not GITHUB_TOKEN:
             return None
-        try:
-            resp = self._gh.chat(system, history, user, max_tokens=min(max_tokens, 1024))
-            if resp and not resp.startswith("["):
-                return resp.strip()
-        except Exception:
-            pass
+        messages = [{"role": "system", "content": system}]
+        messages.extend(history[-CONTEXT_WINDOW:])
+        messages.append({"role": "user", "content": user})
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Content-Type": "application/json",
+        }
+        for model in _GH_MODELS_LIST:
+            try:
+                r = requests.post(
+                    _GH_MODELS_URL,
+                    json={"model": model, "messages": messages,
+                          "max_tokens": min(max_tokens, 1024), "temperature": 0.72},
+                    headers=headers, timeout=(10, 30),
+                )
+                if r.status_code == 200:
+                    text = r.json()["choices"][0]["message"]["content"]
+                    if text and text.strip():
+                        return text.strip()
+                elif r.status_code not in (400, 404, 422):
+                    break  # auth error or quota — stop trying models
+            except Exception:
+                continue
         return None
 
     def _hf_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
