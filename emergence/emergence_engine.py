@@ -138,17 +138,14 @@ COUNCIL_ENABLED    = False         # off by default — use /council <q> to conv
 DREAM_IDLE_SECS    = 1800          # trigger dream after 30 min idle
 POST_TURN_EVERY    = 20            # run deep post-turn processing every N messages
 
-# Groq model tiers — try multiple candidates; 404/400 → permanently dead that session.
-# llama-3.1-8b-instant decommissioned Aug 2026; llama-3.3-70b-versatile access issues.
+# Groq model tiers — verified available Aug 2026 via /openai/v1/models.
 MODELS_SMART  = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-70b-versatile",
-    "llama3-70b-8192",
-    "mixtral-8x7b-32768",
-    "llama-3.2-90b-vision-preview",
-    "llama-3.2-11b-vision-preview",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.6-27b",
+    "groq/compound",
+    "openai/gpt-oss-20b",
 ]
-MODELS_FAST   = MODELS_SMART   # same fallback chain for fast tier
+MODELS_FAST   = MODELS_SMART
 MODELS_CODE   = MODELS_SMART
 
 # GitHub Models (Azure AI) — free inference with any GitHub PAT.
