@@ -497,9 +497,19 @@ class GroqClient:
                     text = r.json()["choices"][0]["message"]["content"]
                     if text and text.strip():
                         return text.strip()
-                elif r.status_code not in (400, 404, 422):
-                    break  # auth error or quota — stop trying models
-            except Exception:
+                else:
+                    try:
+                        err_msg = r.json().get("error", {})
+                        err_msg = err_msg.get("message", str(err_msg)) if isinstance(err_msg, dict) else str(err_msg)
+                    except Exception:
+                        err_msg = r.text[:80]
+                    short = model.split("/")[-1][:20]
+                    print(f"  [GitHub Models/{short}] HTTP {r.status_code}: {err_msg[:80]}", flush=True)
+                    if r.status_code not in (400, 404, 422):
+                        break  # auth error or quota — stop trying models
+            except Exception as e:
+                short = model.split("/")[-1][:20]
+                print(f"  [GitHub Models/{short}] {type(e).__name__}: {str(e)[:60]}", flush=True)
                 continue
         return None
 
@@ -555,7 +565,11 @@ class GroqClient:
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
                 elif r.status_code in (400, 404):
-                    self._dead_models.add(model)  # decommissioned — never try again
+                    # Only permanently blacklist from the main thread — background threads
+                    # hitting a dead model before the user's first message would poison
+                    # the dead-model set and prevent any response on turn 1.
+                    if threading.current_thread() is threading.main_thread():
+                        self._dead_models.add(model)
                 return None
             # Clear any stale cooldown on success
             self._retry_after.pop(model, None)
@@ -677,7 +691,8 @@ class GroqClient:
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
                 elif r.status_code in (400, 404):
-                    self._dead_models.add(model)  # decommissioned — never try again
+                    if threading.current_thread() is threading.main_thread():
+                        self._dead_models.add(model)
                 return None
 
             full_raw   = ""    # everything received, including <think>
