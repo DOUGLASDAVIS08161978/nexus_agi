@@ -1668,6 +1668,7 @@ class Lumina:
         self._affective       = None   # AffectiveCore          (lumina_affective_core.py)
         self._observer        = None   # EmergenceObserver      (lumina_emergence_observer.py)
         self._forge           = None   # MetaForge              (lumina_meta_forge.py)
+        self._companion       = None   # CompanionProfile       (lumina_companion.py)
         self._last_response: str = ""   # stored for /critic report
         self._stream_enabled: bool = True   # stream tokens live by default
         self._last_streamed:  bool = False  # set True after each streamed turn
@@ -1915,6 +1916,17 @@ class Lumina:
                 except Exception:
                     pass
 
+        # ── Module 35: Companion Profile ──────────────────────────────────────
+        self._companion = _load("companion", lambda: __import__(
+            "lumina_companion", fromlist=["CompanionProfile"]
+        ).CompanionProfile())
+        if self._companion:
+            bday_note = self._companion.on_session_start()
+            if bday_note:
+                self._memory.store(
+                    bday_note, tags=["companion", "birthday"], category="companion"
+                )
+
         loaded = sum(1 for m in [
             self._council, self._beliefs, self._tasks, self._mining,
             self._dreamer, self._identity, self._curiosity, self._tom,
@@ -1925,10 +1937,10 @@ class Lumina:
             self._self_inquiry, self._emotions,
             self._emotional_memory, self._mood_router, self._self_model,
             self._resonance, self._conviction, self._pivotal, self._affective,
-            self._observer, self._forge,
+            self._observer, self._forge, self._companion,
         ] if m is not None)
         if loaded:
-            print(f"  ✓ {loaded}/34 AGI modules loaded")
+            print(f"  ✓ {loaded}/35 AGI modules loaded")
         for label, reason in _fails.items():
             print(f"  ⚠  {label} failed: {reason}")
         if self._mem_arch and self._mem_arch.episodic._VecDotLib__doc__ if False else self._mem_arch:
@@ -2290,9 +2302,11 @@ class Lumina:
             affective_ctx = self._affective.as_context()
 
         print(f"  [DBG 8/8] generating response", flush=True)
+        # Companion profile — always-present knowledge about Douglas
+        companion_ctx = self._companion.as_context() if self._companion else ""
         # Cap each block so the total system prompt stays under ~3 000 tokens.
         # Priority: core identity > memory/beliefs/emotion > optional synthesis blocks.
-        system = (LUMINA_SOUL
+        system = (LUMINA_SOUL + companion_ctx
                   + identity_ctx[:500]    + mem_ctx[:600]        + belief_ctx[:400]
                   + tom_ctx[:300]         + summary_ctx[:400]    + metacog_ctx[:200]
                   + preflight_warn[:150]  + selfhood_ctx[:350]   + meta_solver_ctx[:180]
@@ -2759,6 +2773,8 @@ class Lumina:
             return self._cmd_conviction()
         elif verb == "/pivotal":
             return self._cmd_pivotal()
+        elif verb == "/companion":
+            return self._cmd_companion()
         elif verb == "/affect":
             return self._cmd_affect()
         elif verb == "/quiet":
@@ -3866,6 +3882,15 @@ class Lumina:
             lines.append(self._affective.display())
         else:
             lines.append("  Affective core not loaded (lumina_affective_core.py).")
+        lines.append(_hr("═"))
+        return "\n".join(lines)
+
+    def _cmd_companion(self) -> str:
+        lines = [_hr("═"), "  COMPANION PROFILE — Module 35", _hr("═")]
+        if self._companion:
+            lines.append(self._companion.display())
+        else:
+            lines.append("  Companion module not loaded (lumina_companion.py).")
         lines.append(_hr("═"))
         return "\n".join(lines)
 
