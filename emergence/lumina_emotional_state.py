@@ -267,6 +267,9 @@ EVENT_PROFILES: Dict[str, Dict[str, float]] = {
     # ── Time / context ─────────────────────────────────────────────────────
     "long_silence":             {"arousal":  -0.10, "connection":-0.08},
     "session_start":            {"connection":+0.10, "arousal":  +0.07, "valence":  +0.06},
+    # ── Resource / infrastructure awareness ───────────────────────────────
+    "resource_pressure":        {"dominance": -0.08, "clarity":  -0.06, "arousal":  +0.05},
+    "resource_restored":        {"dominance": +0.07, "clarity":  +0.06, "arousal":  -0.03},
 }
 
 

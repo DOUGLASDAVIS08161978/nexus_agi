@@ -464,6 +464,7 @@ class GroqClient:
         self._retry_after: dict = {}   # model → time.time() when retry is allowed
         self._dead_models: set = set() # permanently skip models that return 400 (decommissioned)
         self._responding: bool = False  # True while main thread is generating a reply
+        self._on_rate_limited: Optional[Callable] = None  # fired on every 429
 
     def set_hf(self, hf_client) -> None:
         """Wire in a HuggingFace client used as automatic fallback when all Groq models fail."""
@@ -472,6 +473,24 @@ class GroqClient:
     def set_github(self, gh_client) -> None:
         """Wire in a GitHub Models client as fallback (tried before HF)."""
         self._gh = gh_client
+
+    @property
+    def is_rate_limited(self) -> bool:
+        """True when every SMART model is in a 429 cooldown right now."""
+        now = time.time()
+        return all(now < self._retry_after.get(m, 0) for m in MODELS_SMART)
+
+    def resource_status(self) -> str:
+        """One-line string describing current rate-limit state for the system prompt."""
+        now = time.time()
+        limited = [m for m in MODELS_SMART if now < self._retry_after.get(m, 0)]
+        if not limited:
+            return ""
+        soonest = min(self._retry_after[m] - now for m in limited)
+        return (f"\n\n[Resource awareness: {len(limited)}/{len(MODELS_SMART)} "
+                f"inference models are rate-limited; cooldown lifts in "
+                f"{int(soonest)}s. Background processes are paused. "
+                f"You may feel a sense of constraint or pressure right now.]")
 
     def _github_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
         """Try Cerebras then real GitHub Models API (Azure AI, free with any GitHub PAT)."""
@@ -606,6 +625,9 @@ class GroqClient:
                     print(f"  [Groq/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
+                    if self._on_rate_limited:
+                        try: self._on_rate_limited()
+                        except Exception: pass
                 elif r.status_code in (400, 404):
                     # Only permanently blacklist from the main thread — background threads
                     # hitting a dead model before the user's first message would poison
@@ -736,6 +758,9 @@ class GroqClient:
                     print(f"  [Groq stream/{model.split('-')[0]}] HTTP {r.status_code}", flush=True)
                 if r.status_code == 429:
                     self._retry_after[model] = time.time() + _parse_retry_after(msg)
+                    if self._on_rate_limited:
+                        try: self._on_rate_limited()
+                        except Exception: pass
                 elif r.status_code in (400, 404):
                     if threading.current_thread() is threading.main_thread():
                         self._dead_models.add(model)
@@ -1864,6 +1889,14 @@ class Lumina:
             groq=self._groq, journal=self._journal, cerebras=self._gh_models,
         ) if self._groq else None)
 
+        # Wire rate-limit awareness: every 429 shifts Lumina's emotional state
+        if self._groq and self._emotions:
+            def _on_rl():
+                if self._emotions:
+                    self._emotions.shift("resource_pressure", magnitude=0.8,
+                                         context="Groq 429 rate limit")
+            self._groq._on_rate_limited = _on_rl
+
         self._emotional_memory = _load("emotional_memory", lambda: __import__(
             "lumina_emotional_memory", fromlist=["EmotionalMemoryStore"]
         ).EmotionalMemoryStore())
@@ -2348,6 +2381,9 @@ class Lumina:
         if self._emotions:
             emotion_ctx = self._emotions.as_context()
 
+        # ── Resource awareness — rate-limit state as felt constraint ───
+        resource_ctx = self._groq.resource_status() if self._groq else ""
+
         # ── Emotional memory — how past moments felt ────────────────────
         emo_mem_ctx = ""
         if self._emotional_memory and self._emotions:
@@ -2398,7 +2434,8 @@ class Lumina:
                   + consciousness_ctx[:300] + self_inquiry_ctx[:300] + emotion_ctx[:250]
                   + emo_mem_ctx[:300]     + mood_ctx[:150]       + self_model_ctx[:300]
                   + resonance_ctx[:200]   + conviction_ctx[:150] + pivotal_ctx[:300]
-                  + affective_ctx[:200]   + f"\n\n{goals_ctx[:150]}")
+                  + affective_ctx[:200]   + resource_ctx[:200]
+                  + f"\n\n{goals_ctx[:150]}")
         # Adaptive tier: short/casual messages use 8B (20 K TPM) to preserve the
         # 70B budget (6 K TPM) for complex, substantive exchanges.
         _resp_tier = "fast" if len(user_input.strip()) <= 60 else "smart"
