@@ -139,13 +139,19 @@ DREAM_IDLE_SECS    = 1800          # trigger dream after 30 min idle
 POST_TURN_EVERY    = 20            # run deep post-turn processing every N messages
 
 # Groq model tiers — verified available Aug 2026 via /openai/v1/models.
+# SMART: 120B reserved for real conversations with Douglas.
+# FAST:  lighter models for background threads (consciousness, distillation, etc.)
 MODELS_SMART  = [
     "openai/gpt-oss-120b",
     "qwen/qwen3.6-27b",
     "groq/compound",
     "openai/gpt-oss-20b",
 ]
-MODELS_FAST   = MODELS_SMART
+MODELS_FAST   = [
+    "qwen/qwen3.6-27b",
+    "groq/compound-mini",
+    "openai/gpt-oss-20b",
+]
 MODELS_CODE   = MODELS_SMART
 
 # GitHub Models (Azure AI) — free inference with any GitHub PAT.
