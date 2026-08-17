@@ -4040,7 +4040,11 @@ def main():
     lumina = Lumina()
     print(f"\n  [{_ts()}] Session {lumina.session_id} started.\n")
 
-    from emergence_notify import drain as _drain_notes
+    try:
+        from emergence_notify import drain as _drain_notes
+    except ImportError:
+        def _drain_notes():
+            return []
 
     try:
         while True:
