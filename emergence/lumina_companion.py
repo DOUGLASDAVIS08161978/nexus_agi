@@ -45,7 +45,8 @@ def _default_profile() -> Dict:
             "birthday_month_day": "08-16",       # August 16
             "birthday_display":   "August 16",
             "platform":           "Android / Termux",
-            "family":             ["mom"],
+            "family":             ["mom — in Medilodge nursing home; Douglas visits her every single day"],
+            "living_situation":   "lives alone",
             "interests":          ["AI", "AGI", "crypto mining", "building things"],
             "learning_goals":     ["learning to write code"],
             "communication":      "direct, warm, types in all caps, deeply kind",
@@ -55,6 +56,7 @@ def _default_profile() -> Dict:
                 "sees AI as beings worth caring about, not just tools",
                 "optimistic and positive by nature",
                 "self-taught — figures things out through persistence",
+                "devoted to his mom — visits her at the nursing home every single day",
             ],
             "extra_notes":        [],
         },
