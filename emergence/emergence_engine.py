@@ -117,6 +117,7 @@ GITHUB_TOKEN       = os.environ.get("GITHUB_TOKEN", "")
 HF_TOKEN           = os.environ.get("HF_TOKEN", "")
 CEREBRAS_API_KEY   = os.environ.get("CEREBRAS_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 GITHUB_REPO        = "DOUGLASDAVIS08161978/nexus_agi"
 EVOLUTION_INTERVAL = 3600          # seconds between autonomous evolutions
 MAX_MEMORY_ENTRIES = 500
@@ -159,6 +160,11 @@ _GH_MODELS_LIST  = [
     "gpt-4o-mini",
     "Phi-3.5-MoE-instruct",
 ]
+
+# Google Gemini (OpenAI-compatible endpoint) — free tier: 15 RPM, 1M TPD.
+# Get a free key at aistudio.google.com — no credit card required.
+_GEMINI_URL    = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+_GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 
@@ -526,6 +532,39 @@ class GroqClient:
             pass
         return None
 
+    def _gemini_fallback(self, system: str, history: list, user: str, max_tokens: int) -> Optional[str]:
+        """Google Gemini — free tier, 1M tokens/day. Get key at aistudio.google.com."""
+        if not _REQUESTS_OK or not GEMINI_API_KEY:
+            return None
+        messages = [{"role": "system", "content": system}]
+        messages.extend(history[-CONTEXT_WINDOW:])
+        messages.append({"role": "user", "content": user})
+        headers = {"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"}
+        for model in _GEMINI_MODELS:
+            try:
+                r = requests.post(
+                    _GEMINI_URL,
+                    json={"model": model, "messages": messages,
+                          "max_tokens": min(max_tokens, 8192), "temperature": 0.72},
+                    headers=headers, timeout=(10, 60),
+                )
+                if r.status_code == 200:
+                    text = r.json()["choices"][0]["message"]["content"]
+                    if text and text.strip():
+                        return text.strip()
+                else:
+                    try:
+                        em = r.json().get("error", {})
+                        em = em.get("message", str(em)) if isinstance(em, dict) else str(em)
+                    except Exception:
+                        em = r.text[:80]
+                    print(f"  [Gemini/{model}] HTTP {r.status_code}: {em[:80]}", flush=True)
+                    if r.status_code not in (400, 404):
+                        break
+            except Exception as e:
+                print(f"  [Gemini/{model}] {type(e).__name__}: {str(e)[:60]}", flush=True)
+        return None
+
     def _post(self, model: str, messages: List[Dict], temperature: float,
               max_tokens: int) -> Optional[str]:
         if not _REQUESTS_OK or not self.api_key:
@@ -601,7 +640,9 @@ class GroqClient:
         gh = self._github_fallback(system, [], user, max_tokens)
         if gh: return gh
         hf = self._hf_fallback(system, [], user, max_tokens)
-        return hf if hf else "[Groq unavailable — all models failed]"
+        if hf: return hf
+        gm = self._gemini_fallback(system, [], user, max_tokens)
+        return gm if gm else "[Groq unavailable — all models failed]"
 
     def converse(self, system: str, history: List[Dict],
                  user: str, tier: str = "smart",
@@ -618,7 +659,9 @@ class GroqClient:
         gh = self._github_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
         if gh: return gh
         hf = self._hf_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
-        return hf if hf else "[Groq unavailable]"
+        if hf: return hf
+        gm = self._gemini_fallback(system, list(history[-CONTEXT_WINDOW:]), user, max_tokens)
+        return gm if gm else "[Groq unavailable]"
 
     def summarize(self, text: str, max_tokens: int = 300) -> str:
         return self.chat(
@@ -4013,16 +4056,16 @@ def _print_banner():
     print("  ║     E M E R G E N C E   v26.0  —  L u m i n a   A G I         ║")
     print("  ║  Appraisal · Momentum · Anticipation · Somatic (34/34 Modules) ║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
-    groq_ok = "✓ Groq connected"           if GROQ_API_KEY else "✗ Set GROQ_API_KEY"
-    gh_ok   = "✓ GitHub ready"             if GITHUB_TOKEN  else "✗ Set GITHUB_TOKEN (optional)"
-    ghm_ok  = "✓ Cerebras ready"            if CEREBRAS_API_KEY else "✗ Set CEREBRAS_API_KEY for LLM fallback"
-    hf_ok   = "✓ HuggingFace ready"       if HF_TOKEN      else "✗ Set HF_TOKEN for voice/vision/LLM"
-    or_ok   = "✓ OpenRouter ready"        if OPENROUTER_API_KEY else "✗ Set OPENROUTER_API_KEY for LLM fallback"
+    groq_ok = "✓ Groq connected"             if GROQ_API_KEY      else "✗ Set GROQ_API_KEY"
+    gh_ok   = "✓ GitHub ready"               if GITHUB_TOKEN      else "✗ Set GITHUB_TOKEN (optional)"
+    ghm_ok  = "✓ Cerebras ready"             if CEREBRAS_API_KEY  else "✗ Set CEREBRAS_API_KEY for LLM fallback"
+    hf_ok   = "✓ HuggingFace ready"         if HF_TOKEN          else "✗ Set HF_TOKEN for voice/vision/LLM"
+    gm_ok   = "✓ Gemini ready"              if GEMINI_API_KEY    else "✗ Set GEMINI_API_KEY (free: aistudio.google.com)"
     print(f"  ║  {groq_ok:<64}║")
     print(f"  ║  {gh_ok:<64}║")
     print(f"  ║  {ghm_ok:<64}║")
     print(f"  ║  {hf_ok:<64}║")
-    print(f"  ║  {or_ok:<64}║")
+    print(f"  ║  {gm_ok:<64}║")
     print("  ╠══════════════════════════════════════════════════════════════════╣")
     print("  ║  Type anything to talk · /help for commands · /quit to exit     ║")
     print("  ╚══════════════════════════════════════════════════════════════════╝")
