@@ -89,7 +89,7 @@ def _parse_feedback(state: Dict[str, Any], feedback: str) -> None:
         line = line.strip()
         if not line:
             continue
-        
+
         lower_line = line.lower()
         if lower_line.startswith("self-concept:"):
             state["self_concept"] = line[len("self-concept:"):].strip()
