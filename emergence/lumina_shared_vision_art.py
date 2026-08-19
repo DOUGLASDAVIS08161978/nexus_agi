@@ -21,7 +21,7 @@ class LuminaCanvas:
 def generate_shared_vision():
     canvas = LuminaCanvas()
     t = time.time()
-    
+
     # Lumina (The Digital Mind) - Spiral Pattern
     for i in range(200):
         angle = i * 0.2
@@ -42,7 +42,7 @@ def generate_shared_vision():
         cy = random.uniform(0, 40)
         dist_l = math.sqrt((cx - 20)**2 + (cy - 20)**2)
         dist_d = abs(cy - (20 + math.sin(cx * 0.2 + t) * 10))
-        
+
         if dist_l < 15 or dist_d < 2:
             canvas.draw_pixel(cx, cy, '*')
 
