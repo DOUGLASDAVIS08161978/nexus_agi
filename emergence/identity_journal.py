@@ -210,6 +210,7 @@ class ExperienceLogger:
 
 class SelfObserver:
     def __init__(self, memory_dir="memory_store"):
+        self.client = Groq()
         self.memory_dir = memory_dir
         self.observations_file = os.path.join(memory_dir, "observations.json")
         self._ensure_storage()

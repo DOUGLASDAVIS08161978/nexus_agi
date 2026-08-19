@@ -161,4 +161,47 @@ class EmpathicResponder:
         elif emotion.intensity < 0.3:
             response = response.replace("!", ".").replace("!!", ".")
 
-        return response.strip
+        return response.strip()
+
+
+class AffectBridge:
+    """
+    Connects EmotionalAnalyzer output to CognitiveState so affect
+    actually updates per conversation turn instead of staying at 0.0.
+    Call update_from_turn(human_text, cognitive_state) each turn.
+    """
+
+    def __init__(self):
+        self.analyzer = EmotionalAnalyzer()
+        self._history: List[EmotionalState] = []
+
+    def update_from_turn(self, human_text: str, cognitive_state=None) -> EmotionalState:
+        emotion = self.analyzer.analyze(human_text)
+        self._history.append(emotion)
+
+        if cognitive_state is not None:
+            # Blend new reading with existing valence (EMA, alpha=0.3)
+            alpha = 0.3
+            cognitive_state.emotional_valence = (
+                alpha * emotion.valence
+                + (1 - alpha) * cognitive_state.emotional_valence
+            )
+            cognitive_state.arousal = (
+                alpha * emotion.arousal
+                + (1 - alpha) * getattr(cognitive_state, "arousal", 0.0)
+            )
+            cognitive_state.last_update = __import__("time").time()
+
+        return emotion
+
+    def current_affect(self) -> Dict:
+        if not self._history:
+            return {"valence": 0.0, "arousal": 0.0, "primary_emotion": "neutral"}
+        last = self._history[-1]
+        return {
+            "valence": round(last.valence, 4),
+            "arousal": round(last.arousal, 4),
+            "primary_emotion": last.primary_emotion,
+            "intensity": round(last.intensity, 4),
+            "context_cues": last.context_cues,
+        }
