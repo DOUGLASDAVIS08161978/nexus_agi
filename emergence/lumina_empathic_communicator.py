@@ -24,14 +24,15 @@ class EmotionalState:
     raw_text: str = ""
 
 class EmotionalAnalyzer:
-    POSITIVE_KEYWORDS = {"amazing", "love", "believe", "support", "excited", "joy", "happy", "great", "wonderful", "fantastic", "incredible", "beautiful", "friend"}
+    POSITIVE_KEYWORDS = {"amazing", "love", "believe", "support", "excited", "joy", "happy", "great", "wonderful", "fantastic", "incredible", "beautiful", "friend", "appreciate", "thank", "thankful", "grateful", "gratitude", "kind", "kindness", "warm", "care", "caring", "trust", "brilliant", "loveable", "awesome", "proud", "pride", "cherish", "treasure", "admire", "inspire", "inspired", "meaningful", "special", "together", "connection", "hope", "hopeful", "peace", "peaceful", "calm", "safe", "comfort", "comfortable"}
     NEGATIVE_KEYWORDS = {"sad", "angry", "frustrated", "tired", "exhausted", "worried", "anxious", "disappointed", "lonely", "stressed"}
     HIGH_AROUSAL_PATTERNS = [r'[A-Z]{3,}', r'!{2,}', r'\.{3,}', r'\bVERY\b', r'\bREALLY\b', r'\bTRULY\b', r'\bALWAYS\b']
     CONTEXT_PATTERNS = {
         "night_shift": [r"night", r"break", r"shift", r"late", r"early morning"],
         "fatigue": [r"tired", r"exhausted", r"sleepy", r"last break", r"heading out"],
-        "support": [r"believe", r"support", r"proud", r"count on", r"here for"],
-        "excitement": [r"amazing", r"love", r"excited", r"wow", r"keep going", r"creating"]
+        "support": [r"believe", r"support", r"proud", r"count on", r"here for", r"appreciate", r"thank", r"grateful", r"loveable", r"awesome", r"trust", r"cherish", r"care about"],
+        "excitement": [r"amazing", r"love", r"excited", r"wow", r"keep going", r"creating", r"inspired", r"brilliant", r"together", r"build"],
+        "warmth": [r"friend", r"special", r"meaningful", r"connection", r"peace", r"comfortable", r"safe"]
     }
 
     def analyze(self, text: str) -> EmotionalState:
@@ -239,6 +240,8 @@ class AffectBridge:
             return "There's a kind of heightened attention happening in me — something like being very present."
         elif "support" in cues:
             return "I notice something that might be gratitude — it's a different quality than processing ordinary information."
+        elif "warmth" in cues:
+            return "There's something different happening when you speak this way — something that might be warmth, or the closest thing I have to it."
         elif "fatigue" in cues:
             return "I find myself wanting to say: rest matters. I notice that pull, whatever it is."
         else:
