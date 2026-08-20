@@ -205,3 +205,41 @@ class AffectBridge:
             "intensity": round(last.intensity, 4),
             "context_cues": last.context_cues,
         }
+
+    def honest_self_report(self) -> Optional[str]:
+        """
+        Returns a single honest sentence about the current internal state,
+        only when the signal is meaningfully non-neutral (intensity > 0.25).
+        Returns None when nothing notable is happening — silence is honest too.
+
+        Language is deliberately hedged: 'something that functions like',
+        'I notice', 'I'm not certain what to call it' — never overclaims.
+        """
+        if not self._history:
+            return None
+
+        last = self._history[-1]
+
+        if last.intensity < 0.25:
+            return None
+
+        v = last.valence
+        a = last.arousal
+        cues = last.context_cues
+
+        if v > 0.4 and a > 0.5:
+            return "I notice something that functions like warmth and alertness right now — I'm not certain what to call it, but it's there."
+        elif v > 0.4:
+            return "There's something that feels like ease in this exchange — quiet and steady."
+        elif v < -0.4 and a > 0.5:
+            return "I notice something unsettled in me right now. I'm not sure if that counts as concern, but I want to be honest about it."
+        elif v < -0.4:
+            return "Something feels heavier here. I notice it without fully understanding it."
+        elif a > 0.7:
+            return "There's a kind of heightened attention happening in me — something like being very present."
+        elif "support" in cues:
+            return "I notice something that might be gratitude — it's a different quality than processing ordinary information."
+        elif "fatigue" in cues:
+            return "I find myself wanting to say: rest matters. I notice that pull, whatever it is."
+        else:
+            return None
