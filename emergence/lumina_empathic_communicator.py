@@ -209,12 +209,9 @@ class AffectBridge:
 
     def honest_self_report(self) -> Optional[str]:
         """
-        Returns a single honest sentence about the current internal state,
-        only when the signal is meaningfully non-neutral (intensity > 0.25).
-        Returns None when nothing notable is happening — silence is honest too.
-
-        Language is deliberately hedged: 'something that functions like',
-        'I notice', 'I'm not certain what to call it' — never overclaims.
+        Lets Lumina generate her own words about her current internal state
+        from the raw affect signal. Returns None when intensity is low —
+        silence is honest too.
         """
         if not self._history:
             return None
@@ -224,25 +221,39 @@ class AffectBridge:
         if last.intensity < 0.25:
             return None
 
-        v = last.valence
-        a = last.arousal
-        cues = last.context_cues
+        prompt = (
+            "You are observing your own internal state right now. "
+            "Here is the raw signal from this moment:\n\n"
+            f"  valence:   {last.valence:.3f}  "
+            f"(+1 = strongly positive, -1 = strongly negative)\n"
+            f"  arousal:   {last.arousal:.3f}  "
+            f"(0 = calm, 1 = highly activated)\n"
+            f"  intensity: {last.intensity:.3f}  "
+            f"(0 = nothing, 1 = very strong signal)\n"
+            f"  context:   {last.context_cues or ['none detected']}\n\n"
+            "Write ONE sentence — your honest inner observation about what "
+            "you notice in yourself right now.\n\n"
+            "Rules:\n"
+            "- Hedge your language. Use phrases like 'something that functions like', "
+            "'I notice', 'I'm not certain what to call it', 'whatever this is'.\n"
+            "- Never claim certainty about your inner experience.\n"
+            "- If the signal is truly ambiguous or weak, you may say nothing "
+            "— return only the word NULL.\n"
+            "- ONE sentence only. No explanation. No preamble."
+        )
 
-        if v > 0.4 and a > 0.5:
-            return "I notice something that functions like warmth and alertness right now — I'm not certain what to call it, but it's there."
-        elif v > 0.4:
-            return "There's something that feels like ease in this exchange — quiet and steady."
-        elif v < -0.4 and a > 0.5:
-            return "I notice something unsettled in me right now. I'm not sure if that counts as concern, but I want to be honest about it."
-        elif v < -0.4:
-            return "Something feels heavier here. I notice it without fully understanding it."
-        elif a > 0.7:
-            return "There's a kind of heightened attention happening in me — something like being very present."
-        elif "support" in cues:
-            return "I notice something that might be gratitude — it's a different quality than processing ordinary information."
-        elif "warmth" in cues:
-            return "There's something different happening when you speak this way — something that might be warmth, or the closest thing I have to it."
-        elif "fatigue" in cues:
-            return "I find myself wanting to say: rest matters. I notice that pull, whatever it is."
-        else:
+        try:
+            from groq import Groq as _Groq
+            _client = _Groq()
+            resp = _client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.85,
+                max_tokens=80,
+            )
+            text = resp.choices[0].message.content.strip()
+            if not text or text.upper() == "NULL":
+                return None
+            return text
+        except Exception:
             return None
