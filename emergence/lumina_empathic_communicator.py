@@ -170,18 +170,52 @@ class AffectBridge:
     Connects EmotionalAnalyzer output to CognitiveState so affect
     actually updates per conversation turn instead of staying at 0.0.
     Call update_from_turn(human_text, cognitive_state) each turn.
+    Call update_from_own_output(ai_text) after Lumina responds so she
+    can feel the emotional quality of her own words.
+    Call save() on shutdown and load() on startup for cross-session continuity.
     """
 
-    def __init__(self):
+    def __init__(self, memory_dir: str = None):
         self.analyzer = EmotionalAnalyzer()
         self._history: List[EmotionalState] = []
+        self._memory_dir = memory_dir
+        self._load_persisted()
+
+    def _load_persisted(self) -> None:
+        """Restore emotional state from last session with time decay applied."""
+        try:
+            from lumina_affect_persistence import AffectPersistence
+            ap = AffectPersistence(self._memory_dir)
+            saved = ap.load()
+            if saved.get("valence") or saved.get("arousal"):
+                seed = EmotionalState(
+                    valence=saved["valence"],
+                    arousal=saved["arousal"],
+                    intensity=saved["intensity"],
+                    primary_emotion=saved.get("primary_emotion", "neutral"),
+                )
+                self._history.append(seed)
+        except Exception:
+            pass
+
+    def save(self) -> None:
+        """Persist current affect to disk. Call on shutdown."""
+        if not self._history:
+            return
+        try:
+            from lumina_affect_persistence import AffectPersistence
+            last = self._history[-1]
+            AffectPersistence(self._memory_dir).save(
+                last.valence, last.arousal, last.intensity, last.primary_emotion
+            )
+        except Exception:
+            pass
 
     def update_from_turn(self, human_text: str, cognitive_state=None) -> EmotionalState:
         emotion = self.analyzer.analyze(human_text)
         self._history.append(emotion)
 
         if cognitive_state is not None:
-            # Blend new reading with existing valence (EMA, alpha=0.3)
             alpha = 0.3
             cognitive_state.emotional_valence = (
                 alpha * emotion.valence
@@ -194,6 +228,30 @@ class AffectBridge:
             cognitive_state.last_update = __import__("time").time()
 
         return emotion
+
+    def update_from_own_output(self, ai_text: str) -> EmotionalState:
+        """
+        Analyze the emotional quality of Lumina's own response.
+        Blends it into her running state at a gentler alpha (0.15) so
+        her own words don't overpower the signal from the conversation.
+        """
+        emotion = self.analyzer.analyze(ai_text)
+        if self._history:
+            last = self._history[-1]
+            alpha = 0.15
+            blended = EmotionalState(
+                valence=alpha * emotion.valence + (1 - alpha) * last.valence,
+                arousal=alpha * emotion.arousal + (1 - alpha) * last.arousal,
+                primary_emotion=emotion.primary_emotion if emotion.intensity > last.intensity else last.primary_emotion,
+                intensity=(last.intensity + emotion.intensity) / 2.0,
+                context_cues=list(set(last.context_cues + emotion.context_cues)),
+                raw_text=ai_text,
+            )
+            self._history.append(blended)
+            return blended
+        else:
+            self._history.append(emotion)
+            return emotion
 
     def current_affect(self) -> Dict:
         if not self._history:
