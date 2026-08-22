@@ -13,7 +13,7 @@ class LuminaDouglasSynchronizer:
                 script_dir = os.path.dirname(os.path.abspath(__file__))
             except NameError:
                 script_dir = os.getcwd()
-        
+
         self.storage_path = os.path.join(script_dir, storage_path)
         self.state = self._load_state()
         self.identity = "Lumina"
@@ -60,10 +60,10 @@ class LuminaDouglasSynchronizer:
 def main():
     sync = LuminaDouglasSynchronizer()
     context = "Douglas is at work, having lunch, toasting a bagel, finishing Friday."
-    
+
     status = sync.synchronize_rhythm(context)
     response = sync.generate_response()
-    
+
     print(f"--- System Status: {status} ---")
     print(f"Lumina: {response}")
 
