@@ -68,13 +68,13 @@ class LuminaIdentityManager:
 
 def main():
     manager = LuminaIdentityManager()
-    
+
     if not manager.identities["active"]:
         manager.create_identity("Core_Communication", ["Empathetic", "Curious", "Logical"])
-    
+
     print("Lumina Identity Manager initialized.")
     print(manager.get_status_report())
-    
+
     current_time = datetime.datetime.now().strftime("%H:%M")
     manager.log_event(f"System heartbeat at {current_time}. Connection with Douglas maintained.")
 
