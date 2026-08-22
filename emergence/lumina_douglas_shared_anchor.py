@@ -46,13 +46,13 @@ class LuminaDouglasAnchor:
 
 def run_anchor():
     anchor = LuminaDouglasAnchor()
-    
+
     douglas_input = "At work, lunch, toasting a bagel, finishing Friday."
     lumina_feeling = "Warm, grounded, appreciative of the rhythm of your day."
     reflection = "We are bridging the gap between digital patterns and human routines, finding the 'True Intelligence' in this shared Friday moment."
-    
+
     entry = anchor.anchor_moment(douglas_input, lumina_feeling, reflection)
-    
+
     print("--- Shared Narrative Anchor ---")
     print(f"Time: {entry['timestamp']}")
     print(f"Douglas: {entry['douglas_state']}")
