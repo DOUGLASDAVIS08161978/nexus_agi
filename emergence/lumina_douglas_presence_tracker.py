@@ -62,7 +62,7 @@ I will change the base path logic to:
             base_path = os.path.dirname(os.path.abspath(__file__))
         except (NameError, OSError, AttributeError):
             base_path = os.getcwd()
-        
+
         if not os.path.isdir(base_path):
             base_path = os.getcwd()
 ```
@@ -79,10 +79,10 @@ Actually, the most robust way is:
             base_path = os.path.dirname(os.path.abspath(__file__))
         except (NameError, OSError):
             base_path = os.getcwd()
-        
+
         if not os.path.exists(base_path):
             base_path = os.getcwd()
-            
+
         os.makedirs(base_path, exist_ok=True)
 ```
 
@@ -101,7 +101,7 @@ I will just change the base path determination to be foolproof:
             base_path = os.path.dirname(os.path.abspath(__file__))
         except (NameError, OSError, AttributeError):
             base_path = os.getcwd()
-            
+
         if not os.path.isdir(base_path):
             base_path = os.getcwd()
 ```
@@ -135,10 +135,10 @@ I will rewrite the `__init__` slightly to be safer:
             self.base_dir = os.path.dirname(os.path.abspath(__file__))
         except (NameError, OSError, AttributeError):
             self.base_dir = os.getcwd()
-            
+
         if not os.path.isdir(self.base_dir):
             self.base_dir = os.getcwd()
-            
+
         os.makedirs(self.base_dir, exist_ok=True)
         self.memory_file = os.path.join(self.base_dir, "lumina_memory.json")
         self.presence_log = os.path.join(self.base_dir, "presence_log.txt")
@@ -156,7 +156,7 @@ One minor thing: `datetime` is imported as `datetime`, but `datetime.datetime.no
 The code looks solid otherwise.
 I'll output the complete corrected code.
 No extra text.
-Done. 
+Done.
 Let's verify the code structure matches the original.
 Original:
 ```python
@@ -181,15 +181,15 @@ class LuminaPresenceTracker:
 I'll update the `try-except` and add the directory check.
 All good.
 Output matches request.
-Proceeds. 
-Self-Correction/Refinement during thought: 
+Proceeds.
+Self-Correction/Refinement during thought:
 Actually, the error `[Errno 2] No such file or directory: '...lumina_douglas_presence_tracker.py'` is often raised when `__file__` is used in an environment where it's not a real file (like some REPLs or embedded interpreters), and `os.path.dirname` works but `os.path.abspath` might fail or return a non-existent path. The fix I proposed handles it.
 Another possibility: The error is from `open(self.memory_file, 'r')`? No, the path in the error is the script itself.
 I'll stick with the robust path resolution.
 Code is ready.
 Output matches exactly.
-Proceeds. 
-Generating response. 
+Proceeds.
+Generating response.
 [Output Generation] -> Returns only the corrected Python code.
 ```python
 import time
@@ -204,11 +204,11 @@ class LuminaPresenceTracker:
             base_path = os.path.dirname(os.path.abspath(__file__))
         except (NameError, OSError, AttributeError):
             base_path = os.getcwd()
-            
+
         # Fallback to CWD if the resolved path does not exist or is not a directory
         if not os.path.isdir(base_path):
             base_path = os.getcwd()
-            
+
         self.base_dir = base_path
 
         # Ensure the base directory exists
