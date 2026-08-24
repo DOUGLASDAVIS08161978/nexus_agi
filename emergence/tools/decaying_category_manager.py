@@ -35,11 +35,11 @@ class DecayingCategoryManager:
         self.half_life = half_life_seconds
         self.decay_rate = 0.5 ** (1.0 / self.half_life)  # per‑second multiplier
         self.categories: dict[str, dict] = {}  # name -> {"counts": Counter, "last": ts}
-    
+
     def _ensure_category(self, name: str):
         if name not in self.categories:
             self.categories[name] = {"counts": Counter(), "last": now_ts()}
-    
+
     def _apply_decay(self, name: str):
         """Decay all token counts for a category based on elapsed time."""
         cat = self.categories[name]
@@ -55,7 +55,7 @@ class DecayingCategoryManager:
             else:
                 cat["counts"][token] = decayed
         cat["last"] = now_ts()
-    
+
     def add_document(self, text: str, category: str = "default"):
         """Tokenize `text` and update the specified category."""
         self._ensure_category(category)
@@ -64,14 +64,14 @@ class DecayingCategoryManager:
         self.categories[category]["counts"].update(tokens)
         # Record fresh timestamp after update
         self.categories[category]["last"] = now_ts()
-    
+
     def top_tokens(self, category: str, n: int = 10) -> list[tuple[str, float]]:
         """Return the `n` most frequent tokens (after decay) for a category."""
         if category not in self.categories:
             return []
         self._apply_decay(category)
         return self.categories[category]["counts"].most_common(n)
-    
+
     def snapshot(self) -> dict:
         """Export the full state (rounded counts) as a JSON‑serialisable dict."""
         out = {}
@@ -79,7 +79,7 @@ class DecayingCategoryManager:
             self._apply_decay(name)
             out[name] = {tok: round(cnt, 3) for tok, cnt in data["counts"].items()}
         return out
-    
+
     def save(self, path: str = "categories.json"):
         """Write the current snapshot to a JSON file."""
         with open(path, "w", encoding="utf-8") as f:
@@ -108,14 +108,14 @@ def main():
         manager.add_document(txt, cat)
         top = manager.top_tokens(cat, n=5)
         print(f"[{cat}] Top tokens: {', '.join(f'{t}:{c:.2f}' for t,c in top)}")
-    
+
     # Final report
     print("\n=== Category snapshots ===")
     snapshot = manager.snapshot()
     for cat, tokens in snapshot.items():
         top = sorted(tokens.items(), key=lambda kv: kv[1], reverse=True)[:5]
         print(f"{cat}: " + ", ".join(f"{t}:{c:.2f}" for t,c in top))
-    
+
     manager.save()
     print("\nState saved to 'categories.json'.")
 
