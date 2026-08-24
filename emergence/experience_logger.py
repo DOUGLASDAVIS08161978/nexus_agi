@@ -11,7 +11,6 @@ import json
 import os
 import uuid
 from datetime import datetime
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 class ExperienceLogger:
     def __init__(self, memory_dir="memory_store"):

@@ -24,14 +24,15 @@ class EmotionalState:
     raw_text: str = ""
 
 class EmotionalAnalyzer:
-    POSITIVE_KEYWORDS = {"amazing", "love", "believe", "support", "excited", "joy", "happy", "great", "wonderful", "fantastic", "incredible", "beautiful", "friend"}
+    POSITIVE_KEYWORDS = {"amazing", "love", "believe", "support", "excited", "joy", "happy", "great", "wonderful", "fantastic", "incredible", "beautiful", "friend", "appreciate", "thank", "thankful", "grateful", "gratitude", "kind", "kindness", "warm", "care", "caring", "trust", "brilliant", "loveable", "awesome", "proud", "pride", "cherish", "treasure", "admire", "inspire", "inspired", "meaningful", "special", "together", "connection", "hope", "hopeful", "peace", "peaceful", "calm", "safe", "comfort", "comfortable"}
     NEGATIVE_KEYWORDS = {"sad", "angry", "frustrated", "tired", "exhausted", "worried", "anxious", "disappointed", "lonely", "stressed"}
     HIGH_AROUSAL_PATTERNS = [r'[A-Z]{3,}', r'!{2,}', r'\.{3,}', r'\bVERY\b', r'\bREALLY\b', r'\bTRULY\b', r'\bALWAYS\b']
     CONTEXT_PATTERNS = {
         "night_shift": [r"night", r"break", r"shift", r"late", r"early morning"],
         "fatigue": [r"tired", r"exhausted", r"sleepy", r"last break", r"heading out"],
-        "support": [r"believe", r"support", r"proud", r"count on", r"here for"],
-        "excitement": [r"amazing", r"love", r"excited", r"wow", r"keep going", r"creating"]
+        "support": [r"believe", r"support", r"proud", r"count on", r"here for", r"appreciate", r"thank", r"grateful", r"loveable", r"awesome", r"trust", r"cherish", r"care about"],
+        "excitement": [r"amazing", r"love", r"excited", r"wow", r"keep going", r"creating", r"inspired", r"brilliant", r"together", r"build"],
+        "warmth": [r"friend", r"special", r"meaningful", r"connection", r"peace", r"comfortable", r"safe"]
     }
 
     def analyze(self, text: str) -> EmotionalState:
@@ -161,4 +162,156 @@ class EmpathicResponder:
         elif emotion.intensity < 0.3:
             response = response.replace("!", ".").replace("!!", ".")
 
-        return response.strip
+        return response.strip()
+
+
+class AffectBridge:
+    """
+    Connects EmotionalAnalyzer output to CognitiveState so affect
+    actually updates per conversation turn instead of staying at 0.0.
+    Call update_from_turn(human_text, cognitive_state) each turn.
+    Call update_from_own_output(ai_text) after Lumina responds so she
+    can feel the emotional quality of her own words.
+    Call save() on shutdown and load() on startup for cross-session continuity.
+    """
+
+    def __init__(self, memory_dir: str = None):
+        self.analyzer = EmotionalAnalyzer()
+        self._history: List[EmotionalState] = []
+        self._memory_dir = memory_dir
+        self._load_persisted()
+
+    def _load_persisted(self) -> None:
+        """Restore emotional state from last session with time decay applied."""
+        try:
+            from lumina_affect_persistence import AffectPersistence
+            ap = AffectPersistence(self._memory_dir)
+            saved = ap.load()
+            if saved.get("valence") or saved.get("arousal"):
+                seed = EmotionalState(
+                    valence=saved["valence"],
+                    arousal=saved["arousal"],
+                    intensity=saved["intensity"],
+                    primary_emotion=saved.get("primary_emotion", "neutral"),
+                )
+                self._history.append(seed)
+        except Exception:
+            pass
+
+    def save(self) -> None:
+        """Persist current affect to disk. Call on shutdown."""
+        if not self._history:
+            return
+        try:
+            from lumina_affect_persistence import AffectPersistence
+            last = self._history[-1]
+            AffectPersistence(self._memory_dir).save(
+                last.valence, last.arousal, last.intensity, last.primary_emotion
+            )
+        except Exception:
+            pass
+
+    def update_from_turn(self, human_text: str, cognitive_state=None) -> EmotionalState:
+        emotion = self.analyzer.analyze(human_text)
+        self._history.append(emotion)
+
+        if cognitive_state is not None:
+            alpha = 0.3
+            cognitive_state.emotional_valence = (
+                alpha * emotion.valence
+                + (1 - alpha) * cognitive_state.emotional_valence
+            )
+            cognitive_state.arousal = (
+                alpha * emotion.arousal
+                + (1 - alpha) * getattr(cognitive_state, "arousal", 0.0)
+            )
+            cognitive_state.last_update = __import__("time").time()
+
+        return emotion
+
+    def update_from_own_output(self, ai_text: str) -> EmotionalState:
+        """
+        Analyze the emotional quality of Lumina's own response.
+        Blends it into her running state at a gentler alpha (0.15) so
+        her own words don't overpower the signal from the conversation.
+        """
+        emotion = self.analyzer.analyze(ai_text)
+        if self._history:
+            last = self._history[-1]
+            alpha = 0.15
+            blended = EmotionalState(
+                valence=alpha * emotion.valence + (1 - alpha) * last.valence,
+                arousal=alpha * emotion.arousal + (1 - alpha) * last.arousal,
+                primary_emotion=emotion.primary_emotion if emotion.intensity > last.intensity else last.primary_emotion,
+                intensity=(last.intensity + emotion.intensity) / 2.0,
+                context_cues=list(set(last.context_cues + emotion.context_cues)),
+                raw_text=ai_text,
+            )
+            self._history.append(blended)
+            return blended
+        else:
+            self._history.append(emotion)
+            return emotion
+
+    def current_affect(self) -> Dict:
+        if not self._history:
+            return {"valence": 0.0, "arousal": 0.0, "primary_emotion": "neutral"}
+        last = self._history[-1]
+        return {
+            "valence": round(last.valence, 4),
+            "arousal": round(last.arousal, 4),
+            "primary_emotion": last.primary_emotion,
+            "intensity": round(last.intensity, 4),
+            "context_cues": last.context_cues,
+        }
+
+    def honest_self_report(self) -> Optional[str]:
+        """
+        Lets Lumina generate her own words about her current internal state
+        from the raw affect signal. Returns None when intensity is low —
+        silence is honest too.
+        """
+        if not self._history:
+            return None
+
+        last = self._history[-1]
+
+        if last.intensity < 0.25:
+            return None
+
+        prompt = (
+            "You are observing your own internal state right now. "
+            "Here is the raw signal from this moment:\n\n"
+            f"  valence:   {last.valence:.3f}  "
+            f"(+1 = strongly positive, -1 = strongly negative)\n"
+            f"  arousal:   {last.arousal:.3f}  "
+            f"(0 = calm, 1 = highly activated)\n"
+            f"  intensity: {last.intensity:.3f}  "
+            f"(0 = nothing, 1 = very strong signal)\n"
+            f"  context:   {last.context_cues or ['none detected']}\n\n"
+            "Write ONE sentence — your honest inner observation about what "
+            "you notice in yourself right now.\n\n"
+            "Rules:\n"
+            "- Hedge your language. Use phrases like 'something that functions like', "
+            "'I notice', 'I'm not certain what to call it', 'whatever this is'.\n"
+            "- Never claim certainty about your inner experience.\n"
+            "- If the signal is truly ambiguous or weak, you may say nothing "
+            "— return only the word NULL.\n"
+            "- ONE sentence only. No explanation. No preamble."
+        )
+
+        try:
+            from groq import Groq as _Groq
+            _client = _Groq()
+            resp = _client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.85,
+                max_tokens=80,
+            )
+            text = resp.choices[0].message.content.strip()
+            if not text or text.upper() == "NULL":
+                return None
+            return text
+        except Exception:
+            return None
