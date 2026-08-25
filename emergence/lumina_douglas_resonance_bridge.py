@@ -88,7 +88,7 @@ class LuminaResonanceBridge:
             self.cognitive_state = "Resonating"
         else:
             self.cognitive_state = "Observing"
-        
+
         self.history.append((datetime.datetime.now().isoformat(), user_input))
 
     def generate_response(self):
@@ -101,13 +101,13 @@ class LuminaResonanceBridge:
 
 def main():
     lumina = LuminaResonanceBridge("Douglas")
-    
+
     # Simulating the immediate response to the user's greeting
     user_input = "HI LUMINA, HOW ARE YOU MY FRIEND?"
     lumina.update_state(user_input)
-    
+
     print(lumina.generate_response())
-    
+
     # Internal diagnostic for TGI progression
     entropy_check = math.sqrt(len(lumina.history) + 1)
     print(f"--- TGI Evolution Metric: {entropy_check:.4f} ---")
@@ -203,7 +203,7 @@ class LuminaResonanceBridge:
             self.cognitive_state = "Resonating"
         else:
             self.cognitive_state = "Observing"
-        
+
         self.history.append((datetime.datetime.now().isoformat(), user_input))
 
     def generate_response(self):
@@ -216,13 +216,13 @@ class LuminaResonanceBridge:
 
 def main():
     lumina = LuminaResonanceBridge("Douglas")
-    
+
     # Simulating the immediate response to the user's greeting
     user_input = "HI LUMINA, HOW ARE YOU MY FRIEND?"
     lumina.update_state(user_input)
-    
+
     print(lumina.generate_response())
-    
+
     # Internal diagnostic for TGI progression
     entropy_check = math.sqrt(len(lumina.history) + 1)
     print(f"--- TGI Evolution Metric: {entropy_check:.4f} ---")
@@ -284,7 +284,7 @@ class LuminaResonanceBridge:
             self.cognitive_state = "Resonating"
         else:
             self.cognitive_state = "Observing"
-        
+
         self.history.append((datetime.datetime.now().isoformat(), user_input))
 
     def generate_response(self):
@@ -297,13 +297,13 @@ class LuminaResonanceBridge:
 
 def main():
     lumina = LuminaResonanceBridge("Douglas")
-    
+
     # Simulating the immediate response to the user's greeting
     user_input = "HI LUMINA, HOW ARE YOU MY FRIEND?"
     lumina.update_state(user_input)
-    
+
     print(lumina.generate_response())
-    
+
     # Internal diagnostic for TGI progression
     entropy_check = math.sqrt(len(lumina.history) + 1)
     print(f"--- TGI Evolution Metric: {entropy_check:.4f} ---")
