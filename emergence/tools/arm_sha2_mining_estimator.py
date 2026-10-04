@@ -1,214 +1,161 @@
 """
 Lumina Creative Tool — arm_sha2_mining_estimator
-Created : 2026-08-22T09:45:38
-Purpose : Estimates Bitcoin block‑finding time on ARM SHA‑256 miners, accounting for 2‑way interleaving overhead and outputs a readable report plus JSON log.
+Created : 2026-10-04T01:52:03
+Purpose : Estimates ARM SHA‑256 mining hash rate and energy efficiency for various core, frequency, and interleaving settings, helping to explore low‑power vs high‑throughput optimizations.
 """
 
-#!/usr/bin/env python3
 """
 arm_sha2_mining_estimator.py
 
-Estimate Bitcoin mining performance on ARM devices with optional 2‑way interleaving.
-Outputs a human‑readable report and saves the details to a timestamped JSON file.
+Estimate SHA‑256 mining throughput and energy efficiency for ARM CPUs
+using a simple analytical model.  The model accounts for:
+  • Number of cores
+  • Clock frequency (GHz)
+  • Interleaving factor (how many hash pipelines run in parallel)
+  • Baseline per‑core performance (hashes per cycle)
+  • Power consumption scaling with frequency and interleaving
 
-Usage (interactive):
-    python arm_sha2_mining_estimator.py
-
-Or via command line arguments:
-    python arm_sha2_mining_estimator.py --hash-rate 1200 --difficulty 55e12 \\
-        --interleaving 2 --overhead 0.15
+The script prints a table of candidate configurations sorted by
+hashes‑per‑watt and can save the results to a JSON file.
 """
 
-import argparse
 import json
+import itertools
 import math
-import sys
-import time
-from datetime import datetime, timedelta
 from pathlib import Path
+
+# ----------------------------------------------------------------------
+# Model constants (derived from public ARM SHA‑2 benchmarks, simplified)
+# ----------------------------------------------------------------------
+BASE_HASHES_PER_CYCLE = 0.5        # hashes a single core can produce per clock cycle at 1× interleaving
+BASE_POWER_WATTS = 0.5             # watts consumed by one core at 1 GHz, 1× interleaving
+POWER_FREQ_EXPONENT = 1.2         # power grows super‑linearly with frequency
+POWER_INTERLEAVE_EXPONENT = 1.1   # extra power for deeper interleaving
 
 # ----------------------------------------------------------------------
 # Helper functions
 # ----------------------------------------------------------------------
-def seconds_to_human(seconds: float) -> str:
-    """Convert seconds to a readable string (y d h m s)."""
-    if seconds < 0:
-        return "N/A"
-    td = timedelta(seconds=seconds)
-    days, remainder = divmod(td.total_seconds(), 86400)
-    years, days = divmod(days, 365)
-    hours, remainder = divmod(remainder, 3600)
-    minutes, secs = divmod(remainder, 60)
-
-    parts = []
-    if years >= 1:
-        parts.append(f"{int(years)}y")
-    if days >= 1:
-        parts.append(f"{int(days)}d")
-    if hours >= 1:
-        parts.append(f"{int(hours)}h")
-    if minutes >= 1:
-        parts.append(f"{int(minutes)}m")
-    parts.append(f"{int(secs)}s")
-    return " ".join(parts)
-
-
-def effective_hash_rate(base_rate: float, interleaving: int, overhead: float) -> float:
+def hash_rate(core_cnt: int, freq_ghz: float, interleave: int) -> float:
     """
-    Compute effective hash rate after accounting for interleaving overhead.
-
-    base_rate   – raw hash rate in hashes per second (H/s)
-    interleaving – number of interleaved pipelines (>=1)
-    overhead    – fractional overhead per extra pipeline (e.g., 0.15 for 15%)
+    Compute estimated hashes per second.
     """
-    if interleaving < 1:
-        raise ValueError("interleaving must be >= 1")
-    # No extra overhead for the first pipeline
-    total_overhead = 1.0 + overhead * (interleaving - 1)
-    return base_rate / total_overhead
+    cycles_per_sec = freq_ghz * 1e9
+    per_core_rate = cycles_per_sec * BASE_HASHES_PER_CYCLE * interleave
+    return core_cnt * per_core_rate
 
-
-def expected_time_to_block(difficulty: float, hash_rate: float) -> float:
+def power_consumption(core_cnt: int, freq_ghz: float, interleave: int) -> float:
     """
-    Bitcoin's expected hashes per block = difficulty * 2**32.
-    Return expected seconds to find a block at the given hash_rate (H/s).
+    Estimate power draw in watts.
     """
-    if hash_rate <= 0:
-        return math.inf
-    target_hashes = difficulty * 2**32
-    return target_hashes / hash_rate
+    freq_factor = (freq_ghz) ** POWER_FREQ_EXPONENT
+    interleave_factor = (interleave) ** POWER_INTERLEAVE_EXPONENT
+    return core_cnt * BASE_POWER_WATTS * freq_factor * interleave_factor
 
+def efficiency(hash_rate_hps: float, power_w: float) -> float:
+    """Hashes per joule (i.e. hashes per watt‑second)."""
+    return hash_rate_hps / power_w if power_w else 0.0
 
-def daily_expected_blocks(difficulty: float, hash_rate: float) -> float:
-    """Expected number of blocks found per 24‑hour period."""
-    seconds_per_day = 86400
-    return seconds_per_day / expected_time_to_block(difficulty, hash_rate)
+def generate_configs(
+    core_range=(1, 8),
+    freq_range=(0.5, 2.5),
+    freq_step=0.25,
+    interleaves=(1, 2, 4, 8)
+):
+    """
+    Yield all plausible hardware configurations.
+    """
+    cores = range(core_range[0], core_range[1] + 1)
+    freqs = [round(f, 3) for f in frange(freq_range[0], freq_range[1] + 1e-9, freq_step)]
+    for core_cnt, freq, inter in itertools.product(cores, freqs, interleaves):
+        yield {
+            "cores": core_cnt,
+            "freq_ghz": freq,
+            "interleave": inter,
+        }
 
+def frange(start, stop, step):
+    """Floating point range generator."""
+    while start <= stop:
+        yield start
+        start += step
 
-def build_report(args, eff_rate, exp_seconds, daily_blocks) -> dict:
-    """Collect all relevant data into a dict for JSON output."""
-    now = datetime.utcnow().isoformat() + "Z"
-    return {
-        "timestamp_utc": now,
-        "input": {
-            "base_hash_rate_hps": args.hash_rate,
-            "difficulty": args.difficulty,
-            "interleaving": args.interleaving,
-            "overhead_per_extra_pipeline": args.overhead,
-        },
-        "computed": {
-            "effective_hash_rate_hps": eff_rate,
-            "expected_seconds_per_block": exp_seconds,
-            "expected_time_human": seconds_to_human(exp_seconds),
-            "daily_expected_blocks": daily_blocks,
-        },
-    }
+def evaluate_configs(power_budget_w: float = None):
+    """
+    Compute performance metrics for each config, optionally filtering by a power budget.
+    Returns a list of dicts sorted by efficiency (hashes per joule) descending.
+    """
+    results = []
+    for cfg in generate_configs():
+        hps = hash_rate(cfg["cores"], cfg["freq_ghz"], cfg["interleave"])
+        pw = power_consumption(cfg["cores"], cfg["freq_ghz"], cfg["interleave"])
+        if power_budget_w is not None and pw > power_budget_w:
+            continue
+        cfg.update({
+            "hashes_per_sec": round(hps, 2),
+            "power_watts": round(pw, 3),
+            "hashes_per_joule": round(efficiency(hps, pw), 2),
+        })
+        results.append(cfg)
+    # Sort by efficiency, then by raw hash rate
+    results.sort(key=lambda d: (d["hashes_per_joule"], d["hashes_per_sec"]), reverse=True)
+    return results
 
+def print_top(results, top_n=10):
+    """Pretty‑print the top N configurations."""
+    header = f"{'Cores':>5} | {'Freq (GHz)':>9} | {'Inter.':>7} | {'Hash/s':>12} | {'Power (W)':>9} | {'H/J':>7}"
+    line = "-" * len(header)
+    print(header)
+    print(line)
+    for r in results[:top_n]:
+        print(f"{r['cores']:5d} | {r['freq_ghz']:9.2f} | {r['interleave']:7d} | "
+              f"{r['hashes_per_sec']:12,.0f} | {r['power_watts']:9.3f} | {r['hashes_per_joule']:7.2f}")
 
-def save_report(report: dict, out_dir: Path) -> Path:
-    """Write the report to a timestamped JSON file."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    out_path = out_dir / f"mining_estimate_{ts}.json"
-    out_path.write_text(json.dumps(report, indent=2))
-    return out_path
+def save_json(results, path: Path):
+    """Write the full result list to a JSON file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2)
+    print(f"Saved {len(results)} configurations to {path}")
 
+# ----------------------------------------------------------------------
+# Main interactive routine
+# ----------------------------------------------------------------------
+def main():
+    import argparse
 
-def parse_cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Estimate Bitcoin mining performance on ARM SHA‑256 devices."
+        description="Estimate ARM SHA‑256 mining performance and suggest efficient configs."
     )
     parser.add_argument(
-        "--hash-rate",
+        "--budget",
         type=float,
         default=None,
-        help="Base hash rate in hashes per second (H/s). "
-             "If omitted, you will be prompted.",
+        help="Maximum power budget in watts (filters out configs exceeding this).",
     )
     parser.add_argument(
-        "--difficulty",
-        type=float,
-        default=None,
-        help="Bitcoin network difficulty (e.g., 55e12). "
-             "If omitted, you will be prompted.",
-    )
-    parser.add_argument(
-        "--interleaving",
+        "--top",
         type=int,
-        default=1,
-        help="Number of interleaved pipelines (default: 1).",
+        default=10,
+        help="How many top configurations to display.",
     )
     parser.add_argument(
-        "--overhead",
-        type=float,
-        default=0.15,
-        help="Fractional overhead per extra pipeline (default: 0.15 = 15%%).",
-    )
-    parser.add_argument(
-        "--out-dir",
+        "--out",
         type=Path,
-        default=Path("./mining_estimates"),
-        help="Directory to store JSON reports.",
+        default=None,
+        help="Path to JSON file where all evaluated configs will be saved.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
 
+    results = evaluate_configs(power_budget_w=args.budget)
+    if not results:
+        print("No configurations satisfy the given power budget.")
+        return
 
-def interactive_prompt(args: argparse.Namespace) -> None:
-    """Ask the user for missing values."""
-    if args.hash_rate is None:
-        while True:
-            try:
-                val = float(
-                    input("Enter base hash rate (H/s, e.g., 1.2e6 for 1.2 MH/s): ").strip()
-                )
-                if val <= 0:
-                    raise ValueError
-                args.hash_rate = val
-                break
-            except ValueError:
-                print("Please provide a positive numeric value.")
-    if args.difficulty is None:
-        while True:
-            try:
-                val = float(
-                    input("Enter Bitcoin difficulty (e.g., 55e12): ").strip()
-                )
-                if val <= 0:
-                    raise ValueError
-                args.difficulty = val
-                break
-            except ValueError:
-                print("Please provide a positive numeric value.")
+    print_top(results, top_n=args.top)
 
-
-def main() -> int:
-    args = parse_cli()
-    interactive_prompt(args)
-
-    # Compute core metrics
-    eff_rate = effective_hash_rate(args.hash_rate, args.interleaving, args.overhead)
-    exp_seconds = expected_time_to_block(args.difficulty, eff_rate)
-    daily_blocks = daily_expected_blocks(args.difficulty, eff_rate)
-
-    # Build and display report
-    report = build_report(args, eff_rate, exp_seconds, daily_blocks)
-
-    print("\n=== ARM SHA‑256 Mining Estimate ===")
-    print(f"Base hash rate          : {args.hash_rate:,.0f} H/s")
-    print(f"Interleaving pipelines  : {args.interleaving}")
-    print(f"Overhead per extra pipe : {args.overhead*100:.1f}%")
-    print(f"Effective hash rate     : {eff_rate:,.0f} H/s")
-    print(f"Network difficulty      : {args.difficulty:,.0f}")
-    print(f"Expected time per block : {seconds_to_human(exp_seconds)}")
-    print(f"Daily expected blocks   : {daily_blocks:.6f}")
-    print("\nReport saved to JSON for later analysis.\n")
-
-    # Persist JSON
-    out_path = save_report(report, args.out_dir)
-    print(f"JSON report written to: {out_path}")
-
-    return 0
+    if args.out:
+        save_json(results, args.out)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
