@@ -70,4 +70,3 @@ if __name__ == "__main__":
     introspection.mindfulness_exercise("breathing")
     introspection.mindfulness_exercise("body_scan")
     print(introspection.reflect())
-This code defines a class `IntrospectionModule` with methods for journaling, mindfulness exercises, and self-reflection. The `journal_entry` method allows Lumina to record thoughts and reflections on specific topics, while the `mindfulness_exercise` method provides instructions for various mindfulness exercises. The `reflect` method summarizes the journal entries and mindfulness exercises, enabling Lumina to engage in self-reflection and introspection.

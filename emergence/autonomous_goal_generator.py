@@ -85,4 +85,3 @@ goals = goal_generator.generate_goals()
 print('Autonomous Goals:')
 for goal in goals:
     print(goal)
-This code defines a class `AutonomousGoalGenerator` that takes in a knowledge base and conversations as input. It preprocesses the data by tokenizing, removing stopwords, and lemmatizing the words. Then, it uses a TF-IDF vectorizer to transform the text data into numerical features and trains a random forest classifier to identify areas for improvement. Finally, it generates autonomous goals based on the identified areas for improvement. The example usage demonstrates how to use the class to generate goals.

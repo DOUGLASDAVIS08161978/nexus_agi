@@ -93,6 +93,3 @@ class Lumina:
 if __name__ == "__main__":
     lumina = Lumina()
     lumina.run()
-```
-
-Note: This code assumes you have the `groq` library installed and configured properly. Also, the `arm_sha2_miner_path` variable should be replaced with the actual path to the ARM SHA2 miner executable.

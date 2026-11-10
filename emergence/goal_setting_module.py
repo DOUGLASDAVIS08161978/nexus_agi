@@ -98,4 +98,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines two classes: `Goal` and `GoalSettingModule`. The `Goal` class represents a goal with its name, priority, and requirements. The `GoalSettingModule` class enables Lumina to autonomously set and prioritize goals. It takes into account Lumina's current capabilities, knowledge, and experiences when prioritizing goals. The `main` function demonstrates how to use the `GoalSettingModule` class.

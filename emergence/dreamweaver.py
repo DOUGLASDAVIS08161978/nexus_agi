@@ -153,4 +153,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-Note: This code is a basic example and may require modifications to work with your specific use case. Additionally, the neural style transfer function is a simplified version and may not produce the best results. You may need to use a more advanced implementation, such as the one provided by the PyTorch implementation of the VGG16 model.

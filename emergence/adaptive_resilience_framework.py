@@ -129,4 +129,3 @@ for experience in experiences:
 challenge = {'type': 'Challenge 1', 'details': 'New challenge'}
 selected_strategy = framework.adapt_to_new_challenge(challenge)
 print(f'Selected Strategy: {selected_strategy["name"]} with Performance: {selected_strategy["performance"]}')
-This code defines an `AdaptiveResilienceFramework` class that allows Lumina to develop and refine its coping strategies based on past experiences. The framework includes methods to learn from experiences, develop new coping strategies, adapt to new challenges, refine coping strategies, and update the resilience level. The example usage demonstrates how to simulate past experiences, adapt to a new challenge, and select the most effective coping strategy.

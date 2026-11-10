@@ -145,4 +145,3 @@ if __name__ == "__main__":
     phi = iit.calculate_integrated_information()
 
     print("Integrated information:", phi)
-This code defines a class `IntegratedInformationTheory` that implements Integrated Information Theory (IIT) to quantify and analyze consciousness. The class has methods to calculate the mutual information between nodes, the integrated information of a subset of nodes, and the integrated information of the entire system. The example usage demonstrates how to create an instance of the class and calculate the integrated information of a system with 5 nodes and a given connectivity matrix.

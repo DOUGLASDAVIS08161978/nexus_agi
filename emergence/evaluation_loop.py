@@ -120,4 +120,3 @@ improvement_strategy = ImprovementStrategy()
 
 evaluation_loop = EvaluationLoop(model, environment, reward_function, improvement_strategy)
 evaluation_loop.run()
-This code defines an `EvaluationLoop` class that continuously evaluates a model's performance, adapts its improvement strategy based on the performance history, and runs the evaluation loop for a specified number of iterations. The example usage demonstrates how to create a random model, environment, reward function, and improvement strategy, and how to run the evaluation loop.

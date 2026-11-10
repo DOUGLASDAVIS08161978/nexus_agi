@@ -83,4 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a class `IntrospectiveDialogueManager` that enables Lumina to engage in introspective dialogues. The class has methods to generate random dialogue prompts, engage in dialogues, and reflect on prompts. The `main` function demonstrates how to use the class to engage in introspective dialogues on different topics.

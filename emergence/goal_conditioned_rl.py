@@ -79,4 +79,3 @@ if __name__ == "__main__":
     model = Model(4, 2, 2)
     rl = GoalConditionedRL(model, 2, 10, 1000, 32, 0.001, 0.99, 0.1)
     rl.train()
-This code defines a `GoalConditionedRL` class that implements a goal-conditioned reinforcement learning algorithm. The `Model` class defines a neural network architecture that can be modified to suit the specific requirements of the problem. The example usage at the end demonstrates how to use the `GoalConditionedRL` class to train a model.

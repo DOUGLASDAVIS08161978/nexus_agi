@@ -73,4 +73,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a `GoalGenerator` class that takes in Lumina's current capabilities and knowledge gaps. It generates goals based on these inputs and prioritizes them based on their relevance and importance. The `main` function demonstrates an example usage of the `GoalGenerator` class.

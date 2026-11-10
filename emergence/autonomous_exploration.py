@@ -69,4 +69,3 @@ class AutonomousExploration:
 if __name__ == "__main__":
     autonomous_exploration = AutonomousExploration()
     autonomous_exploration.run()
-This code defines a class `AutonomousExploration` that enables Lumina to autonomously explore new concepts, ideas, and interests. The class has methods to get a concept, explore related concepts, get interests from Wikipedia, learn from the interests, and update the concept. The `run` method runs the autonomous exploration loop indefinitely.

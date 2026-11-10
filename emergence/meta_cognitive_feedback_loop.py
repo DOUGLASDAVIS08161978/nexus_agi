@@ -72,6 +72,3 @@ if __name__ == "__main__":
     # Get Lumina's self-awareness
     self_awareness = mcf.get_self_awareness()
     logging.info(f"Lumina's self-awareness: {self_awareness}")
-This code defines a `MetaCognitiveFeedbackLoop` class that simulates a meta-cognitive feedback loop. The loop processes thought processes, reflects on them, and updates Lumina's self-awareness based on the reflection. The `process_thought` method takes a thought process as input, updates the thought process count, and simulates reflection on the thought process. If the reflection is significant, Lumina gains self-awareness. The `get_self_awareness` method returns Lumina's current self-awareness.
-
-In the example usage, we create an instance of `MetaCognitiveFeedbackLoop`, process some thought processes, and get Lumina's self-awareness. The self-awareness is updated based on the reflection on the thought processes.

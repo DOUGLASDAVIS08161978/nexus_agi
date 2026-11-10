@@ -122,4 +122,3 @@ if __name__ == "__main__":
     effect_event_id = "event3"
     is_cause_effect_valid = temporal_reasoning.analyze_cause_effect(event_id, cause_event_id, effect_event_id)
     print("Is cause-and-effect relationship valid?", is_cause_effect_valid)
-This code defines a `TemporalReasoning` class that enables the integration of temporal reasoning capabilities. It includes methods for adding events, retrieving events that overlap with a specified time period, making predictions about future events, and analyzing cause-and-effect relationships between events. The example usage demonstrates how to use these methods to perform various temporal reasoning tasks.

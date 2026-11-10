@@ -72,8 +72,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-```
-
-This script assumes that the conversation history is stored in a JSON file named `conversation_history.json` in the same directory. It also assumes that there is a Python file named `lumina.py` in the same directory that contains the code to be analyzed.
-
-To run the script, save it to a file named `lumina_self_diagnosis.py`, create a `conversation_history.json` file with the conversation history, and a `lumina.py` file with the code to be analyzed. Then, run the script using `python lumina_self_diagnosis.py`.

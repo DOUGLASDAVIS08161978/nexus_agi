@@ -56,9 +56,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
 
-```python
 # msfconsole.py
 import subprocess
 
@@ -79,12 +77,3 @@ class Msfconsole:
     def stop(self):
         self.process.kill()
         print("Metasploit console stopped.")
-```
-
-```python
-# requirements.txt
-msfconsole
-colorama
-```
-
-Note: You need to have Metasploit installed on your system and the msfconsole executable in your system's PATH. You also need to install the required packages by running `pip install -r requirements.txt` in your terminal.

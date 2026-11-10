@@ -124,4 +124,3 @@ class SensoryInterface:
         inputs = tokenizer(input_text, return_tensors='pt')
         outputs = model(**inputs)
         return outputs.logits
-This code defines a class `SensoryInterface` that provides methods for capturing images and audio using the termux-api, and for contextualizing input text using a transformer-based model. The `see` method captures an image using the camera, the `hear` method captures audio using the microphone, and the `contextualize_input` method uses a transformer-based model to contextualize the input text.

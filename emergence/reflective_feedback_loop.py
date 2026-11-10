@@ -84,12 +84,3 @@ if __name__ == "__main__":
     lumina = Lumina(performance_data)
     feedback = lumina.reflective_feedback_loop()
     print(feedback)
-This code defines a `Lumina` class that encapsulates the reflective feedback loop. The loop consists of three stages:
-
-1.  **Performance Evaluation**: The `evaluate_performance` method assesses Lumina's performance based on the provided data.
-2.  **Area Identification**: The `identify_areas_for_improvement` method identifies areas where Lumina needs to improve based on the performance evaluation.
-3.  **Feedback Generation**: The `generate_feedback` method generates a feedback message highlighting the areas for improvement.
-
-The `reflective_feedback_loop` method orchestrates these stages and returns the feedback message.
-
-In the example usage, we create a `Lumina` instance with sample performance data and call the `reflective_feedback_loop` method to obtain the feedback message.

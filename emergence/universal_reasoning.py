@@ -179,4 +179,3 @@ if __name__ == "__main__":
     # Normalize a distribution
     distribution = [0.2, 0.3, 0.5]
     print(reasoning.normalize_distribution(distribution))
-This code defines a `UniversalReasoning` class that enables Lumina to reason abstractly and apply knowledge across various domains. It includes methods for adding knowledge to the knowledge base, adding reasoning models to the reasoning models dictionary, and reasoning about concepts in domains. The code also defines a `ReasoningModel` class that serves as a base class for reasoning models, and a `BayesianReasoningModel` class that implements a Bayesian reasoning model. The example usage demonstrates how to use the `UniversalReasoning` class to add knowledge, add a reasoning model, and reason about a concept in a domain.

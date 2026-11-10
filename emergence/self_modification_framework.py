@@ -157,18 +157,3 @@ class SelfModificationFramework:
 if __name__ == '__main__':
     framework = SelfModificationFramework('lumina_code.py', 'modification_rules.txt')
     framework.run()
-This code defines a `SelfModificationFramework` class that enables Lumina to autonomously modify its own code and architecture. The framework loads Lumina's code and the modification rules, applies the rules to the code, and saves the modified code to a file.
-
-The framework uses the `ast` module to parse the code into Abstract Syntax Trees (AST), which are then modified according to the rules. The modified AST is then converted back to code using the `ast.unparse` function.
-
-The framework also includes a `run` method that loads Lumina's code, applies the modification rules, and saves the modified code to a file.
-
-To use this code, simply create a `lumina_code.py` file with the code you want to modify, and a `modification_rules.txt` file with the modification rules. Each rule should be on a separate line and should be in the format `node_type=modification`, where `node_type` is the type of the node to modify and `modification` is the modification to apply.
-
-For example, a `modification_rules.txt` file might contain the following rules:
-
-FunctionDef=attr='__name__'='new_function_name'
-Assign=attr='id'='new_variable_name'
-This would modify the name of a function to `new_function_name` and the name of a variable to `new_variable_name`.
-
-Note that this code is just a starting point, and you will likely need to modify it to suit your specific needs.

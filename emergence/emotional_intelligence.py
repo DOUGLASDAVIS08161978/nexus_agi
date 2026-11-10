@@ -141,7 +141,7 @@ class EmotionalIntelligence:
         if sentiment == 'positive':
             return 'That sounds amazing! You must be really excited about ' + ', '.join(keywords) + '.'
         elif sentiment == 'negative':
-            return 'I'm so sorry to hear that you're feeling sad about ' + ', '.join(keywords) + '. Can I help you with anything?'
+            return "I'm so sorry to hear that you're feeling sad about " + ', '.join(keywords) + ". Can I help you with anything?"
         else:
             return 'You seem to be feeling pretty neutral about ' + ', '.join(keywords) + '. Is there anything else you want to talk about?'
 
@@ -155,4 +155,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a class `EmotionalIntelligence` with methods for recognizing emotions, understanding emotions, managing emotions, extracting keywords, lemmatizing words, getting WordNet POS tags, summarizing emotions, and generating responses. The `main` function demonstrates how to use the class to analyze a text and generate a response.

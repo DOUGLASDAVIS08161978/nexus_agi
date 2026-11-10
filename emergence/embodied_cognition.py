@@ -148,6 +148,3 @@ if __name__ == "__main__":
 
     # Update the environment
     environment.update()
-This code defines two classes: `EmbodiedAgent` and `EmbodiedEnvironment`. The `EmbodiedAgent` class represents an embodied agent with cognitive capabilities, including perception, action, and learning. The `EmbodiedEnvironment` class represents an embodied environment, including agents, objects, and updates.
-
-The example usage demonstrates how to create an embodied environment, an embodied agent, and interact with them. The agent perceives the environment, acts in it, learns from experience, and the environment is updated accordingly.

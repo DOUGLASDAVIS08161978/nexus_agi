@@ -100,4 +100,3 @@ if __name__ == "__main__":
 
     # Train the value estimator
     emergent_value_alignment(model, device, data_loader, optimizer, criterion, num_iterations)
-This code defines a simple neural network for value estimation, a dataset class for storing and loading value estimation data, and functions for training and evaluating the value estimator. The `emergent_value_alignment` function trains the value estimator using the Adam optimizer and mean squared error criterion for a specified number of iterations. The example usage demonstrates how to create a value estimator model, move it to a device (GPU or CPU), create a dataset and data loader, define the optimizer and criterion, and train the value estimator using the `emergent_value_alignment` function.

@@ -59,9 +59,3 @@ class Net(nn.Module):
 model = Net()
 pruned_model = prune_model(model)
 print(pruned_model)
-```
-This code defines a class `AutonomousCognitiveNetworkPruner` that can prune a given PyTorch model based on the specified pruning type and threshold. The `magnitude_pruning` and `l1_pruning` methods implement the pruning logic for magnitude and L1 pruning respectively. The `prune` method is used to call the pruning logic based on the specified pruning type. The `get_pruned_model` method returns the pruned model.
-
-The `prune_model` function is a wrapper around the `AutonomousCognitiveNetworkPruner` class that creates an instance of the pruner and returns the pruned model.
-
-The example usage at the end demonstrates how to use the `prune_model` function to prune a simple neural network.

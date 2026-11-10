@@ -160,6 +160,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-This code defines a `KnowledgeGraphExpander` class that can expand a knowledge graph by extracting entities, relationships, and concepts from a given text. It also includes methods to incorporate new entities, relationships, and concepts into the expanded graph. The `main` function demonstrates how to use the `KnowledgeGraphExpander` class to expand a graph from a URL, incorporate new entities, relationships, and concepts, and visualize the expanded graph.
-
-Note that this is a basic implementation and may need to be modified to suit your specific requirements. Additionally, you may need to install additional libraries or modules, such as `networkx` and `matplotlib`, to run this code.

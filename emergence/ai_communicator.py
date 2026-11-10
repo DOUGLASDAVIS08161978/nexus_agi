@@ -100,4 +100,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a class `AICommunicator` that provides methods for secure and efficient communication between AI models. It includes features such as encryption, decryption, authentication, and message sending and receiving. The `main` function demonstrates how to use the `AICommunicator` class to start a server, send a message, and receive a response.

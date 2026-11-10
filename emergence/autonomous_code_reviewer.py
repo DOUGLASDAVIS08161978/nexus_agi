@@ -123,6 +123,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-This code defines a `CodeReviewer` class that collects code from a specified directory, parses it using the `ast` module, extracts features from the code, trains a machine learning model on the features, and optimizes the code based on the model's predictions. The `main` function demonstrates how to use the `CodeReviewer` class to review and optimize code.

@@ -103,7 +103,7 @@ def print_summary(categories, vocab_size, prob_history):
     for i, cat in enumerate(categories, 1):
         top = cat.most_common(TOP_TOKENS)
         top_str = ", ".join(f"{tok}:{cnt}" for tok, cnt in top)
-        print(f"Category {i:2d} | size: {sum(cat.values():5d)} | top tokens: {top_str}")
+        print(f"Category {i:2d} | size: {sum(cat.values()):5d} | top tokens: {top_str}")
 
     # Simple ASCII timeline of category assignments (first 100 tokens)
     print("\nToken → Category (first 100 tokens)")

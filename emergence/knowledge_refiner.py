@@ -93,4 +93,3 @@ if __name__ == '__main__':
     knowledge_base_path = 'path/to/knowledge/base'
     refiner = KnowledgeRefiner(knowledge_base_path)
     refiner.refine_knowledge_base()
-Note: The code above is a basic implementation and may need to be modified to suit the specific requirements of your knowledge base and the tasks involved in refining it.

@@ -76,4 +76,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a module `autonomous_goal_generation.py` that enables Lumina to autonomously generate goals for self-improvement based on its current capabilities and knowledge. The `AutonomousGoalGenerator` class generates goals from Lumina's capabilities and knowledge, and the `main` function demonstrates how to use the module to generate goals.

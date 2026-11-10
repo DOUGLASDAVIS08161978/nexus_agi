@@ -21,7 +21,7 @@ class KnowledgeGraph:
 
     def disambiguate_entity(self, entity_name: str) -> str:
         """Use a knowledge graph API to retrieve related entities and disambiguate the entity."""
-        graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}%20LIMIT%20100')
+        graph_response = requests.get(f'https://api.dbpedia.org/sparql?query=SELECT%20*%20WHERE%20{{%20%3Fs%20%3Fp%20%3Fo.%20FILTER%20regex(str(?o),%20"{entity_name}")%20}}%20LIMIT%20100')
         related_entities = graph_response.json()['results']['bindings']
         # Use a machine learning model to predict the most likely entity
         from sklearn.ensemble import RandomForestClassifier
@@ -49,4 +49,3 @@ class KnowledgeGraph:
         entities = self.disambiguate_entity(text)
         knowledge_graph = self.prune_and_organize(web_content)
         return knowledge_graph
-This code defines a `KnowledgeGraph` class that uses the `WebSurfer` class to fetch web content, extract text, disambiguate entities, and update the knowledge base. The `update_knowledge_base` method is the main entry point for updating the knowledge base. It takes a query string as input and returns a dictionary representing the updated knowledge graph.

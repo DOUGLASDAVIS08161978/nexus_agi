@@ -133,7 +133,6 @@ class DiversityModule:
         # Calculate the diversity of the knowledge graph
         diversity = self.calculate_diversity(reduced_graph)
         return reduced_graph, diversity
-Example usage:
 # Create a DiversityModule instance
 diversity_module = DiversityModule('distilbert-base-uncased')
 

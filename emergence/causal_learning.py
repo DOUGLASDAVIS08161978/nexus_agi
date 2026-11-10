@@ -139,4 +139,3 @@ if __name__ == "__main__":
     event_name = causal_learning.get_event_name("A1")
     print("Entity Name:", entity_name)
     print("Event Name:", event_name)
-This code defines a `CausalLearning` class that enables Lumina to learn causal relationships between events and entities. The class includes methods for adding entities and events, adding causal relationships, learning causal relationships from a dataset, reasoning about causal relationships, and getting entity and event names. The example usage demonstrates how to create a `CausalLearning` object, add entities and events, add causal relationships, learn causal relationships, reason about causal relationships, and get entity and event names.

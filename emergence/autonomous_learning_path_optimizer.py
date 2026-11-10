@@ -102,4 +102,3 @@ resources = {
 optimizer = AutonomousLearningPathOptimizer(knowledge_graph, learning_goals, learning_strategies, resources)
 optimized_learning_path = optimizer.optimize_learning_path()
 print(optimized_learning_path)
-This code defines a class `AutonomousLearningPathOptimizer` that takes in a knowledge graph, learning goals, learning strategies, and resources as input. It uses a KNN regressor model to identify the most effective learning strategies and resources based on Lumina's current knowledge and goals. The `calculate_similarity` method calculates the similarity between a concept and a learning strategy based on the number of related concepts. The `optimize_learning_path` method returns a dictionary representing the optimized learning path, where each key is a concept and each value is a list of related concepts and resources.

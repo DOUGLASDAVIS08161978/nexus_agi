@@ -182,6 +182,3 @@ if __name__ == "__main__":
     # Integrate two cognitive architectures
     integrated_architecture = lumina.integrate_architectures(architecture1, architecture3)
     print("Integrated Architecture:", integrated_architecture.name)
-This code defines two classes: `CognitiveArchitecture` and `Lumina`. The `CognitiveArchitecture` class represents a cognitive architecture with attributes for its name, description, and capabilities. The `Lumina` class represents a cognitive architecture evaluator that can evaluate and select cognitive architectures based on given criteria and integrate two cognitive architectures.
-
-The example usage at the end demonstrates how to create cognitive architectures, create a Lumina instance, evaluate and select a cognitive architecture, and integrate two cognitive architectures.

@@ -94,8 +94,3 @@ if __name__ == "__main__":
     start_time = time.time()
     main()
     print(f"Time taken: {time.time() - start_time} seconds")
-This code defines a class `InsightGenerator` that can generate novel insights about Lumina's thought processes, behaviors, and emotional patterns. The `generate_insight` method selects a random insight topic and emotional state, generates a random sentence that relates the topic and emotional state, and concludes with a random conclusion. The `generate_multiple_insights` method generates multiple insights by calling `generate_insight` multiple times.
-
-The `main` function creates an instance of `InsightGenerator`, generates 5 insights, and prints them to the console. The time taken to generate the insights is also printed.
-
-You can run this code by saving it to a file named `introspective_insight_generator.py` and running it with Python: `python introspective_insight_generator.py`.

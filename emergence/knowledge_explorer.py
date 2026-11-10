@@ -96,4 +96,3 @@ if __name__ == "__main__":
     knowledge_base_path = "knowledge_base.json"
     explorer = KnowledgeExplorer(url, knowledge_base_path)
     explorer.explore()
-This code defines a `KnowledgeExplorer` class that enables Lumina to autonomously discover new knowledge and integrate it into its existing knowledge base. The class uses web scraping and natural language processing techniques to extract relevant information from webpages and update the knowledge base accordingly. The code includes example usage at the end to demonstrate how to use the `KnowledgeExplorer` class.

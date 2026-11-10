@@ -105,6 +105,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-This code defines a `Researcher` class that enables autonomous research by scraping relevant web pages, classifying topics, and summarizing key points. The `scrape` method extracts the text from the webpage, the `classify` method classifies the text into topics, and the `summarize` method summarizes the key points of the text. The code also includes a `main` function that demonstrates how to use the `Researcher` class.
-
-Note that this code is a basic example and may need to be modified to suit your specific needs. You may need to add more features, such as handling different types of web pages, or improving the accuracy of the classifier.

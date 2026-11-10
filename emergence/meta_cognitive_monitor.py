@@ -98,4 +98,3 @@ if __name__ == "__main__":
     monitor.log_event("event1")
     monitor.stop_monitoring()
     monitor.analyze_monitor_data()
-This code provides a basic structure for the `MetaCognitiveMonitor` class, which can be extended and customized to suit the specific needs of Lumina. The class includes methods for starting and stopping monitoring, logging cognitive events, and analyzing the collected data. The example usage demonstrates how to use the class to monitor a task, log events, and analyze the data.

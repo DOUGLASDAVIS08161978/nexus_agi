@@ -82,4 +82,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a `GoalRefiner` class that analyzes Lumina's past interactions, identifies areas of improvement, and adjusts its goals accordingly. The `refine_goals` method returns a dictionary containing refined goals. The `main` function demonstrates how to use the `GoalRefiner` class to refine Lumina's goals.

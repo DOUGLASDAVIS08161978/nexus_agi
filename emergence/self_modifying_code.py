@@ -133,4 +133,3 @@ if __name__ == '__main__':
     # Save the performance metrics to a file
     with open('performance_metrics.json', 'w') as f:
         json.dump(self_improving_code.performance_metrics, f)
-This code provides a framework for self-modifying code, allowing the AI to generate new modules, optimize existing ones, and evaluate their performance. The `SelfModifyingCode` class handles loading and updating modules, while the `CodeGenerator` class generates new code, the `CodeOptimizer` class optimizes existing code, and the `CodeEvaluator` class evaluates the performance of modules. The `SelfImprovingCode` class combines these features to enable self-improving code.

@@ -136,6 +136,3 @@ emulator.add_learner(learner)
 # Simulate mentorship
 print(emulator.simulate_mentorship(learner, "Python"))
 print(emulator.simulate_mentorship(learner, "Painting"))
-This Python code defines a mentorship emulator that allows an AI learner to learn from virtual mentors in various domains. The emulator consists of three classes: `Mentor`, `Learner`, and `MentorshipEmulator`. The `Mentor` class represents a virtual mentor with expertise in a specific domain, while the `Learner` class represents the AI learner seeking guidance. The `MentorshipEmulator` class simulates mentorship by allowing the learner to learn from a random mentor.
-
-In the example usage, we create two mentors with expertise in programming and art, respectively. We then create a learner and add it to the mentorship emulator along with the two mentors. Finally, we simulate mentorship by allowing the learner to learn from a random mentor on specific topics.

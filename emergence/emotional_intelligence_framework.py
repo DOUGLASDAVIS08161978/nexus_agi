@@ -156,16 +156,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-This code defines a framework for emotional intelligence that includes the following components:
-
-1.  **Data Loading**: The `load_data` method loads data from a CSV file.
-2.  **Data Preprocessing**: The `preprocess_data` method converts text to numerical values using a sentiment lexicon and one-hot encodes emotions.
-3.  **Data Splitting**: The `split_data` method splits the preprocessed data into training and testing sets.
-4.  **Data Scaling**: The `scale_data` method scales the training and testing data using StandardScaler.
-5.  **Dimensionality Reduction**: The `reduce_dimensions` method reduces the dimensions of the scaled data using PCA.
-6.  **Model Training**: The `train_model` method trains a model using the preprocessed data.
-7.  **Model Evaluation**: The `evaluate_model` method evaluates the trained model using accuracy score, classification report, and confusion matrix.
-8.  **Model Saving**: The `save_model` method saves the trained model to a file.
-9.  **Model Loading**: The `load_model` method loads a saved model from a file.
-10. **Emotion Prediction**: The `predict_emotion` method predicts the emotion of a given text.
-11. **Empathy Response**: The `empathize_with_emotion` method generates a response that empathizes with the given emotion.

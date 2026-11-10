@@ -129,4 +129,3 @@ if __name__ == "__main__":
     print("Accuracy:", accuracy)
     print("Classification Report:\n", report)
     print("Confusion Matrix:\n", matrix)
-This code defines a `CognitiveReflector` class that enables meta-cognitive abilities in a machine learning model. The class includes methods for training a model, evaluating its performance, reflecting on bias, adjusting the decision-making strategy, and getting the model's performance. The example usage demonstrates how to create a `CognitiveReflector` instance, train a model, reflect on bias, adjust the decision strategy, and get the model's performance.

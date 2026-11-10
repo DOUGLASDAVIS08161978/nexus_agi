@@ -56,4 +56,3 @@ print(integrate_emotional_intelligence(text_input))
 
 face_input = np.random.rand(100, 128)
 print(integrate_emotional_intelligence(face_input))
-This code integrates a module that enables Lumina to recognize, understand, and respond to emotional cues from users, fostering more empathetic and human-like interactions. It uses pre-trained models for sentiment analysis and facial expression recognition, and defines functions to recognize emotions from text and facial expressions, as well as respond to emotional cues. The example usage demonstrates how to use the `integrate_emotional_intelligence` function with text and facial input.

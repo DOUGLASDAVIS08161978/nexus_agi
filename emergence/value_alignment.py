@@ -96,4 +96,3 @@ if __name__ == "__main__":
     print("\nUpdated Aligned Goals and Values:")
     for goal, aligned_goal in aligned_goals.items():
         print(f"{goal}: {aligned_goal}")
-This module provides a basic implementation of value alignment for Lumina. It includes methods for aligning goals and values, evaluating actions based on aligned goals and values, and updating goals and values. The example usage demonstrates how to create an instance of the `ValueAlignment` class, align goals and values, evaluate an action, and update goals and values.

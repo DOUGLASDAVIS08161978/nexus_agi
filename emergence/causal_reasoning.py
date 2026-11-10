@@ -132,4 +132,3 @@ causal_reasoner.add_edge("A", "C")
 
 result = causal_reasoner.reason("A", "C")
 print(result)
-This code defines a `CausalReasoning` class that allows you to create a causal graph, add nodes and edges, and reason about the cause-and-effect relationships between nodes. The `reason` method returns a dictionary containing the causal relationship, the effect of the cause, the cause of the effect, and the probability of the effect given the cause.

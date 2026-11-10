@@ -126,4 +126,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-This code defines a framework for multimodal learning using PyTorch. It includes a custom dataset class for multimodal data, a multimodal model architecture, and functions for training and evaluating the model. The main function loads data, creates data loaders, and trains the model for a specified number of epochs.

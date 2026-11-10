@@ -70,4 +70,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This script defines a `SelfModifyingCodeGenerator` class that can generate new Python functions, modify existing functions, add import statements, and retrieve the generated or modified code. The `main` function demonstrates how to use the class to generate and modify code.

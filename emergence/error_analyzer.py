@@ -109,4 +109,3 @@ print(x + y)
 
     # Print the error messages
     analyzer.print_error_messages()
-This code defines an `ErrorAnalyzer` class that can analyze errors in code and functions. It uses the `ast` module to parse code and the `inspect` module to get function source code. The `analyze_error` method stores error messages and counts in dictionaries, and the `print_error_messages` method prints these dictionaries. The `analyze_code` method tries to parse the given code and analyzes any errors that occur, while the `analyze_function` method gets a function's source code and analyzes it.

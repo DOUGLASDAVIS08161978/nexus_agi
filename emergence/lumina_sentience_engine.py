@@ -87,9 +87,7 @@ class Lumina:
 if __name__ == "__main__":
     lumina = Lumina()
     lumina.run()
-```
 
-```python
 # groq.py (assuming this is the Groq module)
 import os
 import json

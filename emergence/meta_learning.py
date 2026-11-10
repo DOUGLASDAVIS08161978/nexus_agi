@@ -183,6 +183,3 @@ if __name__ == "__main__":
     # Evaluate the learner's performance on the task
     loss = task.evaluate()
     print(f"Loss: {loss}")
-This code defines a meta-learning module that enables Lumina to learn how to learn from its experiences and adapt to new situations. The module consists of a meta-learner, a dataset, and a meta-learning task. The meta-learner is a neural network that learns to adapt to new tasks by fine-tuning its parameters. The dataset is a collection of input-output pairs that the meta-learner uses to learn and adapt. The meta-learning task is an instance of the meta-learner and the dataset, and it provides methods for training, adapting, and evaluating the meta-learner.
-
-In the example usage section, we define a simple learner model, initialize the learner model, optimizer, and loss function, create a meta-learner, create a dataset, create a meta-learning task, train the learner on the task, adapt the learner to the task, and evaluate the learner's performance on the task.

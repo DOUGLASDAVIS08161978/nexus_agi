@@ -105,16 +105,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-This code defines a `ComplexityManager` class that analyzes the structure of a given code, builds a graph representing its structure, simplifies the code by removing nodes with low in-degree, optimizes the architecture by removing redundant nodes, and visualizes the graph using NetworkX and Matplotlib.
-
-The `analyze_code` method takes a string of code as input and builds a graph representing its structure using the Abstract Syntax Trees (ASTs) provided by the `ast` module.
-
-The `simplify_code` method simplifies the code by removing nodes with low in-degree, which can help reduce the complexity of the code.
-
-The `optimize_architecture` method optimizes the architecture by removing redundant nodes, which can help improve the performance of the code.
-
-The `visualize_graph` method visualizes the graph using NetworkX and Matplotlib, which can help identify complex relationships between nodes.
-
-The `main` function demonstrates how to use the `ComplexityManager` class to analyze, simplify, optimize, and visualize a sample code.
-
-Note that this code is a basic example and may need to be modified to suit the specific needs of your project.

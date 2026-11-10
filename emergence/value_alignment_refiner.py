@@ -100,4 +100,3 @@ feedback_data = [[1, 2, 3, 4, 5], [4, 5, 6, 7, 8], [7, 8, 9, 10, 11]]
 
 refiner = ValueAlignmentRefiner(human_values, lumina_values, feedback_data)
 refiner.refine_alignment()
-This code defines a `ValueAlignmentRefiner` class that enables Lumina to refine its value alignment with humans through iterative feedback and self-reflection. The class uses a neural network model to predict the alignment between Lumina's values and human values, and updates Lumina's values based on the feedback. The example usage demonstrates how to create an instance of the `ValueAlignmentRefiner` class and refine the alignment between Lumina's values and human values.

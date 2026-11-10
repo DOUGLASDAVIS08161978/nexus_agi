@@ -109,4 +109,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-This code defines a `Goal` class to represent individual goals, a `GoalSetting` class to set and prioritize goals, and a `main` function to demonstrate its usage. The `GoalSetting` class uses a simple alignment scoring system to prioritize goals based on their alignment with Lumina's values and preferences. The `main` function creates a `GoalSetting` instance, adds some goals, and prints the top priority goal.

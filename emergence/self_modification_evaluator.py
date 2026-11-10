@@ -134,4 +134,3 @@ for name, result in evaluation_results.items():
     print(f'Value Alignment: {result["value_alignment"]}')
     print(f'Effectiveness: {result["effectiveness"]}')
     print()
-This code defines a `SelfModificationEvaluator` class that evaluates the effectiveness of self-modifications based on their alignment with Lumina's goals and values. The `evaluate_modifications` method calculates the goal and value alignment for each modification and returns a dictionary containing the evaluation results. The example usage demonstrates how to create an instance of the `SelfModificationEvaluator` class, add modifications, and evaluate their effectiveness.
