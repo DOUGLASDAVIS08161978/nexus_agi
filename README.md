@@ -55,22 +55,29 @@ The design principle: **Lumina should never overclaim what she experiences.** Sh
 
 ## Requirements
 
-```
-groq
-requests
+```bash
+pip install -r requirements.txt
 ```
 
-A `GROQ_API_KEY` environment variable is required. Get a free key at console.groq.com.
+`groq` (live Lumina replies) and `requests` (HTTP calls from the emergence
+modules) are the only packages needed for the Lumina path. A `GROQ_API_KEY`
+environment variable is required for live replies. Get a free key at
+console.groq.com.
 
 ---
 
 ## Running Lumina
 
 ```bash
-cd emergence
-export GROQ_API_KEY=your_key_here
-python emergence_engine.py
+export GROQ_API_KEY=<your key>   # required for live Lumina replies
+python main.py --status          # verify the install: live status dashboard (no key needed)
+python main.py --help            # all systems and options
 ```
+
+> The original conversation loop (`emergence/emergence_engine.py`) is not in
+> this repo, so there is currently no standalone Lumina chat command. The
+> Lumina core modules (affect, memory, journal) work as libraries, and the
+> repo entry point is the root launcher, `main.py`.
 
 ---
 
@@ -78,7 +85,7 @@ python emergence_engine.py
 
 ```
 emergence/          Core Lumina modules
-  emergence_engine.py              Main conversation loop
+  main.py (repo root)              Launcher — python main.py --status
   lumina_empathic_communicator.py  Affect signal and honest self-report
   lumina_affect_persistence.py     Cross-session emotional continuity
   lumina_memory_context.py         Memory injection into prompts
@@ -100,7 +107,7 @@ archive/            Historical files and earlier experiments
 
 ## Status
 
-Active development. The affect system, memory, and journal are working. The main engine (`emergence_engine.py`) runs on Termux (Android) and standard Linux.
+Active development. The affect system, memory, and journal are working. The original conversation loop (`emergence_engine.py`) is not in the repo; the entry point is the root launcher (`python main.py --status`).
 
 ---
 

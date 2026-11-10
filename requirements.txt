@@ -1,0 +1,16 @@
+# Nexus AGI / Lumina — core dependencies
+# Install with: pip install -r requirements.txt
+
+# Live Lumina replies via the Groq API.
+# Imported by emergence/identity_journal.py (top level) and
+# emergence/lumina_empathic_communicator.py (lazy import in honest_self_report).
+groq
+
+# HTTP calls from the emergence modules (knowledge explorer, autonomous
+# modules, and others).
+requests
+
+# Only needed by IdentityJournal.analyze_growth() (lazy imports).
+# Uncomment if you use journal growth analysis:
+# nltk
+# scikit-learn

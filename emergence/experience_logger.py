@@ -93,6 +93,14 @@ class ExperienceLogger:
         all_exp = self._load()
         return [e for e in all_exp if e["reflection"] is None][-n:]
 
+    def get_by_id(self, experience_id):
+        """Return an experience by its ID."""
+        all_exp = self._load()
+        for exp in all_exp:
+            if exp["id"] == experience_id:
+                return exp
+        return None
+
     def get_all(self):
         """
         Return all experiences.
@@ -130,55 +138,6 @@ class ExperienceLogger:
         """
         with open(self.experiences_file, "w") as f:
             json.dump(data, f, indent=2)
-
-    def contextualize_input(self, input_text):
-        """
-        Use a transformer-based model for contextualization of the input text.
-
-        Args:
-            input_text (str): The input text to be contextualized.
-
-        Returns:
-            torch.Tensor: The contextualized input.
-        """
-        model_name = 'distilbert-base-uncased'
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        inputs = tokenizer(input_text, return_tensors='pt')
-        outputs = model(**inputs)
-        return outputs.logits
-
-    def analyze_experience(self, experience):
-        """
-        Analyze an experience using contextualization.
-
-        Args:
-            experience (dict): The experience to be analyzed.
-
-        Returns:
-            dict: The analyzed experience with contextualized input.
-        """
-        human_input = experience["human_input"]
-        contextualized_input = self.contextualize_input(human_input)
-        experience["contextualized_input"] = contextualized_input
-        return experience
-
-    def analyze_experiences(self, experiences):
-        """
-        Analyze a list of experiences using contextualization.
-
-        Args:
-            experiences (list): The list of experiences to be analyzed.
-
-        Returns:
-            list: The list of analyzed experiences with contextualized input.
-        """
-        analyzed_experiences = []
-        for experience in experiences:
-            analyzed_experience = self.analyze_experience(experience)
-            analyzed_experiences.append(analyzed_experience)
-        return analyzed_experiences
-
 
 def main():
     experience_logger = ExperienceLogger()
