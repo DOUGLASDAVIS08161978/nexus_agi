@@ -64,6 +64,11 @@ modules) are the only packages needed for the Lumina path. A `GROQ_API_KEY`
 environment variable is required for live replies. Get a free key at
 console.groq.com.
 
+The Nexus Core demo (`python main.py`, the default) needs the optional
+packages listed at the bottom of `requirements.txt` (torch, transformers,
+and friends); without them it reports the missing package instead of
+running.
+
 ---
 
 ## Running Lumina

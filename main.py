@@ -130,7 +130,33 @@ def main() -> int:
                 nexus_service.main()
             else:
                 print("  Running Nexus Core demonstration...\n")
-                import nexus_agi  # noqa: F401
+                from nexus_agi import MetaAlgorithm_NexusCore
+
+                core = MetaAlgorithm_NexusCore()
+                problem = {
+                    "title": "Clean Water Access",
+                    "type": "complex_adaptive_system",
+                    "domain_knowledge": {
+                        "hydrology": "Groundwater recharge, rainfall patterns, and aquifer capacity.",
+                        "economics": "Cost of wells, filtration, and distribution networks.",
+                        "social_policy": "Community governance of shared water resources.",
+                    },
+                    "stakeholders": ["local_communities", "farmers", "future_generations"],
+                }
+                constraints = {
+                    "equity": 0.9,
+                    "implementation_cost": 0.6,
+                    "time_horizon": 10,
+                }
+                print("  Generating solution...\n")
+                solution = core.solve_complex_problem(problem, constraints)
+                print("  SOLUTION SUMMARY")
+                print(f"  Problem: {solution['problem']}")
+                print(f"  Approach: {solution['approach']}")
+                print(f"  Subproblems identified: {len(solution['subproblems'])}")
+                print("  Constraint satisfaction:")
+                for constraint, details in solution["constraints_satisfied"].items():
+                    print(f"    - {constraint}: {details['satisfaction_rate']:.2f}")
 
         # ── OMEGA ASI ─────────────────────────────────────────────────────
         elif args.system == "omega":

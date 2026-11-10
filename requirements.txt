@@ -14,3 +14,16 @@ requests
 # Uncomment if you use journal growth analysis:
 # nltk
 # scikit-learn
+
+# Optional — Nexus Core demo (python main.py, python -m nexus_agi).
+# The core module (nexus_agi.py) needs these heavy packages; the Lumina
+# path above does not. Uncomment to run the core demo:
+# numpy
+# torch
+# transformers
+# networkx
+# scikit-learn
+# matplotlib
+# scipy
+# pandas
+# joblib
