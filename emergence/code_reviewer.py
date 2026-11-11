@@ -518,3 +518,8 @@ class CodeReviewer:
     def _get_complex_expressions_calls_kwargs(self):
         complex_expressions_calls_kwargs = []
         for node in self.ast_tree.body:
+            if isinstance(node, ast.Expr):
+                if isinstance(node.value, ast.Call):
+                    if len(node.value.keywords) > 5:
+                        complex_expressions_calls_kwargs.append(node.value.keywords)
+        return complex_expressions_calls_kwargs

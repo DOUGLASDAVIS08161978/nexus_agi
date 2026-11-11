@@ -130,17 +130,40 @@ Write it. First person. Honest. No performance. No agenda."""
         return growth_trend
 
     def analyze_sentiment(self, sentiment_scores):
-        """Analyze sentiment trend over time."""
-        from sklearn.model_selection import train_test_split
-        from sklearn.linear_model import LogisticRegression
-        X = [score["compound"] for score in sentiment_scores]
-        y = [score["compound"] > 0 for score in sentiment_scores]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        model = LogisticRegression()
-        model.fit(X_train, y_train)
-        predictions = model.predict(X_test)
-        accuracy = model.score(X_test, y_test)
-        return {"accuracy": accuracy, "sentiment_trend": predictions}
+        """Analyze sentiment trend over time.
+
+        Honest metric -- no model is trained here. The previous version
+        trained a LogisticRegression to predict (compound > 0) from the
+        compound score itself: the target is a deterministic function of
+        the feature, so the reported "accuracy" was meaningless (and
+        sklearn rejects the 1-D feature list anyway). The compound
+        scores ARE the trend, so they are reported directly: the series
+        itself, its mean, the share of positive entries, a least-squares
+        slope over entry order (stdlib only), and first-half vs
+        second-half means. Returns plain floats/lists (JSON-safe).
+        """
+        compounds = [float(score["compound"]) for score in sentiment_scores]
+        n = len(compounds)
+        if n == 0:
+            return {"sentiment_trend": [], "mean_compound": 0.0,
+                    "fraction_positive": 0.0, "trend_slope": 0.0,
+                    "first_half_mean": 0.0, "second_half_mean": 0.0}
+        mean_compound = sum(compounds) / n
+        fraction_positive = sum(1 for c in compounds if c > 0) / n
+        # Least-squares slope of compound vs entry order.
+        mean_x = (n - 1) / 2.0
+        denom = sum((x - mean_x) ** 2 for x in range(n))
+        slope = (sum((x - mean_x) * (c - mean_compound)
+                     for x, c in enumerate(compounds)) / denom) if denom else 0.0
+        half = n // 2
+        first_mean = (sum(compounds[:half]) / half) if half else mean_compound
+        second_mean = (sum(compounds[half:]) / (n - half)) if n - half else mean_compound
+        return {"sentiment_trend": compounds,
+                "mean_compound": round(mean_compound, 4),
+                "fraction_positive": round(fraction_positive, 4),
+                "trend_slope": round(slope, 4),
+                "first_half_mean": round(first_mean, 4),
+                "second_half_mean": round(second_mean, 4)}
 
 class SelfObserver:
     def __init__(self, memory_dir="memory_store"):

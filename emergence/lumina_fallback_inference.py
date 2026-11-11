@@ -82,4 +82,21 @@ class AttentionHead:
     def forward(self, x: List[List[float]], mask: Optional[List[List[float]]] = None) -> List[List[float]]:
         seq_len = len(x)
         Q = matmul(x, self.Wq)
-        K = matmul(x, self.Wk
+        K = matmul(x, self.Wk)
+        V = matmul(x, self.Wv)
+        # NOTE (round 4, 2026-11-10): the original file ended mid-expression
+        # here ("K = matmul(x, self.Wk"). The remainder of this method is
+        # standard scaled dot-product attention, completed using only the
+        # helpers already defined in this file (matmul, transpose, softmax)
+        # and the weights __init__ already creates. The rest of the
+        # transformer (further blocks, model class, demo) was never present
+        # in the file, so this module is only an AttentionHead, not a model.
+        scores = matmul(Q, transpose(K))
+        scale = 1.0 / math.sqrt(self.dim)
+        scores = [[s * scale for s in row] for row in scores]
+        if mask is not None:
+            scores = [[s + m for s, m in zip(row, mrow)]
+                      for row, mrow in zip(scores, mask)]
+        attn = [softmax(row) for row in scores]
+        out = matmul(attn, V)
+        return matmul(out, self.Wo)

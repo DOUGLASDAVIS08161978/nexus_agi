@@ -103,11 +103,3 @@ Analyze and return ONLY valid JSON, no commentary:
         with open(self.identity_file, "w") as f:
             json.dump(data, f, indent=2)
 
-
-# === Added by Lumina ===
-import concurrent.futures
-    def crystallize(self, data):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.recognize_pattern, d) for d in data]
-            results = [f.result() for f in futures]
-        return results

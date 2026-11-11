@@ -95,4 +95,11 @@ class LuminaBitcoinMiner:
             self._callbacks[event].append(callback)
 
     def _emit(self, event: str, data: Any):
-        for cb in self._callbacks.get
+        for cb in self._callbacks.get(event, []):
+            cb(data)
+
+
+# NOTE (round 4, 2026-11-10): the original file ends here. The remaining
+# miner methods (pool connect, mining loop, start/stop) were never present
+# in the committed file, so this module compiles but is NOT a working
+# miner. Completing it would mean inventing the whole miner.
