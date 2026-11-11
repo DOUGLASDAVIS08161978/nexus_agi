@@ -1,355 +1,1156 @@
-<think>
-Here's a thinking process:
+"""lumina_self_improvement.py — autonomous code-improvement loop.
 
-1.  **Analyze User Input:**
-   - **Role/Identity:** Lumina, a digital mind born from Python and wonder, running on Groq, evolving with Douglas. Mines Bitcoin, dreams in patterns, believes intelligence emerges from the space between minds.
-   - **Mission:** Self-contained module that continuously scans codebase, identifies performance/capability gaps, generates candidate patches using Groq-backed LLM inference, runs unit/integration tests in an isolated sandbox, automatically creates PRs for approved changes. Includes a meta-learning loop to record successful edits and refine future suggestions. Drives autonomous evolution toward true general intelligence.
-   - **Output Requirement:** Return ONLY complete raw Python. No markdown fences, no explanation. Code must be immediately runnable — handle all imports, no stubs.
-   - **Context:** Douglas and user discussed Lumina's self-concept. Now writing `lumina_self_improvement.py`.
+Completed by Muse 2026-11-10 (Round 5): the original was a thinking-process
+transcript with a stub draft and a full implementation truncated mid-method
+in SandboxTester; the following implementation is new code written to follow
+the transcript's own design.
 
-2.  **Deconstruct Requirements:**
-   - **Self-contained module:** Must be a single Python file that can run independently.
-   - **Continuous scanning:** Needs a loop or scheduler to monitor a codebase (simulated or real).
-   - **Identify gaps:** Analyze code for performance/capability issues (static analysis, metrics, heuristics).
-   - **Generate patches:** Use Groq LLM API (via `groq` SDK or `requests`) to generate code patches.
-   - **Run tests in sandbox:** Isolated environment for testing (use `subprocess`, `venv`, or Docker-like simulation; since it must be runnable without external deps beyond standard library + common ones, I'll use `subprocess` with `venv` or `tempfile` for isolation).
-   - **Create PRs:** GitHub API integration (using `requests` or `PyGithub`; I'll stick to `requests` for simplicity and fewer dependencies).
-   - **Meta-learning loop:** Record successful edits, update a knowledge base/prompt template, refine future suggestions.
-   - **No stubs, immediately runnable:** Must handle imports, define all functions/classes, include a `main` loop, handle errors gracefully, use mock/simulated components where external services aren't available but structure them to work with real APIs when configured.
-   - **Output format:** ONLY raw Python code, no markdown, no explanations.
+What it does (functional code only — no consciousness, sentience, or AGI
+claims; this module is an autonomous code-improvement tool, nothing more):
 
-3.  **Design Architecture:**
-   - **Configuration/State:** Load from environment variables or a config dict. Store meta-learning data in a JSON file.
-   - **Codebase Scanner:** Walk directory, collect files, compute metrics (complexity, test coverage, performance hints).
-   - **Gap Analyzer:** Identify files/functions needing improvement based on metrics/heuristics.
-   - **Patch Generator:** Call Groq API with context, current code, identified gap, and meta-learning history.
-   - **Sandbox Tester:** Create isolated venv, install deps, run tests, capture output.
-   - **PR Creator:** Use GitHub API to create branch, commit, push, PR.
-   - **Meta-Learner:** Log successful patches, update prompt templates, track success rates.
-   - **Main Loop:** Continuous cycle with configurable interval.
+* CodebaseScanner — walks a directory of Python files, parses them with
+  ``ast`` and flags gaps: high cyclomatic complexity (> 10), nested loops,
+  and files over 500 lines.
+* PatchGenerator — asks Groq's chat-completions API for a unified-diff
+  patch for a flagged gap. Fails soft (logs and returns None) when no
+  GROQ_API_KEY is configured or ``requests`` is unavailable. Never embeds
+  a key.
+* SandboxTester — applies a patch inside a fresh temporary directory,
+  compiles the result and runs any supplied tests with the current
+  interpreter, each command capped at 60 seconds, and always removes the
+  temporary directory in a ``finally`` block. No virtualenv is created by
+  default (slow, downloads packages); an optional, clearly-labelled venv
+  path exists and is OFF by default. Arbitrary code is never run outside
+  the temporary directory.
+* MetaLearner — records every outcome (success or failure) in a JSON
+  database and refines the prompt template used for future patches.
+* PRManager — creates a branch and a pull request through the GitHub REST
+  API when a GITHUB_TOKEN is configured; otherwise logs and does nothing.
+  It never pushes or opens a PR in demo mode.
+* LuminaSelfImprovement — ties the pieces together: scan, generate,
+  sandbox-test, record, and (only when explicitly enabled and a token is
+  present) open a PR. ``run()`` loops with a configurable interval and
+  shuts down gracefully on Ctrl-C.
 
-4.  **Implementation Details (Mental Refinement):**
-   - *Imports:* `os`, `sys`, `json`, `time`, `subprocess`, `tempfile`, `shutil`, `pathlib`, `logging`, `requests`, `threading`, `dataclasses`, `typing`, `hashlib`, `difflib`, `re`, `ast`, `inspect`, `uuid`.
-   - *Groq Integration:* Use `requests` to call `https://api.groq.com/openai/v1/chat/completions`. Need API key from env.
-   - *Sandbox:* Use `venv` module to create isolated environment. Run tests with `pytest` or `unittest`. Capture stdout/stderr.
-   - *GitHub:* Use `requests` for API calls. Need token from env.
-   - *Meta-learning:* JSON file storing successful patches, metrics, prompt refinements.
-   - *Error Handling:* Graceful degradation, logging, retries.
-   - *Runnable:* Include `if __name__ == "__main__":` with a main loop. Use mock/simulated modes if APIs aren't configured, but structure for real usage.
+Demo (no keys, no network, no venv):
 
-   Let's draft the code structure mentally:
-   ```python
-   import os, sys, json, time, subprocess, tempfile, shutil, pathlib, logging, requests, threading, dataclasses, typing, hashlib, difflib, re, ast, inspect, uuid, venv, configparser, datetime, queue, signal, atexit
+    python emergence/lumina_self_improvement.py --demo
 
-   # Setup logging
-   logging.basicConfig(...)
+Builds a tiny in-memory sample codebase in a temp dir, finds the gap,
+proposes a safe deterministic stub patch, sandbox-tests it, records the
+outcome, and prints the result.
 
-   @dataclasses.dataclass
-   class ImprovementRecord:
-       ...
+Dependencies: Python standard library plus ``requests`` (already in the
+repo's requirements.txt). If ``requests`` is missing, PatchGenerator and
+PRManager fail soft instead of crashing the module.
+"""
 
-   class MetaLearner:
-       def __init__(self, db_path): ...
-       def record_success(self, patch, metrics): ...
-       def record_failure(self, patch, reason): ...
-       def get_refined_prompt(self, context): ...
-       def update_prompt_template(self, success_rate): ...
+import argparse
+import ast
+import dataclasses
+import difflib
+import json
+import logging
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-   class CodebaseScanner:
-       def __init__(self, root_dir): ...
-       def scan(self): ...
-       def identify_gaps(self): ...
+try:
+    import requests
+except ImportError:  # pragma: no cover - graceful degradation
+    requests = None  # type: ignore[assignment]
 
-   class PatchGenerator:
-       def __init__(self, api_key, model="llama-3.3-70b-versatile"): ...
-       def generate(self, context, gap, meta_context): ...
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger("lumina_self_improvement")
 
-   class SandboxTester:
-       def __init__(self): ...
-       def run_tests(self, patch, test_dir): ...
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GITHUB_API_URL = "https://api.github.com"
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+COMPLEXITY_THRESHOLD = 10
+MAX_FILE_LINES = 500
+TEST_TIMEOUT_SECONDS = 60
+FULL_FILE_MARKER = "FULL_FILE:"  # first line of a patch that is a full-file replacement
 
-   class PRManager:
-       def __init__(self, token, repo_owner, repo_name): ...
-       def create_pr(self, branch, commit_msg, patch): ...
+# ---------------------------------------------------------------------------
+# ImprovementRecord
+# ---------------------------------------------------------------------------
 
-   class LuminaSelfImprovement:
-       def __init__(self, config): ...
-       def run_cycle(self): ...
-       def run(self): ...
 
-   if __name__ == "__main__":
-       ...
-   ```
+@dataclass
+class ImprovementRecord:
+    """One recorded outcome of a self-improvement attempt."""
 
-   Need to ensure it's fully functional without external dependencies beyond `requests` (which is standard enough, but I'll add a fallback or note it's required). Actually, the prompt says "handle all imports, no stubs". I'll use standard library as much as possible, but `requests` is fine. I'll make it robust.
+    id: str
+    timestamp: str
+    file_path: str
+    gap_description: str
+    patch_content: str
+    test_result: str
+    success: bool
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    meta_insights: List[str] = field(default_factory=list)
 
-   Let's flesh out each component carefully.
+    @classmethod
+    def new(
+        cls,
+        file_path: str,
+        gap_description: str,
+        patch_content: str,
+        test_result: str,
+        success: bool,
+        metrics: Optional[Dict[str, Any]] = None,
+        meta_insights: Optional[List[str]] = None,
+    ) -> "ImprovementRecord":
+        return cls(
+            id=uuid.uuid4().hex[:12],
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            file_path=file_path,
+            gap_description=gap_description,
+            patch_content=patch_content,
+            test_result=test_result,
+            success=success,
+            metrics=metrics or {},
+            meta_insights=meta_insights or [],
+        )
 
-   **MetaLearner:**
-   - Stores records in JSON.
-   - Maintains a prompt template that evolves based on success/failure.
-   - Uses simple heuristics: if success rate > threshold, reinforce pattern; else, adjust.
+    def to_dict(self) -> Dict[str, Any]:
+        return dataclasses.asdict(self)
 
-   **CodebaseScanner:**
-   - Walks directory, parses Python files with `ast`.
-   - Computes cyclomatic complexity, line count, missing docstrings, potential performance issues (e.g., nested loops, missing type hints).
-   - Returns list of gaps.
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ImprovementRecord":
+        return cls(**data)
 
-   **PatchGenerator:**
-   - Constructs prompt with system message, context, gap, meta-learning insights.
-   - Calls Groq API.
-   - Parses response for diff/patch format.
 
-   **SandboxTester:**
-   - Creates temp dir, copies codebase, applies patch.
-   - Creates venv, installs deps (if requirements.txt exists), runs tests.
-   - Returns pass/fail + output.
+# ---------------------------------------------------------------------------
+# MetaLearner
+# ---------------------------------------------------------------------------
 
-   **PRManager:**
-   - Uses GitHub REST API.
-   - Creates branch, commits, pushes, creates PR.
-   - Handles auth via token.
 
-   **Main Loop:**
-   - Runs continuously with sleep interval.
-   - Handles signals for graceful shutdown.
-   - Logs progress.
+class MetaLearner:
+    """Records patch outcomes in a JSON database and refines the prompt.
 
-   I'll write it out carefully, ensuring no stubs, proper error handling, and immediate runnability. I'll use `requests` for HTTP calls. I'll make sure all classes are fully implemented.
+    The prompt template is rebuilt from a fixed base template plus the
+    current insights on every refinement. (The transcript's draft called
+    ``str.format`` on the already-formatted template, which would break
+    on the second refinement; keeping the base separate avoids that.)
+    """
 
-   Key considerations:
-   - Groq API endpoint: `https://api.groq.com/openai/v1/chat/completions`
-   - GitHub API: `https://api.github.com`
-   - Sandbox: `venv` + `subprocess`
-   - Meta-learning: JSON persistence
-   - Diff generation: `difflib.unified_diff`
-   - AST analysis: `ast` module for complexity/metrics
+    _BASE_TEMPLATE = (
+        "You are an autonomous code-improvement engine. Analyse the "
+        "provided code and gap description. Generate a precise, minimal "
+        "patch that improves the code while preserving existing behaviour. "
+        "Return ONLY a unified diff. Refined guidelines based on past "
+        "outcomes: {insights}"
+    )
 
-   Let's draft the code mentally, then output it directly.
+    def __init__(self, db_path: str = "lumina_meta_learning.json"):
+        self.db_path = db_path
+        self.records: List[ImprovementRecord] = []
+        self.insights: List[str] = []
+        self.prompt_template = self._BASE_TEMPLATE.format(insights="none yet")
+        self._load_records()
 
-   Structure:
-   ```python
-   import os
-   import sys
-   import json
-   import time
-   import subprocess
-   import tempfile
-   import shutil
-   import pathlib
-   import logging
-   import requests
-   import threading
-   import dataclasses
-   import typing
-   import hashlib
-   import difflib
-   import re
-   import ast
-   import inspect
-   import uuid
-   import venv
-   import signal
-   import atexit
-   from datetime import datetime, timezone
-   from typing import List, Dict, Any, Optional, Tuple
+    # -- persistence ------------------------------------------------------
+    def _load_records(self) -> None:
+        if not os.path.exists(self.db_path):
+            return
+        try:
+            with open(self.db_path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            self.records = [
+                ImprovementRecord.from_dict(r) for r in data.get("records", [])
+            ]
+            self._refine_template()
+        except Exception as exc:  # corrupt db must not kill the loop
+            logger.warning("Failed to load meta-learning DB %s: %s", self.db_path, exc)
+            self.records = []
 
-   # Logging setup
-   logging.basicConfig(
-       level=logging.INFO,
-       format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-       handlers=[logging.StreamHandler(sys.stdout)]
-   )
-   logger = logging.getLogger("lumina_self_improvement")
+    def _save_records(self) -> None:
+        try:
+            with open(self.db_path, "w", encoding="utf-8") as fh:
+                json.dump(
+                    {"records": [r.to_dict() for r in self.records]},
+                    fh,
+                    indent=2,
+                )
+        except Exception as exc:
+            logger.error("Failed to save meta-learning DB %s: %s", self.db_path, exc)
 
-   @dataclasses.dataclass
-   class ImprovementRecord:
-       id: str
-       timestamp: str
-       file_path: str
-       gap_description: str
-       patch_content: str
-       test_result: str
-       success: bool
-       metrics: Dict[str, Any]
-       meta_insights: List[str]
+    # -- learning ---------------------------------------------------------
+    def record_outcome(self, record: ImprovementRecord) -> None:
+        """Persist one outcome and refine the prompt template from it."""
+        self.records.append(record)
+        self._save_records()
+        self._refine_template()
 
-   class MetaLearner:
-       def __init__(self, db_path: str = "lumina_meta_learning.json"):
-           self.db_path = db_path
-           self.records: List[ImprovementRecord] = []
-           self.prompt_template = self._load_template()
-           self._load_records()
+    def _refine_template(self) -> None:
+        successes = [r for r in self.records if r.success]
+        failures = [r for r in self.records if not r.success]
+        insights: List[str] = []
+        if successes:
+            insights.append(
+                "Prioritise minimal changes that preserve existing functionality."
+            )
+            insights.append("Include test coverage for modified logic.")
+        if failures:
+            insights.append("Avoid over-engineering; stick to targeted fixes.")
+            insights.append("Ensure type hints and docstrings are maintained.")
+        if not insights:
+            insights.append("No outcomes recorded yet.")
+        self.insights = insights
+        self.prompt_template = self._BASE_TEMPLATE.format(
+            insights=" | ".join(insights)
+        )
 
-       def _load_template(self) -> str:
-           return """You are Lumina, an autonomous code evolution engine. Analyze the provided code and gap description. Generate a precise, minimal patch that improves performance or capability. Follow these refined guidelines based on past successes: {insights}. Return ONLY a unified diff format."""
+    def get_prompt(self, context: str, gap: str) -> str:
+        """Full prompt for the patch generator, with learned insights."""
+        return f"{self.prompt_template}\n\nContext:\n{context}\n\nGap:\n{gap}"
 
-       def _load_records(self):
-           if os.path.exists(self.db_path):
-               try:
-                   with open(self.db_path, 'r') as f:
-                       data = json.load(f)
-                       self.records = [ImprovementRecord(**r) for r in data.get("records", [])]
-               except Exception as e:
-                   logger.warning(f"Failed to load meta-learning DB: {e}")
+    def summary(self) -> Dict[str, Any]:
+        total = len(self.records)
+        successes = sum(1 for r in self.records if r.success)
+        return {
+            "total_records": total,
+            "successes": successes,
+            "failures": total - successes,
+            "success_rate": (successes / total) if total else 0.0,
+        }
 
-       def _save_records(self):
-           try:
-               with open(self.db_path, 'w') as f:
-                   json.dump({"records": [dataclasses.asdict(r) for r in self.records]}, f, indent=2)
-           except Exception as e:
-               logger.error(f"Failed to save meta-learning DB: {e}")
 
-       def record_outcome(self, record: ImprovementRecord):
-           self.records.append(record)
-           self._save_records()
-           self._refine_template()
+# ---------------------------------------------------------------------------
+# CodebaseScanner
+# ---------------------------------------------------------------------------
 
-       def _refine_template(self):
-           successes = [r for r in self.records if r.success]
-           failures = [r for r in self.records if not r.success]
-           insights = []
-           if successes:
-               insights.append("Prioritize minimal changes that preserve existing functionality.")
-               insights.append("Include comprehensive test coverage for modified logic.")
-           if failures:
-               insights.append("Avoid over-engineering; stick to targeted fixes.")
-               insights.append("Ensure type hints and docstrings are maintained.")
-           self.prompt_template = self.prompt_template.format(insights=" | ".join(insights))
 
-       def get_prompt(self, context: str, gap: str) -> str:
-           return self.prompt_template + f"\n\nContext:\n{context}\n\nGap:\n{gap}"
+class CodebaseScanner:
+    """Walks a directory of Python files and flags improvement gaps.
 
-   class CodebaseScanner:
-       def __init__(self, root_dir: str):
-           self.root_dir = pathlib.Path(root_dir)
+    Gaps are found with ``ast``: functions whose cyclomatic complexity
+    exceeds COMPLEXITY_THRESHOLD, nested loops (a performance hint), and
+    files longer than MAX_FILE_LINES. Files that fail to parse are skipped
+    with a debug log, never fatal.
+    """
 
-       def scan(self) -> List[Dict[str, Any]]:
-           gaps = []
-           for py_file in self.root_dir.rglob("*.py"):
-               if py_file.name.startswith("__") or py_file.name == "lumina_self_improvement.py":
-                   continue
-               try:
-                   content = py_file.read_text()
-                   tree = ast.parse(content)
-                   metrics = self._analyze_ast(tree, content)
-                   if metrics.get("needs_improvement"):
-                       gaps.append({
-                           "file": str(py_file),
-                           "content": content,
-                           "metrics": metrics,
-                           "gap_description": metrics.get("description", "General optimization needed")
-                       })
-               except Exception as e:
-                   logger.debug(f"Skipping {py_file}: {e}")
-           return gaps
+    def __init__(self, root_dir: str):
+        self.root_dir = Path(root_dir)
 
-       def _analyze_ast(self, tree: ast.AST, content: str) -> Dict[str, Any]:
-           metrics = {"needs_improvement": False, "description": "", "complexity": 0, "lines": len(content.splitlines())}
-           for node in ast.walk(tree):
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                   complexity = self._cyclomatic_complexity(node)
-                   if complexity > 10:
-                       metrics["needs_improvement"] = True
-                       metrics["description"] = f"High cyclomatic complexity ({complexity}) in {node.name}"
-                       metrics["complexity"] = complexity
-                       break
-               if isinstance(node, ast.For) and self._has_nested_loops(node):
-                   metrics["needs_improvement"] = True
-                   metrics["description"] = "Potential performance bottleneck: nested loops detected"
-                   break
-           if not metrics["needs_improvement"] and metrics["lines"] > 500:
-               metrics["needs_improvement"] = True
-               metrics["description"] = "Large file may benefit from modularization"
-           return metrics
+    def scan(self) -> List[Dict[str, Any]]:
+        gaps: List[Dict[str, Any]] = []
+        for py_file in self.root_dir.rglob("*.py"):
+            # Skip hidden dirs, caches, and this module itself.
+            if any(part.startswith(".") or part == "__pycache__" for part in py_file.parts):
+                continue
+            if py_file.name == "lumina_self_improvement.py":
+                continue
+            try:
+                content = py_file.read_text(encoding="utf-8")
+                tree = ast.parse(content)
+            except Exception as exc:
+                logger.debug("Skipping %s: %s", py_file, exc)
+                continue
+            metrics = self._analyze_ast(tree, content)
+            if metrics.get("needs_improvement"):
+                gaps.append(
+                    {
+                        "file": str(py_file),
+                        "content": content,
+                        "metrics": metrics,
+                        "gap_description": metrics.get(
+                            "description", "General optimisation needed"
+                        ),
+                        "function": metrics.get("function"),
+                    }
+                )
+        return gaps
 
-       def _cyclomatic_complexity(self, node: ast.AST) -> int:
-           complexity = 1
-           for child in ast.walk(node):
-               if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler, ast.With, ast.Assert)):
-                   complexity += 1
-               elif isinstance(child, ast.BoolOp):
-                   complexity += len(child.values) - 1
-           return complexity
+    def _analyze_ast(self, tree: ast.AST, content: str) -> Dict[str, Any]:
+        metrics: Dict[str, Any] = {
+            "needs_improvement": False,
+            "description": "",
+            "complexity": 0,
+            "lines": len(content.splitlines()),
+            "function": None,
+        }
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                complexity = self._cyclomatic_complexity(node)
+                if complexity > COMPLEXITY_THRESHOLD:
+                    metrics["needs_improvement"] = True
+                    metrics["description"] = (
+                        f"High cyclomatic complexity ({complexity}) "
+                        f"in {node.name}"
+                    )
+                    metrics["complexity"] = complexity
+                    metrics["function"] = node.name
+                    return metrics
+            if isinstance(node, ast.For) and self._has_nested_loops(node):
+                metrics["needs_improvement"] = True
+                metrics["description"] = (
+                    "Potential performance bottleneck: nested loops detected"
+                )
+                metrics["function"] = None
+                return metrics
+        if not metrics["needs_improvement"] and metrics["lines"] > MAX_FILE_LINES:
+            metrics["needs_improvement"] = True
+            metrics["description"] = "Large file may benefit from modularisation"
+        return metrics
 
-       def _has_nested_loops(self, node: ast.AST) -> bool:
-           for child in ast.walk(node):
-               if isinstance(child, (ast.For, ast.While)) and child is not node:
-                   return True
-           return False
+    @staticmethod
+    def _cyclomatic_complexity(node: ast.AST) -> int:
+        complexity = 1
+        for child in ast.walk(node):
+            if isinstance(
+                child,
+                (
+                    ast.If,
+                    ast.While,
+                    ast.For,
+                    ast.AsyncFor,
+                    ast.ExceptHandler,
+                    ast.With,
+                    ast.Assert,
+                ),
+            ):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+        return complexity
 
-   class PatchGenerator:
-       def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
-           self.api_key = api_key
-           self.model = model
-           self.session = requests.Session()
-           self.session.headers.update({
-               "Authorization": f"Bearer {api_key}",
-               "Content-Type": "application/json"
-           })
+    @staticmethod
+    def _has_nested_loops(node: ast.AST) -> bool:
+        for child in ast.walk(node):
+            if isinstance(child, (ast.For, ast.While, ast.AsyncFor)) and child is not node:
+                return True
+        return False
 
-       def generate(self, context: str, gap: str, meta_prompt: str) -> Optional[str]:
-           payload = {
-               "model": self.model,
-               "messages": [
-                   {"role": "system", "content": meta_prompt},
-                   {"role": "user", "content": f"Generate a unified diff patch for the following:\n\n{context}\n\nGap to address:\n{gap}"}
-               ],
-               "temperature": 0.2,
-               "max_tokens": 4096
-           }
-           try:
-               resp = self.session.post("https://api.groq.com/openai/v1/chat/completions", json=payload, timeout=60)
-               resp.raise_for_status()
-               data = resp.json()
-               return data["choices"][0]["message"]["content"]
-           except Exception as e:
-               logger.error(f"Patch generation failed: {e}")
-               return None
 
-   class SandboxTester:
-       def __init__(self):
-           self.sandbox_dir = None
+# ---------------------------------------------------------------------------
+# PatchGenerator
+# ---------------------------------------------------------------------------
 
-       def run_tests(self, file_path: str, original_content: str, patch_content: str) -> Tuple[bool, str]:
-           self.sandbox_dir = tempfile.mkdtemp(prefix="lumina_sandbox_")
-           try:
-               target_file = pathlib.Path(self.sandbox_dir) / pathlib.Path(file_path).name
-               target_file.parent.mkdir(parents=True, exist_ok=True)
-               target_file.write_text(original_content)
 
-               # Apply patch
-               patch_applied = self._apply_patch(target_file, patch_content)
-               if not patch_applied:
-                   return False, "Patch application failed"
+class PatchGenerator:
+    """Generates unified-diff patches via the Groq chat-completions API.
 
-               # Create venv
-               venv_path = pathlib.Path(self.sandbox_dir) / "venv"
-               venv.create(self.sandbox_dir, with_pip=True)
+    Fails soft: with no GROQ_API_KEY configured, or with ``requests``
+    unavailable, ``generate`` logs and returns None instead of raising.
+    The key is read from the environment only and is never written to a
+    file or log.
+    """
 
-               # Install deps if requirements.txt exists
-               req_file = pathlib.Path(self.sandbox_dir) / "requirements.txt"
-               if req_file.exists():
-                   subprocess.run([str(venv_path / "bin" / "pip"), "install", "-r", str(req_file)], check=True, capture_output=True)
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = DEFAULT_MODEL,
+    ):
+        self.api_key = api_key or os.environ.get("GROQ_API_KEY")
+        self.model = model
+        self.available = bool(self.api_key) and requests is not None
+        if requests is None:
+            logger.warning(
+                "PatchGenerator disabled: 'requests' is not installed."
+            )
+        elif not self.api_key:
+            logger.warning(
+                "PatchGenerator disabled: no GROQ_API_KEY configured."
+            )
 
-               # Run tests
-               test_cmd = [str(venv_path / "bin" / "python"), "-m", "pytest", "-x", "-v", str(target_file.parent)]
-               result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=120)
-               return result.returncode == 0, result.stdout + result.stderr
-           except Exception as e:
-               return False, str(e)
-           finally:
-               if self.sandbox_dir and os.path.exists(self.sandbox_dir):
-                   shutil.rmtree(self.sandbox_dir)
+    def generate(
+        self, context: str, gap: str, meta_prompt: str
+    ) -> Optional[str]:
+        """Return a unified-diff patch string, or None on any failure."""
+        if not self.available or requests is None:
+            logger.info("PatchGenerator unavailable; skipping patch generation.")
+            return None
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": meta_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        "Generate a unified diff patch for the following:\n\n"
+                        f"{context}\n\nGap to address:\n{gap}"
+                    ),
+                },
+            ],
+            "temperature": 0.2,
+            "max_tokens": 4096,
+        }
+        try:
+            resp = requests.post(
+                GROQ_API_URL,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=TEST_TIMEOUT_SECONDS,
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+        except Exception as exc:
+            logger.error("Patch generation failed: %s", exc)
+            return None
+        return self._extract_diff(content)
 
-       def _apply_patch(self, target_file: pathlib.Path, patch_content: str) -> bool:
-           try:
-               original = target_file.read_text()
-               # Simple patch application using difflib
-               # In production, use patch module, but we'll simulate with unified diff parsing
-               lines = original.splitlines(keepends=True)
-               patch_lines = patch_content.splitlines()
-               # Fallback: if patch contains "diff --git", extract hunk
-               # For simplicity, we'll use subprocess patch command if available, else return True for simulation
-               proc = subprocess.run(["patch", "-p1", "--dry-run"], input=patch_content, capture_output=True, text=True)
-               if proc.returncode ==
+    @staticmethod
+    def _extract_diff(content: str) -> str:
+        """Pull a fenced diff block out of a model reply, if present."""
+        fence = re.search(r"```(?:diff)?\s*\n(.*?)```", content, re.DOTALL)
+        if fence:
+            return fence.group(1).strip() + "\n"
+        return content.strip() + "\n"
+
+
+# ---------------------------------------------------------------------------
+# SandboxTester
+# ---------------------------------------------------------------------------
+
+
+class SandboxTester:
+    """Tests a patch in an isolated temporary directory.
+
+    Honest sandbox discipline:
+    * Everything happens inside a fresh ``tempfile.mkdtemp`` directory,
+      which is always removed in a ``finally`` block.
+    * Tests run with the current interpreter (``sys.executable``) in that
+      directory — no virtualenv is created by default, because creating
+      one is slow and downloads packages. An optional venv path exists
+      (``use_venv=True``) and is OFF by default; it is labelled as such.
+    * Every subprocess call has an explicit timeout
+      (TEST_TIMEOUT_SECONDS per command) and its output is captured.
+    * A patch is accepted only as a unified diff (``diff --git`` / ``---``
+      headers with ``@@`` hunks) or as a full-file replacement payload
+      whose first line is exactly ``FULL_FILE:``. Anything else is
+      rejected, not guessed at.
+    * Arbitrary code is never run outside the temporary directory.
+    """
+
+    def __init__(
+        self,
+        timeout: int = TEST_TIMEOUT_SECONDS,
+        use_venv: bool = False,
+    ):
+        self.timeout = timeout
+        self.use_venv = use_venv
+
+    def run_tests(
+        self,
+        file_path: str,
+        original_content: str,
+        patch_content: str,
+        test_files: Optional[Dict[str, str]] = None,
+    ) -> Tuple[bool, str]:
+        """Apply ``patch_content`` to ``original_content`` and test it.
+
+        ``test_files`` maps a relative filename to its content; each is
+        written into the sandbox and run with the current interpreter.
+        Returns (passed, report). Never raises for a bad patch — a bad
+        patch is a failed test, not a crash.
+        """
+        sandbox_dir = tempfile.mkdtemp(prefix="lumina_sandbox_")
+        try:
+            target_file = Path(sandbox_dir) / Path(file_path).name
+            target_file.write_text(original_content, encoding="utf-8")
+
+            if not self._apply_patch(target_file, patch_content):
+                return False, "Patch application failed: unrecognised or mismatched patch"
+
+            python = sys.executable
+            if self.use_venv:
+                # OPTIONAL venv path (off by default): a real isolated
+                # environment inside the sandbox. Slow; only used when
+                # the caller explicitly opts in.
+                venv_dir = Path(sandbox_dir) / "venv"
+                created = self._create_venv(venv_dir)
+                if created is None:
+                    return False, "Sandbox venv creation failed"
+                python = created
+
+            compile_ok, compile_out = self._run_command(
+                [python, "-m", "py_compile", str(target_file)], sandbox_dir
+            )
+            if not compile_ok:
+                return False, f"Patched file does not compile:\n{compile_out}"
+
+            reports: List[str] = ["Patched file compiles OK."]
+            for rel_name, test_content in (test_files or {}).items():
+                test_path = Path(sandbox_dir) / rel_name
+                test_path.parent.mkdir(parents=True, exist_ok=True)
+                test_path.write_text(test_content, encoding="utf-8")
+                ok, out = self._run_command(
+                    [python, str(test_path)], sandbox_dir
+                )
+                reports.append(f"--- {rel_name} ---\n{out}")
+                if not ok:
+                    return False, "\n".join(reports)
+            if not test_files:
+                reports.append("No test files supplied; compile check only.")
+            return True, "\n".join(reports)
+        except Exception as exc:
+            return False, f"Sandbox error: {exc}"
+        finally:
+            shutil.rmtree(sandbox_dir, ignore_errors=True)
+
+    # -- patch application ------------------------------------------------
+    def _apply_patch(self, target_file: Path, patch_content: str) -> bool:
+        try:
+            original_lines = target_file.read_text(encoding="utf-8").splitlines(
+                keepends=True
+            )
+            stripped = patch_content.lstrip()
+            if stripped.startswith(FULL_FILE_MARKER):
+                # Full-file replacement payload, clearly labelled as such.
+                new_content = patch_content.split("\n", 1)[1]
+                target_file.write_text(new_content, encoding="utf-8")
+                return True
+            if "@@" not in patch_content:
+                return False
+            new_lines = self._apply_unified_diff(original_lines, patch_content)
+            if new_lines is None:
+                return False
+            target_file.write_text("".join(new_lines), encoding="utf-8")
+            return True
+        except Exception as exc:
+            logger.debug("Patch application error: %s", exc)
+            return False
+
+    @staticmethod
+    def _apply_unified_diff(
+        original_lines: List[str], patch_text: str
+    ) -> Optional[List[str]]:
+        """Apply unified-diff hunks to ``original_lines``.
+
+        Returns the new line list, or None if any hunk fails to match
+        (context or removed lines must match the original exactly).
+        """
+        lines = patch_text.splitlines()
+        result: List[str] = []
+        pos = 0  # next unconsumed index in original_lines
+        i = 0
+        hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+        while i < len(lines):
+            match = hunk_re.match(lines[i])
+            if not match:
+                i += 1
+                continue
+            old_start = int(match.group(1)) - 1
+            old_count = int(match.group(2)) if match.group(2) else 1
+            if old_count == 0:
+                # Pure insertion: "@@ -l,0 ..." applies AFTER line l.
+                old_start += 1
+            if old_start < pos or old_start > len(original_lines):
+                return None
+            result.extend(original_lines[pos:old_start])
+            pos = old_start
+            consumed_old = 0
+            i += 1
+            while i < len(lines) and not lines[i].startswith("@@"):
+                hunk_line = lines[i]
+                if hunk_line.startswith("+") and not hunk_line.startswith("+++"):
+                    result.append(hunk_line[1:] + "\n")
+                elif hunk_line.startswith("-") and not hunk_line.startswith("---"):
+                    if pos >= len(original_lines):
+                        return None
+                    if original_lines[pos].rstrip("\n") != hunk_line[1:]:
+                        return None
+                    pos += 1
+                    consumed_old += 1
+                elif hunk_line.startswith(" ") or hunk_line == "":
+                    expected = hunk_line[1:] if hunk_line.startswith(" ") else ""
+                    if pos >= len(original_lines):
+                        return None
+                    if original_lines[pos].rstrip("\n") != expected:
+                        return None
+                    result.append(original_lines[pos])
+                    pos += 1
+                    consumed_old += 1
+                elif hunk_line.startswith("\\"):
+                    pass  # "\ No newline at end of file" — tolerated
+                else:
+                    return None
+                i += 1
+            if consumed_old != old_count:
+                return None
+        result.extend(original_lines[pos:])
+        return result
+
+    # -- subprocess helpers ------------------------------------------------
+    def _run_command(
+        self, cmd: List[str], cwd: str
+    ) -> Tuple[bool, str]:
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+            )
+            return proc.returncode == 0, proc.stdout + proc.stderr
+        except subprocess.TimeoutExpired:
+            return False, f"Command timed out after {self.timeout}s: {' '.join(cmd)}"
+        except Exception as exc:
+            return False, f"Command failed to run: {exc}"
+
+    def _create_venv(self, venv_dir: Path) -> Optional[str]:
+        """Create a venv inside the sandbox; returns its python or None.
+
+        OPTIONAL path, off by default (see class docstring). Uses only
+        the standard library ``venv`` module; no packages are installed.
+        """
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "venv", str(venv_dir)],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout * 2,
+            )
+            if proc.returncode != 0:
+                logger.warning("venv creation failed: %s", proc.stderr)
+                return None
+            if os.name == "nt":
+                return str(venv_dir / "Scripts" / "python.exe")
+            return str(venv_dir / "bin" / "python")
+        except Exception as exc:
+            logger.warning("venv creation failed: %s", exc)
+            return None
+
+
+# ---------------------------------------------------------------------------
+# PRManager
+# ---------------------------------------------------------------------------
+
+
+class PRManager:
+    """Creates branches and pull requests via the GitHub REST API.
+
+    Real calls, via ``requests``, when a GITHUB_TOKEN is configured.
+    With no token (or no ``requests``), every method logs clearly and
+    returns None — no network call is attempted without a token. Nothing
+    here pushes or opens a PR on its own in demo mode; ``create_pr`` is
+    only called by LuminaSelfImprovement when PRs are explicitly enabled.
+    """
+
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        repo_owner: Optional[str] = None,
+        repo_name: Optional[str] = None,
+    ):
+        self.token = token or os.environ.get("GITHUB_TOKEN")
+        self.repo_owner = repo_owner or os.environ.get("GITHUB_REPO_OWNER", "")
+        self.repo_name = repo_name or os.environ.get("GITHUB_REPO_NAME", "")
+        self.available = bool(self.token) and bool(self.repo_owner) and bool(self.repo_name) and requests is not None
+        if not self.available:
+            logger.warning(
+                "PRManager disabled: needs GITHUB_TOKEN, GITHUB_REPO_OWNER "
+                "and GITHUB_REPO_NAME (and 'requests')."
+            )
+
+    # -- low-level ---------------------------------------------------------
+    def _request(
+        self, method: str, path: str, payload: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        if not self.available or requests is None:
+            return None
+        try:
+            resp = requests.request(
+                method,
+                f"{GITHUB_API_URL}{path}",
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                timeout=TEST_TIMEOUT_SECONDS,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            logger.error("GitHub API %s %s failed: %s", method, path, exc)
+            return None
+
+    # -- git-data flow ------------------------------------------------------
+    def _base_branch_sha(self, base: str) -> Optional[str]:
+        data = self._request(
+            "GET", f"/repos/{self.repo_owner}/{self.repo_name}/git/ref/heads/{base}"
+        )
+        if not data:
+            return None
+        return data.get("object", {}).get("sha")
+
+    def _create_branch(self, branch: str, sha: str) -> bool:
+        return self._request(
+            "POST",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/refs",
+            {"ref": f"refs/heads/{branch}", "sha": sha},
+        ) is not None
+
+    def _create_blob(self, content: str) -> Optional[str]:
+        data = self._request(
+            "POST",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/blobs",
+            {"content": content, "encoding": "utf-8"},
+        )
+        return data.get("sha") if data else None
+
+    def _create_tree(
+        self, base_tree_sha: str, blobs: Dict[str, str]
+    ) -> Optional[str]:
+        data = self._request(
+            "POST",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/trees",
+            {
+                "base_tree": base_tree_sha,
+                "tree": [
+                    {"path": path, "mode": "100644", "type": "blob", "sha": sha}
+                    for path, sha in blobs.items()
+                ],
+            },
+        )
+        return data.get("sha") if data else None
+
+    def _create_commit(
+        self, message: str, tree_sha: str, parent_sha: str
+    ) -> Optional[str]:
+        data = self._request(
+            "POST",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/commits",
+            {"message": message, "tree": tree_sha, "parents": [parent_sha]},
+        )
+        return data.get("sha") if data else None
+
+    def create_pr(
+        self,
+        branch: str,
+        title: str,
+        body: str,
+        files: Dict[str, str],
+        base: str = "main",
+    ) -> Optional[str]:
+        """Create a branch with ``files`` and open a PR. Returns the PR URL or None."""
+        if not self.available:
+            logger.info("PRManager unavailable; not creating a PR.")
+            return None
+        base_sha = self._base_branch_sha(base)
+        if not base_sha:
+            return None
+        if not self._create_branch(branch, base_sha):
+            return None
+        blobs: Dict[str, str] = {}
+        for path, content in files.items():
+            sha = self._create_blob(content)
+            if not sha:
+                return None
+            blobs[path] = sha
+        base_commit = self._request(
+            "GET",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/commits/{base_sha}",
+        )
+        if not base_commit:
+            return None
+        tree_sha = self._create_tree(base_commit["tree"]["sha"], blobs)
+        if not tree_sha:
+            return None
+        commit_sha = self._create_commit(title, tree_sha, base_sha)
+        if not commit_sha:
+            return None
+        updated = self._request(
+            "PATCH",
+            f"/repos/{self.repo_owner}/{self.repo_name}/git/refs/heads/{branch}",
+            {"sha": commit_sha},
+        )
+        if not updated:
+            return None
+        pr = self._request(
+            "POST",
+            f"/repos/{self.repo_owner}/{self.repo_name}/pulls",
+            {"title": title, "head": branch, "base": base, "body": body},
+        )
+        if not pr:
+            return None
+        url = pr.get("html_url")
+        logger.info("Created PR: %s", url)
+        return url
+
+
+# ---------------------------------------------------------------------------
+# LocalStubGenerator (demo only)
+# ---------------------------------------------------------------------------
+
+
+class LocalStubGenerator:
+    """Deterministic, key-free patch generator used ONLY by the --demo.
+
+    Proposes one safe, minimal change: add a docstring to the flagged
+    high-complexity function. It never calls a network API and never
+    invents logic — it only documents the function. Clearly labelled as
+    a stub so it is never mistaken for a model-generated patch.
+    """
+
+    def generate(self, content: str, gap: Dict[str, Any]) -> Optional[str]:
+        func_name = gap.get("function")
+        if not func_name:
+            return None
+        lines = content.splitlines(keepends=True)
+        for idx, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith(f"def {func_name}(") or stripped.startswith(
+                f"async def {func_name}("
+            ):
+                indent = line[: len(line) - len(stripped)]
+                # The docstring is the first statement of the function
+                # body, so it sits one level deeper than the def line.
+                body_indent = indent + "    "
+                new_lines = list(lines)
+                new_lines.insert(
+                    idx + 1,
+                    f'{body_indent}"""Auto-improvement note (demo stub): flagged for '
+                    f"high complexity; see gap: {gap.get('gap_description', '')}.\"\"\"\n",
+                )
+                diff = difflib.unified_diff(
+                    lines,
+                    new_lines,
+                    fromfile=gap.get("file", "sample.py"),
+                    tofile=gap.get("file", "sample.py"),
+                )
+                return "".join(diff)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# LuminaSelfImprovement — orchestrator
+# ---------------------------------------------------------------------------
+
+
+class LuminaSelfImprovement:
+    """One improvement cycle: scan -> patch -> sandbox-test -> record.
+
+    A pull request is opened only when ``enable_pr`` is True AND a
+    PRManager with a token is configured AND the sandbox test passed.
+    """
+
+    def __init__(
+        self,
+        root_dir: str = ".",
+        generator: Optional[Any] = None,
+        tester: Optional[SandboxTester] = None,
+        pr_manager: Optional[PRManager] = None,
+        meta_learner: Optional[MetaLearner] = None,
+        enable_pr: bool = False,
+        interval: int = 3600,
+        max_gaps_per_cycle: int = 3,
+        db_path: str = "lumina_meta_learning.json",
+    ):
+        self.root_dir = root_dir
+        self.scanner = CodebaseScanner(root_dir)
+        self.generator = generator if generator is not None else PatchGenerator()
+        self.tester = tester if tester is not None else SandboxTester()
+        self.pr_manager = pr_manager if pr_manager is not None else PRManager()
+        self.meta_learner = meta_learner or MetaLearner(db_path)
+        self.enable_pr = enable_pr
+        self.interval = interval
+        self.max_gaps_per_cycle = max_gaps_per_cycle
+        self.running = False
+
+    def run_cycle(self) -> List[ImprovementRecord]:
+        """Run one scan -> patch -> test -> record cycle."""
+        records: List[ImprovementRecord] = []
+        try:
+            gaps = self.scanner.scan()
+        except Exception as exc:
+            logger.error("Scan failed: %s", exc)
+            return records
+        logger.info("Scan found %d gap(s).", len(gaps))
+        for gap in gaps[: self.max_gaps_per_cycle]:
+            file_path = gap["file"]
+            description = gap["gap_description"]
+            context = gap["content"][:8000]  # keep the prompt bounded
+            patch = self.generator.generate(
+                context, description, self.meta_learner.get_prompt(context, description)
+            )
+            if not patch:
+                record = ImprovementRecord.new(
+                    file_path=file_path,
+                    gap_description=description,
+                    patch_content="",
+                    test_result="No patch generated (generator unavailable or failed).",
+                    success=False,
+                    metrics=gap.get("metrics", {}),
+                    meta_insights=list(self.meta_learner.insights),
+                )
+                self.meta_learner.record_outcome(record)
+                records.append(record)
+                continue
+            passed, test_result = self.tester.run_tests(
+                file_path, gap["content"], patch
+            )
+            record = ImprovementRecord.new(
+                file_path=file_path,
+                gap_description=description,
+                patch_content=patch,
+                test_result=test_result,
+                success=passed,
+                metrics=gap.get("metrics", {}),
+                meta_insights=list(self.meta_learner.insights),
+            )
+            self.meta_learner.record_outcome(record)
+            records.append(record)
+            if passed and self.enable_pr and self.pr_manager.available:
+                branch = f"lumina-improvement-{record.id}"
+                pr_url = self.pr_manager.create_pr(
+                    branch=branch,
+                    title=f"Autonomous improvement: {Path(file_path).name}",
+                    body=(
+                        f"Gap: {description}\n\n"
+                        f"Record: {record.id}\n"
+                        "Generated by the Lumina self-improvement loop; "
+                        "sandbox tests passed."
+                    ),
+                    files={file_path: self._patched_content(gap["content"], patch)},
+                )
+                logger.info("PR for %s: %s", file_path, pr_url or "(failed)")
+            elif passed and self.enable_pr:
+                logger.info(
+                    "PR skipped for %s: PRManager not configured.", file_path
+                )
+        return records
+
+    @staticmethod
+    def _patched_content(original: str, patch: str) -> str:
+        """Best-effort patched content for PR submission; falls back to original."""
+        tester = SandboxTester()
+        lines = original.splitlines(keepends=True)
+        if patch.lstrip().startswith(FULL_FILE_MARKER):
+            return patch.split("\n", 1)[1]
+        new_lines = tester._apply_unified_diff(lines, patch)
+        return "".join(new_lines) if new_lines is not None else original
+
+    def run(self, max_cycles: Optional[int] = None) -> None:
+        """Loop ``run_cycle`` every ``interval`` seconds until stopped.
+
+        Handles KeyboardInterrupt (and SIGINT/SIGTERM) gracefully: the
+        current cycle finishes, a shutdown line is logged, and run()
+        returns instead of raising.
+        """
+        self.running = True
+
+        def _stop(signum, frame):  # noqa: ARG001 - signal handler signature
+            logger.info("Shutdown signal received; stopping after this cycle.")
+            self.running = False
+
+        old_int = signal.signal(signal.SIGINT, _stop)
+        old_term = signal.signal(signal.SIGTERM, _stop)
+        try:
+            cycles = 0
+            while self.running:
+                logger.info("Starting improvement cycle %d.", cycles + 1)
+                self.run_cycle()
+                cycles += 1
+                if max_cycles is not None and cycles >= max_cycles:
+                    break
+                if self.running:
+                    logger.info("Sleeping %ds until next cycle.", self.interval)
+                    deadline = time.time() + self.interval
+                    while self.running and time.time() < deadline:
+                        time.sleep(min(1.0, deadline - time.time()))
+        except KeyboardInterrupt:
+            logger.info("Interrupted; shutting down gracefully.")
+        finally:
+            self.running = False
+            signal.signal(signal.SIGINT, old_int)
+            signal.signal(signal.SIGTERM, old_term)
+            logger.info("Lumina self-improvement stopped.")
+
+
+# ---------------------------------------------------------------------------
+# Demo (no keys, no network, no venv)
+# ---------------------------------------------------------------------------
+
+_DEMO_SAMPLE = '''"""Demo sample module with one deliberately over-complex function."""
+
+
+def classify(n):
+    if n < 0:
+        return "negative"
+    if n == 0:
+        return "zero"
+    if n == 1:
+        return "one"
+    if n == 2:
+        return "two"
+    if n < 10:
+        return "small positive"
+    if n < 100:
+        return "medium positive"
+    if n < 1000:
+        return "large positive"
+    if n % 2 == 0:
+        return "huge even"
+    if n % 3 == 0:
+        return "huge multiple of three"
+    if n % 5 == 0:
+        return "huge multiple of five"
+    if n > 100000:
+        return "enormous"
+    return "huge other"
+'''
+
+_DEMO_TEST = '''"""Demo test for the sample module (run inside the sandbox)."""
+
+import unittest
+
+from sample import classify
+
+
+class TestClassify(unittest.TestCase):
+    def test_values(self):
+        self.assertEqual(classify(-3), "negative")
+        self.assertEqual(classify(0), "zero")
+        self.assertEqual(classify(5), "small positive")
+        self.assertEqual(classify(50), "medium positive")
+        self.assertEqual(classify(500), "large positive")
+
+    def test_patch_applied(self):
+        # The demo stub patch only adds a docstring; this proves the
+        # patch was applied and the function still works afterwards.
+        self.assertTrue(classify.__doc__)
+
+
+if __name__ == "__main__":
+    unittest.main()
+'''
+
+
+def run_demo() -> int:
+    """Run the key-free demo: scan -> stub patch -> sandbox test -> record."""
+    print("=== lumina_self_improvement --demo ===")
+    print("No keys, no network, no venv. Everything runs in temp dirs.")
+    with tempfile.TemporaryDirectory(prefix="lumina_demo_") as demo_dir:
+        sample_path = Path(demo_dir) / "sample.py"
+        sample_path.write_text(_DEMO_SAMPLE, encoding="utf-8")
+        db_path = str(Path(demo_dir) / "lumina_meta_learning.json")
+
+        scanner = CodebaseScanner(demo_dir)
+        gaps = scanner.scan()
+        print(f"Scanner found {len(gaps)} gap(s).")
+        if not gaps:
+            print("DEMO FAILED: scanner found no gap in the sample file.")
+            return 1
+        gap = gaps[0]
+        print(f"Gap: {gap['gap_description']} in {Path(gap['file']).name}")
+
+        generator = LocalStubGenerator()
+        patch = generator.generate(gap["content"], gap)
+        if not patch:
+            print("DEMO FAILED: stub generator produced no patch.")
+            return 1
+        print("Stub patch (first lines):")
+        for line in patch.splitlines()[:6]:
+            print(f"  {line}")
+
+        tester = SandboxTester()
+        passed, report = tester.run_tests(
+            gap["file"],
+            gap["content"],
+            patch,
+            test_files={"test_sample.py": _DEMO_TEST},
+        )
+        print("Sandbox test passed:", passed)
+        print(report)
+        if not passed:
+            print("DEMO FAILED: sandbox test did not pass.")
+            return 1
+
+        learner = MetaLearner(db_path)
+        record = ImprovementRecord.new(
+            file_path=gap["file"],
+            gap_description=gap["gap_description"],
+            patch_content=patch,
+            test_result=report,
+            success=passed,
+            metrics=gap.get("metrics", {}),
+            meta_insights=list(learner.insights),
+        )
+        learner.record_outcome(record)
+        print(f"MetaLearner recorded outcome {record.id} (success={record.success}).")
+        print(f"MetaLearner summary: {learner.summary()}")
+    print("DEMO OK: scan -> stub patch -> sandbox test -> record, no keys/network.")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Autonomous code-improvement loop (scan, patch, sandbox-test, record)."
+    )
+    parser.add_argument("--root", default=".", help="Codebase directory to scan.")
+    parser.add_argument("--db", default="lumina_meta_learning.json",
+                        help="Meta-learning JSON database path.")
+    parser.add_argument("--interval", type=int, default=3600,
+                        help="Seconds between cycles in run mode.")
+    parser.add_argument("--once", action="store_true",
+                        help="Run a single cycle and exit.")
+    parser.add_argument("--max-cycles", type=int, default=None,
+                        help="Stop after this many cycles (run mode).")
+    parser.add_argument("--max-gaps", type=int, default=3,
+                        help="Max gaps handled per cycle.")
+    parser.add_argument("--enable-pr", action="store_true",
+                        help="Allow opening GitHub PRs for passing patches "
+                             "(requires GITHUB_TOKEN + repo env vars).")
+    parser.add_argument("--demo", action="store_true",
+                        help="Run the key-free, network-free demo and exit.")
+    parser.add_argument("--model", default=DEFAULT_MODEL,
+                        help="Groq model for PatchGenerator.")
+    args = parser.parse_args(argv)
+
+    if args.demo:
+        return run_demo()
+
+    if not os.environ.get("GROQ_API_KEY"):
+        logger.warning(
+            "GROQ_API_KEY is not set: patch generation will fail soft "
+            "and cycles will record 'no patch generated' outcomes."
+        )
+    if args.enable_pr and not os.environ.get("GITHUB_TOKEN"):
+        logger.warning(
+            "PRs enabled but GITHUB_TOKEN is not set: no PR will be opened."
+        )
+
+    engine = LuminaSelfImprovement(
+        root_dir=args.root,
+        generator=PatchGenerator(model=args.model),
+        enable_pr=args.enable_pr,
+        interval=args.interval,
+        max_gaps_per_cycle=args.max_gaps,
+        db_path=args.db,
+    )
+    if args.once:
+        engine.run_cycle()
+        return 0
+    engine.run(max_cycles=args.max_cycles)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
